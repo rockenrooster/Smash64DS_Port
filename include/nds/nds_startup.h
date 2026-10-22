@@ -11,50 +11,6 @@
 #define NDS_STARTUP_LOGO_RELOC_PASS 0x4c524c43u
 #define NDS_STARTUP_LOGO_DRAW_PASS 0x4c445257u
 
-#if NDS_FIGHTER_ANIM_AUDIT
-#define NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT 6u
-/* Donkey owns the largest landed main-motion table: 221 source rows. */
-#define NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY 221u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_SOURCE_NULL 0x0001u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_LOAD_FALLBACK 0x0002u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_EXTERN_FAIL 0x0004u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_FIGATREE_INVALID 0x0008u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_UNSAFE 0x0010u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_END 0x0020u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_LOOP 0x0040u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_TIMEOUT 0x0080u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_MISMATCH 0x0100u
-#define NDS_FIGHTER_ANIM_AUDIT_FLAG_EXPECTED_INVALID 0x0200u
-
-extern volatile u16 gNdsFighterAnimAuditRequested
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u16 gNdsFighterAnimAuditResolved
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u16 gNdsFighterAnimAuditFallback
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u16 gNdsFighterAnimAuditExpectedFrames
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u16 gNdsFighterAnimAuditPlayedFrames
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u16 gNdsFighterAnimAuditFlags
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-extern volatile u32 gNdsFighterAnimAuditActiveKind;
-extern volatile u32 gNdsFighterAnimAuditActiveMotion;
-extern volatile u32 gNdsFighterAnimAuditEpoch;
-extern volatile u32 gNdsFighterAnimAuditCaptureCount;
-extern volatile u32 gNdsFighterAnimAuditCompleteCount;
-extern volatile u32 gNdsFighterAnimAuditInvalidMotionCount;
-extern volatile u32 gNdsFighterAnimAuditLoadSerial;
-extern volatile u32 gNdsFighterAnimAuditLoadAssetID;
-extern volatile u32 gNdsFighterAnimAuditLoadResolved;
-extern volatile u32 gNdsFighterAnimAuditLoadFallback;
-#endif
 
 #define NDS_STARTUP_LOGO_BLOCKER_NONE 0u
 #define NDS_STARTUP_LOGO_BLOCKER_NO_SOBJ 1u
@@ -863,22 +819,6 @@ extern volatile u32 gNdsObjAnimRunawayOpcode;
 extern volatile u32 gNdsShieldAnimJointInstallCalls;
 extern volatile u32 gNdsShieldAnimJointAttachCount;
 extern volatile u32 gNdsShieldAnimJointNullCount;
-#if NDS_ANIM_JOINT_AUDIT
-/* Lab-only broken-invariant counter, ftParamUpdateAnimKeys' dispatch. Dispatch32
- * is the denominator (is_anim_joint true, so the 32-bit parser was chosen);
- * Figatree is the fault -- that joint's script lies in an asset
- * ndsRelocPointerIsFighterAObj16 claims, i.e. a 16-bit figatree read by the
- * 32-bit parser. Misalign is the subclass gNdsObjAnimRunawayCount can see (2 mod
- * 4, so the LDR rotates); Figatree - Misalign is the subclass it CANNOT, which
- * decodes to a legal opcode and corrupts silently. Figatree must be 0 with
- * Dispatch32 non-zero. */
-extern volatile u32 gNdsAnimJointFlagFrames;
-extern volatile u32 gNdsAnimJointIdleSkip32Count;
-extern volatile u32 gNdsAnimJointDispatch32Count;
-extern volatile u32 gNdsAnimJointDispatchFigatreeCount;
-extern volatile u32 gNdsAnimJointDispatchMisalignCount;
-extern volatile u32 gNdsAnimJointDispatchFigatreeScript;
-#endif
 extern volatile u32 gNdsStartupTaskmanMallocCount;
 extern volatile u32 gNdsTaskmanGeneralHeapUsed;
 extern volatile u32 gNdsTaskmanDLContextsValid;
@@ -4086,7 +4026,6 @@ extern volatile u32 gNdsFighterReflectorProofFireballDamage;
 extern volatile u32 gNdsFighterReflectorProofFireballSizeMilli;
 extern volatile s32 gNdsFighterReflectorProofFireballDXMilli;
 extern volatile s32 gNdsFighterReflectorProofFireballDYMilli;
-#if NDS_R2_FIREBALL_NATIVE_MAP_COLL
 extern volatile u32 gNdsFireballNativeMapCallCount;
 extern volatile u32 gNdsFireballNativeMapHandledCount;
 extern volatile u32 gNdsFireballNativeMapFallbackCount;
@@ -4097,7 +4036,6 @@ extern volatile u32 gNdsFireballNativeMapLWallHitCount;
 extern volatile u32 gNdsFireballNativeMapRWallHitCount;
 extern volatile u32 gNdsFireballNativeMapLastMask;
 extern volatile s32 gNdsFireballNativeMapLastLineID;
-#endif
 extern volatile u32 gNdsFighterReflectorProofSpecialSizeMilli;
 extern volatile u32 gNdsFighterReflectorProofSpecialResist;
 extern volatile u32 gNdsFighterSpecialsProofMask;
@@ -4153,7 +4091,6 @@ extern volatile u32 gNdsFighterDonkeySpecialsLwLoopFlagFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsLwEndFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsLwWaitFrames;
 #endif
-#if NDS_P2_SAMUS
 extern volatile u32 gNdsFighterSamusSpecialsSlot;
 extern volatile u32 gNdsFighterSamusSpecialsNPressFrames;
 extern volatile u32 gNdsFighterSamusSpecialsNStartFrames;
@@ -4166,7 +4103,6 @@ extern volatile u32 gNdsFighterSamusSpecialsNReleaseWaitFrames;
 extern volatile u32 gNdsFighterSamusSpecialsLwPressFrames;
 extern volatile u32 gNdsFighterSamusSpecialsLwFrames;
 extern volatile u32 gNdsFighterSamusSpecialsLwWaitFrames;
-#endif
 extern volatile u32 gNdsFighterNaturalMovesetMask;
 extern volatile u32 gNdsFighterNaturalMovesetPhase;
 extern volatile u32 gNdsFighterNaturalMovesetPhaseFrames;
@@ -4194,73 +4130,6 @@ extern volatile u32 gNdsFighterNaturalMovesetVictimStatus;
 extern volatile u32 gNdsFighterNaturalMovesetVictimMotion;
 extern volatile u32 gNdsFighterNaturalMovesetVictimGA;
 extern volatile s32 gNdsFighterNaturalMovesetVictimRootYMilli;
-#if NDS_P2_SAMUS_STATE_TOUR
-extern volatile u32 gNdsSamusStateTourMask;
-extern volatile u32 gNdsSamusStateTourPhase;
-extern volatile u32 gNdsSamusStateTourPhaseFrames;
-extern volatile u32 gNdsSamusStateTourStatus;
-extern volatile u32 gNdsSamusStateTourMotion;
-extern volatile u32 gNdsSamusStateTourCliffID;
-extern volatile u32 gNdsSamusStateTourStageCount;
-#endif
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-extern volatile u32 gNdsSamusTumbleTourMask;
-extern volatile u32 gNdsSamusTumbleTourDamageFlyMask;
-extern volatile u32 gNdsSamusTumbleTourScenario;
-extern volatile u32 gNdsSamusTumbleTourStep;
-extern volatile u32 gNdsSamusTumbleTourFrames;
-extern volatile u32 gNdsSamusTumbleTourStatus;
-extern volatile u32 gNdsSamusTumbleTourMotion;
-extern volatile u32 gNdsSamusTumbleTourHitCount;
-extern volatile u32 gNdsSamusTumbleTourStageCount;
-extern volatile u32 gNdsSamusTumbleTourDone;
-#endif
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-extern volatile u32 gNdsSamusDamageFlyTourMask;
-extern volatile u32 gNdsSamusDamageFlyTourScenario;
-extern volatile u32 gNdsSamusDamageFlyTourStep;
-extern volatile u32 gNdsSamusDamageFlyTourFrames;
-extern volatile u32 gNdsSamusDamageFlyTourStatus;
-extern volatile u32 gNdsSamusDamageFlyTourMotion;
-extern volatile u32 gNdsSamusDamageFlyTourAttackerMask;
-extern volatile u32 gNdsSamusDamageFlyTourPlacementPacked;
-extern volatile u32 gNdsSamusDamageFlyTourHitCount;
-extern volatile u32 gNdsSamusDamageFlyTourRollAttempts;
-extern volatile u32 gNdsSamusDamageFlyTourSakuraiHitCount;
-extern volatile u32 gNdsSamusDamageFlyTourTopAngle80Count;
-extern volatile u32 gNdsSamusDamageFlyTourRollPercent;
-extern volatile u32 gNdsSamusDamageFlyTourMismatchCount;
-extern volatile u32 gNdsSamusDamageFlyTourStageCount;
-extern volatile u32 gNdsSamusDamageFlyTourTerminalCount;
-extern volatile u32 gNdsSamusDamageFlyTourDone;
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-extern volatile u32 gNdsSamusAttackTourMask;
-extern volatile u32 gNdsSamusAttackTourScenario;
-extern volatile u32 gNdsSamusAttackTourStep;
-extern volatile u32 gNdsSamusAttackTourFrames;
-extern volatile u32 gNdsSamusAttackTourStatus;
-extern volatile u32 gNdsSamusAttackTourMotion;
-extern volatile u32 gNdsSamusAttackTourStageCount;
-extern volatile u32 gNdsSamusAttackTourTerminalCount;
-extern volatile u32 gNdsSamusAttackTourCatchAttr;
-extern volatile u32 gNdsSamusAttackTourGrabInputCount;
-extern volatile u32 gNdsSamusAttackTourCatchStatusMask;
-extern volatile u32 gNdsSamusAttackTourCatchFrames;
-extern volatile u32 gNdsSamusAttackTourCatchActiveFrames;
-extern volatile u32 gNdsSamusAttackTourCatchSearchFrames;
-extern volatile u32 gNdsSamusAttackTourCatchAttackMask;
-extern volatile u32 gNdsSamusAttackTourCatchAnimFrameMaxMilli;
-extern volatile u32 gNdsSamusAttackTourVictimGrabbableMask;
-extern volatile u32 gNdsSamusAttackTourVictimNormalMask;
-extern volatile u32 gNdsSamusAttackTourJoint36SeenCount;
-extern volatile u32 gNdsSamusAttackTourJoint36AttackMask;
-extern volatile s32 gNdsSamusAttackTourMinGrabDXMilli;
-extern volatile s32 gNdsSamusAttackTourGrab0XMilli;
-extern volatile s32 gNdsSamusAttackTourGrab1XMilli;
-extern volatile s32 gNdsSamusAttackTourFoxXMilli;
-extern volatile u32 gNdsSamusAttackTourDone;
-#endif
 extern volatile u32 gNdsFighterBattlePlayableResult;
 extern volatile u32 gNdsFighterBattlePlayableMask;
 extern volatile u32 gNdsFighterBattlePlayableVictimSlot;
@@ -4624,75 +4493,13 @@ extern volatile u32 gNdsTickHudSpans;
  * before any GX traffic, CONTRACT rejects after preparation but before GX, and
  * POST_GX is the expensive one because the frame has already paid for a
  * partial native submission before restarting generically. */
-#ifndef NDS_TASK68_FALLBACK_CENSUS
-#define NDS_TASK68_FALLBACK_CENSUS 0
-#endif
-#if NDS_TASK68_FALLBACK_CENSUS
-/* Every point at which the fighter draw can abandon the native production
- * owner, in execution order. The first attempt at this census counted only the
- * last four and read exactly zero, which is true and useless: by the time
- * control reaches them, the eight earlier rejections have already had their
- * chance, and any one of them leaves native_owner_enabled FALSE so the block
- * holding those four counters is skipped entirely. A give-up census has to
- * cover every give-up or its zero means nothing.
- *
- * Calls and Eligible are denominators rather than reasons -- without them a
- * count of zero rejections cannot be told apart from a path that was never
- * taken -- so they are marked, not counted as fallbacks. */
-enum NDSTickHudNativeOwnerFallbackReason {
-    nNDSTickHudNativeOwnerFallbackCalls,
-    nNDSTickHudNativeOwnerFallbackEligible,
-    nNDSTickHudNativeOwnerFallbackAnimLock,
-    nNDSTickHudNativeOwnerFallbackSelected,
-    nNDSTickHudNativeOwnerFallbackDisplayList,
-    nNDSTickHudNativeOwnerFallbackMaterialCount,
-    nNDSTickHudNativeOwnerFallbackValidate,
-    nNDSTickHudNativeOwnerFallbackMatrices,
-    nNDSTickHudNativeOwnerFallbackMaterialPrep,
-    nNDSTickHudNativeOwnerFallbackInputs,
-    nNDSTickHudNativeOwnerFallbackContract,
-    nNDSTickHudNativeOwnerFallbackPostGx,
-    nNDSTickHudNativeOwnerFallbackBegin,
-    /* Task 73. Not native-owner reasons -- this array is the lab counter bank
-     * and these ride along on its existing plumbing rather than earning a
-     * second one. lbRelocGetForceExternHeapFile re-reads a fighter animation
-     * off the cartridge on every call with no residency check, and Task 71
-     * showed that load setting the WORK-H P95. AnimForceResident counts the
-     * subset where the destination heap already holds that same asset, which
-     * is the size of the opportunity a residency cache would take. */
-    nNDSTickHudNativeOwnerFallbackAnimForceLoad,
-    nNDSTickHudNativeOwnerFallbackAnimForceResident,
-    nNDSTickHudNativeOwnerFallbackReasonCount
-};
-extern volatile u32 gNdsTickHudNativeOwnerFallbackCount;
-extern volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
-    nNDSTickHudNativeOwnerFallbackReasonCount];
-#define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) \
-    do { \
-        gNdsTickHudNativeOwnerFallbackByReason[(reason)]++; \
-    } while (0)
-#define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) \
-    do { \
-        gNdsTickHudNativeOwnerFallbackCount++; \
-        gNdsTickHudNativeOwnerFallbackByReason[(reason)]++; \
-    } while (0)
-#else
 #define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) ((void)0)
 #define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) ((void)0)
-#endif
 
 /* Task 75 E0: completed file loads, differenced per frame into the census ring.
  * See the definition in diagnostics.c for why this rides the same ring as the
  * Task 70 fallback counter rather than adding a second one. */
-#if NDS_TICK_HUD && NDS_TASK75_LOAD_CENSUS
-extern volatile u32 gNdsTask75AssetLoadCount;
-#define NDS_TASK75_MARK_ASSET_LOAD() \
-    do { \
-        gNdsTask75AssetLoadCount++; \
-    } while (0)
-#else
 #define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
-#endif
 extern volatile u32 gNdsTickHudFighterTicks;
 extern volatile u32 gNdsTickHudStageTicks;
 extern volatile u32 gNdsTickHudBackgroundTicks;
@@ -4910,80 +4717,6 @@ extern volatile u32 gNdsFtrPlanBuild;
  * cannot break the shipping build the same way. */
 #ifndef NDS_TASK75_MARK_ASSET_LOAD
 #define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-extern volatile u32 gNdsRendererProfileLoopWallTicks;
-extern volatile u32 gNdsRendererProfileInputTicks;
-extern volatile u32 gNdsRendererProfileSourceUpdate1Ticks;
-extern volatile u32 gNdsRendererProfileSourceUpdate2Ticks;
-extern volatile u32 gNdsRendererProfileSourceUpdateTicks;
-extern volatile u32 gNdsRendererProfileAudioUpdateTicks;
-extern volatile u32 gNdsRendererProfileBeginFrameTicks;
-extern volatile u32 gNdsRendererProfileWallpaperTicks;
-extern volatile u32 gNdsRendererProfileForegroundTicks;
-extern volatile u32 gNdsRendererProfileStageLayer0Ticks;
-extern volatile u32 gNdsRendererProfileFlushTicks;
-extern volatile u32 gNdsRendererProfileVBlankWaitTicks;
-extern volatile u32 gNdsRendererProfilePostVBlankTicks;
-extern volatile u32 gNdsRendererProfileThreadTicks;
-extern volatile u32 gNdsRendererProfilePresentActiveTicks;
-extern volatile u32 gNdsRendererProfileDrawResidualTicks;
-extern volatile u32 gNdsRendererProfilePresentResidualTicks;
-extern volatile u32 gNdsRendererProfileLoopResidualTicks;
-extern volatile u32 gNdsRendererProfileConservationErrorTicks;
-extern volatile u32 gNdsRendererProfileLogicTick;
-extern volatile u32 gNdsRendererProfilePresentIntervalVBlanks;
-extern volatile u32 gNdsRendererProfileGXStatusBeforeFlush;
-extern volatile u32 gNdsRendererProfileGXStatusAfterFlush;
-extern volatile u32 gNdsRendererProfileGXControlBeforeFlush;
-extern volatile u32 gNdsRendererProfileGXStatusPostVBlank;
-extern volatile u32 gNdsRendererProfileGXControlPostVBlank;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-extern volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
-extern volatile u32 gNdsRendererPhase05PresentHardwareTicks;
-extern volatile u32 gNdsRendererPhase05GCDrawAllTicks;
-extern volatile u32 gNdsRendererPhase05StageTransitionTicks;
-extern volatile u32 gNdsRendererPhase05FighterWrapperTicks;
-extern volatile u32 gNdsRendererPhase05FrameResetTicks;
-extern volatile u32 gNdsRendererPhase05PresentTailTicks;
-extern volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
-extern volatile u32 gNdsRendererPhase05ProfilePublishTicks;
-extern volatile u32 gNdsRendererPhase05FlushPrepTicks;
-extern volatile u32 gNdsRendererPhase05TimerReadCount;
-extern volatile u32 gNdsRendererPhase05TimerSpanCount;
-extern volatile u32 gNdsRendererPhase05CalibrationTicks;
-extern volatile u32 gNdsRendererPhase05CalibrationIntervals;
-extern volatile u32 gNdsRendererPhase05WallpaperRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
-extern volatile u32 gNdsRendererPhase05WallpaperFullRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperIncrementalRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperChangedXCount;
-extern volatile u32 gNdsRendererPhase05WallpaperChangedRunCount;
-extern volatile u32 gNdsRendererPhase05WallpaperLongestChangedRun;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperScalarStoreCount;
-extern volatile u32 gNdsRendererPhase05WallpaperPackedStoreCount;
-extern volatile u32 gNdsRendererPhase05WallpaperDmaPixelCount;
-extern volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
-
-#define NDS_RENDERER_PHASE05_TICK() \
-    (gNdsRendererPhase05TimerReadCount++, cpuGetTiming())
-#define NDS_RENDERER_PHASE05_FINISH(bucket, start) \
-    do \
-    { \
-        (bucket) += NDS_RENDERER_PHASE05_TICK() - (start); \
-        gNdsRendererPhase05TimerSpanCount++; \
-    } while (0)
-#endif
 #endif
 extern volatile u32 gNdsRendererProfileStageAdapterTicks;
 extern volatile u32 gNdsRendererProfileMaterialTicks;
@@ -5545,22 +5278,6 @@ extern volatile u32 gNdsFtrDrawMemoFills;
 extern volatile u32 gNdsFtrDrawMemoBypass;
 extern volatile u32 gNdsFtrDrawMemoBoundary;
 extern volatile u32 gNdsFtrDrawMemoReplayEvents;
-#if NDS_R2_FTR_CONTRACT_CENSUS
-/* Fighter draw-contract change census; see src/port/diagnostics.c. Lab only. */
-extern volatile u32 gNdsFtrContractCaptures;
-extern volatile u32 gNdsFtrContractSame;
-extern volatile u32 gNdsFtrContractCountSame;
-extern volatile u32 gNdsFtrContractDObjSame;
-extern volatile u32 gNdsFtrContractDLSame;
-extern volatile u32 gNdsFtrContractPreSame;
-extern volatile u32 gNdsFtrContractKeySame;
-extern volatile u32 gNdsFtrContractKeySameContractDiff;
-extern volatile u32 gNdsFtrContractKeyDiffContractSame;
-extern volatile u32 gNdsFtrContractChangeTotal;
-extern volatile u32 gNdsFtrContractMaxRun;
-extern volatile u32 gNdsFtrContractZeroEvents;
-extern volatile u32 gNdsFtrContractEventTotal;
-#endif
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;
 extern volatile u32 gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount;

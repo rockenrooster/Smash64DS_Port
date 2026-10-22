@@ -48,21 +48,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_DEDEDE
 
 #include "kirby/nds_p4_kirby.generated.h"
-#if !NDS_P2_KIRBY
-#error "P4 Dedede's inhale runs Kirby's status code (NDS_P2_KIRBY)"
-#endif
-#if !NDS_P2_YOSHI
-#error "P4 Dedede's landing stars run Yoshi's star weapon (NDS_P2_YOSHI)"
-#endif
-#if !NDS_P2_ITEM_CORE
-#error "P4 Dedede's minions run the common items' code (NDS_P2_ITEM_CORE)"
-#endif
-#if !NDS_P2_SAMUS
-#error "P4 Dedede's minions spawn at Samus's charge shot spot (NDS_P2_SAMUS)"
-#endif
 
 #include <stddef.h>
 
@@ -92,10 +79,8 @@ s32 ftCommonWalkGetWalkStatus(s8 stick_range_x);
 sb32 ftCommonWalkCheckInputSuccess(GObj *fighter_gobj);
 sb32 ftCommonWaitCheckInputSuccess(GObj *fighter_gobj);
 void ftParamKirbyTryMakeMapStarEffect(GObj *fighter_gobj);
-#if NDS_P2_ITEM_CORE
 GObj *itStarRodWeaponStarMakeWeapon(GObj *fighter_gobj, Vec3f *pos, ub8 is_smash);
 extern void *gITManagerCommonData;
-#endif
 
 /* Dedede.Action (his action array; 0xEF on are add_new_action's). */
 #define DEDEDE_STATUS_USP_BEGIN 0xE4
@@ -886,7 +871,6 @@ static void ndsP4DededeNSPSpatPhysics(GObj *fighter_gobj)
  * lifetime. */
 static void ndsP4DededeNSPSpitStar(GObj *fighter_gobj, Vec3f *pos)
 {
-#if NDS_P2_ITEM_CORE
     void **attributes;
 
     if (gITManagerCommonData == NULL)
@@ -900,10 +884,6 @@ static void ndsP4DededeNSPSpitStar(GObj *fighter_gobj, Vec3f *pos)
         return;
     }
     (void)itStarRodWeaponStarMakeWeapon(fighter_gobj, pos, 2);
-#else
-    (void)fighter_gobj;
-    (void)pos;
-#endif
 }
 
 /* DededeNSP.spit_shoot_check_: at the script's temp variable 3 the held
@@ -3020,4 +3000,3 @@ const NDSP4Overrides gNdsP4DededeOverrides = {
     .kirby_colanim_end = ndsP4DededeColAnimEnd,
 };
 
-#endif /* NDS_P4_DEDEDE */

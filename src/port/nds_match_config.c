@@ -52,101 +52,8 @@ u8 ndsMatchConfigClampPublishedHandicap(u8 handicap)
     return handicap;
 }
 
-#if NDS_P2_PROOF_FIGHTER0 >= 0
-/* nFTKindPlayableEnd is inclusive (== nFTKindNess), as mnplayersvs reads it. */
-_Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
-               "NDS_P2_PROOF_FIGHTER0 must be a playable fighter kind");
-#if NDS_P2_PROOF_FIGHTER0 == 4 && !NDS_P2_LUIGI
-/* ft/fighter.h / BattleShip fttypes.h: nFTKindLuigi == 4. The preprocessor
- * cannot compare an enum identifier (an undefined token becomes 0 in #if), so
- * pin the source integer here while the C static assertion above owns range. */
-#error "Luigi proof fighter requires NDS_P2_LUIGI=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 2 && !NDS_P2_DONKEY
-/* BattleShip fttypes.h: nFTKindDonkey == 2. Keep the proof selector incapable
- * of creating a fighter whose source assets/native owner were not admitted. */
-#error "Donkey proof fighter requires NDS_P2_DONKEY=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 7 && !NDS_P2_CAPTAIN
-/* BattleShip fttypes.h: nFTKindCaptain == 7. Same rule as the two above. */
-#error "Captain Falcon proof fighter requires NDS_P2_CAPTAIN=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 3 && !NDS_P2_SAMUS
-/* BattleShip fttypes.h: nFTKindSamus == 3. Samus's first production landing
- * uses the generic renderer, but the source assets/status/weapon TUs must still
- * be admitted before the direct proof descriptor can instantiate her. */
-#error "Samus proof fighter requires NDS_P2_SAMUS=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 5 && !NDS_P2_LINK
-/* BattleShip fttypes.h: nFTKindLink == 5. Keep the proof selector bound to the
- * same production-admission flag that stages Link's full source closure and
- * native owner. */
-#error "Link proof fighter requires NDS_P2_LINK=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 9 && !NDS_P2_PIKACHU
-/* BattleShip fttypes.h: nFTKindPikachu == 9. Same rule: the proof selector
- * cannot instantiate a fighter whose source closure was not admitted. */
-#error "Pikachu proof fighter requires NDS_P2_PIKACHU=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 6 && !NDS_P2_YOSHI
-/* BattleShip fttypes.h: nFTKindYoshi == 6. Same rule: the proof selector
- * cannot instantiate a fighter whose source closure was not admitted. */
-#error "Yoshi proof fighter requires NDS_P2_YOSHI=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 11 && !NDS_P2_NESS
-#error "Ness proof fighter requires NDS_P2_NESS=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 10 && !NDS_P2_PURIN
-#error "Purin proof fighter requires NDS_P2_PURIN=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 8 && !NDS_P2_KIRBY
-#error "Kirby proof fighter requires NDS_P2_KIRBY=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 26 && !NDS_P2_GDONKEY
-#error "GDonkey proof fighter requires NDS_P2_GDONKEY=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 13 && !NDS_P2_MMARIO
-#error "MMario proof fighter requires NDS_P2_MMARIO=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 14 && !NDS_P2_NMARIO
-#error "NMario proof fighter requires NDS_P2_NMARIO=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 15 && !NDS_P2_NFOX
-#error "NFox proof fighter requires NDS_P2_NFOX=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 16 && !NDS_P2_NDONKEY
-#error "NDonkey proof fighter requires NDS_P2_NDONKEY=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 17 && !NDS_P2_NSAMUS
-#error "NSamus proof fighter requires NDS_P2_NSAMUS=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 18 && !NDS_P2_NLUIGI
-#error "NLuigi proof fighter requires NDS_P2_NLUIGI=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 19 && !NDS_P2_NLINK
-#error "NLink proof fighter requires NDS_P2_NLINK=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 20 && !NDS_P2_NYOSHI
-#error "NYoshi proof fighter requires NDS_P2_NYOSHI=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 21 && !NDS_P2_NCAPTAIN
-#error "NCaptain proof fighter requires NDS_P2_NCAPTAIN=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 22 && !NDS_P2_NKIRBY
-#error "NKirby proof fighter requires NDS_P2_NKIRBY=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 23 && !NDS_P2_NPIKACHU
-#error "NPikachu proof fighter requires NDS_P2_NPIKACHU=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 24 && !NDS_P2_NPURIN
-#error "NPurin proof fighter requires NDS_P2_NPURIN=1"
-#endif
-#if NDS_P2_PROOF_FIGHTER0 == 25 && !NDS_P2_NNESS
-#error "NNess proof fighter requires NDS_P2_NNESS=1"
-#endif
-#endif
 
-#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
+#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI) || (!NDS_P2_DONKEY) || (!NDS_P2_CAPTAIN)
 #error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1 NDS_P2_SAMUS=1"
 #endif
 #if NDS_P2_FOUR_CPU_ROSTER
@@ -216,7 +123,6 @@ volatile u32 gNdsLabFourCpuTwo __attribute__((used)) = 0u;
  * Ball Pokemon on screen for an owner capture. */
 volatile u32 gNdsLabItemToggles __attribute__((used));
 volatile u32 gNdsLabItemRate __attribute__((used)) = 0xffu;
-#if NDS_P4
 /* Boot-poked P4 content, one byte a slot (0 = the slot's own kind): the slot
  * becomes that content on its setup parent (include/nds/nds_p4.h). The
  * profile census, which cannot poke, bakes it (NDS_LAB_FOURCPU_SWEEP_P4). */
@@ -225,7 +131,6 @@ volatile u32 gNdsLabItemRate __attribute__((used)) = 0xffu;
 #endif
 volatile u32 gNdsLabP4Content __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_P4;
-#endif
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
@@ -280,29 +185,13 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[0].handicap = 9;
     /* Base Mario/Fox VS preset: source reset teams are Red,Red,Blue,Blue. */
     cfg->fighters[0].team = nSCBattleTeamIDRed;
-#if NDS_P2_PROOF_FIGHTER0 >= 0
-    /* Focused P2-3 proof only.  Keep this at the descriptor owner instead of
-     * teaching scene_harness or the combat runtime about individual roster
-     * additions: BattleShip still receives an ordinary FTDesc with the chosen
-     * fkind, and all status/motion/attribute dispatch remains source-owned. */
-    cfg->fighters[0].fkind = (u8)NDS_P2_PROOF_FIGHTER0;
-#endif
 
     cfg->fighters[1].fkind = nFTKindFox;
     cfg->fighters[1].pkind = nFTPlayerKindMan;
     cfg->fighters[1].handicap = 9;
     cfg->fighters[1].team = nSCBattleTeamIDRed;
 
-#if NDS_P2_KIRBY_COPYLINK_PROOF
-    /* P2-3f47 acceptance fixture only. Both slots stay ordinary human fighters;
-     * the proof harness sends input only to player 0, leaving Link stationary
-     * so Inhale/CopyLink is deterministic. It does not assign status, motion or
-     * copy_kind; BattleShip owns the complete catch/eat/copy transition. */
-    cfg->fighters[0].fkind = nFTKindKirby;
-    cfg->fighters[1].fkind = nFTKindLink;
-#endif
 
-#if NDS_DEV_LIVE_INPUT_PREVIEW
     /* The shipped match: three-minute Time (owner, 2026-10-11; the VS menu
      * starts from it), Fox on the CPU, and the source's item defaults: every
      * item at the middle rate (scmanager.c:578,583; owner, 2026-10-12, "Items
@@ -311,32 +200,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->time_limit = 3;
     cfg->item_toggles = ~0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
-#if NDS_HARNESS_ITEMS_ON
-    /* DIAGNOSTIC ONLY, DEFAULT OFF. Written when the preset above ran items
-     * off (until 2026-10-12), which made one question unanswerable on this
-     * arm: the Poke Ball rays row.
-     * Those rays (roots 41/42) were measured drawing 25 times each -- but from
-     * the FIGHTER ENTRY path, because with items off no Poke Ball item ever
-     * spawns. Entry and item reach the same effect through the same roots, so
-     * that proves the RENDER path; it does not exercise the item TRIGGER,
-     * which is the owner's actual scenario.
-     *
-     * This has to be a build flag rather than a gdb poke. The fields are
-     * copied into gSCManagerTransferBattleState (:623) immediately before the
-     * battle scene reads them, so at that moment the cache line is dirty and a
-     * stub write to DRAM is overwritten by the writeback -- the write-side of
-     * the known stale-read trap. Making the guest write the value is the only
-     * reliable way.
-     *
-     * Never set on a published ROM: it changes the match the shipped preset
-     * describes. */
-    cfg->item_toggles = ~0u;
-    cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
-#endif
     cfg->fighters[1].pkind = nFTPlayerKindCom;
-#if NDS_P2_KIRBY_COPYLINK_PROOF
-    cfg->fighters[1].pkind = nFTPlayerKindMan;
-#endif
 #if NDS_DEMO_FOX_CPU_LADDER
     /* The demo ladder owns Fox's level: 1 at boot, +1 per Mario win, wrapping
      * 9 -> 1 (owner, 2026-08-17). `ndsMNVSResultsSetLoadScene` advances it just
@@ -348,71 +212,6 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[1].level = (u8)gNdsDemoFoxCpuLevel;
 #else
     cfg->fighters[1].level = 3;
-#endif
-#if NDS_R2_BOTH_CPU
-    /* Switch plan R2-06's harness prerequisite, owner-requested 2026-07-29.
-     * Mario becomes a level-3 CPU too, so both fighters attack continuously
-     * without a recorded input stream. That is what makes it useful: it
-     * maximises the live hitbox population, which R2-03 E35 measured as the
-     * owner of the SRC P95 excursion, so it is a deliberate STRESS case.
-     *
-     * The plan is explicit that this is a harness configuration and not a
-     * product change: "The shipped Boundary stays Mario human vs level-3 Fox CPU
-     * at mode 163, and PROJECT_GOAL.md's P95 gate is defined on *representative*
-     * gameplay -- so a P95 read off the stress config is a harder number than
-     * the milestone requires and must be reported as such, never swapped in
-     * silently for the Boundary figure." Honour that: never publish a number
-     * from this build as the Boundary P95.
-     *
-     * OFF THE DEMO LADDER ON PURPOSE. Every banked gate figure was measured
-     * with both fighters at level 3, so this arm re-pins Fox even when
-     * NDS_DEMO_FOX_CPU_LADDER seeded it from the ladder above. Letting the
-     * ladder reach this arm would make a rematched measurement incomparable to
-     * the one before it, silently.
-     *
-     * THE MATCH LENGTH IS NOT THIS FLAG'S BUSINESS. This branch changes WHO
-     * plays, never HOW LONG -- the one-minute Time match set above stands.
-     *
-     * It used to seed time_limit = 7 here, for the freeze soak, and that made
-     * the gate arm sample a 420-second match through a window sized for a
-     * 60-second one: measured 2026-08-05, this arm's banked "whole match"
-     * baseline covered 12.6% of its own match (the opening minute) against
-     * Boundary's 86.7%. Every both-CPU tick figure in the campaign, and the
-     * SRC/MISC split derived from them, was superseded by that one line.
-     * Owner's ruling the same day: *"the soak was only meant to catch freezes,
-     * boundary and both cpu gates should be the 60 sec match"*.
-     *
-     * The soak's long match is real and still needed -- see the block below --
-     * but it is a soak property, not a stress-config property, so it lives on
-     * its own flag where reading it cannot be mistaken for reading the gate. */
-    cfg->fighters[0].pkind = nFTPlayerKindCom;
-    cfg->fighters[0].level = 3;
-    cfg->fighters[1].level = 3;
-#if NDS_P2_MENU_SHELL
-    /* P2-2 standing stress seed.  Keep the old direct-boot R2 arm byte-for-byte
-     * two-fighter so its banked measurements remain comparable, but when that
-     * same stress switch is used on the P2 shell it means what the phase plan
-     * now says: FOUR level-3 CPUs, using only the two ported fighter kinds.
-     *
-     * Mario/Fox/Mario/Fox deliberately exercises same-kind mirror instances in
-     * P3/P4.  The CSS is still the source-of-truth appearance owner: on entry
-     * mnPlayersVSGetFreeCostume assigns distinct FFA costumes in slot order, and
-     * Team Battle reassigns team costumes/shades through the imported source
-     * helpers.  RRBB is BattleShip mnPlayersVSResetPlayer's default team split.
-     * No shipping shell target enables NDS_R2_BOTH_CPU by default. */
-    cfg->fighters[0].team = nSCBattleTeamIDRed;
-    cfg->fighters[1].team = nSCBattleTeamIDRed;
-
-    cfg->fighters[2].fkind = nFTKindMario;
-    cfg->fighters[2].pkind = nFTPlayerKindCom;
-    cfg->fighters[2].level = 3;
-    cfg->fighters[2].team = nSCBattleTeamIDBlue;
-
-    cfg->fighters[3].fkind = nFTKindFox;
-    cfg->fighters[3].pkind = nFTPlayerKindCom;
-    cfg->fighters[3].level = 3;
-    cfg->fighters[3].team = nSCBattleTeamIDBlue;
-#endif
 #endif
 #if NDS_P2_FOUR_CPU_STRESS
     /* P2-2 standing gate: four source VSBattle instances, not four renderer
@@ -520,7 +319,6 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
             {
                 cfg->fighters[slot].fkind = (FTKind)kind;
             }
-#if NDS_P4
             {
                 u32 content = (gNdsLabP4Content >> (slot * 8u)) & 0xffu;
                 const NDSP4Fighter *p4 = ndsP4Fighter(content);
@@ -532,7 +330,6 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
                     cfg->fighters[slot].fkind = (FTKind)p4->parent_kind;
                 }
             }
-#endif
             if (color > 3u)
             {
                 u32 earlier;
@@ -578,64 +375,6 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 #endif
 #endif
-#if NDS_P2_SHELL_ARGMAX_ROSTER
-    /* P2-3f9/f22: THE HEAVIEST PACK ROSTER A PLAYER CAN REACH, SEEDED INTO THE
-     * SCREEN THAT LETS THEM REACH IT.
-     *
-     * PROJECT_GOAL's P2 gate asks for "the measured hardest fighter set", and
-     * the semantic-pack estimator now enumerates all 793 legal one-through-four
-     * kind sets. For an actual four-player VS battle the source selects LOW
-     * detail for every fighter; under that contract the current worst set is
-     * Captain/Link/Pikachu/Kirby (both conservative and VRAM-resolved views),
-     * so this lab arm measures that exact set instead of the older
-     * scene-agnostic High+Low or raw-main-file argmax.
-     *
-     * This is a DESCRIPTOR seed, not a battle seed: it is what the character
-     * select opens on (ndsMenuShellCssInit reads exactly these fields), so the
-     * whole shell still runs -- four live 3D previews, four gates, the
-     * announcer, the stage select -- and the battle loads whatever the CSS
-     * commits. That is the difference from NDS_P2_FOUR_CPU_STRESS below, which
-     * writes the battle state directly and never enters PlayersVS.
-     *
-     * Slot 0 stays the HUMAN. One console is one controller, so 1 human + 3
-     * CPUs is the configuration P2 actually ships; four distinct kinds cost the
-     * arena the same either way. */
-#if !NDS_P2_MENU_SHELL
-#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 is a shell configuration: needs NDS_P2_MENU_SHELL=1"
-#endif
-#if !NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS || \
-    !NDS_P2_LINK || !NDS_P2_PIKACHU || !NDS_P2_YOSHI || !NDS_P2_NESS || \
-    !NDS_P2_PURIN || !NDS_P2_KIRBY
-#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs Kirby and every copied-special donor admitted"
-#endif
-    cfg->fighters[0].fkind = nFTKindCaptain;
-    cfg->fighters[0].pkind = nFTPlayerKindMan;
-    cfg->fighters[0].level = 3;
-    cfg->fighters[0].team = nSCBattleTeamIDRed;
-    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
-    cfg->fighters[0].shade = 0;
-
-    cfg->fighters[1].fkind = nFTKindLink;
-    cfg->fighters[1].pkind = nFTPlayerKindCom;
-    cfg->fighters[1].level = 3;
-    cfg->fighters[1].team = nSCBattleTeamIDRed;
-    cfg->fighters[1].costume = (u8)ftParamGetCostumeCommonID(nFTKindLink, 0);
-    cfg->fighters[1].shade = 0;
-
-    cfg->fighters[2].fkind = nFTKindPikachu;
-    cfg->fighters[2].pkind = nFTPlayerKindCom;
-    cfg->fighters[2].level = 3;
-    cfg->fighters[2].team = nSCBattleTeamIDBlue;
-    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindPikachu, 0);
-    cfg->fighters[2].shade = 0;
-
-    cfg->fighters[3].fkind = nFTKindKirby;
-    cfg->fighters[3].pkind = nFTPlayerKindCom;
-    cfg->fighters[3].level = 3;
-    cfg->fighters[3].team = nSCBattleTeamIDBlue;
-    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindKirby, 0);
-    cfg->fighters[3].shade = 0;
-#endif
 #if NDS_R2_SOAK_MATCH_MINUTES
     /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.
      *
@@ -653,11 +392,6 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * arm must be able to differ in match length without differing in anything
      * else. Both gate arms build with this at 0 and get the 60-second match. */
     cfg->time_limit = NDS_R2_SOAK_MATCH_MINUTES;
-#endif
-#else
-    cfg->game_rules = SCBATTLE_GAMERULE_STOCK;
-    cfg->time_limit = SCBATTLE_TIMELIMIT_INFINITE;
-    cfg->stocks = 8;
 #endif
 }
 
@@ -806,7 +540,6 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         player->pkind = slot->pkind;
         player->costume = slot->costume;
         player->shade = slot->shade;
-#if NDS_P4
         /* The battle state holds the setup parent's kind; the content rides
          * beside it (include/nds/nds_p4.h). VS only: the 1P tier keeps the
          * original cast. */
@@ -819,7 +552,6 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
                  ((s32)slot->fkind == p4->parent_kind)) ?
                     slot->p4_content : 0u;
         }
-#endif
         if (slot->pkind == nFTPlayerKindMan)
         {
             player->color = (cfg->is_team_battle == FALSE) ? (u8)i :

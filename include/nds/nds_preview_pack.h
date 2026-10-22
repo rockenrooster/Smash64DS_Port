@@ -14,11 +14,7 @@
 
 /* Shared VS/1P CSS preview-arena policy. Compact native packs include their
  * owner images; source/oracle profiles retain the complete reloc closure. */
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES (80u * 1024u)
-#else
-#define NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES (156u * 1024u)
-#endif
 
 typedef struct NDSPreviewPackHeader {
     u32 magic;
@@ -90,7 +86,6 @@ _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
  * condition identical to NDS_PLAYERS_VS_COMPACT_PREVIEW's -- if that moves,
  * this must move with it, or the same break comes back in a different
  * configuration. */
-#if ((((NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_SHELL_ARGMAX_ROSTER) || NDS_P2_COMPACT_BATTLE_FIGHTERS) || NDS_P2_YOSHI) || (NDS_RENDERER_PROFILE_LEVEL < 2)
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
 
 /* Resumable form of the same compact load, for the character-select preview
@@ -136,7 +131,6 @@ u32 ndsRelocUseBattleCoreFighterData(void);
 /* Only native production's original-offset image references use this seam;
  * ordinary relocated MObj pointers already address the compact bytes. */
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset);
-#endif
 /* Model display-list roots are not ordinary retained spans in FPC2. They live
  * in the section's identity-cell tail as { ENDDL, source_root_offset }. Resolve
  * that cell explicitly; raw/non-compact files preserve base + root_offset. */
@@ -155,7 +149,7 @@ void ndsMNPlayersClearPreviewFighterFiles(s32 fkind);
 const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
                                              u32 offset);
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
 /* FPC1 VSBattle packs leave non-Model Main externs NULL until the source
  * status/special closure has been made resident.  Restore those generated
  * source slots before fighter construction. */

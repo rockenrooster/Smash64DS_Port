@@ -534,7 +534,6 @@
 #define NDS_AUDIO_BGM_DATA_LOOP_PACKET 1u
 #define NDS_AUDIO_BGM_DATA_LOOP_RECORD 5876u
 #endif
-#if NDS_P2_ITEM_CORE
 /* nSYAudioBGMHammer, rendered 2026-09-05 from S1_music_sbk sequence 45 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_hammer_ima.json
  * verbatim. */
@@ -546,8 +545,6 @@
 #define NDS_AUDIO_BGM_HAMMER_PACKET_COUNT 5u
 #define NDS_AUDIO_BGM_HAMMER_LOOP_PACKET 1u
 #define NDS_AUDIO_BGM_HAMMER_LOOP_RECORD 2256u
-#endif
-#if NDS_P2_ITEM_CORE
 /* nSYAudioBGMStar, rendered 2026-09-05 from S1_music_sbk sequence 46 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_star_ima.json
  * verbatim. */
@@ -559,7 +556,6 @@
 #define NDS_AUDIO_BGM_STAR_PACKET_COUNT 6u
 #define NDS_AUDIO_BGM_STAR_LOOP_PACKET 1u
 #define NDS_AUDIO_BGM_STAR_LOOP_RECORD 5144u
-#endif
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_BYTES 326800u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0x0a5ba8cfu
 #define NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u
@@ -694,10 +690,6 @@ extern volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 extern volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 extern volatile u32 gNdsAudioBgmLoopCount;
 extern volatile u32 gNdsAudioBgmRefillCount;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-extern volatile u32 gNdsAudioBgmRefillTicksLast;
-extern volatile u32 gNdsAudioBgmRefillTicksMax;
-#endif
 extern volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 extern volatile u32 gNdsAudioBgmWritePositionBytes;
 extern volatile u32 gNdsAudioBgmPlaybackHalf;

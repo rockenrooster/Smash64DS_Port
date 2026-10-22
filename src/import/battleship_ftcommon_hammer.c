@@ -19,7 +19,6 @@
  * reloc_backend_compat_shims.c, as is ftHammerProcMap in
  * battleship_ftstatus_map_physics_shims.c.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <ft/fighter.h>
 #include <it/item.h>
@@ -76,4 +75,3 @@ void ftCommonHammerLandingSetStatus(GObj *fighter_gobj);
 #undef ftCommonPassSetStatusParam
 #undef ftCommonPassCheckInputSuccess
 
-#endif /* NDS_P2_ITEM_CORE */

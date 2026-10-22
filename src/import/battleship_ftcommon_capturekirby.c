@@ -19,9 +19,7 @@
 #include <mp/map.h>
 #include <sys/audio.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -75,7 +73,6 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureApplyCatchKnockback ndsBaseFTCommonCaptureApplyCatchKnockback
 #define ftCommonCaptureApplyCaptureKnockback ndsBaseFTCommonCaptureApplyCaptureKnockback
 
-#if NDS_P4
 /* P4: a content holding the victim sets its own breakout wait (Dedede's
  * custom_initial_absorbed_timer_ in ftCommonCaptureWaitKirbySetStatus), and
  * the star's damage reads the port's copy of Kirby's copy table, his file or
@@ -83,26 +80,15 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureTrappedInitBreakoutVars(fp_, wait_) \
     ftCommonCaptureTrappedInitBreakoutVars((fp_), ndsP4KirbyCaptureWait((fp_), (wait_)))
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
-#if NDS_P2_KIRBY
 /* S8: a Kirby another swallows loses his copy, and a content's power with
  * it (the only call here is that loss). */
 #define ftKirbySpecialNInitPassiveVars(fp_) \
     (ndsP4KirbyLoseCopy(fp_), ftKirbySpecialNInitPassiveVars(fp_))
-#endif
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturekirby.c"
-#if NDS_P4
 #undef ftCommonCaptureTrappedInitBreakoutVars
 #undef gFTDataKirbyMainMotion
-#if NDS_P2_KIRBY
 #undef ftKirbySpecialNInitPassiveVars
-#endif
-#endif
 /* P4: as battleship_ftcommon_catch.c's copy (yoshi_grab_fix_2). */
-#if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturewait.c"
-#if NDS_P4
 #undef nFTKindYoshi
-#endif

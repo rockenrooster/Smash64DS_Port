@@ -9,18 +9,12 @@
 #include <sys/obj.h>
 
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 /* P4 builds name the source's definitions ndsSource*; the ndsBase* entry
  * points below send a P4 content to the files' P4 copy
  * (battleship_ftcommon_jab_p4.c) and everyone else here. */
-#if NDS_P4
 #define NDS_ATTACK100_NAME(name_) ndsSource##name_
-#else
-#define NDS_ATTACK100_NAME(name_) ndsBase##name_
-#endif
 #define ftCommonAttack100StartProcUpdate NDS_ATTACK100_NAME(FTCommonAttack100StartProcUpdate)
 #define ftCommonAttack100StartSetStatus NDS_ATTACK100_NAME(FTCommonAttack100StartSetStatus)
 #define ftCommonAttack100LoopKirbyUpdateEffect NDS_ATTACK100_NAME(FTCommonAttack100LoopKirbyUpdateEffect)
@@ -55,7 +49,6 @@ sb32 NDS_ATTACK100_NAME(FTCommonAttack100StartCheckInterruptCommon)(GObj *fighte
 #undef llKirbyMainMotionftKirbyAttack100Effect
 #undef NDS_RELOC_LVALUE
 
-#if NDS_P4
 #define NDS_ATTACK100_ENTRY(n_)                                                   \
     void ndsBaseFTCommon##n_(GObj *fighter_gobj)                                  \
     {                                                                             \
@@ -92,4 +85,3 @@ sb32 ndsBaseFTCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
     }
     return ndsSourceFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
 }
-#endif

@@ -145,9 +145,6 @@ extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
  * (`battleship_fox_blaster.c`) -- read THIS ONE constant, proven by enumeration
  * over the whole tree, so any value keeps presentation and collision on one
  * shared line and a visual/hitbox desync is not expressible here. */
-#ifndef NDS_FOX_BLASTER_BORE_OFFSET_Y
-#define NDS_FOX_BLASTER_BORE_OFFSET_Y 0
-#endif
 #define NDS_FOX_BLASTER_BORE_OFFSET_Y_Q12 \
     ((s32)NDS_FOX_BLASTER_BORE_OFFSET_Y << 12)
 /* EFCommon script 0x62's closed Fox muzzle/impact flash. The native path keeps
@@ -170,7 +167,6 @@ s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj);
 s32 ndsEFManagerVisualTemplateIndex(GObj *effect_gobj, u32 *template_out);
 extern volatile u32 gNdsVisualEffectNativeDrawCount;
 extern volatile u32 gNdsVisualEffectNativeDeclineCount;
-#if NDS_R2_IMPACT_WAVE_NATIVE
 /* Identity only; the source maker/update still own the GObj. The renderer uses
  * this to replace only ImpactWave's hot display-list execution. */
 s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj);
@@ -184,13 +180,10 @@ extern volatile u32 gNdsImpactWaveNativeDrawCount;
 extern volatile u32 gNdsImpactWaveNativeFallbackCount;
 extern volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
 extern volatile u32 gNdsImpactWaveNativeTextureBindCount;
-#endif
-#if NDS_R2_REBIRTH_HALO_NATIVE
 extern volatile u32 gNdsRebirthHaloNativeDrawCount;
 extern volatile u32 gNdsRebirthHaloNativeFallbackCount;
 extern volatile u32 gNdsRebirthHaloNativeTexturePrepareCount;
 extern volatile u32 gNdsRebirthHaloNativeTextureBindCount;
-#endif
 /* Named for what it does: it stops EVERY effect attached to the fighter, source
  * models included, exactly as source's ftParamProcStopEffect does. The old name
  * said "VisualEffects" and the body matched the name rather than the contract,

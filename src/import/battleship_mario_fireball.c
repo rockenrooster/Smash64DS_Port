@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
 
 #include <common.h>
 #include <ef/effect.h>
@@ -25,38 +24,19 @@ uintptr_t llMarioMainFireballWeaponAttributes;
 uintptr_t llMarioSpecial1FireballWeaponAttributes;
 uintptr_t llLuigiSpecial1FireballWeaponAttributes;
 
-#if NDS_R2_FIREBALL_MAP_COLL_DEBUG
-/* Live fireball collision-diamond snapshot, captured every frame from the
- * fireball's update proc and drawn as a world-space line outline from
- * lbParticleDrawTextures (which has the particle camera matrix loaded). Read
- * by the debug overlay; defined here because the fireball TU owns the capture. */
-u32  gNdsFireballDebugCollActive;
-f32  gNdsFireballDebugCollX;
-f32  gNdsFireballDebugCollY;
-f32  gNdsFireballDebugCollZ;
-f32  gNdsFireballDebugCollTop;
-f32  gNdsFireballDebugCollCenter;
-f32  gNdsFireballDebugCollBottom;
-f32  gNdsFireballDebugCollWidth;
-#endif
 
 extern f32 lbCommonMag2D(Vec3f *vec);
 extern Vec3f *syVectorRotateAbout3D(Vec3f *dst, Vec3f *dir, f32 angle);
 void ftMarioSpecialAirNSwitchStatusGround(GObj *fighter_gobj);
 void ftMarioSpecialNSwitchStatusAir(GObj *fighter_gobj);
 
-#if NDS_R2_FIREBALL_NATIVE_MAP_COLL
 static sb32 ndsMarioFireballMapTestAll(GObj *weapon_gobj);
 #define wpMapTestAll ndsMarioFireballMapTestAll
-#endif
 #define wpMarioFireballMakeWeapon battleship_wpMarioFireballMakeWeapon
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmario/wpmariofireball.c"
 #undef wpMarioFireballMakeWeapon
-#if NDS_R2_FIREBALL_NATIVE_MAP_COLL
 #undef wpMapTestAll
-#endif
 
-#if NDS_R2_FIREBALL_NATIVE_MAP_COLL
 /*
  * DS-NATIVE DREAM LAND FIREBALL COLLISION
  * ----------------------------------------
@@ -616,7 +596,6 @@ static sb32 ndsMarioFireballMapTestAll(GObj *weapon_gobj)
     NDS_DIAG(gNdsFireballNativeMapHandledCount++);
     return FALSE;
 }
-#endif /* NDS_R2_FIREBALL_NATIVE_MAP_COLL */
 
 static sb32 ndsMarioFireballProcReflectorProbe(GObj *weapon_gobj)
 {
@@ -652,32 +631,6 @@ static sb32 ndsMarioFireballProcUpdateProbe(GObj *weapon_gobj)
     {
         gNdsFighterProjectileProofUpdateDestroyCount++;
     }
-#if NDS_R2_FIREBALL_MAP_COLL_DEBUG
-    /* Capture the live collision diamond for the debug overlay drawn from
-     * lbParticleDrawTextures. Only the most-recently-updated fireball is shown,
-     * which is the one in flight. Values are read live each frame here so the
-     * overlay tracks the fireball as it moves/rebounds. */
-    if (result == FALSE)
-    {
-        WPStruct *wp = wpGetStruct(weapon_gobj);
-        if (wp != NULL)
-        {
-            Vec3f *t = &DObjGetStruct(weapon_gobj)->translate.vec.f;
-            gNdsFireballDebugCollActive = 1u;
-            gNdsFireballDebugCollX = t->x;
-            gNdsFireballDebugCollY = t->y;
-            gNdsFireballDebugCollZ = t->z;
-            gNdsFireballDebugCollTop    = wp->coll_data.map_coll.top;
-            gNdsFireballDebugCollCenter = wp->coll_data.map_coll.center;
-            gNdsFireballDebugCollBottom = wp->coll_data.map_coll.bottom;
-            gNdsFireballDebugCollWidth  = wp->coll_data.map_coll.width;
-        }
-    }
-    else
-    {
-        gNdsFireballDebugCollActive = 0u;
-    }
-#endif
     return result;
 }
 
@@ -788,7 +741,6 @@ static void ndsMarioFireballSampleWeaponPool(void)
 GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
 {
     GObj *weapon_gobj;
-#if NDS_P4
     /* The fireball table: a content's (or its copied power's) own
      * projectile in the fireball's place (Mad Piano's book). */
     GObj *(*fireball)(GObj *, Vec3f *) = ndsP4Fireball(ftGetStruct(fighter_gobj));
@@ -797,7 +749,6 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
     {
         return fireball(fighter_gobj, pos);
     }
-#endif
 
     gNdsFighterProjectileProofSpawnCallCount++;
     dWPMarioFireballWeaponDesc.proc_update = ndsMarioFireballProcUpdateProbe;
@@ -873,4 +824,3 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialn.c"
 
-#endif

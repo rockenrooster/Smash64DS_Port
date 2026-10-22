@@ -9,9 +9,6 @@ static s32 ndsRendererValidateCommand(const Gfx *dl,
 {
     uintptr_t addr = (uintptr_t)dl;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererProfileValidatedCommandCount++;
-#endif
 
     if ((dl == NULL) || ((addr & 0x3u) != 0))
     {
@@ -37,9 +34,7 @@ ndsRendererApplyVertexCommand(
     const u8 *src;
     u32 i;
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u32 *prepared_light_shade_lut = NULL;
-#endif
     u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
 
     if ((stats == NULL) || (state == NULL))
@@ -54,9 +49,6 @@ ndsRendererApplyVertexCommand(
         NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    stats->source_vertex_count += count;
-#endif
     if ((v0 + count) > stats->vertex_count)
     {
         stats->vertex_count = v0 + count;
@@ -88,7 +80,6 @@ ndsRendererApplyVertexCommand(
             state->prepared_light_direction_valid = TRUE;
         }
         prepared_light_direction = &state->prepared_light_direction;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((stats->light_color_mask &
              (NDS_RENDERER_LIGHT_COLOR_1_MASK |
               NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
@@ -98,7 +89,6 @@ ndsRendererApplyVertexCommand(
             prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut(
                 stats->light_color_1, stats->light_color_2);
         }
-#endif
     }
 
     for (i = 0u; i < count; i++)
@@ -118,7 +108,6 @@ ndsRendererApplyVertexCommand(
         {
             state->raw_vertex_fit_mask &= ~mask;
         }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (prepared_light_shade_lut != NULL)
         {
             state->vertex_colors[index] =
@@ -127,7 +116,6 @@ ndsRendererApplyVertexCommand(
                     prepared_light_shade_lut);
         }
         else
-#endif
         {
             state->vertex_colors[index] =
                 ndsRendererHardwareLitShadeColorPrepared(
@@ -147,10 +135,6 @@ ndsRendererApplyVertexCommand(
         {
             continue;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        (void)ndsRendererTransformCachedVertex(
-            stats, state, index, &state->matrix, matrix_snapshot);
-#else
         /* Profile 0/1 keep source vertices raw for GX. Only an exhausted
          * snapshot table needs the eager clip fallback retained here. */
         if (matrix_snapshot == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID)
@@ -158,7 +142,6 @@ ndsRendererApplyVertexCommand(
             (void)ndsRendererTransformCachedVertex(
                 stats, state, index, &state->matrix, matrix_snapshot);
         }
-#endif
     }
 }
 
@@ -170,9 +153,6 @@ static inline void ndsRendererExecuteTriangleCommand(
     u32 w0,
     u32 w1)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 triangle_submit_start;
-#endif
 
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->triangle_command_count++);
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->render_command_count++);
@@ -183,18 +163,8 @@ static inline void ndsRendererExecuteTriangleCommand(
         stats->triangle_count++;
         if (sNdsRendererHardwareNoOracle == 0u)
         ndsRendererRecordTransformedTriangle(stats, state, packed);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        triangle_submit_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->semantic_tri2_half = 0u;
-#endif
         NDS_EFFECT_PHASE_TRI(
             ndsRendererSubmitHardwareTriangle(stats, config, state, packed));
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererProfileTriangleSubmitTicks +=
-            cpuGetTiming() - triangle_submit_start;
-#endif
         return;
     }
 
@@ -206,23 +176,10 @@ static inline void ndsRendererExecuteTriangleCommand(
         ndsRendererRecordTransformedTriangle(
             stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    triangle_submit_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    state->semantic_tri2_half = 0u;
-#endif
     NDS_EFFECT_PHASE_TRI(ndsRendererSubmitHardwareTriangle(
         stats, config, state, ndsGBIDecodeF3DEX2Tri2First(w0)));
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    state->semantic_tri2_half = 1u;
-#endif
     NDS_EFFECT_PHASE_TRI(ndsRendererSubmitHardwareTriangle(
         stats, config, state, ndsGBIDecodeF3DEX2Tri2Second(w1)));
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererProfileTriangleSubmitTicks +=
-        cpuGetTiming() - triangle_submit_start;
-#endif
 }
 
 /* Direct immutable TRI-run records are topology only.  Live vertex, matrix,
@@ -512,48 +469,8 @@ static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteDirectRawRemainder(
             stats->triangle_command_count++;
             stats->render_command_count++;
         );
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->semantic_command_index = first_index + entry_number;
-        state->semantic_tri2_half = 0u;
-        sNdsRendererProfileTrustedCommandCount++;
-        sNdsRendererProfileTriangleRunReuseCount++;
-#endif
         ndsRendererFastEmitDirectRawEntry(state, entry, textured);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        {
-            u32 w0 = command->words.w0;
-            u32 w1 = command->words.w1;
-            u32 packed[2];
-            u32 triangle_index;
-
-            packed[0] = (entry->triangle_count == 1u) ?
-                ndsGBIDecodeF3DEX2Tri1(w0) :
-                ndsGBIDecodeF3DEX2Tri2First(w0);
-            packed[1] = (entry->triangle_count == 2u) ?
-                ndsGBIDecodeF3DEX2Tri2Second(w1) : 0u;
-            for (triangle_index = 0u;
-                 triangle_index < entry->triangle_count;
-                 triangle_index++)
-            {
-                u32 indices[3];
-                u32 base = triangle_index * 3u;
-
-                indices[0] = entry->indices[base];
-                indices[1] = entry->indices[base + 1u];
-                indices[2] = entry->indices[base + 2u];
-                if (sNdsRendererHardwareNoOracle == 0u)
-                {
-                    ndsRendererRecordTransformedTriangle(
-                        stats, state, packed[triangle_index]);
-                }
-                state->semantic_tri2_half = triangle_index;
-                ndsRendererFastCommitRawSemanticTriangle(
-                    stats, state, packed[triangle_index], indices);
-            }
-        }
-#else
         (void)command;
-#endif
     }
 
     stats->triangle_count += plan->triangle_count;
@@ -628,12 +545,6 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
         list_index++;
         dl = next_dl;
         stats->command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->semantic_command_index = list_index;
-        state->semantic_tri2_half = 0u;
-        sNdsRendererProfileTrustedCommandCount++;
-        sNdsRendererProfileTriangleRunReuseCount++;
-#endif
         if (callback != NULL)
         {
             memset(&command, 0, sizeof(command));
@@ -700,11 +611,6 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
                 }
                 ndsRendererFastEmitRawCommand(
                     state, triangle, 1u, textured);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                state->semantic_tri2_half = triangle_index;
-                ndsRendererFastCommitRawSemanticTriangle(
-                    stats, state, packed[triangle_index], triangle);
-#endif
             }
             fast_triangles += triangle_count;
             fast_command_count++;
@@ -831,10 +737,6 @@ ndsRendererScanColdCommand(const Gfx *dl,
     {
         const Gfx *raw_branch = command.raw_branch_dl;
         const Gfx *branch = command.resolved_branch_dl;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        u32 parent_branch_path = state->semantic_branch_path;
-        u32 child_branch_path;
-#endif
 
         stats->branch_command_count++;
         if (stats->first_branch_dl == NULL)
@@ -857,27 +759,14 @@ ndsRendererScanColdCommand(const Gfx *dl,
         if ((w0 & (1u << 16)) != 0)
         {
             stats->branch_jump_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            child_branch_path = ndsRendererSemanticBranchPath(
-                parent_branch_path, list_index, depth + 1u, TRUE);
-            state->semantic_branch_path = child_branch_path;
-#endif
             ndsRendererScanList(branch, config, stats, state, depth + 1u,
                                 callback, callback_user);
             return NDS_RENDERER_SCAN_COLD_RETURN;
         }
 
         stats->branch_call_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        child_branch_path = ndsRendererSemanticBranchPath(
-            parent_branch_path, list_index, depth + 1u, FALSE);
-        state->semantic_branch_path = child_branch_path;
-#endif
         ndsRendererScanList(branch, config, stats, state, depth + 1u,
                             callback, callback_user);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->semantic_branch_path = parent_branch_path;
-#endif
         return (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ?
             NDS_RENDERER_SCAN_COLD_RETURN : NDS_RENDERER_SCAN_COLD_CONTINUE;
     }
@@ -965,12 +854,6 @@ ndsRendererScanList(const Gfx *dl,
             immutable_count = config->max_list_commands;
         }
         immutable_command_count = (u32)immutable_count;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (immutable_command_count != 0u)
-        {
-            sNdsRendererProfileImmutableListCount++;
-        }
-#endif
     }
 
     for (i = 0; i < config->max_list_commands; i++, dl++)
@@ -985,12 +868,6 @@ ndsRendererScanList(const Gfx *dl,
             stats->blocker = NDS_RENDERER_BLOCKER_BAD_BRANCH;
             return;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (i < immutable_command_count)
-        {
-            sNdsRendererProfileTrustedCommandCount++;
-        }
-#endif
         if (stats->command_count >= config->max_commands)
         {
             stats->blocker = NDS_RENDERER_BLOCKER_BUDGET;
@@ -1001,10 +878,6 @@ ndsRendererScanList(const Gfx *dl,
         w1 = dl->words.w1;
         op = w0 >> 24;
         state->source_command_site = dl;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->semantic_command_index = i;
-        state->semantic_tri2_half = 0u;
-#endif
         /* Preserve the source-command boundary: only adjacent TRI1/TRI2
          * opcodes may share a GX triangle group. In particular, close before
          * VTX/MODIFYVTX mutate the cached vertices and before any matrix,
@@ -1069,17 +942,12 @@ ndsRendererScanList(const Gfx *dl,
              * state transition. Profile 0/1 has no command callback, so
              * replay the remainder of the run without rebuilding a generic
              * command record or re-entering the full opcode switch. */
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             if ((callback == NULL) && (sNdsRendererFastOwnerEnabled != 0u))
-#else
-            if (sNdsRendererFastOwnerEnabled != 0u)
-#endif
             {
                 ndsRendererExecuteFastRawCurrentRun(
                     &dl, &i, immutable_command_count,
                     config, stats, state, depth, callback, callback_user);
             }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             else while ((callback == NULL) &&
                    ((i + 1u) < immutable_command_count) &&
                    ((i + 1u) < config->max_list_commands))
@@ -1101,15 +969,10 @@ ndsRendererScanList(const Gfx *dl,
                 i++;
                 dl = next_dl;
                 stats->command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                sNdsRendererProfileTrustedCommandCount++;
-                sNdsRendererProfileTriangleRunReuseCount++;
-#endif
                 ndsRendererExecuteTriangleCommand(
                     stats, config, state, next_op, next_w0,
                     next_dl->words.w1);
             }
-#endif
             break;
         }
 

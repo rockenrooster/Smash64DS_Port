@@ -83,9 +83,6 @@ static void ndsTask37ProfileWriteMarker(unsigned int value)
  * tick site keyed on sMNVSResultsTotalTimeTics, and the battle one must go quiet
  * or it would RESET at battle frame START and DUMP long before Results is
  * reached. Exactly one of the two is live in any build. */
-#ifndef NDS_TASK37_PROFILE_RESULTS
-#define NDS_TASK37_PROFILE_RESULTS 0
-#endif
 
 /* Called once per presented battle iteration, after the frame counter has
  * advanced. Opens the census window on one frame and closes it on one frame;
@@ -114,15 +111,9 @@ static inline void ndsTask37ProfileFrameTick(unsigned int presented_frames)
 #endif
 }
 
-#if NDS_TASK37_PROFILE_RESULTS
-#define NDS_TASK37_PROFILE_FRAME_TICK(frames) ((void)0)
-#define NDS_TASK37_PROFILE_RESULTS_TICK(tics) \
-    ndsTask37ProfileFrameTick((unsigned int)(tics))
-#else
 #define NDS_TASK37_PROFILE_FRAME_TICK(frames) \
     ndsTask37ProfileFrameTick((unsigned int)(frames))
 #define NDS_TASK37_PROFILE_RESULTS_TICK(tics) ((void)0)
-#endif
 
 #else
 

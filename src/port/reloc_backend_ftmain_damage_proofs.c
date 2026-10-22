@@ -556,13 +556,9 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof(
     ftParamClearAttackRecordID(attacker_fp, (s32)attack_id);
     gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
     attacker_gobj->link_next = NULL;
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     sNdsStageMPLiveHitDamageLoopShieldStatProofActive = TRUE;
-#endif
     ftMainSearchHitFighter(victim_gobj);
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     sNdsStageMPLiveHitDamageLoopShieldStatProofActive = FALSE;
-#endif
     gGCCommonLinks[nGCCommonLinkIDFighter] = saved_fighter_link_head;
     attacker_gobj->link_next = saved_attacker_link_next;
 
@@ -599,13 +595,9 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopRunShieldStatProof(
         gNdsStageMPLiveHitDamageLoopShieldContactHitCount;
     gGCCommonLinks[nGCCommonLinkIDFighter] = attacker_gobj;
     attacker_gobj->link_next = NULL;
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     sNdsStageMPLiveHitDamageLoopShieldStatProofActive = TRUE;
-#endif
     ftMainSearchHitFighter(victim_gobj);
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     sNdsStageMPLiveHitDamageLoopShieldStatProofActive = FALSE;
-#endif
     gGCCommonLinks[nGCCommonLinkIDFighter] = saved_fighter_link_head;
     attacker_gobj->link_next = saved_attacker_link_next;
     if ((attack_coll->attack_records[0].victim_gobj == victim_gobj) &&

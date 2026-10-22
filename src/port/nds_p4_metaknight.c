@@ -33,13 +33,10 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_METAKNIGHT
 
 #include <ef/effect.h>
 #include <sys/audio.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -778,23 +775,18 @@ static const u16 sNdsP4MetaknightStatusReplace[] = {
     0xFFFF
 };
 
-#if NDS_P2_KIRBY
 static void ndsP4MetaknightKirbyOnLanding(FTStruct *fp);
-#endif
 
 const NDSP4Overrides gNdsP4MetaknightOverrides = {
     .on_init = ndsP4MetaknightOnInit,
     .shouldered_interrupt = ndsP4MetaknightShoulderedInterrupt,
     .status_replace = sNdsP4MetaknightStatusReplace,
-#if NDS_P2_KIRBY
     .kirby_on_landing = ndsP4MetaknightKirbyOnLanding,
-#endif
     /* main.asm static_part: "withheld part 5 - left hand item", joint 12
      * (his light-item joint, a hidden part his item motions install). */
     .static_parts = { 0x00800000u, 0u },
 };
 
-#if NDS_P2_KIRBY
 /* ---- Kirby's copy (owner request 2026-10-12, "Brawl-style") ----
  *
  * EXTRA lets no Kirby copy Meta Knight (define_character's bool_inhale_copy
@@ -1061,6 +1053,4 @@ sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp)
     return ((fp->fkind == nFTKindKirby) &&
             (fp->status_id == NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_LOOP)) ? TRUE : FALSE;
 }
-#endif /* NDS_P2_KIRBY */
 
-#endif /* NDS_P4_METAKNIGHT */

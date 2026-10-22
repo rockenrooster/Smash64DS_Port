@@ -29,8 +29,5 @@
  * a 42,240 regression for "uncaching", which was the opposite of the truth.
  * One variable per arm. Evidence:
  * artifacts/performance/2026-09-16_p2-2p8-sintable-uncached/. */
-#if NDS_LAB_UNCACHED_SINTABLE
-extern u16 gSYSinTable[0x800] __attribute__((aligned(4096)));
-#endif
 
 #include "../../decomp/BattleShip-main/decomp/src/sys/sintable.c"

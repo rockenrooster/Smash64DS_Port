@@ -23,7 +23,6 @@
 
 #include <nds/nds_r2_hwmath_unit.h>
 
-#if NDS_R2_FIXED_SQRT
 
 /* The square-root unit is one set of global registers, and the sequence is
  * write-param / poll-busy / read-result. newlib's sqrtf was pure software and
@@ -70,9 +69,6 @@ extern float __ieee754_sqrtf(float x);
  * GCC inlines it, so the shipped `sqrtf` is the same function it always was. In
  * the route build it must stay out of line so BOTH arms pay one call and the
  * measured delta is the instruction selection, not the call. */
-#if defined(NDS_R2_HWMATH_ROUTE) && NDS_R2_HWMATH_ROUTE
-__attribute__((noinline))
-#endif
 static float ndsR2SqrtfBody(float x)
 {
     unsigned int bits;
@@ -87,40 +83,10 @@ static float ndsR2SqrtfBody(float x)
     return x;
 }
 
-#if defined(NDS_R2_HWMATH_ROUTE) && NDS_R2_HWMATH_ROUTE
-
-/* THE SAME-BINARY ROUTE. The change being priced is a codegen flag -- this
- * object built -marm instead of -mthumb, so nds_r2_sqrtf.h's 48-bit
- * `root * root` becomes one UMULL instead of `bl __aeabi_lmul` (ARMv5TE Thumb
- * has no UMULL). Expected 37%-41% of an 11,608 tk/fr lane = 4,300-4,750, which
- * is FAR under the >=14,080 rank-80 cross-build floor, so a two-build A/B
- * cannot decide it. Instead both bodies live in one binary -- this TU stays
- * -mthumb and nds_r2_sqrtf_arm.c is built -marm -- and one `.data` word picks
- * the arm, giving identical ROM placement on every arm.
- *
- * .data AND NOT .bss: a zero-initialised route word without an explicit section
- * attribute lands in .bss and drags a ~10,000 tk/fr placement floor with it. */
-volatile uint32_t gNdsR2HwMathRoute
-    __attribute__((used, section(".data"))) = 0u;
-
-extern float ndsR2SqrtfArmBody(float x);
-
-float __attribute__((section(".itcm"))) sqrtf(float x)
-{
-    if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_SQRTF_ARM) != 0u)
-    {
-        return ndsR2SqrtfArmBody(x);
-    }
-    return ndsR2SqrtfBody(x);
-}
-
-#else
 
 float __attribute__((section(".itcm"))) sqrtf(float x)
 {
     return ndsR2SqrtfBody(x);
 }
 
-#endif
 
-#endif /* NDS_R2_FIXED_SQRT */

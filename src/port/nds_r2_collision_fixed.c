@@ -54,23 +54,6 @@
 /* NDS_R2_CFX_HWMATH arrives through the Makefile's global
  * `-include $(BUILD)/nds_build_config.h` (Makefile:2382), the same way
  * NDS_R2_COLLISION_FIXED reaches src/import/battleship_gmcollision.c. */
-#if NDS_R2_CFX_HWMATH
-#include <nds/nds_r2_hwmath_unit.h>
-#define NDS_R2_CFX_DIV64(numerator, denominator) \
-    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
-#define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
-/* THE THIRD HOOK, and it was not in the brief. include/nds/nds_r2_collision_mtx.h:361
- * carries its own never-defined NDS_R2_COLLISION_DIV64 with the same "the port
- * overrides this with the DS hardware divider" comment, and it is the divide
- * inside ndsR2CollisionInvertMatrix44 -- i.e. inside ndsR2CollisionFixedInvertF32,
- * which is one of the four f32-boundary entry points the wired ring actually
- * calls (EXCHANGE.md section 3.1 lists InvertF32 among the ring rows). Binding
- * only the two CFX hooks left a `bl __aeabi_ldivmod` in this object, found by
- * disassembling it rather than by reading the brief. That header is included by
- * nds_r2_collision_fixed.h, so defining the macro here reaches it. */
-#define NDS_R2_COLLISION_DIV64(numerator, denominator) \
-    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
-#endif
 
 #include <nds/nds_r2_collision_fixed.h>
 

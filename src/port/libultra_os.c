@@ -29,51 +29,6 @@ static size_t ndsOsServiceStackSize(OSId id)
 
 static OSThread *sThreads[NDS_OS_MAX_THREADS];
 
-#if NDS_TASK20_STACK_PROFILE
-volatile u32 gNdsTask20GameplayStackBase;
-volatile u32 gNdsTask20GameplayStackSize;
-volatile u32 gNdsTask20GameplayStackHighWater;
-volatile u32 gNdsTask20MainStackBottom;
-volatile u32 gNdsTask20MainStackPoisonStart;
-volatile u32 gNdsTask20MainStackTop;
-volatile u32 gNdsTask20MainStackHighWater;
-volatile u32 gNdsTask20SampleCount;
-/* Consume one suspension-safe startup census before any timed phase. */
-volatile u32 gNdsTask20SampleRequest = 1u;
-
-static void ndsOsTask20SampleStack(const OSThread *thread, s32 finished)
-{
-    size_t high_water;
-
-    if (thread == NULL || thread->port_coroutine == NULL) return;
-    if (finished != FALSE) {
-        portCoroutineTask20Sample(thread->port_coroutine);
-    }
-    if (thread->id != 5) return;
-    if ((gNdsTask20SampleRequest == 0u) && (finished == FALSE)) return;
-    gNdsTask20SampleRequest = 0u;
-
-    portCoroutineTask20Sample(thread->port_coroutine);
-
-    gNdsTask20GameplayStackBase = (u32)(uintptr_t)
-        portCoroutineStackBase(thread->port_coroutine);
-    gNdsTask20GameplayStackSize = (u32)
-        portCoroutineStackSize(thread->port_coroutine);
-    high_water = portCoroutineStackHighWater(thread->port_coroutine);
-    if (high_water > gNdsTask20GameplayStackHighWater) {
-        gNdsTask20GameplayStackHighWater = (u32)high_water;
-    }
-    gNdsTask20MainStackBottom = (u32)portCoroutineMainStackBottom();
-    gNdsTask20MainStackPoisonStart =
-        (u32)portCoroutineMainStackPoisonStart();
-    gNdsTask20MainStackTop = (u32)portCoroutineMainStackTop();
-    high_water = portCoroutineMainStackHighWater();
-    if (high_water > gNdsTask20MainStackHighWater) {
-        gNdsTask20MainStackHighWater = (u32)high_water;
-    }
-    gNdsTask20SampleCount++;
-}
-#endif
 
 u32 ndsOsForgetThreadsInArena(const void *base, u32 size)
 {
@@ -260,9 +215,6 @@ void osStartThread(OSThread *thread)
     if (!portCoroutineIsFinished(coroutine)) {
         thread->state = OS_STATE_RUNNABLE;
         portCoroutineResume(coroutine);
-#if NDS_TASK20_STACK_PROFILE
-        ndsOsTask20SampleStack(thread, portCoroutineIsFinished(coroutine));
-#endif
         if (portCoroutineIsFinished(coroutine)) {
             thread->state = OS_STATE_STOPPED;
             ndsOsReclaimFinishedService(thread);
@@ -417,9 +369,6 @@ void ndsOsRunThreads(void)
 
         thread->state = OS_STATE_RUNNING;
         portCoroutineResume(coroutine);
-#if NDS_TASK20_STACK_PROFILE
-        ndsOsTask20SampleStack(thread, portCoroutineIsFinished(coroutine));
-#endif
         if (portCoroutineIsFinished(coroutine)) {
             thread->state = OS_STATE_STOPPED;
             ndsOsReclaimFinishedService(thread);

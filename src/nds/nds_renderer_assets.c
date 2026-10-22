@@ -46,13 +46,6 @@ typedef struct NDSRendererTraversalState
     u32 texture_prepare_source_zbuffered;
     u32 texture_prepare_decal_depth;
     u32 texture_prepare_prim_depth;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 texture_prepare_key_hash;
-    u32 texture_prepare_params;
-    u32 semantic_branch_path;
-    u32 semantic_command_index;
-    u32 semantic_tri2_half;
-#endif
     u32 texture_prepare_alpha_constant;
     u32 texture_prepare_poly_alpha;
     u32 texture_prepare_poly_fmt;
@@ -173,7 +166,6 @@ extern void *syTaskmanMalloc(size_t size, u32 align);
 #endif
 
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* R2-03 E29. Under NDS_R2_FIGHTER_HW_LIGHT the geometry engine lights the
  * fighter: all four emit paths write GFX_NORMAL from
  * sNdsNativeFighterDenseNormals and never read packed_color, and every epoch is
@@ -187,21 +179,10 @@ extern void *syTaskmanMalloc(size_t size, u32 align);
 typedef struct NDSNativePreparedDenseVertex
 {
     u32 gx_xy;
-#if !NDS_R2_FIGHTER_HW_LIGHT
-    u32 shaded_rgba;
-#endif
     u16 gx_z;
-#if !NDS_R2_FIGHTER_HW_LIGHT
-    u16 packed_color;
-#endif
     s16 s;
     s16 t;
-#if NDS_R2_FIGHTER_HW_LIGHT
 } __attribute__((packed, aligned(2))) NDSNativePreparedDenseVertex;
-#else
-} NDSNativePreparedDenseVertex;
-#endif
-#endif
 
 
 typedef struct NDSNativeRoot
@@ -244,19 +225,12 @@ _Static_assert(sizeof(NDSNativeStateDelta) == 12u,
                "native state effect ABI must stay compact");
 _Static_assert(sizeof(NDSNativeDenseVertex) == 12u,
                "native dense vertex ABI must stay cache-line friendly");
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-#if NDS_R2_FIGHTER_HW_LIGHT
 /* R2-03 E29. 16 bytes bought exactly two per 32-byte cache line and no
  * straddling; 12 bytes buys a smaller table (6,492 against 8,656, both over the
  * 4 KB dcache) at the cost of one access in three spanning two lines. Which wins
  * is measured, not assumed -- see the E29 write-up. */
 _Static_assert(sizeof(NDSNativePreparedDenseVertex) == 10u,
                "hardware-lit prepared vertices must use ten bytes");
-#else
-_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 16u,
-               "native prepared dense vertex ABI must stay power-of-two");
-#endif
-#endif
 _Static_assert(sizeof(NDSNativeRun) == 8u,
                "native run ABI must stay compact");
 _Static_assert(sizeof(NDSNativeEpoch) == 16u,
@@ -268,17 +242,12 @@ _Static_assert(sizeof(NDSNativeRootVariant) == 20u,
 _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
-#if NDS_P4
 #include "nds_p4_native_owner.generated.inc"
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 /* P4 S8: Remix's Kirby hats (scripts/p4/p4_kirby_hats.py): their image types,
  * and their trio programs with Kirby's head list regenerated around them. */
 #include "kirby/hats/nds_p4_kirby_hats.generated.h"
 #include "kirby/hats/nds_p4_kirby_hats.generated.inc"
-#endif
-#endif
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
-    !defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if !defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
 #error "Kirby owner images require the generated Kirby root programs"
 #endif
 #include "nds_native_stage_owner.generated.inc"
@@ -534,7 +503,6 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* P2-2: BattleShip switches every VS fighter to the Low JointTree when three
  * or more fighters are present (scvsbattle.c:188/:460).  The generated owner
  * therefore has two immutable programs with the same ABI but different roots
@@ -562,9 +530,6 @@ typedef struct NDSNativeFighterRuntimeTables
     const u32 *dense_normals;
     NDSNativePreparedDenseVertex *prepared_dense;
     const u16 *action_dense_spans;
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    const u16 *dense_color_source;
-#endif
     const u16 *packed_corners;
     u32 packed_corner_count;
     const u16 *run_first_corner;
@@ -576,14 +541,12 @@ typedef struct NDSNativeFighterRuntimeTables
     u32 triangle_count;
     const NDSNativeRun *runs;
     u32 run_count;
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     const u16 *primitive_group_first;
     const u8 *primitive_group_count;
     const u8 *primitive_group_type;
     const u16 *primitive_group_first_vertex;
     const u8 *primitive_group_vertex_count;
     const u16 *primitive_vertices;
-#endif
     const NDSNativeEpoch *epochs;
     u32 epoch_count;
 } NDSNativeFighterRuntimeTables;
@@ -693,14 +656,10 @@ typedef struct NDSEntryEffectTexture
  * texels holds 1 + the byte offset (generate_nds_entry_effects.py --p4). */
 #define NDS_ENTRY_EFFECT_COMPRESSION_FILE 2u
 
-#if NDS_P4
 /* P4 builds: the same packet with every enabled content's article roots
  * appended (scripts/p4/p4_articles.py, generated into the build's p4
  * directory by generate_nds_entry_effects.py --p4). */
 #include "nds_p4_entry_effects.generated.inc"
-#else
-#include "nds_entry_effects.generated.inc"
-#endif
 /* The texcoord dictionaries' corner index: u8 unless a packet outgrew it. */
 #ifndef NDS_ENTRY_EFFECT_UV_INDEX_T
 #define NDS_ENTRY_EFFECT_UV_INDEX_T u8
@@ -806,9 +765,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
     NULL,
     sNdsNativeFighterPreparedDense,
     sNdsNativeFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeFighterDenseColorSource,
-#endif
     /* R1 retired: no raw-path reader is compiled, so these stay unlinked. */
     NULL, 0u, NULL, 0u,
     sNdsNativeFighterRunFirstUnique,
@@ -816,14 +772,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
     sNdsNativeFighterRunUniqueDense,
     sNdsNativeFighterTriangles, NDS_FTR_COUNT(sNdsNativeFighterTriangles),
     sNdsNativeFighterRuns, NDS_FTR_COUNT(sNdsNativeFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeFighterPrimitiveGroupFirst,
     sNdsNativeFighterPrimitiveGroupCount,
     sNdsNativeFighterPrimitiveGroupType,
     sNdsNativeFighterPrimitiveGroupFirstVertex,
     sNdsNativeFighterPrimitiveGroupVertexCount,
     sNdsNativeFighterPrimitiveVertices,
-#endif
     sNdsNativeFighterEpochs, NDS_FTR_COUNT(sNdsNativeFighterEpochs)
 };
 
@@ -842,23 +796,18 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
     NULL,
     sNdsNativeFighterPreparedDenseLow,
     sNdsNativeFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeFighterDenseColorSourceLow,
-#endif
     NULL, 0u, NULL, 0u,
     sNdsNativeFighterRunFirstUniqueLow,
     sNdsNativeFighterRunUniqueCountLow,
     sNdsNativeFighterRunUniqueDenseLow,
     sNdsNativeFighterTrianglesLow, NDS_FTR_COUNT(sNdsNativeFighterTrianglesLow),
     sNdsNativeFighterRunsLow, NDS_FTR_COUNT(sNdsNativeFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeFighterPrimitiveGroupFirstLow,
     sNdsNativeFighterPrimitiveGroupCountLow,
     sNdsNativeFighterPrimitiveGroupTypeLow,
     sNdsNativeFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeFighterPrimitiveGroupVertexCountLow,
     sNdsNativeFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeFighterEpochsLow, NDS_FTR_COUNT(sNdsNativeFighterEpochsLow)
 };
 
@@ -916,9 +865,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables =
     sNdsNativeLuigiFighterDenseNormals,
     sNdsNativeLuigiFighterPreparedDense,
     sNdsNativeLuigiFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLuigiFighterDenseColorSource,
-#endif
     sNdsNativeLuigiFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterPackedCorners),
     sNdsNativeLuigiFighterRunFirstCorner,
@@ -930,14 +876,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeLuigiFighterTriangles),
     sNdsNativeLuigiFighterRuns,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLuigiFighterPrimitiveGroupFirst,
     sNdsNativeLuigiFighterPrimitiveGroupCount,
     sNdsNativeLuigiFighterPrimitiveGroupType,
     sNdsNativeLuigiFighterPrimitiveGroupFirstVertex,
     sNdsNativeLuigiFighterPrimitiveGroupVertexCount,
     sNdsNativeLuigiFighterPrimitiveVertices,
-#endif
     sNdsNativeLuigiFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterEpochs)
 };
@@ -966,9 +910,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables =
     sNdsNativeLuigiFighterDenseNormalsLow,
     sNdsNativeLuigiFighterPreparedDenseLow,
     sNdsNativeLuigiFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLuigiFighterDenseColorSourceLow,
-#endif
     sNdsNativeLuigiFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterPackedCornersLow),
     sNdsNativeLuigiFighterRunFirstCornerLow,
@@ -980,14 +921,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeLuigiFighterTrianglesLow),
     sNdsNativeLuigiFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLuigiFighterPrimitiveGroupFirstLow,
     sNdsNativeLuigiFighterPrimitiveGroupCountLow,
     sNdsNativeLuigiFighterPrimitiveGroupTypeLow,
     sNdsNativeLuigiFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeLuigiFighterPrimitiveGroupVertexCountLow,
     sNdsNativeLuigiFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeLuigiFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterEpochsLow)
 };
@@ -1027,9 +966,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
     sNdsNativeDonkeyFighterDenseNormals,
     sNdsNativeDonkeyFighterPreparedDense,
     sNdsNativeDonkeyFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeDonkeyFighterDenseColorSource,
-#endif
     sNdsNativeDonkeyFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterPackedCorners),
     sNdsNativeDonkeyFighterRunFirstCorner,
@@ -1041,14 +977,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterTriangles),
     sNdsNativeDonkeyFighterRuns,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeDonkeyFighterPrimitiveGroupFirst,
     sNdsNativeDonkeyFighterPrimitiveGroupCount,
     sNdsNativeDonkeyFighterPrimitiveGroupType,
     sNdsNativeDonkeyFighterPrimitiveGroupFirstVertex,
     sNdsNativeDonkeyFighterPrimitiveGroupVertexCount,
     sNdsNativeDonkeyFighterPrimitiveVertices,
-#endif
     sNdsNativeDonkeyFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochs)
 };
@@ -1077,9 +1011,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
     sNdsNativeDonkeyFighterDenseNormalsLow,
     sNdsNativeDonkeyFighterPreparedDenseLow,
     sNdsNativeDonkeyFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeDonkeyFighterDenseColorSourceLow,
-#endif
     sNdsNativeDonkeyFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterPackedCornersLow),
     sNdsNativeDonkeyFighterRunFirstCornerLow,
@@ -1091,14 +1022,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterTrianglesLow),
     sNdsNativeDonkeyFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeDonkeyFighterPrimitiveGroupFirstLow,
     sNdsNativeDonkeyFighterPrimitiveGroupCountLow,
     sNdsNativeDonkeyFighterPrimitiveGroupTypeLow,
     sNdsNativeDonkeyFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeDonkeyFighterPrimitiveGroupVertexCountLow,
     sNdsNativeDonkeyFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeDonkeyFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterEpochsLow)
 };
@@ -1138,9 +1067,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterHighTables =
     sNdsNativeCaptainFighterDenseNormals,
     sNdsNativeCaptainFighterPreparedDense,
     sNdsNativeCaptainFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeCaptainFighterDenseColorSource,
-#endif
     sNdsNativeCaptainFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterPackedCorners),
     sNdsNativeCaptainFighterRunFirstCorner,
@@ -1152,14 +1078,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeCaptainFighterTriangles),
     sNdsNativeCaptainFighterRuns,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeCaptainFighterPrimitiveGroupFirst,
     sNdsNativeCaptainFighterPrimitiveGroupCount,
     sNdsNativeCaptainFighterPrimitiveGroupType,
     sNdsNativeCaptainFighterPrimitiveGroupFirstVertex,
     sNdsNativeCaptainFighterPrimitiveGroupVertexCount,
     sNdsNativeCaptainFighterPrimitiveVertices,
-#endif
     sNdsNativeCaptainFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterEpochs)
 };
@@ -1188,9 +1112,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterLowTables =
     sNdsNativeCaptainFighterDenseNormalsLow,
     sNdsNativeCaptainFighterPreparedDenseLow,
     sNdsNativeCaptainFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeCaptainFighterDenseColorSourceLow,
-#endif
     sNdsNativeCaptainFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterPackedCornersLow),
     sNdsNativeCaptainFighterRunFirstCornerLow,
@@ -1202,14 +1123,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeCaptainFighterTrianglesLow),
     sNdsNativeCaptainFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeCaptainFighterPrimitiveGroupFirstLow,
     sNdsNativeCaptainFighterPrimitiveGroupCountLow,
     sNdsNativeCaptainFighterPrimitiveGroupTypeLow,
     sNdsNativeCaptainFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeCaptainFighterPrimitiveGroupVertexCountLow,
     sNdsNativeCaptainFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeCaptainFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterEpochsLow)
 };
@@ -1225,94 +1144,9 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeCaptainRootLightPreambles, NDS_NATIVE_CAPTAIN_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_SAMUS
-#if NDS_NATIVE_OWNER_IMAGE_SAMUS
 static NDSNativeFighterRuntimeTables sNdsNativeSamusFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterHighTables =
-{
-    sNdsNativeSamusFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterStateDeltas),
-    sNdsNativeSamusFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterStateSequence),
-    sNdsNativeSamusFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterVertexActions),
-    sNdsNativeSamusFighterEpochDirectPolicy,
-    sNdsNativeSamusFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVertices),
-    sNdsNativeSamusFighterDenseNormals,
-    sNdsNativeSamusFighterPreparedDense,
-    sNdsNativeSamusFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeSamusFighterDenseColorSource,
-#endif
-    sNdsNativeSamusFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterPackedCorners),
-    sNdsNativeSamusFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterRunFirstCorner),
-    sNdsNativeSamusFighterRunFirstUnique,
-    sNdsNativeSamusFighterRunUniqueCount,
-    sNdsNativeSamusFighterRunUniqueDense,
-    sNdsNativeSamusFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterTriangles),
-    sNdsNativeSamusFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeSamusFighterPrimitiveGroupFirst,
-    sNdsNativeSamusFighterPrimitiveGroupCount,
-    sNdsNativeSamusFighterPrimitiveGroupType,
-    sNdsNativeSamusFighterPrimitiveGroupFirstVertex,
-    sNdsNativeSamusFighterPrimitiveGroupVertexCount,
-    sNdsNativeSamusFighterPrimitiveVertices,
-#endif
-    sNdsNativeSamusFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_SAMUS
 static NDSNativeFighterRuntimeTables sNdsNativeSamusFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterLowTables =
-{
-    sNdsNativeSamusFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterStateDeltasLow),
-    sNdsNativeSamusFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterStateSequenceLow),
-    sNdsNativeSamusFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterVertexActionsLow),
-    sNdsNativeSamusFighterEpochDirectPolicyLow,
-    sNdsNativeSamusFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVerticesLow),
-    sNdsNativeSamusFighterDenseNormalsLow,
-    sNdsNativeSamusFighterPreparedDenseLow,
-    sNdsNativeSamusFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeSamusFighterDenseColorSourceLow,
-#endif
-    sNdsNativeSamusFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterPackedCornersLow),
-    sNdsNativeSamusFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterRunFirstCornerLow),
-    sNdsNativeSamusFighterRunFirstUniqueLow,
-    sNdsNativeSamusFighterRunUniqueCountLow,
-    sNdsNativeSamusFighterRunUniqueDenseLow,
-    sNdsNativeSamusFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterTrianglesLow),
-    sNdsNativeSamusFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeSamusFighterPrimitiveGroupFirstLow,
-    sNdsNativeSamusFighterPrimitiveGroupCountLow,
-    sNdsNativeSamusFighterPrimitiveGroupTypeLow,
-    sNdsNativeSamusFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeSamusFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeSamusFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeSamusFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeSamusFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusHighOwner, &sNdsNativeSamusFighterHighTables,
@@ -1366,9 +1200,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusFSmashRootsLow, sNdsNativeSamusFSmashCrossPaletteSlotsLow,
     sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
 #endif
-#endif
 
-#if NDS_P2_LINK || NDS_P2_KIRBY
 /* Link's hand-held Neutral-B model and Kirby CopyLink's hidden joint 12 both
  * resolve to LinkBoomerangModel asset 0x146 root 0xF8.  Its compact indices
  * belong to this tiny donor table set, never to LinkModel/KirbyModel tables. */
@@ -1387,9 +1219,6 @@ sNdsNativeLinkBoomerangFighterHighTables =
     sNdsNativeLinkBoomerangFighterDenseNormals,
     sNdsNativeLinkBoomerangFighterPreparedDense,
     sNdsNativeLinkBoomerangFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkBoomerangFighterDenseColorSource,
-#endif
     sNdsNativeLinkBoomerangFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCorners),
     sNdsNativeLinkBoomerangFighterRunFirstCorner,
@@ -1401,14 +1230,12 @@ sNdsNativeLinkBoomerangFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTriangles),
     sNdsNativeLinkBoomerangFighterRuns,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLinkBoomerangFighterPrimitiveGroupFirst,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupCount,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupType,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertex,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCount,
     sNdsNativeLinkBoomerangFighterPrimitiveVertices,
-#endif
     sNdsNativeLinkBoomerangFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochs)
 };
@@ -1428,9 +1255,6 @@ sNdsNativeLinkBoomerangFighterLowTables =
     sNdsNativeLinkBoomerangFighterDenseNormalsLow,
     sNdsNativeLinkBoomerangFighterPreparedDenseLow,
     sNdsNativeLinkBoomerangFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkBoomerangFighterDenseColorSourceLow,
-#endif
     sNdsNativeLinkBoomerangFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCornersLow),
     sNdsNativeLinkBoomerangFighterRunFirstCornerLow,
@@ -1442,18 +1266,15 @@ sNdsNativeLinkBoomerangFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTrianglesLow),
     sNdsNativeLinkBoomerangFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstLow,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupCountLow,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupTypeLow,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCountLow,
     sNdsNativeLinkBoomerangFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeLinkBoomerangFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochsLow)
 };
-#endif
 
 #if NDS_P2_LINK
 #if NDS_NATIVE_OWNER_IMAGE_LINK
@@ -1473,9 +1294,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterHighTables =
     sNdsNativeLinkFighterDenseNormals,
     sNdsNativeLinkFighterPreparedDense,
     sNdsNativeLinkFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkFighterDenseColorSource,
-#endif
     sNdsNativeLinkFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeLinkFighterPackedCorners),
     sNdsNativeLinkFighterRunFirstCorner,
@@ -1487,14 +1305,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeLinkFighterTriangles),
     sNdsNativeLinkFighterRuns,
     NDS_FTR_COUNT(sNdsNativeLinkFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLinkFighterPrimitiveGroupFirst,
     sNdsNativeLinkFighterPrimitiveGroupCount,
     sNdsNativeLinkFighterPrimitiveGroupType,
     sNdsNativeLinkFighterPrimitiveGroupFirstVertex,
     sNdsNativeLinkFighterPrimitiveGroupVertexCount,
     sNdsNativeLinkFighterPrimitiveVertices,
-#endif
     sNdsNativeLinkFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeLinkFighterEpochs)
 };
@@ -1517,9 +1333,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterLowTables =
     sNdsNativeLinkFighterDenseNormalsLow,
     sNdsNativeLinkFighterPreparedDenseLow,
     sNdsNativeLinkFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkFighterDenseColorSourceLow,
-#endif
     sNdsNativeLinkFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeLinkFighterPackedCornersLow),
     sNdsNativeLinkFighterRunFirstCornerLow,
@@ -1531,14 +1344,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeLinkFighterTrianglesLow),
     sNdsNativeLinkFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeLinkFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeLinkFighterPrimitiveGroupFirstLow,
     sNdsNativeLinkFighterPrimitiveGroupCountLow,
     sNdsNativeLinkFighterPrimitiveGroupTypeLow,
     sNdsNativeLinkFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeLinkFighterPrimitiveGroupVertexCountLow,
     sNdsNativeLinkFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeLinkFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeLinkFighterEpochsLow)
 };
@@ -1612,94 +1423,9 @@ NDS_FTR_OWNER_RUNTIME(
 #endif
 #endif
 
-#if NDS_P2_PIKACHU
-#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
 static NDSNativeFighterRuntimeTables sNdsNativePikachuFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativePikachuFighterHighTables =
-{
-    sNdsNativePikachuFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterStateDeltas),
-    sNdsNativePikachuFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterStateSequence),
-    sNdsNativePikachuFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterVertexActions),
-    sNdsNativePikachuFighterEpochDirectPolicy,
-    sNdsNativePikachuFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterDenseVertices),
-    sNdsNativePikachuFighterDenseNormals,
-    sNdsNativePikachuFighterPreparedDense,
-    sNdsNativePikachuFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativePikachuFighterDenseColorSource,
-#endif
-    sNdsNativePikachuFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterPackedCorners),
-    sNdsNativePikachuFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterRunFirstCorner),
-    sNdsNativePikachuFighterRunFirstUnique,
-    sNdsNativePikachuFighterRunUniqueCount,
-    sNdsNativePikachuFighterRunUniqueDense,
-    sNdsNativePikachuFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterTriangles),
-    sNdsNativePikachuFighterRuns,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativePikachuFighterPrimitiveGroupFirst,
-    sNdsNativePikachuFighterPrimitiveGroupCount,
-    sNdsNativePikachuFighterPrimitiveGroupType,
-    sNdsNativePikachuFighterPrimitiveGroupFirstVertex,
-    sNdsNativePikachuFighterPrimitiveGroupVertexCount,
-    sNdsNativePikachuFighterPrimitiveVertices,
-#endif
-    sNdsNativePikachuFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
 static NDSNativeFighterRuntimeTables sNdsNativePikachuFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativePikachuFighterLowTables =
-{
-    sNdsNativePikachuFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterStateDeltasLow),
-    sNdsNativePikachuFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterStateSequenceLow),
-    sNdsNativePikachuFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterVertexActionsLow),
-    sNdsNativePikachuFighterEpochDirectPolicyLow,
-    sNdsNativePikachuFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterDenseVerticesLow),
-    sNdsNativePikachuFighterDenseNormalsLow,
-    sNdsNativePikachuFighterPreparedDenseLow,
-    sNdsNativePikachuFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativePikachuFighterDenseColorSourceLow,
-#endif
-    sNdsNativePikachuFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterPackedCornersLow),
-    sNdsNativePikachuFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterRunFirstCornerLow),
-    sNdsNativePikachuFighterRunFirstUniqueLow,
-    sNdsNativePikachuFighterRunUniqueCountLow,
-    sNdsNativePikachuFighterRunUniqueDenseLow,
-    sNdsNativePikachuFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterTrianglesLow),
-    sNdsNativePikachuFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativePikachuFighterPrimitiveGroupFirstLow,
-    sNdsNativePikachuFighterPrimitiveGroupCountLow,
-    sNdsNativePikachuFighterPrimitiveGroupTypeLow,
-    sNdsNativePikachuFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativePikachuFighterPrimitiveGroupVertexCountLow,
-    sNdsNativePikachuFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativePikachuFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativePikachuFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativePikachuHighOwner, &sNdsNativePikachuFighterHighTables,
@@ -1721,96 +1447,10 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativePikachuAccessoryCrossPaletteSlotsLow,
     sNdsNativePikachuRootLightPreambles, NDS_NATIVE_PIKACHU_MODEL_DATA_SIZE);
 #endif
-#endif
 
-#if NDS_P2_YOSHI
-#if NDS_NATIVE_OWNER_IMAGE_YOSHI
 static NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterHighTables =
-{
-    sNdsNativeYoshiFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateDeltas),
-    sNdsNativeYoshiFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateSequence),
-    sNdsNativeYoshiFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterVertexActions),
-    sNdsNativeYoshiFighterEpochDirectPolicy,
-    sNdsNativeYoshiFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVertices),
-    sNdsNativeYoshiFighterDenseNormals,
-    sNdsNativeYoshiFighterPreparedDense,
-    sNdsNativeYoshiFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeYoshiFighterDenseColorSource,
-#endif
-    sNdsNativeYoshiFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterPackedCorners),
-    sNdsNativeYoshiFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunFirstCorner),
-    sNdsNativeYoshiFighterRunFirstUnique,
-    sNdsNativeYoshiFighterRunUniqueCount,
-    sNdsNativeYoshiFighterRunUniqueDense,
-    sNdsNativeYoshiFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterTriangles),
-    sNdsNativeYoshiFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeYoshiFighterPrimitiveGroupFirst,
-    sNdsNativeYoshiFighterPrimitiveGroupCount,
-    sNdsNativeYoshiFighterPrimitiveGroupType,
-    sNdsNativeYoshiFighterPrimitiveGroupFirstVertex,
-    sNdsNativeYoshiFighterPrimitiveGroupVertexCount,
-    sNdsNativeYoshiFighterPrimitiveVertices,
-#endif
-    sNdsNativeYoshiFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_YOSHI
 static NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterLowTables =
-{
-    sNdsNativeYoshiFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateDeltasLow),
-    sNdsNativeYoshiFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateSequenceLow),
-    sNdsNativeYoshiFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterVertexActionsLow),
-    sNdsNativeYoshiFighterEpochDirectPolicyLow,
-    sNdsNativeYoshiFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVerticesLow),
-    sNdsNativeYoshiFighterDenseNormalsLow,
-    sNdsNativeYoshiFighterPreparedDenseLow,
-    sNdsNativeYoshiFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeYoshiFighterDenseColorSourceLow,
-#endif
-    sNdsNativeYoshiFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterPackedCornersLow),
-    sNdsNativeYoshiFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunFirstCornerLow),
-    sNdsNativeYoshiFighterRunFirstUniqueLow,
-    sNdsNativeYoshiFighterRunUniqueCountLow,
-    sNdsNativeYoshiFighterRunUniqueDenseLow,
-    sNdsNativeYoshiFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterTrianglesLow),
-    sNdsNativeYoshiFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeYoshiFighterPrimitiveGroupFirstLow,
-    sNdsNativeYoshiFighterPrimitiveGroupCountLow,
-    sNdsNativeYoshiFighterPrimitiveGroupTypeLow,
-    sNdsNativeYoshiFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeYoshiFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeYoshiFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeYoshiFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeYoshiFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeYoshiHighOwner, &sNdsNativeYoshiFighterHighTables,
@@ -1844,96 +1484,10 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeYoshiThrowRootsLow, sNdsNativeYoshiThrowCrossPaletteSlotsLow,
     sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
 #endif
-#endif
 
-#if NDS_P2_NESS
-#if NDS_NATIVE_OWNER_IMAGE_NESS
 static NDSNativeFighterRuntimeTables sNdsNativeNessFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterHighTables =
-{
-    sNdsNativeNessFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeNessFighterStateDeltas),
-    sNdsNativeNessFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeNessFighterStateSequence),
-    sNdsNativeNessFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeNessFighterVertexActions),
-    sNdsNativeNessFighterEpochDirectPolicy,
-    sNdsNativeNessFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeNessFighterDenseVertices),
-    sNdsNativeNessFighterDenseNormals,
-    sNdsNativeNessFighterPreparedDense,
-    sNdsNativeNessFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNessFighterDenseColorSource,
-#endif
-    sNdsNativeNessFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeNessFighterPackedCorners),
-    sNdsNativeNessFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeNessFighterRunFirstCorner),
-    sNdsNativeNessFighterRunFirstUnique,
-    sNdsNativeNessFighterRunUniqueCount,
-    sNdsNativeNessFighterRunUniqueDense,
-    sNdsNativeNessFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeNessFighterTriangles),
-    sNdsNativeNessFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeNessFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeNessFighterPrimitiveGroupFirst,
-    sNdsNativeNessFighterPrimitiveGroupCount,
-    sNdsNativeNessFighterPrimitiveGroupType,
-    sNdsNativeNessFighterPrimitiveGroupFirstVertex,
-    sNdsNativeNessFighterPrimitiveGroupVertexCount,
-    sNdsNativeNessFighterPrimitiveVertices,
-#endif
-    sNdsNativeNessFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeNessFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_NESS
 static NDSNativeFighterRuntimeTables sNdsNativeNessFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterLowTables =
-{
-    sNdsNativeNessFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterStateDeltasLow),
-    sNdsNativeNessFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterStateSequenceLow),
-    sNdsNativeNessFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterVertexActionsLow),
-    sNdsNativeNessFighterEpochDirectPolicyLow,
-    sNdsNativeNessFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterDenseVerticesLow),
-    sNdsNativeNessFighterDenseNormalsLow,
-    sNdsNativeNessFighterPreparedDenseLow,
-    sNdsNativeNessFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNessFighterDenseColorSourceLow,
-#endif
-    sNdsNativeNessFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterPackedCornersLow),
-    sNdsNativeNessFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterRunFirstCornerLow),
-    sNdsNativeNessFighterRunFirstUniqueLow,
-    sNdsNativeNessFighterRunUniqueCountLow,
-    sNdsNativeNessFighterRunUniqueDenseLow,
-    sNdsNativeNessFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterTrianglesLow),
-    sNdsNativeNessFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeNessFighterPrimitiveGroupFirstLow,
-    sNdsNativeNessFighterPrimitiveGroupCountLow,
-    sNdsNativeNessFighterPrimitiveGroupTypeLow,
-    sNdsNativeNessFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeNessFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeNessFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeNessFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeNessFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNessHighOwner, &sNdsNativeNessFighterHighTables,
@@ -1990,96 +1544,10 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNessFSmashRootsLow, sNdsNativeNessFSmashCrossPaletteSlotsLow,
     sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
 #endif
-#endif
 
-#if NDS_P2_PURIN
-#if NDS_NATIVE_OWNER_IMAGE_PURIN
 static NDSNativeFighterRuntimeTables sNdsNativePurinFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterHighTables =
-{
-    sNdsNativePurinFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativePurinFighterStateDeltas),
-    sNdsNativePurinFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativePurinFighterStateSequence),
-    sNdsNativePurinFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativePurinFighterVertexActions),
-    sNdsNativePurinFighterEpochDirectPolicy,
-    sNdsNativePurinFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativePurinFighterDenseVertices),
-    sNdsNativePurinFighterDenseNormals,
-    sNdsNativePurinFighterPreparedDense,
-    sNdsNativePurinFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativePurinFighterDenseColorSource,
-#endif
-    sNdsNativePurinFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativePurinFighterPackedCorners),
-    sNdsNativePurinFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativePurinFighterRunFirstCorner),
-    sNdsNativePurinFighterRunFirstUnique,
-    sNdsNativePurinFighterRunUniqueCount,
-    sNdsNativePurinFighterRunUniqueDense,
-    sNdsNativePurinFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativePurinFighterTriangles),
-    sNdsNativePurinFighterRuns,
-    NDS_FTR_COUNT(sNdsNativePurinFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativePurinFighterPrimitiveGroupFirst,
-    sNdsNativePurinFighterPrimitiveGroupCount,
-    sNdsNativePurinFighterPrimitiveGroupType,
-    sNdsNativePurinFighterPrimitiveGroupFirstVertex,
-    sNdsNativePurinFighterPrimitiveGroupVertexCount,
-    sNdsNativePurinFighterPrimitiveVertices,
-#endif
-    sNdsNativePurinFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativePurinFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_PURIN
 static NDSNativeFighterRuntimeTables sNdsNativePurinFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterLowTables =
-{
-    sNdsNativePurinFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterStateDeltasLow),
-    sNdsNativePurinFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterStateSequenceLow),
-    sNdsNativePurinFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterVertexActionsLow),
-    sNdsNativePurinFighterEpochDirectPolicyLow,
-    sNdsNativePurinFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterDenseVerticesLow),
-    sNdsNativePurinFighterDenseNormalsLow,
-    sNdsNativePurinFighterPreparedDenseLow,
-    sNdsNativePurinFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativePurinFighterDenseColorSourceLow,
-#endif
-    sNdsNativePurinFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterPackedCornersLow),
-    sNdsNativePurinFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterRunFirstCornerLow),
-    sNdsNativePurinFighterRunFirstUniqueLow,
-    sNdsNativePurinFighterRunUniqueCountLow,
-    sNdsNativePurinFighterRunUniqueDenseLow,
-    sNdsNativePurinFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterTrianglesLow),
-    sNdsNativePurinFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativePurinFighterPrimitiveGroupFirstLow,
-    sNdsNativePurinFighterPrimitiveGroupCountLow,
-    sNdsNativePurinFighterPrimitiveGroupTypeLow,
-    sNdsNativePurinFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativePurinFighterPrimitiveGroupVertexCountLow,
-    sNdsNativePurinFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativePurinFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativePurinFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativePurinHighOwner, &sNdsNativePurinFighterHighTables,
@@ -2102,96 +1570,10 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativePurinAccessoryCrossPaletteSlotsLow,
     sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
 #endif
-#endif
 
-#if NDS_P2_KIRBY
-#if NDS_NATIVE_OWNER_IMAGE_KIRBY
 static NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterHighTables =
-{
-    sNdsNativeKirbyFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateDeltas),
-    sNdsNativeKirbyFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateSequence),
-    sNdsNativeKirbyFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterVertexActions),
-    sNdsNativeKirbyFighterEpochDirectPolicy,
-    sNdsNativeKirbyFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVertices),
-    sNdsNativeKirbyFighterDenseNormals,
-    sNdsNativeKirbyFighterPreparedDense,
-    sNdsNativeKirbyFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeKirbyFighterDenseColorSource,
-#endif
-    sNdsNativeKirbyFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterPackedCorners),
-    sNdsNativeKirbyFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunFirstCorner),
-    sNdsNativeKirbyFighterRunFirstUnique,
-    sNdsNativeKirbyFighterRunUniqueCount,
-    sNdsNativeKirbyFighterRunUniqueDense,
-    sNdsNativeKirbyFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterTriangles),
-    sNdsNativeKirbyFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeKirbyFighterPrimitiveGroupFirst,
-    sNdsNativeKirbyFighterPrimitiveGroupCount,
-    sNdsNativeKirbyFighterPrimitiveGroupType,
-    sNdsNativeKirbyFighterPrimitiveGroupFirstVertex,
-    sNdsNativeKirbyFighterPrimitiveGroupVertexCount,
-    sNdsNativeKirbyFighterPrimitiveVertices,
-#endif
-    sNdsNativeKirbyFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterEpochs)
-};
-#endif
 
-#if NDS_NATIVE_OWNER_IMAGE_KIRBY
 static NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables =
-{
-    sNdsNativeKirbyFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateDeltasLow),
-    sNdsNativeKirbyFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateSequenceLow),
-    sNdsNativeKirbyFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterVertexActionsLow),
-    sNdsNativeKirbyFighterEpochDirectPolicyLow,
-    sNdsNativeKirbyFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVerticesLow),
-    sNdsNativeKirbyFighterDenseNormalsLow,
-    sNdsNativeKirbyFighterPreparedDenseLow,
-    sNdsNativeKirbyFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeKirbyFighterDenseColorSourceLow,
-#endif
-    sNdsNativeKirbyFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterPackedCornersLow),
-    sNdsNativeKirbyFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunFirstCornerLow),
-    sNdsNativeKirbyFighterRunFirstUniqueLow,
-    sNdsNativeKirbyFighterRunUniqueCountLow,
-    sNdsNativeKirbyFighterRunUniqueDenseLow,
-    sNdsNativeKirbyFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterTrianglesLow),
-    sNdsNativeKirbyFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeKirbyFighterPrimitiveGroupFirstLow,
-    sNdsNativeKirbyFighterPrimitiveGroupCountLow,
-    sNdsNativeKirbyFighterPrimitiveGroupTypeLow,
-    sNdsNativeKirbyFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeKirbyFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeKirbyFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeKirbyFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeKirbyFighterEpochsLow)
-};
-#endif
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyHighOwner, &sNdsNativeKirbyFighterHighTables,
@@ -2279,7 +1661,6 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyCopyTransitionCrossPaletteSlotsLow,
     sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
 #endif
-#endif
 
 #if NDS_P2_MMARIO
 #if NDS_NATIVE_OWNER_IMAGE_MMARIO
@@ -2299,9 +1680,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterHighTables =
     sNdsNativeMMarioFighterDenseNormals,
     sNdsNativeMMarioFighterPreparedDense,
     sNdsNativeMMarioFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeMMarioFighterDenseColorSource,
-#endif
     sNdsNativeMMarioFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterPackedCorners),
     sNdsNativeMMarioFighterRunFirstCorner,
@@ -2313,14 +1691,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeMMarioFighterTriangles),
     sNdsNativeMMarioFighterRuns,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeMMarioFighterPrimitiveGroupFirst,
     sNdsNativeMMarioFighterPrimitiveGroupCount,
     sNdsNativeMMarioFighterPrimitiveGroupType,
     sNdsNativeMMarioFighterPrimitiveGroupFirstVertex,
     sNdsNativeMMarioFighterPrimitiveGroupVertexCount,
     sNdsNativeMMarioFighterPrimitiveVertices,
-#endif
     sNdsNativeMMarioFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterEpochs)
 };
@@ -2343,9 +1719,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterLowTables =
     sNdsNativeMMarioFighterDenseNormalsLow,
     sNdsNativeMMarioFighterPreparedDenseLow,
     sNdsNativeMMarioFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeMMarioFighterDenseColorSourceLow,
-#endif
     sNdsNativeMMarioFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterPackedCornersLow),
     sNdsNativeMMarioFighterRunFirstCornerLow,
@@ -2357,14 +1730,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeMMarioFighterTrianglesLow),
     sNdsNativeMMarioFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeMMarioFighterPrimitiveGroupFirstLow,
     sNdsNativeMMarioFighterPrimitiveGroupCountLow,
     sNdsNativeMMarioFighterPrimitiveGroupTypeLow,
     sNdsNativeMMarioFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeMMarioFighterPrimitiveGroupVertexCountLow,
     sNdsNativeMMarioFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeMMarioFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeMMarioFighterEpochsLow)
 };
@@ -2398,9 +1769,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNMarioFighterHighTables =
     sNdsNativeNMarioFighterDenseNormals,
     sNdsNativeNMarioFighterPreparedDense,
     sNdsNativeNMarioFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNMarioFighterDenseColorSource,
-#endif
     sNdsNativeNMarioFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterPackedCorners),
     sNdsNativeNMarioFighterRunFirstCorner,
@@ -2412,14 +1780,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNMarioFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNMarioFighterTriangles),
     sNdsNativeNMarioFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNMarioFighterPrimitiveGroupFirst,
     sNdsNativeNMarioFighterPrimitiveGroupCount,
     sNdsNativeNMarioFighterPrimitiveGroupType,
     sNdsNativeNMarioFighterPrimitiveGroupFirstVertex,
     sNdsNativeNMarioFighterPrimitiveGroupVertexCount,
     sNdsNativeNMarioFighterPrimitiveVertices,
-#endif
     sNdsNativeNMarioFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterEpochs)
 };
@@ -2442,9 +1808,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNMarioFighterLowTables =
     sNdsNativeNMarioFighterDenseNormalsLow,
     sNdsNativeNMarioFighterPreparedDenseLow,
     sNdsNativeNMarioFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNMarioFighterDenseColorSourceLow,
-#endif
     sNdsNativeNMarioFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterPackedCornersLow),
     sNdsNativeNMarioFighterRunFirstCornerLow,
@@ -2456,14 +1819,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNMarioFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNMarioFighterTrianglesLow),
     sNdsNativeNMarioFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNMarioFighterPrimitiveGroupFirstLow,
     sNdsNativeNMarioFighterPrimitiveGroupCountLow,
     sNdsNativeNMarioFighterPrimitiveGroupTypeLow,
     sNdsNativeNMarioFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNMarioFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNMarioFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNMarioFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNMarioFighterEpochsLow)
 };
@@ -2497,9 +1858,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNFoxFighterHighTables =
     sNdsNativeNFoxFighterDenseNormals,
     sNdsNativeNFoxFighterPreparedDense,
     sNdsNativeNFoxFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNFoxFighterDenseColorSource,
-#endif
     sNdsNativeNFoxFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterPackedCorners),
     sNdsNativeNFoxFighterRunFirstCorner,
@@ -2511,14 +1869,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNFoxFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNFoxFighterTriangles),
     sNdsNativeNFoxFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNFoxFighterPrimitiveGroupFirst,
     sNdsNativeNFoxFighterPrimitiveGroupCount,
     sNdsNativeNFoxFighterPrimitiveGroupType,
     sNdsNativeNFoxFighterPrimitiveGroupFirstVertex,
     sNdsNativeNFoxFighterPrimitiveGroupVertexCount,
     sNdsNativeNFoxFighterPrimitiveVertices,
-#endif
     sNdsNativeNFoxFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterEpochs)
 };
@@ -2541,9 +1897,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNFoxFighterLowTables =
     sNdsNativeNFoxFighterDenseNormalsLow,
     sNdsNativeNFoxFighterPreparedDenseLow,
     sNdsNativeNFoxFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNFoxFighterDenseColorSourceLow,
-#endif
     sNdsNativeNFoxFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterPackedCornersLow),
     sNdsNativeNFoxFighterRunFirstCornerLow,
@@ -2555,14 +1908,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNFoxFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNFoxFighterTrianglesLow),
     sNdsNativeNFoxFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNFoxFighterPrimitiveGroupFirstLow,
     sNdsNativeNFoxFighterPrimitiveGroupCountLow,
     sNdsNativeNFoxFighterPrimitiveGroupTypeLow,
     sNdsNativeNFoxFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNFoxFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNFoxFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNFoxFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNFoxFighterEpochsLow)
 };
@@ -2578,7 +1929,6 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNFoxRootLightPreambles, NDS_NATIVE_NFOX_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P4
 /* P4 donor owners (nds_p4_contents.h): image-backed. Each content's two
  * tables structs are bound to its loaded image (ndsRendererNativeBindOwnerImage)
  * and so are its root tables -- roots, light preambles, binding parents and
@@ -2710,7 +2060,6 @@ static const NDSP4RootProgram *ndsP4RootPrograms(u32 slot, u32 *count)
     *count = 0u;
     return NULL;
 }
-#endif
 
 #if NDS_P2_NDONKEY
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
@@ -2730,9 +2079,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterHighTables =
     sNdsNativeNDonkeyFighterDenseNormals,
     sNdsNativeNDonkeyFighterPreparedDense,
     sNdsNativeNDonkeyFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNDonkeyFighterDenseColorSource,
-#endif
     sNdsNativeNDonkeyFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterPackedCorners),
     sNdsNativeNDonkeyFighterRunFirstCorner,
@@ -2744,14 +2090,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterTriangles),
     sNdsNativeNDonkeyFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNDonkeyFighterPrimitiveGroupFirst,
     sNdsNativeNDonkeyFighterPrimitiveGroupCount,
     sNdsNativeNDonkeyFighterPrimitiveGroupType,
     sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertex,
     sNdsNativeNDonkeyFighterPrimitiveGroupVertexCount,
     sNdsNativeNDonkeyFighterPrimitiveVertices,
-#endif
     sNdsNativeNDonkeyFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterEpochs)
 };
@@ -2774,9 +2118,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterLowTables =
     sNdsNativeNDonkeyFighterDenseNormalsLow,
     sNdsNativeNDonkeyFighterPreparedDenseLow,
     sNdsNativeNDonkeyFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNDonkeyFighterDenseColorSourceLow,
-#endif
     sNdsNativeNDonkeyFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterPackedCornersLow),
     sNdsNativeNDonkeyFighterRunFirstCornerLow,
@@ -2788,14 +2129,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterTrianglesLow),
     sNdsNativeNDonkeyFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNDonkeyFighterPrimitiveGroupFirstLow,
     sNdsNativeNDonkeyFighterPrimitiveGroupCountLow,
     sNdsNativeNDonkeyFighterPrimitiveGroupTypeLow,
     sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNDonkeyFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNDonkeyFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNDonkeyFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNDonkeyFighterEpochsLow)
 };
@@ -2829,9 +2168,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNSamusFighterHighTables =
     sNdsNativeNSamusFighterDenseNormals,
     sNdsNativeNSamusFighterPreparedDense,
     sNdsNativeNSamusFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNSamusFighterDenseColorSource,
-#endif
     sNdsNativeNSamusFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterPackedCorners),
     sNdsNativeNSamusFighterRunFirstCorner,
@@ -2843,14 +2179,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNSamusFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNSamusFighterTriangles),
     sNdsNativeNSamusFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNSamusFighterPrimitiveGroupFirst,
     sNdsNativeNSamusFighterPrimitiveGroupCount,
     sNdsNativeNSamusFighterPrimitiveGroupType,
     sNdsNativeNSamusFighterPrimitiveGroupFirstVertex,
     sNdsNativeNSamusFighterPrimitiveGroupVertexCount,
     sNdsNativeNSamusFighterPrimitiveVertices,
-#endif
     sNdsNativeNSamusFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterEpochs)
 };
@@ -2873,9 +2207,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNSamusFighterLowTables =
     sNdsNativeNSamusFighterDenseNormalsLow,
     sNdsNativeNSamusFighterPreparedDenseLow,
     sNdsNativeNSamusFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNSamusFighterDenseColorSourceLow,
-#endif
     sNdsNativeNSamusFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterPackedCornersLow),
     sNdsNativeNSamusFighterRunFirstCornerLow,
@@ -2887,14 +2218,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNSamusFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNSamusFighterTrianglesLow),
     sNdsNativeNSamusFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNSamusFighterPrimitiveGroupFirstLow,
     sNdsNativeNSamusFighterPrimitiveGroupCountLow,
     sNdsNativeNSamusFighterPrimitiveGroupTypeLow,
     sNdsNativeNSamusFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNSamusFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNSamusFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNSamusFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNSamusFighterEpochsLow)
 };
@@ -2928,9 +2257,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNLinkFighterHighTables =
     sNdsNativeNLinkFighterDenseNormals,
     sNdsNativeNLinkFighterPreparedDense,
     sNdsNativeNLinkFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNLinkFighterDenseColorSource,
-#endif
     sNdsNativeNLinkFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterPackedCorners),
     sNdsNativeNLinkFighterRunFirstCorner,
@@ -2942,14 +2268,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNLinkFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNLinkFighterTriangles),
     sNdsNativeNLinkFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNLinkFighterPrimitiveGroupFirst,
     sNdsNativeNLinkFighterPrimitiveGroupCount,
     sNdsNativeNLinkFighterPrimitiveGroupType,
     sNdsNativeNLinkFighterPrimitiveGroupFirstVertex,
     sNdsNativeNLinkFighterPrimitiveGroupVertexCount,
     sNdsNativeNLinkFighterPrimitiveVertices,
-#endif
     sNdsNativeNLinkFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterEpochs)
 };
@@ -2972,9 +2296,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNLinkFighterLowTables =
     sNdsNativeNLinkFighterDenseNormalsLow,
     sNdsNativeNLinkFighterPreparedDenseLow,
     sNdsNativeNLinkFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNLinkFighterDenseColorSourceLow,
-#endif
     sNdsNativeNLinkFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterPackedCornersLow),
     sNdsNativeNLinkFighterRunFirstCornerLow,
@@ -2986,14 +2307,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNLinkFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNLinkFighterTrianglesLow),
     sNdsNativeNLinkFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNLinkFighterPrimitiveGroupFirstLow,
     sNdsNativeNLinkFighterPrimitiveGroupCountLow,
     sNdsNativeNLinkFighterPrimitiveGroupTypeLow,
     sNdsNativeNLinkFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNLinkFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNLinkFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNLinkFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNLinkFighterEpochsLow)
 };
@@ -3027,9 +2346,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNYoshiFighterHighTables =
     sNdsNativeNYoshiFighterDenseNormals,
     sNdsNativeNYoshiFighterPreparedDense,
     sNdsNativeNYoshiFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNYoshiFighterDenseColorSource,
-#endif
     sNdsNativeNYoshiFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterPackedCorners),
     sNdsNativeNYoshiFighterRunFirstCorner,
@@ -3041,14 +2357,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNYoshiFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterTriangles),
     sNdsNativeNYoshiFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNYoshiFighterPrimitiveGroupFirst,
     sNdsNativeNYoshiFighterPrimitiveGroupCount,
     sNdsNativeNYoshiFighterPrimitiveGroupType,
     sNdsNativeNYoshiFighterPrimitiveGroupFirstVertex,
     sNdsNativeNYoshiFighterPrimitiveGroupVertexCount,
     sNdsNativeNYoshiFighterPrimitiveVertices,
-#endif
     sNdsNativeNYoshiFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterEpochs)
 };
@@ -3071,9 +2385,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNYoshiFighterLowTables =
     sNdsNativeNYoshiFighterDenseNormalsLow,
     sNdsNativeNYoshiFighterPreparedDenseLow,
     sNdsNativeNYoshiFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNYoshiFighterDenseColorSourceLow,
-#endif
     sNdsNativeNYoshiFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterPackedCornersLow),
     sNdsNativeNYoshiFighterRunFirstCornerLow,
@@ -3085,14 +2396,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNYoshiFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterTrianglesLow),
     sNdsNativeNYoshiFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNYoshiFighterPrimitiveGroupFirstLow,
     sNdsNativeNYoshiFighterPrimitiveGroupCountLow,
     sNdsNativeNYoshiFighterPrimitiveGroupTypeLow,
     sNdsNativeNYoshiFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNYoshiFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNYoshiFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNYoshiFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNYoshiFighterEpochsLow)
 };
@@ -3126,9 +2435,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNCaptainFighterHighTables =
     sNdsNativeNCaptainFighterDenseNormals,
     sNdsNativeNCaptainFighterPreparedDense,
     sNdsNativeNCaptainFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNCaptainFighterDenseColorSource,
-#endif
     sNdsNativeNCaptainFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterPackedCorners),
     sNdsNativeNCaptainFighterRunFirstCorner,
@@ -3140,14 +2446,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNCaptainFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterTriangles),
     sNdsNativeNCaptainFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNCaptainFighterPrimitiveGroupFirst,
     sNdsNativeNCaptainFighterPrimitiveGroupCount,
     sNdsNativeNCaptainFighterPrimitiveGroupType,
     sNdsNativeNCaptainFighterPrimitiveGroupFirstVertex,
     sNdsNativeNCaptainFighterPrimitiveGroupVertexCount,
     sNdsNativeNCaptainFighterPrimitiveVertices,
-#endif
     sNdsNativeNCaptainFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterEpochs)
 };
@@ -3170,9 +2474,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNCaptainFighterLowTables =
     sNdsNativeNCaptainFighterDenseNormalsLow,
     sNdsNativeNCaptainFighterPreparedDenseLow,
     sNdsNativeNCaptainFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNCaptainFighterDenseColorSourceLow,
-#endif
     sNdsNativeNCaptainFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterPackedCornersLow),
     sNdsNativeNCaptainFighterRunFirstCornerLow,
@@ -3184,14 +2485,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNCaptainFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterTrianglesLow),
     sNdsNativeNCaptainFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNCaptainFighterPrimitiveGroupFirstLow,
     sNdsNativeNCaptainFighterPrimitiveGroupCountLow,
     sNdsNativeNCaptainFighterPrimitiveGroupTypeLow,
     sNdsNativeNCaptainFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNCaptainFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNCaptainFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNCaptainFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNCaptainFighterEpochsLow)
 };
@@ -3225,9 +2524,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNKirbyFighterHighTables =
     sNdsNativeNKirbyFighterDenseNormals,
     sNdsNativeNKirbyFighterPreparedDense,
     sNdsNativeNKirbyFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNKirbyFighterDenseColorSource,
-#endif
     sNdsNativeNKirbyFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterPackedCorners),
     sNdsNativeNKirbyFighterRunFirstCorner,
@@ -3239,14 +2535,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNKirbyFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterTriangles),
     sNdsNativeNKirbyFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNKirbyFighterPrimitiveGroupFirst,
     sNdsNativeNKirbyFighterPrimitiveGroupCount,
     sNdsNativeNKirbyFighterPrimitiveGroupType,
     sNdsNativeNKirbyFighterPrimitiveGroupFirstVertex,
     sNdsNativeNKirbyFighterPrimitiveGroupVertexCount,
     sNdsNativeNKirbyFighterPrimitiveVertices,
-#endif
     sNdsNativeNKirbyFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterEpochs)
 };
@@ -3269,9 +2563,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNKirbyFighterLowTables =
     sNdsNativeNKirbyFighterDenseNormalsLow,
     sNdsNativeNKirbyFighterPreparedDenseLow,
     sNdsNativeNKirbyFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNKirbyFighterDenseColorSourceLow,
-#endif
     sNdsNativeNKirbyFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterPackedCornersLow),
     sNdsNativeNKirbyFighterRunFirstCornerLow,
@@ -3283,14 +2574,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNKirbyFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterTrianglesLow),
     sNdsNativeNKirbyFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNKirbyFighterPrimitiveGroupFirstLow,
     sNdsNativeNKirbyFighterPrimitiveGroupCountLow,
     sNdsNativeNKirbyFighterPrimitiveGroupTypeLow,
     sNdsNativeNKirbyFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNKirbyFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNKirbyFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNKirbyFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNKirbyFighterEpochsLow)
 };
@@ -3324,9 +2613,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPikachuFighterHighTables =
     sNdsNativeNPikachuFighterDenseNormals,
     sNdsNativeNPikachuFighterPreparedDense,
     sNdsNativeNPikachuFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNPikachuFighterDenseColorSource,
-#endif
     sNdsNativeNPikachuFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterPackedCorners),
     sNdsNativeNPikachuFighterRunFirstCorner,
@@ -3338,14 +2624,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPikachuFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterTriangles),
     sNdsNativeNPikachuFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNPikachuFighterPrimitiveGroupFirst,
     sNdsNativeNPikachuFighterPrimitiveGroupCount,
     sNdsNativeNPikachuFighterPrimitiveGroupType,
     sNdsNativeNPikachuFighterPrimitiveGroupFirstVertex,
     sNdsNativeNPikachuFighterPrimitiveGroupVertexCount,
     sNdsNativeNPikachuFighterPrimitiveVertices,
-#endif
     sNdsNativeNPikachuFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterEpochs)
 };
@@ -3368,9 +2652,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPikachuFighterLowTables =
     sNdsNativeNPikachuFighterDenseNormalsLow,
     sNdsNativeNPikachuFighterPreparedDenseLow,
     sNdsNativeNPikachuFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNPikachuFighterDenseColorSourceLow,
-#endif
     sNdsNativeNPikachuFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterPackedCornersLow),
     sNdsNativeNPikachuFighterRunFirstCornerLow,
@@ -3382,14 +2663,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPikachuFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterTrianglesLow),
     sNdsNativeNPikachuFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNPikachuFighterPrimitiveGroupFirstLow,
     sNdsNativeNPikachuFighterPrimitiveGroupCountLow,
     sNdsNativeNPikachuFighterPrimitiveGroupTypeLow,
     sNdsNativeNPikachuFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNPikachuFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNPikachuFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNPikachuFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNPikachuFighterEpochsLow)
 };
@@ -3423,9 +2702,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPurinFighterHighTables =
     sNdsNativeNPurinFighterDenseNormals,
     sNdsNativeNPurinFighterPreparedDense,
     sNdsNativeNPurinFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNPurinFighterDenseColorSource,
-#endif
     sNdsNativeNPurinFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterPackedCorners),
     sNdsNativeNPurinFighterRunFirstCorner,
@@ -3437,14 +2713,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPurinFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNPurinFighterTriangles),
     sNdsNativeNPurinFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNPurinFighterPrimitiveGroupFirst,
     sNdsNativeNPurinFighterPrimitiveGroupCount,
     sNdsNativeNPurinFighterPrimitiveGroupType,
     sNdsNativeNPurinFighterPrimitiveGroupFirstVertex,
     sNdsNativeNPurinFighterPrimitiveGroupVertexCount,
     sNdsNativeNPurinFighterPrimitiveVertices,
-#endif
     sNdsNativeNPurinFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterEpochs)
 };
@@ -3467,9 +2741,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPurinFighterLowTables =
     sNdsNativeNPurinFighterDenseNormalsLow,
     sNdsNativeNPurinFighterPreparedDenseLow,
     sNdsNativeNPurinFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNPurinFighterDenseColorSourceLow,
-#endif
     sNdsNativeNPurinFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterPackedCornersLow),
     sNdsNativeNPurinFighterRunFirstCornerLow,
@@ -3481,14 +2752,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNPurinFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNPurinFighterTrianglesLow),
     sNdsNativeNPurinFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNPurinFighterPrimitiveGroupFirstLow,
     sNdsNativeNPurinFighterPrimitiveGroupCountLow,
     sNdsNativeNPurinFighterPrimitiveGroupTypeLow,
     sNdsNativeNPurinFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNPurinFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNPurinFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNPurinFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNPurinFighterEpochsLow)
 };
@@ -3522,9 +2791,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNNessFighterHighTables =
     sNdsNativeNNessFighterDenseNormals,
     sNdsNativeNNessFighterPreparedDense,
     sNdsNativeNNessFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNNessFighterDenseColorSource,
-#endif
     sNdsNativeNNessFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeNNessFighterPackedCorners),
     sNdsNativeNNessFighterRunFirstCorner,
@@ -3536,14 +2802,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNNessFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeNNessFighterTriangles),
     sNdsNativeNNessFighterRuns,
     NDS_FTR_COUNT(sNdsNativeNNessFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNNessFighterPrimitiveGroupFirst,
     sNdsNativeNNessFighterPrimitiveGroupCount,
     sNdsNativeNNessFighterPrimitiveGroupType,
     sNdsNativeNNessFighterPrimitiveGroupFirstVertex,
     sNdsNativeNNessFighterPrimitiveGroupVertexCount,
     sNdsNativeNNessFighterPrimitiveVertices,
-#endif
     sNdsNativeNNessFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeNNessFighterEpochs)
 };
@@ -3566,9 +2830,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNNessFighterLowTables =
     sNdsNativeNNessFighterDenseNormalsLow,
     sNdsNativeNNessFighterPreparedDenseLow,
     sNdsNativeNNessFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeNNessFighterDenseColorSourceLow,
-#endif
     sNdsNativeNNessFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeNNessFighterPackedCornersLow),
     sNdsNativeNNessFighterRunFirstCornerLow,
@@ -3580,14 +2841,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNNessFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeNNessFighterTrianglesLow),
     sNdsNativeNNessFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeNNessFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeNNessFighterPrimitiveGroupFirstLow,
     sNdsNativeNNessFighterPrimitiveGroupCountLow,
     sNdsNativeNNessFighterPrimitiveGroupTypeLow,
     sNdsNativeNNessFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeNNessFighterPrimitiveGroupVertexCountLow,
     sNdsNativeNNessFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeNNessFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeNNessFighterEpochsLow)
 };
@@ -3621,9 +2880,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterHighTables =
     sNdsNativeBossFighterDenseNormals,
     sNdsNativeBossFighterPreparedDense,
     sNdsNativeBossFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeBossFighterDenseColorSource,
-#endif
     sNdsNativeBossFighterPackedCorners,
     NDS_FTR_COUNT(sNdsNativeBossFighterPackedCorners),
     sNdsNativeBossFighterRunFirstCorner,
@@ -3635,14 +2891,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterHighTables =
     NDS_FTR_COUNT(sNdsNativeBossFighterTriangles),
     sNdsNativeBossFighterRuns,
     NDS_FTR_COUNT(sNdsNativeBossFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeBossFighterPrimitiveGroupFirst,
     sNdsNativeBossFighterPrimitiveGroupCount,
     sNdsNativeBossFighterPrimitiveGroupType,
     sNdsNativeBossFighterPrimitiveGroupFirstVertex,
     sNdsNativeBossFighterPrimitiveGroupVertexCount,
     sNdsNativeBossFighterPrimitiveVertices,
-#endif
     sNdsNativeBossFighterEpochs,
     NDS_FTR_COUNT(sNdsNativeBossFighterEpochs)
 };
@@ -3665,9 +2919,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterLowTables =
     sNdsNativeBossFighterDenseNormalsLow,
     sNdsNativeBossFighterPreparedDenseLow,
     sNdsNativeBossFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeBossFighterDenseColorSourceLow,
-#endif
     sNdsNativeBossFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeBossFighterPackedCornersLow),
     sNdsNativeBossFighterRunFirstCornerLow,
@@ -3679,14 +2930,12 @@ static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeBossFighterTrianglesLow),
     sNdsNativeBossFighterRunsLow,
     NDS_FTR_COUNT(sNdsNativeBossFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     sNdsNativeBossFighterPrimitiveGroupFirstLow,
     sNdsNativeBossFighterPrimitiveGroupCountLow,
     sNdsNativeBossFighterPrimitiveGroupTypeLow,
     sNdsNativeBossFighterPrimitiveGroupFirstVertexLow,
     sNdsNativeBossFighterPrimitiveGroupVertexCountLow,
     sNdsNativeBossFighterPrimitiveVerticesLow,
-#endif
     sNdsNativeBossFighterEpochsLow,
     NDS_FTR_COUNT(sNdsNativeBossFighterEpochsLow)
 };
@@ -3711,7 +2960,6 @@ static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
 static const u32 (*sNdsNativeFighterActiveRootLightPreambles)[2];
 static u32 sNdsNativeFighterActiveRootLightPreambleCount;
 static u8 sNdsNativeFighterRootPrograms[NDS_NATIVE_FIGHTER_OWNER_COUNT];
-#if NDS_P4
 /* The slot's current program's row; NULL for canonical or another slot. */
 static const NDSP4RootProgram *ndsP4CurrentRootProgram(u32 slot)
 {
@@ -3723,8 +2971,6 @@ static const NDSP4RootProgram *ndsP4CurrentRootProgram(u32 slot)
     return ((programs != NULL) && (program >= 1u) && (program <= count)) ?
         &programs[program - 1u] : NULL;
 }
-#endif
-#if NDS_P2_KIRBY
 /* The complete 9/10-root hidden-part programs are keyed not only by their
  * ordered source DL vector but by the live joint-6 head that produced the
  * context-baked body cache.  The adapter republishes this key every Kirby
@@ -3755,7 +3001,6 @@ s32 ndsRendererNativeKirbyTrioHeadSupported(u32 head_mp)
 #endif
     return (head_mp == 10u) ? TRUE : FALSE;
 }
-#endif
 
 /* The Mario/Fox-only mirror stress build has no image-backed owner block, but
  * the production preflight still resolves every selected root through these
@@ -3836,10 +3081,7 @@ void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment);
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMatchCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMismatchCount;
 
-#if NDS_P2_KIRBY
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatSuppressedCount;
-#endif
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 /* A table identity owns its mutable prepared-dense data. VS admits one image
  * per reachable hat/detail and shares that same table between Kirby instances,
  * exactly as mirror fighters share their ordinary owner image. Non-VS display
@@ -3917,7 +3159,6 @@ __attribute__((used)) volatile u32 gNdsNativeKirbyHatBytes;
 /* Copies whose power the match had not admitted (see the late load in
  * ndsRendererNativeEnsureKirbyCopyHat). */
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatLateLoadCount;
-#endif
 
 static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                                    u32 use_low_detail)
@@ -3964,11 +3205,7 @@ u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail)
  * loaded copy exactly as they landed in the static one. Mario/Fox have no
  * image and keep their static arrays; every other owner reaches its tables
  * only after ndsRendererNativeEnsureOwnerImage has bound this struct. */
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_IMG_PRIM_OFF(type_, member_) offsetof(type_, member_##_m1)
-#elif NDS_TASK56_FIGHTER_PRIMITIVES == 2
 #define NDS_IMG_PRIM_OFF(type_, member_) offsetof(type_, member_##_m2)
-#endif
 
 /* One owner image's members as offsets into it, in the runtime tables'
  * order, with the generated counts: the binding is a constant per owner and
@@ -3985,9 +3222,6 @@ typedef struct NDSImgBindDesc
     u32 dense_normals;
     u32 prepared_dense;
     u32 action_dense_spans;
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u32 dense_color_source;
-#endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
     u32 packed_corners;
 #endif
@@ -3996,14 +3230,12 @@ typedef struct NDSImgBindDesc
     u32 run_unique_dense;
     u32 triangles;
     u32 runs;
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     u32 primitive_group_first;
     u32 primitive_group_count;
     u32 primitive_group_type;
     u32 primitive_group_first_vertex;
     u32 primitive_group_vertex_count;
     u32 primitive_vertices;
-#endif
     u32 epochs;
     u32 state_delta_count;
     u32 state_sequence_count;
@@ -4020,11 +3252,7 @@ typedef struct NDSImgBindDesc
     u32 dense_vertices_imaged;
 } NDSImgBindDesc;
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_IMG_DESC_COLOR(type_) offsetof(type_, dense_color_source),
-#else
 #define NDS_IMG_DESC_COLOR(type_)
-#endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
 #define NDS_IMG_DESC_CORNERS(type_) offsetof(type_, packed_corners),
 #define NDS_IMG_DESC_CORNER_COUNT(prefix_) prefix_##_PACKED_CORNERS_COUNT,
@@ -4032,7 +3260,6 @@ typedef struct NDSImgBindDesc
 #define NDS_IMG_DESC_CORNERS(type_)
 #define NDS_IMG_DESC_CORNER_COUNT(prefix_)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
 #define NDS_IMG_DESC_PRIMITIVES(type_)                                         \
     NDS_IMG_PRIM_OFF(type_, primitive_group_first),                            \
     NDS_IMG_PRIM_OFF(type_, primitive_group_count),                            \
@@ -4040,9 +3267,6 @@ typedef struct NDSImgBindDesc
     NDS_IMG_PRIM_OFF(type_, primitive_group_first_vertex),                     \
     NDS_IMG_PRIM_OFF(type_, primitive_group_vertex_count),                     \
     NDS_IMG_PRIM_OFF(type_, primitive_vertices),
-#else
-#define NDS_IMG_DESC_PRIMITIVES(type_)
-#endif
 #define NDS_IMG_DESC(type_, prefix_)                                           \
     {                                                                          \
         offsetof(type_, state_deltas), offsetof(type_, state_sequence),        \
@@ -4069,13 +3293,9 @@ typedef struct NDSImgBindDesc
  * eye and gray-Link failures this closes. Defined beside the memo in
  * nds_renderer_native_common.c, later in this same unity translation unit, and
  * only where that memo exists. */
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsRendererNativeForgetFighterRunUvTables(const void *tables);
 #define NDS_IMG_FORGET_RUN_UV(tables_)                                         \
     ndsRendererNativeForgetFighterRunUvTables((const void *)&(tables_))
-#else
-#define NDS_IMG_FORGET_RUN_UV(tables_) ((void)0)
-#endif
 
 /* Binds a runtime tables struct to a loaded image (NULL unbinds it). */
 static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
@@ -4104,9 +3324,6 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
     /* Image RAM owns mutable prepared-dense scratch. */
     tables->prepared_dense = (NDSNativePreparedDenseVertex *)(img + desc->prepared_dense);
     tables->action_dense_spans = (const u16 *)(img + desc->action_dense_spans);
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    tables->dense_color_source = (const u16 *)(img + desc->dense_color_source);
-#endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
     tables->packed_corners = (const u16 *)(img + desc->packed_corners);
     tables->packed_corner_count = desc->packed_corner_count;
@@ -4123,7 +3340,6 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
     tables->triangle_count = desc->triangle_count;
     tables->runs = (const NDSNativeRun *)(img + desc->runs);
     tables->run_count = desc->run_count;
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     tables->primitive_group_first = (const u16 *)(img + desc->primitive_group_first);
     tables->primitive_group_count = img + desc->primitive_group_count;
     tables->primitive_group_type = img + desc->primitive_group_type;
@@ -4131,7 +3347,6 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
         (const u16 *)(img + desc->primitive_group_first_vertex);
     tables->primitive_group_vertex_count = img + desc->primitive_group_vertex_count;
     tables->primitive_vertices = (const u16 *)(img + desc->primitive_vertices);
-#endif
     tables->epochs = (const NDSNativeEpoch *)(img + desc->epochs);
     tables->epoch_count = desc->epoch_count;
 }
@@ -4143,7 +3358,6 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
         ndsRendererNativeBindImageTables(&(tables_), &desc_, (base_));         \
     } while (0)
 
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 static const char *ndsRendererNativeKirbyHatImagePath(
     u32 copy_modelpart_id, u32 use_low_detail)
 {
@@ -4207,7 +3421,7 @@ static s32 ndsRendererNativeBindKirbyHatImage(
     return FALSE;
 }
 
-#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+#if defined(NDS_P4_KIRBY_HATS_PRESENT)
 static const char *ndsRendererNativeP4KirbyHatImagePath(u32 hat, u32 use_low_detail)
 {
 #define NDS_P4_KIRBY_HAT_PATH_CASE(id_, base_, detail_, type_, prefix_, path_)   \
@@ -4372,7 +3586,7 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
             }
         }
     }
-#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+#if defined(NDS_P4_KIRBY_HATS_PRESENT)
     for (part = 0u; part < p4_count; part++)
     {
         for (detail = p4_with_low ? 1u : 0u; detail < (p4_with_low ? 2u : 1u); detail++)
@@ -4405,7 +3619,7 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
         return TRUE;
     }
     storage = ndsSceneAssetTryAlloc(table_bytes + image_bytes, 16u, 25600u);
-#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+#if defined(NDS_P4_KIRBY_HATS_PRESENT)
     if ((storage == NULL) && (p4_images != 0u) && (sNdsNativeKirbyP4KirbySlots != 0u))
     {
         u32 kirbys = 0u;
@@ -4477,7 +3691,7 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
             NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
         }
     }
-#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+#if defined(NDS_P4_KIRBY_HATS_PRESENT)
     if (p4_deferred != FALSE)
     {
         u32 player;
@@ -4596,7 +3810,7 @@ s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_deta
             return TRUE;
         }
     }
-#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+#if defined(NDS_P4_KIRBY_HATS_PRESENT)
     if ((sNdsNativeKirbyP4DeferredCount != 0u) &&
         (use_low_detail == sNdsNativeKirbyP4DeferredDetail))
     {
@@ -5189,82 +4403,6 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
     *count = owner->root_light_preamble_count;
     return owner->root_light_preambles;
 }
-#else
-void ndsRendererNativeBeginKirbyHatMatch(void) {}
-
-s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
-{
-    return ((high_mask | low_mask) == 0u) ? TRUE : FALSE;
-}
-
-s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail)
-{
-    (void)part;
-    (void)use_low_detail;
-    return FALSE;
-}
-
-s32 ndsRendererNativeEnsureKirbyCopyHat(
-    u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail)
-{
-    (void)battle_slot;
-    (void)copy_modelpart_id;
-    (void)use_low_detail;
-    return FALSE;
-}
-
-void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail)
-{
-    (void)hats;
-    (void)count;
-    (void)use_low_detail;
-}
-
-void ndsRendererNativeKirbyHatSetKirbySlots(u32 slot_mask)
-{
-    (void)slot_mask;
-}
-
-s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)
-{
-    (void)battle_slot;
-    (void)hat;
-    (void)use_low_detail;
-    return FALSE;
-}
-
-static const NDSNativeFighterRuntimeTables *
-ndsRendererNativeFighterTablesForResolvedRoot(
-    const NDSNativeRoot *root,
-    const NDSNativeFighterOwnerRuntime *owner,
-    u32 battle_slot,
-    u32 binding)
-{
-    (void)root;
-    (void)battle_slot;
-    (void)binding;
-    return (owner != NULL) ? owner->tables : NULL;
-}
-
-static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
-    const NDSNativeRoot *root,
-    const NDSNativeFighterOwnerRuntime *owner,
-    u32 battle_slot,
-    u32 binding,
-    u32 *count))[2]
-{
-    (void)root;
-    (void)battle_slot;
-    (void)binding;
-    if (owner == NULL)
-    {
-        *count = 0u;
-        return NULL;
-    }
-    *count = owner->root_light_preamble_count;
-    return owner->root_light_preambles;
-}
-#endif
 
 /* Bind every owner whose tables this build takes from an image. Called once
  * per successful load, with the buffer this scene's arena generation owns. */
@@ -5272,7 +4410,6 @@ static const u8 sNdsSkeletonBindingParents[32] = { [0 ... 31] = 0xffu };
 static const u8 sNdsSkeletonCrossSlots[32] = { [0 ... 31] = 31u };
 #include "generated/nds_native_skeletons.generated.inc"
 
-#if NDS_P4
 /* A P4 content's root tables (owner_words) are in each of its images: the one
  * being bound, else -- it is being unbound -- the other detail's while that
  * one stays loaded; NULL when neither is. */
@@ -5294,7 +4431,6 @@ static const void *ndsP4OwnerTablesInImage(u32 owner_slot, u32 use_low_detail,
     }
     return NULL;
 }
-#endif
 
 static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                                             const void *base)
@@ -5365,7 +4501,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
-#if NDS_NATIVE_OWNER_IMAGE_SAMUS
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_SAMUS)
     {
         if (use_low_detail != 0u)
@@ -5382,7 +4517,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
 #if NDS_NATIVE_OWNER_IMAGE_LINK
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LINK)
     {
@@ -5401,7 +4535,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
-#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PIKACHU)
     {
         if (use_low_detail != 0u)
@@ -5418,8 +4551,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_YOSHI
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_YOSHI)
     {
         if (use_low_detail != 0u)
@@ -5436,8 +4567,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NESS
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NESS)
     {
         if (use_low_detail != 0u)
@@ -5454,8 +4583,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_PURIN
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PURIN)
     {
         if (use_low_detail != 0u)
@@ -5472,8 +4599,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_KIRBY
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_KIRBY)
     {
         if (use_low_detail != 0u)
@@ -5490,7 +4615,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         }
         return;
     }
-#endif
 #if NDS_NATIVE_OWNER_IMAGE_MMARIO
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MMARIO)
     {
@@ -5545,7 +4669,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
-#if NDS_P4
 #define NDS_P4_OWNER_BIND(id_, T_, N_, n_, parent_, model_, main_)             \
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_##N_)                               \
     {                                                                           \
@@ -5571,7 +4694,6 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_BIND)
 #undef NDS_P4_OWNER_BIND
-#endif
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NDONKEY)
     {
@@ -6037,164 +5159,6 @@ static void ndsRendererNativeBuildDenseShadeWords(
     const u16 *run_first_unique, const u8 *run_unique_count,
     const u16 *run_unique_dense, u32 *dense_words);
 
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-/* THE EQUIVALENCE PROOF, RUN ON THE CONSOLE RATHER THAN ARGUED ON PAPER.
- *
- * Moving a table out of the binary is only safe if the bytes that arrive are
- * the bytes that left. This compares the loaded image against the arrays it
- * replaces, member by member, using the pairing list the image generator emits
- * from the same description that produced both. It needs a build where BOTH
- * exist, which is `NDS_NATIVE_OWNER_IMAGE=0 NDS_NATIVE_OWNER_IMAGE_VERIFY=1`:
- * arrays compiled in, image staged and loaded, nothing reading the image yet.
- * That build is the proof; the shipping build is the one this proof licenses.
- *
- * A size disagreement is reported as a mismatch rather than clamped -- a short
- * compare that passes is exactly the false green this exists to prevent. */
-static void ndsRendererNativeVerifyMember(const void *image_member,
-                                          u32 image_bytes,
-                                          const void *array, u32 array_bytes)
-{
-    const u8 *a = (const u8 *)image_member;
-    const u8 *b = (const u8 *)array;
-    u32 i;
-
-    if (image_bytes != array_bytes)
-    {
-        gNdsNativeOwnerImageMismatchCount++;
-        return;
-    }
-    for (i = 0u; i < array_bytes; i++)
-    {
-        if (a[i] != b[i])
-        {
-            gNdsNativeOwnerImageMismatchCount++;
-            return;
-        }
-    }
-    gNdsNativeOwnerImageMatchCount++;
-}
-
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-static void ndsRendererNativeVerifyPreparedMember(const void *image_member,
-                                                 u32 image_bytes,
-                                                 const void *array,
-                                                 u32 array_bytes)
-{
-    const NDSNativePreparedDenseVertex *image = image_member;
-    const NDSNativePreparedDenseVertex *reference = array;
-    u32 i;
-    if ((image_bytes != array_bytes) ||
-        (image_bytes % sizeof(*image) != 0u))
-    {
-        gNdsNativeOwnerImageMismatchCount++;
-        return;
-    }
-    /* Positions are baked and immutable. The in-binary verification copy
-     * may already have drawn an earlier CSS preview, so its UV/color scratch
-     * is not an initial-data oracle. The unused image must still contain the
-     * generator's zero initial scratch values. */
-    for (i = 0u; i < image_bytes / sizeof(*image); i++)
-    {
-        if ((image[i].gx_xy != reference[i].gx_xy) ||
-            (image[i].gx_z != reference[i].gx_z) ||
-            (image[i].s != 0) || (image[i].t != 0)
-#if !NDS_R2_FIGHTER_HW_LIGHT
-            || (image[i].shaded_rgba != 0u) || (image[i].packed_color != 0u)
-#endif
-           )
-        {
-            gNdsNativeOwnerImageMismatchCount++;
-            return;
-        }
-    }
-    gNdsNativeOwnerImageMatchCount++;
-}
-
-#define NDS_IMG_VERIFY(type_, member_, array_)                                 \
-    _Generic((array_),                                                        \
-        NDSNativePreparedDenseVertex *: ndsRendererNativeVerifyPreparedMember, \
-        default: ndsRendererNativeVerifyMember)                               \
-        (&img_->member_, (u32)sizeof(img_->member_),                           \
-         (array_), (u32)sizeof(array_));
-#else
-#define NDS_IMG_VERIFY(type_, member_, array_)                                 \
-    ndsRendererNativeVerifyMember(&img_->member_, (u32)sizeof(img_->member_),  \
-                                  (array_), (u32)sizeof(array_));
-#endif
-
-/* P2-3f49/P2-3f47: dense shade words are baked, not copied, so the byte
- * compare above cannot cover them. VERIFY rebuilds the exact runtime words,
- * including the NDO6 unlit vertex-colour overlay, through the same helper the
- * runtime bake calls. Kirby high is currently the largest generated owner;
- * fail closed if a future image grows beyond this verification-only scratch. */
-static u32 sNdsNativeOwnerImageVerifyDenseShadeWords[
-    NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT];
-
-static void ndsRendererNativeVerifyDenseNormals(
-    const NDSNativeDenseVertex *vertices, u32 vertex_count,
-    const NDSNativeRun *runs, u32 run_count,
-    const u16 *run_first_unique, const u8 *run_unique_count,
-    const u16 *run_unique_dense,
-    const u32 *image_normals, u32 image_bytes)
-{
-    if ((vertex_count > NDS_FTR_COUNT(sNdsNativeOwnerImageVerifyDenseShadeWords)) ||
-        (image_bytes != vertex_count * (u32)sizeof(u32)))
-    {
-        gNdsNativeOwnerImageMismatchCount++;
-        return;
-    }
-    ndsRendererNativeBuildDenseShadeWords(
-        vertices, vertex_count, runs, run_count,
-        run_first_unique, run_unique_count, run_unique_dense,
-        sNdsNativeOwnerImageVerifyDenseShadeWords);
-    ndsRendererNativeVerifyMember(
-        image_normals, image_bytes,
-        sNdsNativeOwnerImageVerifyDenseShadeWords,
-        vertex_count * (u32)sizeof(u32));
-}
-
-#define NDS_IMG_VERIFY_NORMALS(type_, member_, vertices_)                      \
-    ndsRendererNativeVerifyDenseNormals((vertices_),                           \
-                                        NDS_FTR_COUNT(vertices_),              \
-                                        img_->runs,                            \
-                                        NDS_FTR_COUNT(img_->runs),            \
-                                        img_->run_first_unique,                \
-                                        img_->run_unique_count,                \
-                                        img_->run_unique_dense,                \
-                                        img_->member_,                        \
-                                        (u32)sizeof(img_->member_));
-
-s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
-{
-    const NDSNativeOwnerImageSlot *slot;
-    u32 before;
-
-    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) ||
-        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
-    {
-        return FALSE;
-    }
-    slot = &sNdsNativeOwnerImage[owner_slot][use_low_detail];
-    if (slot->base == NULL)
-    {
-        gNdsNativeOwnerImageMismatchCount++;
-        return FALSE;
-    }
-    if (*(const u32 *)slot->base != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG)
-    {
-        gNdsNativeOwnerImageMismatchCount++;
-        return FALSE;
-    }
-    before = gNdsNativeOwnerImageMismatchCount;
-    /* One row per owner the verifier still walks, from the image generator.
-     * Replaces twenty-three hand-written blocks that differed only in the
-     * owner's name. */
-#define NDS_IMG_VERIFY_OWNER_ROW(slot_id, UP, high_t, low_t)                       if (owner_slot == (slot_id))                                                   {                                                                                  if (use_low_detail != 0u)                                                      {                                                                                  const low_t *img_ = (const low_t *)slot->base;                                 NDS_NATIVE_IMAGE_##UP##_LOW_MEMBERS(NDS_IMG_VERIFY)                            NDS_NATIVE_IMAGE_##UP##_LOW_MEMBERS_DENSE_NORMALS(                                 NDS_IMG_VERIFY_NORMALS)                                                }                                                                              else                                                                           {                                                                                  const high_t *img_ = (const high_t *)slot->base;                               NDS_NATIVE_IMAGE_##UP##_HIGH_MEMBERS(NDS_IMG_VERIFY)                           NDS_NATIVE_IMAGE_##UP##_HIGH_MEMBERS_DENSE_NORMALS(                                NDS_IMG_VERIFY_NORMALS)                                                }                                                                          }
-    NDS_NATIVE_OWNER_IMAGE_VERIFY_ROWS(NDS_IMG_VERIFY_OWNER_ROW)
-#undef NDS_IMG_VERIFY_OWNER_ROW
-    return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
-}
-#endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
 
 #endif /* P2-3 image-backed owners */
 
@@ -6285,13 +5249,11 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
             &sNdsNativeCaptainLowOwner : &sNdsNativeCaptainHighOwner;
     }
 #endif
-#if NDS_P2_SAMUS
     if (slot == 5u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeSamusLowOwner : &sNdsNativeSamusHighOwner;
     }
-#endif
 #if NDS_P2_LINK
     if (slot == 6u)
     {
@@ -6299,41 +5261,31 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
             &sNdsNativeLinkLowOwner : &sNdsNativeLinkHighOwner;
     }
 #endif
-#if NDS_P2_PIKACHU
     if (slot == 7u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativePikachuLowOwner : &sNdsNativePikachuHighOwner;
     }
-#endif
-#if NDS_P2_YOSHI
     if (slot == 8u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeYoshiLowOwner : &sNdsNativeYoshiHighOwner;
     }
-#endif
-#if NDS_P2_NESS
     if (slot == 9u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNessLowOwner : &sNdsNativeNessHighOwner;
     }
-#endif
-#if NDS_P2_PURIN
     if (slot == 10u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativePurinLowOwner : &sNdsNativePurinHighOwner;
     }
-#endif
-#if NDS_P2_KIRBY
     if (slot == 11u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeKirbyLowOwner : &sNdsNativeKirbyHighOwner;
     }
-#endif
 #if NDS_P2_MMARIO
     if (slot == 12u)
     {
@@ -6355,7 +5307,6 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
             &sNdsNativeNFoxLowOwner : &sNdsNativeNFoxHighOwner;
     }
 #endif
-#if NDS_P4
 #define NDS_P4_OWNER_LOOKUP(id_, T_, N_, n_, parent_, model_, main_)           \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
@@ -6364,7 +5315,6 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_LOOKUP)
 #undef NDS_P4_OWNER_LOOKUP
-#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -6451,7 +5401,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         return ndsRendererNativeFighterCanonicalOwnerForDetail(
             slot, use_low_detail);
     }
-#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program == 1u))
     {
         return (use_low_detail != 0u) ?
@@ -6512,7 +5462,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
 #endif
     }
 #endif
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
         /* 1..NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT are the trio head contexts in
@@ -6546,7 +5496,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
-#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI)
     {
         if (program == 1u)
@@ -6561,7 +5511,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
-#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
     {
         if (program == 1u)
@@ -6581,7 +5531,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
-#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU) && (program == 1u))
     {
         return (use_low_detail != 0u) ?
@@ -6589,7 +5539,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             &sNdsNativePikachuAccessoryHighOwner;
     }
 #endif
-#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN) && (program == 1u))
     {
         return (use_low_detail != 0u) ?
@@ -6597,7 +5547,6 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             &sNdsNativePurinAccessoryHighOwner;
     }
 #endif
-#if NDS_P4
     {
         u32 count;
         const NDSP4RootProgram *programs = ndsP4RootPrograms(slot, &count);
@@ -6607,14 +5556,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             return programs[program - 1u].owners[(use_low_detail != 0u) ? 1u : 0u];
         }
     }
-#endif
-#if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
+#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -6705,7 +5647,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
     }
-#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     /* Catch, MorphUnfold, MorphBall, FSmash. Every number this bound rejects
      * falls through to the reset below and silently becomes canonical, which is
      * how Kirby's Stone and CopyLink were lost for a month -- so this literal
@@ -6724,7 +5666,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     /* Derived, not a literal. This was `program <= 4u` while Kirby had four
      * programs; admitting the ten copy hats made Stone program 13 and CopyLink
      * 14, and every number past the stale bound fell through to the reset
@@ -6740,14 +5682,14 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI) && (program <= 2u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
     }
 #endif
-#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
     /* canonical + Win3 + YoYo + FSmash. Every number this bound rejects falls
      * through to the reset below and silently becomes canonical, which is how
      * Kirby's Stone was lost for a month -- so this literal moves whenever a
@@ -6758,7 +5700,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
     /* canonical + Accessory. */
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU) && (program <= 1u))
     {
@@ -6766,7 +5708,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
     /* canonical + Accessory. */
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN) && (program <= 1u))
     {
@@ -6774,7 +5716,6 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P4
     {
         u32 count;
 
@@ -6784,20 +5725,12 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
             return;
         }
     }
-#endif
-#if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
+#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
 }
 
-#if NDS_P4
 /* A P4 owner's variant rows (donor_variants), keyed by canonical binding. */
 static sb32 ndsP4RootVariantFits(u32 slot, u32 use_low_detail, u32 binding,
                                  u32 root_offset)
@@ -6877,7 +5810,6 @@ static u32 ndsP4SelectRootProgram(
     }
     return 0xffu;
 }
-#endif
 
 u32 ndsRendererNativeFighterSelectRootProgram(
     u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
@@ -6907,7 +5839,6 @@ u32 ndsRendererNativeFighterSelectRootProgram(
             if (i == root_count) { return NDS_NATIVE_SKELETON_PROGRAM; }
         }
     }
-#if NDS_P4
     {
         u32 count;
         const NDSP4RootProgram *programs = ndsP4RootPrograms(slot, &count);
@@ -6919,8 +5850,7 @@ u32 ndsRendererNativeFighterSelectRootProgram(
                                           programs_tried);
         }
     }
-#endif
-#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
         /* canonical + Catch + MorphUnfold + MorphBall + FSmash. */
@@ -6935,35 +5865,35 @@ u32 ndsRendererNativeFighterSelectRootProgram(
         program_count = NDS_NATIVE_LINK_LAST_PROGRAM + 1u;
     }
 #endif
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
         /* canonical + every trio head + Stone + CopyLink + CopyTransition. */
         program_count = NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 4u;
     }
 #endif
-#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI)
     {
         /* canonical + Catch + Throw. */
         program_count = 3u;
     }
 #endif
-#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
     {
         /* canonical + Win3 + YoYo + FSmash. */
         program_count = 4u;
     }
 #endif
-#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU)
     {
         /* canonical + Accessory. */
         program_count = 2u;
     }
 #endif
-#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN)
     {
         /* canonical + Accessory. */
@@ -6981,7 +5911,7 @@ u32 ndsRendererNativeFighterSelectRootProgram(
         {
             continue;
         }
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
         if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
         {
             /* Programs 1..N are the trio head contexts, then Stone, CopyLink,
@@ -7046,17 +5976,14 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
 {
     const NDSNativeRootVariant *variants = NULL;
     u32 variant_count = 0u;
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
     NDSNativeKirbyHatImageSlot *kirby_hat_slot = NULL;
     NDSNativeRoot *kirby_hat_root = NULL;
-#endif
     u32 i;
 
     if ((owner == NULL) || (binding >= owner->root_count))
     {
         return NULL;
     }
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
     if ((use_low_detail < NDS_NATIVE_IMAGE_DETAILS) &&
         (battle_slot < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS))
     {
@@ -7084,12 +6011,10 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
         return kirby_hat_root;
     }
 #endif
-#endif
     if (owner->roots[binding].root_offset == root_offset)
     {
         return &owner->roots[binding];
     }
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
     /* Copy hats are the only Kirby joint-6 variants excluded from the resident
      * owner table.  The generated binding is source-derived from the JointTree
      * + setup_parts walk (joint 6 is the first selected drawable root, binding
@@ -7106,7 +6031,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     {
         return kirby_hat_root;
     }
-#endif
     /* Mario's two hand joints (10 and 16) each carry a second model part in
      * 203_MarioMain.c, and the VS Results pose selects it: without these rows
      * the owner declined at validate code 4 and every root of the Lose pose
@@ -7164,7 +6088,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeCaptainRootVariants);
     }
 #endif
-#if NDS_P2_SAMUS
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
         variants = (use_low_detail != 0u) ?
@@ -7173,8 +6096,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeSamusRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeSamusRootVariants);
     }
-#endif
-#if NDS_P2_NESS
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
     {
         variants = (use_low_detail != 0u) ?
@@ -7183,8 +6104,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeNessRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeNessRootVariants);
     }
-#endif
-#if NDS_P2_YOSHI
     /* Yoshi's grab throws. dYoshiMainMotion_ThrowF/_ThrowB set joint 7 to
      * model part 1 and restore 0 on release, and they are Yoshi's only
      * model-part mutations. Without the row this resolves to nothing, the
@@ -7199,8 +6118,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeYoshiRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeYoshiRootVariants);
     }
-#endif
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)
+#if defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
         variants = (use_low_detail != 0u) ?
@@ -7210,7 +6128,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeKirbyRootVariants);
     }
 #endif
-#if NDS_P4
     /* A P4 owner carries every alternate model part its donor's joints have
      * (scripts/p4/p4_native_owner.py donor_variants): its own scripts and
      * its parent's code both set them. The rows name canonical bindings, so a
@@ -7235,7 +6152,6 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_VARIANTS)
 #undef NDS_P4_OWNER_VARIANTS
-#endif
     for (i = 0u; i < variant_count; i++)
     {
         if ((variants[i].binding == binding) &&
@@ -7248,83 +6164,10 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
 }
 
 #undef NDS_FTR_COUNT
-#endif
 
-#if NDS_TASK93_TEXKEY_CENSUS
-/* Task 93 E0. Sizes the texture-key rebuild in
- * ndsRendererHardwareResolveOrBindTexture, the largest renderer symbol left in
- * the frame. 256 entries covers several frames at the expected bind rate. */
-#define NDS_TASK93_KEY_TRACE_COUNT 256u
-u32 gNdsTask93BindCalls;
-u32 gNdsTask93PreflightCalls;
-u32 gNdsTask93ConsecutiveRepeat;
-u32 gNdsTask93LastKeyHash;
-u32 gNdsTask93KeyTrace[NDS_TASK93_KEY_TRACE_COUNT];
-u32 gNdsTask93KeyTraceNext;
-#endif
 
-#if NDS_TASK107_RENDER_STATE_CENSUS
-/* Task 107. Observation only: these counters size two renderer-state candidates
- * before any production path is changed. The stats tracker compares exact tile
- * source bytes against the previous sync of that SAME stats object/tile. A
- * stats init retires the object's history, so stack-address reuse cannot create
- * a false repeat. The load tile's set_seen bit is tracked separately because it
- * contributes NDS_RENDERER_TILE_LOAD_SEEN to the published flags word. */
-#define NDS_TASK107_SYNC_SITE_COUNT 4u
-#define NDS_TASK107_SYNC_TRACK_COUNT 32u
-#define NDS_TASK107_BIND_NAME_CAPACITY 64u
-enum
-{
-    NDS_TASK107_SYNC_TEXTURE = 0,
-    NDS_TASK107_SYNC_SETTILE = 1,
-    NDS_TASK107_SYNC_SETTILESIZE = 2,
-    NDS_TASK107_SYNC_RESOLVE = 3
-};
-typedef struct NDSRendererTask107SyncTrack
-{
-    const NDSRendererStats *stats;
-    u32 valid_mask;
-    u32 load_seen[NDS_RENDERER_TILE_COUNT];
-    NDSRendererTileState tile[NDS_RENDERER_TILE_COUNT];
-} NDSRendererTask107SyncTrack;
 
-__attribute__((used)) volatile u32
-    gNdsTask107SyncCalls[NDS_TASK107_SYNC_SITE_COUNT];
-__attribute__((used)) volatile u32
-    gNdsTask107SyncUnchanged[NDS_TASK107_SYNC_SITE_COUNT];
-__attribute__((used)) volatile u32 gNdsTask107SyncTrackerOverflow;
-__attribute__((used)) volatile u32 gNdsTask107BindRequests;
-__attribute__((used)) volatile u32 gNdsTask107BindZeroNameExits;
-__attribute__((used)) volatile u32 gNdsTask107BindCurrentNameElisions;
-__attribute__((used)) volatile u32 gNdsTask107BindIssues;
-__attribute__((used)) volatile u32 gNdsTask107BindRevisitIssues;
-__attribute__((used)) volatile u32 gNdsTask107BindNameSetOverflow;
 
-static NDSRendererTask107SyncTrack
-    sNdsTask107SyncTrack[NDS_TASK107_SYNC_TRACK_COUNT];
-static u32 sNdsTask107BindFrameSerial;
-static u32 sNdsTask107BindNameCount;
-static u32 sNdsTask107BindNames[NDS_TASK107_BIND_NAME_CAPACITY];
-#endif
-
-#if NDS_TASK90_SHADE_CENSUS
-/* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
- * records every light-shade request in order, so the cache size is set from the
- * measured working set rather than from a hit rate. Keep it alive -- the size
- * constant's comment names scripts/census-light-shade-lut.ps1 as the
- * re-check when the fighter or stage set changes, and that script reads these.
- * Lab only, default off; the trace array is 1 KiB of BSS.
- *
- * 128 entries covers ~2.6 frames at the measured 49 requests/frame. */
-#define NDS_TASK90_LUT_TRACE_COUNT 128u
-u32 gNdsTask90LutGetCalls;
-u32 gNdsTask90LutBuilds;
-u32 gNdsTask90LutTraceDiffuse[NDS_TASK90_LUT_TRACE_COUNT];
-u32 gNdsTask90LutTraceAmbient[NDS_TASK90_LUT_TRACE_COUNT];
-u32 gNdsTask90LutTraceNext;
-#endif
-
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_FIGHTER_HIERARCHY_JOINT_MAX 27u
 #define NDS_NATIVE_FIGHTER_HIERARCHY_BINDING_MAX 18u
 #define NDS_NATIVE_FIGHTER_HIERARCHY_EPOCH_COUNT 49u
@@ -7388,242 +6231,6 @@ typedef struct NDSNativeFighterOwnerExecution
     u32 active;
 } NDSNativeFighterOwnerExecution;
 
-#if NDS_RENDERER_M2_DETAILED_LEDGER
-typedef struct NDSNativeFighterShadeKey
-{
-    u32 owner_generation;
-    u32 slot;
-    u32 epoch_index;
-    u32 epoch_policy;
-    u32 combine_w0;
-    u32 combine_w1;
-    u32 policy_flags;
-    u32 geometry_mode;
-    u32 prim_color;
-    u32 light_color_1;
-    u32 light_color_2;
-    u32 light_masks;
-    s32 light_dir_x;
-    s32 light_dir_y;
-    s32 light_dir_z;
-    u32 light_dir_valid;
-} NDSNativeFighterShadeKey;
-
-typedef struct NDSNativeFighterShadeCensusEntry
-{
-    NDSNativeFighterShadeKey key;
-    u32 hash;
-    u32 valid;
-} NDSNativeFighterShadeCensusEntry;
-
-static NDSNativeFighterShadeCensusEntry sNdsNativeFighterShadeCensus[2][
-    NDS_NATIVE_FIGHTER_HIERARCHY_EPOCH_COUNT];
-static u32 sNdsNativeFighterShadeProducerGeneration[
-    sizeof(sNdsNativeFighterDenseVertices) /
-        sizeof(sNdsNativeFighterDenseVertices[0])];
-static u8 sNdsNativeFighterShadeProducerTag[
-    sizeof(sNdsNativeFighterDenseVertices) /
-        sizeof(sNdsNativeFighterDenseVertices[0])];
-
-static u32 ndsRendererM2ShadeHash(
-    const NDSNativeFighterShadeKey *key)
-{
-    const u32 *word = (const u32 *)key;
-    u32 hash = 2166136261u;
-    u32 i;
-
-    for (i = 0u; i < sizeof(*key) / sizeof(*word); i++)
-    {
-        u32 value = word[i];
-        u32 byte;
-
-        for (byte = 0u; byte < sizeof(value); byte++)
-        {
-            hash ^= (value >> (byte * 8u)) & 0xffu;
-            hash *= 16777619u;
-        }
-    }
-    return (hash != 0u) ? hash : 1u;
-}
-
-static s32 ndsRendererM2ShadeOutputsResident(
-    u32 slot,
-    u32 epoch_index,
-    u32 owner_generation,
-    const NDSNativeEpoch *epoch)
-{
-    u8 producer_tag = (u8)((slot << 7) | (epoch_index + 1u));
-    u32 action_offset;
-
-    for (action_offset = 0u;
-         action_offset < epoch->action_count;
-         action_offset++)
-    {
-        u32 action_index = epoch->first_action + action_offset;
-        u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
-        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
-        u32 dense_count = NDS_NATIVE_SPAN_COUNT(
-            wide, span,
-            &sNdsNativeFighterActiveTables->vertex_actions[action_index]);
-        u32 dense_offset;
-
-        for (dense_offset = 0u;
-             dense_offset < dense_count;
-             dense_offset++)
-        {
-            u32 dense_id = dense_first + dense_offset;
-
-            if ((sNdsNativeFighterShadeProducerGeneration[dense_id] !=
-                 owner_generation) ||
-                (sNdsNativeFighterShadeProducerTag[dense_id] !=
-                 producer_tag))
-            {
-                return FALSE;
-            }
-        }
-    }
-    return TRUE;
-}
-
-static void __attribute__((noinline)) ndsRendererM2ShadeCensusEpoch(
-    u32 slot,
-    u32 owner_generation,
-    u32 epoch_index,
-    const NDSNativeEpoch *epoch,
-    const NDSRendererHardwareLightDirection *prepared_direction,
-    u32 prepared_direction_valid,
-    const NDSRendererStats *stats)
-{
-    const u32 epoch_policy =
-        sNdsNativeFighterActiveTables->epoch_direct_policy[epoch_index];
-    const NDSNativeDirectPolicy *policy =
-        &sNdsNativeFighterDirectPolicies[
-            epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
-    NDSNativeFighterShadeCensusEntry *entry =
-        &sNdsNativeFighterShadeCensus[slot][epoch_index];
-    NDSNativeFighterShadeKey key = {
-        owner_generation,
-        slot,
-        epoch_index,
-        epoch_policy,
-        policy->combine_w0,
-        policy->combine_w1,
-        (u32)policy->vertex_flags | ((u32)policy->textured << 8),
-        stats->geometry_mode,
-        stats->prim_color,
-        stats->light_color_1,
-        stats->light_color_2,
-        stats->light_color_mask | (stats->light_dir_mask << 16),
-        (prepared_direction != NULL) ? prepared_direction->x : 0,
-        (prepared_direction != NULL) ? prepared_direction->y : 0,
-        (prepared_direction != NULL) ? prepared_direction->z : 0,
-        prepared_direction_valid
-    };
-    u32 hash;
-
-    sNdsRendererM2ShadeEpochCount++;
-    sNdsRendererM2ShadeOwnerEpochCount[slot]++;
-    if (epoch->action_count == 0u)
-    {
-        return;
-    }
-    hash = ndsRendererM2ShadeHash(&key);
-    if ((entry->valid != 0u) && (entry->hash == hash))
-    {
-        if (memcmp(&entry->key, &key, sizeof(key)) == 0)
-        {
-            sNdsRendererM2ShadeKeyHitCount++;
-            sNdsRendererM2ShadeOwnerKeyHitCount[slot]++;
-            if (ndsRendererM2ShadeOutputsResident(
-                    slot, epoch_index, owner_generation, epoch) != FALSE)
-            {
-                sNdsRendererM2ShadeResidentHitCount++;
-                sNdsRendererM2ShadeOwnerResidentHitCount[slot]++;
-            }
-        }
-        else
-        {
-            sNdsRendererM2ShadeHashCollisionCount++;
-        }
-    }
-    entry->key = key;
-    entry->hash = hash;
-    entry->valid = TRUE;
-}
-
-static void __attribute__((noinline)) ndsRendererM2ShadeRecordProduced(
-    u32 slot,
-    u32 owner_generation,
-    u32 epoch_index,
-    const NDSNativeEpoch *epoch,
-    u32 epoch_policy,
-    const NDSRendererStats *stats)
-{
-    const NDSNativeDirectPolicy *policy =
-        &sNdsNativeFighterDirectPolicies[
-            epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
-    u32 use_material =
-        policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
-    u32 use_lut =
-        ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
-        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
-        ((stats->light_color_mask &
-          (NDS_RENDERER_LIGHT_COLOR_1_MASK |
-           NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
-         (NDS_RENDERER_LIGHT_COLOR_1_MASK |
-          NDS_RENDERER_LIGHT_COLOR_2_MASK));
-    u32 action_offset;
-
-    for (action_offset = 0u;
-         action_offset < epoch->action_count;
-         action_offset++)
-    {
-        u32 action_index = epoch->first_action + action_offset;
-        u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
-        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
-        u32 dense_count = NDS_NATIVE_SPAN_COUNT(
-            wide, span,
-            &sNdsNativeFighterActiveTables->vertex_actions[action_index]);
-        u32 dense_offset;
-
-        sNdsRendererM2ShadeDenseVisitCount += dense_count;
-        if (use_material != 0u)
-        {
-            sNdsRendererM2ShadeMaterialPackCount += dense_count;
-        }
-        for (dense_offset = 0u;
-             dense_offset < dense_count;
-             dense_offset++)
-        {
-            u32 dense_id = dense_first + dense_offset;
-
-            if (sNdsNativeFighterActiveTables->dense_color_source[dense_id] !=
-                dense_id)
-            {
-                sNdsRendererM2ShadeAliasCopyCount++;
-            }
-            else
-            {
-                sNdsRendererM2ShadeComputeCount++;
-                if (use_lut != 0u)
-                {
-                    sNdsRendererM2ShadeLutComputeCount++;
-                }
-                else
-                {
-                    sNdsRendererM2ShadePreparedComputeCount++;
-                }
-            }
-            sNdsNativeFighterShadeProducerGeneration[dense_id] =
-                owner_generation;
-            sNdsNativeFighterShadeProducerTag[dense_id] =
-                (u8)((slot << 7) | (epoch_index + 1u));
-        }
-    }
-}
-#endif
 
 typedef struct NDSNativeStagePreparedDense
 {
@@ -7804,7 +6411,6 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererStats preflight_stats;
     const NDSRendererMatrix20p12 *binding_composed;
     u64 hidden_binding_mask;
-#if NDS_TASK36_HW_COMPOSE
     const NDSRendererMatrix20p12 *projection;
     const NDSRendererMatrix20p12 *camera_modelview;
     const NDSRendererMatrix20p12 *binding_world;
@@ -7814,14 +6420,12 @@ typedef struct NDSNativeStageOwnerExecution
     u32 task36_coordinate_shift;
     u32 task36_local_pushed;
     u32 task36_segment_active;
-#endif
     NDSRendererStats *stats;
     /* Bit i: segment i committed this frame. Segments commit in the order the
      * runtime presents their display GObjs, which is the source's draw order;
      * a segment presented twice is refused, never drawn twice. */
     u32 committed_segments;
     u32 active;
-#if NDS_R2_STAGE_DIRECT
     /* R2-02 E1a. `runs[]` is a pure function of the generated run/epoch/policy
      * tables and the traversal state, and Task 44 already proves the traversal
      * state unchanged every frame. Once built it is reusable, so the whole
@@ -7862,7 +6466,6 @@ typedef struct NDSNativeStageOwnerExecution
      * loop. Memoised with `epoch_mask` so eliding the loop body cannot depend
      * on which segment happens to run last. */
     u32 r2_prepared_sync_count;
-#endif
 } NDSNativeStageOwnerExecution;
 
 typedef struct NDSNativeStageTopologySummary
@@ -7985,40 +6588,13 @@ static s32 ndsRendererNativeStagePreparedTexturesProven(void)
     sNdsNativeStagePreparedTextureProofValid = TRUE;
     return TRUE;
 }
-#if NDS_R2_STAGE_DIRECT
 /* R2-02 E1a engagement counters. Non-static so a GDB stop can read them and
  * prove the elision actually engaged -- a flag that silently never fires is
  * indistinguishable from a null result, and this campaign has shipped that
  * mistake (Task 52 found the Task 36 replay structurally disabled). */
 volatile u32 gNdsR2StagePrepareReuseCount;
 volatile u32 gNdsR2StagePrepareBuildCount;
-#if NDS_R2_STAGE_ROUTE_PROBE
-/* Which of the five reuse-key components missed, COUNTED rather than latched.
- * See the write site in ndsRendererPrepareNativeStageOwner. Measured
- * 2026-08-01 with NDS_R2_PARTICLE_DRAW=1: Invalid 197, every other 0 -- so the
- * topology, config and asset bases never move and all 197 rebuilds are the
- * PREVIOUS frame's owner having rejected. Which is what the six counters below
- * then have to name. */
-volatile u32 gNdsR2StageKeyMissInvalid;
-volatile u32 gNdsR2StageKeyMissGeneration;
-volatile u32 gNdsR2StageKeyMissStamp;
-volatile u32 gNdsR2StageKeyMissConfig;
-volatile u32 gNdsR2StageKeyMissAssets;
-/* One per PrepareRun refusal site, indexed by the same reason code the latch
- * carries. The LATCH is reset at the top of every prepare, so an end-of-run
- * read reports the last frame -- both reason words read 0 on a run whose
- * battle rebuilt 197 times, which is the "a counter identical before and after
- * the window is not evidence about the window" rule in its purest form. */
-volatile u32 gNdsR2StageRejectCounts[7];
-#endif
-#if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2)
 /* R2-02 E8 engagement, for the same reason: five per frame is the elision
  * working, zero is a flag that compiled but never fired. */
 volatile u32 gNdsR2StagePreflightElideCount;
-#endif
-#endif
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-static u32 sNdsNativeStageTopologyFaultInjected;
-#endif
-#endif

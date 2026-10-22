@@ -56,7 +56,6 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_SNAKE
 
 #include <ef/effect.h>
 #include <gr/ground.h>
@@ -66,9 +65,7 @@
 #include <sys/audio.h>
 #include <wp/weapon.h>
 #include <math.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -3133,7 +3130,6 @@ const NDSP4Overrides gNdsP4SnakeOverrides = {
     .status_replace = sNdsP4SnakeStatusReplace,
 };
 
-#if NDS_P2_KIRBY
 /* ---- Kirby's copy (owner request 2026-10-12, "Brawl-style") ----
  *
  * EXTRA lets no Kirby copy Snake (define_character's bool_inhale_copy is the
@@ -3272,6 +3268,4 @@ void ndsP4SnakeKirbyNSPAirMap(GObj *fighter_gobj)
 {
     mpCommonProcFighterLanding(fighter_gobj, ndsP4SnakeKirbyNSPSwitchGround);
 }
-#endif /* NDS_P2_KIRBY */
 
-#endif /* NDS_P4_SNAKE */

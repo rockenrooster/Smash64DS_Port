@@ -21,7 +21,6 @@
  * are referenced verbatim and listed in the task report -- no values
  * invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -512,4 +511,3 @@ void itSpearFlyMakeSwarm(GObj *item_gobj, Vec3f *pos, s32 kind)
     itSpearWeaponSwarmMakeWeapon(item_gobj, pos, kind);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

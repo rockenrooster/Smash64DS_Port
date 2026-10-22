@@ -12,23 +12,9 @@
 #include <reloc_data.h>
 #include <sys/obj.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 sb32 itMainCheckShootNoAmmo(GObj *item_gobj);
-#if !NDS_P2_ITEM_CORE
-/* The real body (BattleShip it/itmain.c:281) lives in
- * battleship_item_link_core.c, which only configurations with the item core
- * link. Without items no fighter can hold a shoot item, so the source branch
- * is unreachable and the answer is always "not spent". Weak so the real body
- * wins wherever it is linked. */
-__attribute__((weak)) sb32 itMainCheckShootNoAmmo(GObj *item_gobj)
-{
-    (void)item_gobj;
-    return FALSE;
-}
-#endif
 void func_ovl2_800EE018(DObj *main_dobj, Vec3f *vec);
 void ndsBaseFTCommonSquatWaitSetStatus(GObj *fighter_gobj);
 
@@ -215,7 +201,6 @@ sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
  * compares to J Yoshi only (yoshi_dj_fix_1, joshi_armor), so a content
  * aliasing Yoshi (Bowser) jumps like everyone else (nds_p4.h
  * NDS_P4_PARENT_KIND). */
-#if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
 /* P4: Remix's check_float_ (PeachSpecial.asm) runs in place of the
  * JumpAerial interrupt's jump check, after the aerial check: it is tried
@@ -238,12 +223,9 @@ sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 void ndsSrcFTCommonJumpAerialProcInterrupt(GObj *fighter_gobj);
 void ndsSrcFTCommonJumpAerialProcPhysics(GObj *fighter_gobj);
 sb32 ndsSrcFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c"
-#if NDS_P4
 #undef nFTKindYoshi
 #undef ftCommonAttackAirCheckInterruptCommon
-#endif
 
 #undef ftCommonJumpAerialUpdateModelYaw
 #undef ftCommonJumpAerialProcUpdate
@@ -257,7 +239,6 @@ sb32 ndsSrcFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 #undef ftCommonJumpAerialMultiGetJumpInputType
 #undef ftCommonJumpAerialCheckInterruptCommon
 
-#if NDS_P4
 /* ftCommonJumpAerialMultiSetStatus' Kirby case (decomp 0x8013FF38) with the
  * content's heights (jump_fix_1 and jump_fix_2). Remix's Size.asm patch on
  * the first jump's height (adjust_jumping_height_multiplier_kirby) leaves
@@ -380,4 +361,3 @@ void ndsBaseFTCommonJumpAerialProcPhysics(GObj *fighter_gobj)
     }
     ftPhysicsApplyAirVelXFriction(fp, attr);
 }
-#endif

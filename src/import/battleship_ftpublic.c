@@ -15,7 +15,6 @@
  * DamageL/M/S 622/623/625 and GaspL/M/S 615/616/617. A cue the pack does not
  * carry fails closed and is silent; it does not fault.
  */
-#if NDS_IMPORT_BATTLESHIP_FT_PUBLIC
 
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
@@ -218,4 +217,3 @@ void ftPublicMakeActor(void)
     battleship_ftPublicMakeActor();
 }
 
-#endif

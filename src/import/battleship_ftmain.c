@@ -96,9 +96,6 @@ static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
     }
     return ftParamCheckSetFighterColAnimID(fighter_gobj, colanim_id, length);
 }
-#if NDS_TASK108_SITR_CALLBACK_CENSUS
-void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -110,8 +107,7 @@ void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #define lbRelocGetFileData(type, file, offset) \
     ((type)((uintptr_t)(file) + (intptr_t)(offset)))
 
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
-    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) && NDS_TICK_HUD
 /* LAB: price the parts of a status change, in columns the SRC split leaves
  * unused without it. SHDT = the motion fetch and SPRM = the figatree install,
  * each only as called from the setter below; SCPU = the whole setter. MCAP =
@@ -242,7 +238,6 @@ void battleship_ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj);
 #define ftMainSearchFighterCatch battleship_ftMainSearchFighterCatch
 #define ftMainProcSearchCatch battleship_ftMainProcSearchCatch
 #define ftMainSearchHitItem battleship_ftMainSearchHitItem
-#if NDS_P4
 /* P4: Remix's override_reflectability_ (Reflect.asm) lets a custom absorber
  * take weapons the source never reflects. The definition (first argument's
  * type) keeps the source body; the hit search's call goes through
@@ -252,17 +247,10 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
 #define ftMainSearchHitWeapon(g_) NDS_P4_SEARCH_WEAPON_##g_)
 #define NDS_P4_SEARCH_WEAPON_GObj battleship_ftMainSearchHitWeapon(GObj
 #define NDS_P4_SEARCH_WEAPON_fighter_gobj ndsP4SearchHitWeapon(fighter_gobj
-#else
-#define ftMainSearchHitWeapon battleship_ftMainSearchHitWeapon
-#endif
 #define ftMainSearchGroundHit battleship_ftMainSearchGroundHit
 #define ftMainProcSearchHitAll battleship_ftMainProcSearchHitAll
-#if NDS_P4
 /* P4 wraps the source proc (Remix sword trails, below the include). */
 #define ftMainProcParams ndsBaseFTMainProcParams
-#else
-#define ftMainProcParams battleship_ftMainProcParams
-#endif
 #define ftMainRunUpdateColAnim battleship_ftMainRunUpdateColAnim
 #define ftMainPlayAnimEventsAll battleship_ftMainPlayAnimEventsAll
 #define ftMainSetStatus battleship_ftMainSetStatus
@@ -277,7 +265,6 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
 #define ftMainProcUpdateInterrupt battleship_ftMainProcUpdateInterrupt
 #define ftMainProcPhysicsMapDefault battleship_ftMainProcPhysicsMapDefault
 #define ftMainProcPhysicsMapCapture battleship_ftMainProcPhysicsMapCapture
-#if NDS_P4
 /* P4: Remix's custom motion commands (first byte 0xD0+, src/Command.asm) are
  * executed where Remix executes them -- at the event-kind read of each motion
  * loop (load_command_ / load_command_2_). In this TU every read of a command
@@ -404,8 +391,6 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #define ftMainEjectHiddenPartID(first, ...) NDS_P4_HIDDEN_EJECT_##first, __VA_ARGS__)
 #define NDS_P4_HIDDEN_EJECT_FTStruct ftMainEjectHiddenPartID(FTStruct
 #define NDS_P4_HIDDEN_EJECT_fp ndsP4EjectHiddenPartID(fp
-#endif
-#if NDS_P4
 /* P4: Ness's absorb routine is the content's when it has one
  * (ndsP4ProcAbsorb), and an absorbed shot heals a content its own amount.
  * ftMainUpdateAbsorbStatWeapon's definition and its one call differ in their
@@ -423,11 +408,8 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
  * function above. */
 #define gmCollisionGetFighterPartsWorldPosition(joint_, pos_) \
     ndsP4AttackCollWorldPosition(fp, (joint_), (pos_))
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
-#if NDS_P4
 #undef gmCollisionGetFighterPartsWorldPosition
-#endif
 #if NDS_P5
 #undef ftMainProcessHitCollisionStatsMain
 #undef NDS_P5_HIT_STATS_GObj
@@ -443,7 +425,6 @@ void battleship_ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj)
     ndsP5BaseFTMainProcessHitCollisionStatsMain(fighter_gobj);
 }
 #endif
-#if NDS_P4
 #undef ftNessSpecialLwProcAbsorb
 #undef ftMainUpdateAbsorbStatWeapon
 #undef ftMainUpdateHiddenPartID
@@ -501,8 +482,6 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
         gSCManagerBattleState->players[fp->player].stock_damage_all = fp->percent_damage;
     }
 }
-#endif
-#if NDS_P4
 #undef lbCommonMakePositionFGM
 #undef ftParamUpdate1PGameDamageStats
 #undef ftParamGetStaledDamage
@@ -524,7 +503,6 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
 #undef dFTMainSpecialStatusDescs
-#endif
 #undef ftMainCheckGetUpdateDamage
 #undef ftMainPlayHitSFX
 #undef ftMainUpdateDamageStatFighter
@@ -571,7 +549,6 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
 #undef ftParamMoveDLLink
 #endif
 
-#if NDS_P4
 /* Remix SwordTrail.asm: SET AFTERIMAGE with is_itemswing >= 2 picks a Remix
  * trail row. The source's afterimage switch, the last statement of
  * ftMainProcParams, has cases for the vanilla 0 and 1 only; Remix's
@@ -695,7 +672,6 @@ static FTStatusDesc **ndsFTMainLendSpecialStatusDescs(FTStruct *fp,
     *row = table;
     return row;
 }
-#endif
 
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 {
@@ -705,10 +681,6 @@ void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 #endif
 }
 
-#if NDS_P2_SAMUS_ATTACK_TOUR
-void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
-                                               s32 status_id);
-#endif
 
 /* See the flattened-walk block in ftMainSetStatus below. */
 __attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
@@ -727,13 +699,10 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #endif
     FTStruct *nds_topology_fp;
     u32 nds_topology_word;
-#if NDS_P4
     FTStatusDesc **nds_p4_row = NULL;
     FTStatusDesc *nds_p4_saved = NULL;
     s32 nds_p4_status = status_id;
-#endif
 
-#if NDS_P4 && NDS_P2_KIRBY
     /* S8, Kirby.clone_power_action_swap_: a Kirby holding a content's power
      * takes the power's status where the parent's copy routine sets its
      * own (Falco's Phantasm for Fox's blaster). */
@@ -745,7 +714,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
          * blaster from an unloaded file. */
         nds_p4_status = status_id;
     }
-#endif
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
     {
@@ -757,7 +725,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     nds_topology_fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     nds_topology_word = (nds_topology_fp != NULL) ?
         nds_topology_fp->anim_desc.word : 0xffffffffu;
-#if NDS_P4
     if (nds_topology_fp != NULL)
     {
         ndsP4OnSetStatus(fighter_gobj);
@@ -785,29 +752,20 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     {
         *nds_p4_row = nds_p4_saved;
     }
-#else
-    battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
-                               anim_speed, flags);
-#endif
     if (nds_topology_fp != NULL)
     {
         nds_topology_word |= nds_topology_fp->anim_desc.word;
-#if NDS_P4
         if (nds_topology_fp->nds_p4_content != 0u)
         {
             /* on_action_changed reads the replaced argument. */
             ndsP4AfterSetStatus(fighter_gobj, nds_p4_status);
         }
-#if NDS_P2_KIRBY
         else if (nds_topology_fp->nds_p4_kirby_copy != 0u)
         {
             ndsP4KirbyAfterSetStatus(fighter_gobj, status_id);
         }
-#endif
-#endif
     }
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
-    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) && NDS_TICK_HUD
     /* LAB: status changes per frame, in the SPHC column (unused without the
      * SRC split). */
     {
@@ -815,12 +773,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 
         gNdsTickHudSrcPhysicsCaptureTicks++;
     }
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-    /* Read-only P2-3 acceptance observer. BattleShip has already selected and
-     * installed the status; this only records transient states that can begin
-     * and end inside one gcRunAll before the once-per-update sampler runs. */
-    ndsSamusAttackTourRecordStatusTransition(fighter_gobj, status_id);
 #endif
     /* BattleShip's status setter owns the dynamic hidden-part topology used by
      * grab/throw animations. It can allocate/eject/re-parent a DObj without
@@ -864,7 +816,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     {
         NDS_DIAG(gNdsFtStatusRenderKept++);
     }
-#if NDS_P2_HURTBOX_REJECT
     /* The same topology change retires the hurtbox reject's cached worlds
      * (src/port/nds_p2_hurtbox_reject.c keys them on the DObj pointer). */
     {
@@ -872,14 +823,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 
         gNdsP2HurtboxLatchEpoch++;
     }
-#endif
-#if NDS_TASK108_SITR_CALLBACK_CENSUS
-    /* A status change can happen between the census's outer-proc entry and the
-     * later proc_update/proc_interrupt calls. Re-wrap the newly installed
-     * source callbacks only while that lab census is active. */
-    ndsTask108SitrRefreshCallbacks(fighter_gobj);
-#endif
-#if NDS_R2_BATTLEPACK
     {
         FTStruct *fp = ftGetStruct(fighter_gobj);
         if (fp != NULL)
@@ -887,7 +830,6 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
             fp->figatree = ndsRelocResolveAuthoritativeForceFile(fp->figatree);
         }
     }
-#endif
 #if NDS_SHIP_TELEMETRY
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
                                                  frame_begin, anim_speed,

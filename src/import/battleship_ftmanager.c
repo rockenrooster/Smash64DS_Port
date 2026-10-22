@@ -46,10 +46,8 @@
 #define ftManagerDestroyFighter ndsBaseFTManagerDestroyFighter
 #define ftManagerAllocFigatreeHeapKind ndsBaseFTManagerAllocFigatreeHeapKind
 #define ftManagerAllocFighter ndsBaseFTManagerAllocFighter
-#if NDS_P4
 #define ftManagerSetupFilesPlayablesAll ndsBaseFTManagerSetupFilesPlayablesAll
 void ndsBaseFTManagerSetupFilesPlayablesAll(void);
-#endif
 
 void ndsBaseFTManagerSetupFileSize(void);
 void ndsBaseFTManagerSetupFilesAllKind(s32 fkind);
@@ -82,7 +80,6 @@ static void *ndsFTManagerHeapMalloc(size_t size, u32 align)
 #define ndsFTManagerHeapMalloc syTaskmanMalloc
 #endif
 
-#if NDS_P2_ARM9_WRAM
 #include <nds/nds_arm9_wram.h>
 
 /* The first allocation in ftManagerAllocFighter is the FTStruct pool; it
@@ -111,10 +108,6 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
     return ndsFTManagerHeapMalloc(size, align);
 }
 #define syTaskmanMalloc ndsFTManagerPoolMalloc
-#elif NDS_P2_1P_GAME
-#define syTaskmanMalloc ndsFTManagerHeapMalloc
-#endif
-#if NDS_P4
 /* P4 (include/nds/nds_p4.h): a Remix fighter constructs through its setup
  * parent's kind, so every dFTManagerDataFiles[fkind] read in this TU goes
  * through a view that is the source array except while one P4 player's files
@@ -125,14 +118,9 @@ static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
 #define dFTManagerDataFiles sNdsP4FtDataView
 /* EXTRA's static parts (nds_p4.h static_parts) join the setup selection. */
 #define lbCommonSetupFighterPartsDObjs(root_, container_, detail_, dobjs_, setup_, ...)     lbCommonSetupFighterPartsDObjs(root_, container_, detail_, dobjs_,                                                 ndsP4SetupParts(fp, setup_), __VA_ARGS__)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
-#if NDS_P4
 #undef lbCommonSetupFighterPartsDObjs
-#endif
-#if NDS_P2_ARM9_WRAM || NDS_P2_1P_GAME
 #undef syTaskmanMalloc
-#endif
 
 #undef ftManagerSetupFileSize
 #undef ftManagerSetupFilesAllKind
@@ -140,9 +128,7 @@ static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
 #undef ftManagerDestroyFighter
 #undef ftManagerAllocFigatreeHeapKind
 #undef ftManagerAllocFighter
-#if NDS_P4
 #undef ftManagerSetupFilesPlayablesAll
-#endif
 
 /* SIZE THE FIGHTER POOLS BY THE FIGHTERS THIS BATTLE CAN HOLD.
  *
@@ -170,9 +156,7 @@ static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
  * source count. A three-player match gets 11,300 bytes back; four, none. */
 volatile u32 gNdsFTManagerPoolSlotsTrimmed;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void);
-#endif
 
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 {
@@ -197,11 +181,8 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
             allocs_num = players;
         }
     }
-#if NDS_P2_ARM9_WRAM
     sNdsFTManagerPoolToWram = 1u;
-#endif
     ndsBaseFTManagerAllocFighter(data_flags, allocs_num);
-#if NDS_P4
     {
         s32 i;
 
@@ -212,13 +193,11 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
             sFTManagerStructsAllocBuf[i].nds_p4_kirby_hat = 0u;
             sFTManagerStructsAllocBuf[i].nds_kirby_metal = 0u;
         }
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
         ndsKirbyMetalResetMatch();
 #endif
         ndsP4SetupFileSizes(data_flags);
     }
-#endif
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* Both VS entries (battle and Sudden Death) come through here before
      * their player loop allocates a figatree heap or makes a fighter. */
     if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
@@ -226,7 +205,6 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
     {
         ndsFTManagerPreloadVSOwnerImagesLargestFirst();
     }
-#endif
 }
 
 /* A fighter's figatree heap is sized by its largest animation file (Pikachu
@@ -239,7 +217,6 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment);
 void *ndsBaseFTManagerAllocFigatreeHeapKind(s32 fkind);
 
-#if NDS_P4
 /* The player whose heap this call sizes. A scene builds its players in order,
  * each heap just before its fighter (scvsbattle.c's loop): the first player
  * of this scene not yet given one, if it plays `fkind`. -1 otherwise. */
@@ -273,7 +250,6 @@ static s32 ndsFTManagerHeapPlayer(s32 fkind)
     }
     return -1;
 }
-#endif
 
 /* P7 C1: Metal Mario plays the campaign under Mario's kind in every source
  * table -- the records, the bonus boards and the intro, continue and
@@ -377,7 +353,6 @@ void *ftManagerAllocFigatreeHeapKind(s32 fkind)
     }
 #endif
     data = dFTManagerDataFiles[fkind];
-#if NDS_P4
     /* A P4 player constructs through its parent's kind, whose row the scene
      * raised to its largest selected child (nds_p4.c ndsP4SetupFileSizes):
      * Dedede beside Banjo took Banjo's 29 KB heap. The heap only ever holds
@@ -392,7 +367,6 @@ void *ftManagerAllocFigatreeHeapKind(s32 fkind)
         return (heap != NULL) ? heap :
             syTaskmanMalloc(f->data->file_anim_size, 0x10u);
     }
-#endif
     heap = ndsBattleIdleScratchAlloc(data->file_anim_size, 0x10u);
     return (heap != NULL) ? heap : ndsBaseFTManagerAllocFigatreeHeapKind(fkind);
 }
@@ -419,7 +393,6 @@ void ftManagerSetupFileSize(void)
      * and filesystem metadata lookups. */
     memcpy(gSCManagerFighterFileSizes, sNdsFTManagerSourceFileSizes,
            sizeof(sNdsFTManagerSourceFileSizes));
-#if NDS_P4
     /* Selectable Metal Mario plays Mario's menu motions 1-13
      * (battleship_scsubsysdata_ft.c); the census walked the source's table,
      * whose rows are his idle and 1P pose only. Mario's largest bounds his. */
@@ -429,7 +402,6 @@ void ftManagerSetupFileSize(void)
         gSCManagerFighterFileSizes[nFTKindMMario].submotion_largest_anim =
             gSCManagerFighterFileSizes[nFTKindMario].submotion_largest_anim;
     }
-#endif
 }
 
 #if NDS_P2_1P_GAME
@@ -459,19 +431,15 @@ static void ndsFTManagerPreloadVariantOwnerImages(void)
     }
     if (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageMMario)
     {
-#if NDS_NATIVE_OWNER_IMAGE_MMARIO || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_MMARIO)
+#if NDS_NATIVE_OWNER_IMAGE_MMARIO
         (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 0u);
         (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 1u);
-#endif
 #endif
     }
 }
 #endif
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
 static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 {
     FTData *data = dFTManagerDataFiles[fkind];
@@ -530,7 +498,6 @@ static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 }
 #endif
 
-#if NDS_P4
 /* A P4 child loads through the source loader (its files are not in the
  * parent's battle-core or preview packs), with its FTData standing in for the
  * parent's row; then its menu-motion scripts are rebased onto the motion file
@@ -662,7 +629,7 @@ void ndsP4LendArticleDeadSpans(void)
  * the source loader runs instead. */
 static sb32 ndsP4SetupPackFiles(u32 content, s32 fkind)
 {
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
     FTData *data = dFTManagerDataFiles[fkind];
     s32 kind = (s32)(NDS_P4_SEL_BASE + content);
     s32 preview;
@@ -733,7 +700,6 @@ static void ndsP4SetupFilesForParent(s32 fkind)
             ndsBaseFTManagerSetupFilesAllKind(fkind);
         }
         sNdsP4FtDataView = sNdsP4FtDataReal;
-#if NDS_P2_KIRBY
         /* A content that inhales on Kirby's code (Dedede's DededeNSP hooks)
          * draws Kirby's inhale wind from Kirby's particle bank, which only a
          * Kirby's setup registers: without one in the match the wind maker
@@ -753,7 +719,6 @@ static void ndsP4SetupFilesForParent(s32 fkind)
                     kirby->particles_texture_lo, kirby->particles_texture_hi);
             }
         }
-#endif
         ndsP4LoadOpenSpecialFiles(content, f->data);
         ndsP4LendArticleDeadSpans();
         ndsP4PublishParentMotion(f);
@@ -824,9 +789,7 @@ void ftManagerSetupFilesPlayablesAll(void)
     }
     ndsEFManagerRetryDeferredDescs();
 }
-#endif
 
-#if NDS_P4
 /* ndsMNPlayersVS's P4 preview commit: the staged pack publishes Main and
  * Model into the content's FTData (reloc_preview_pack.c); the motion file
  * loads whole into the same block, because the menu motions' scripts live
@@ -862,7 +825,6 @@ sb32 ndsFTManagerSetupPreviewFilesP4(u32 content)
     }
     return TRUE;
 }
-#endif
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
@@ -878,19 +840,17 @@ void ftManagerSetupFilesAllKind(s32 fkind)
         }
     }
 #endif
-#if NDS_P4
     ndsP4SetupFilesForParent(fkind);
     if (ndsP4ParentFilesNeeded(fkind) == FALSE)
     {
         return;
     }
-#endif
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
     {
         FTData *data = dFTManagerDataFiles[fkind];
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((preview == 2) &&
             (ndsRelocUseBattleCoreFighterData() != FALSE))
         {
@@ -937,7 +897,7 @@ __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindCount;
 __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindBytes;
 __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 
-#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
 /* BattleShip's Kirby constructor needs only the copy table at offset zero of
  * KirbyMainMotion while building a CSS preview (ftmanager.c:632-634). The DS
  * compact preview pack deliberately omits the rest of MainMotion. Publish the
@@ -979,7 +939,7 @@ static sb32 sNdsFTManagerKirbyPreviewMainMotionActive;
 
 void ndsFTManagerRestoreKirbyPreviewMainMotion(void)
 {
-#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
     if (sNdsFTManagerKirbyPreviewMainMotionActive != FALSE)
     {
         if (gFTDataKirbyMainMotion == sNdsFTManagerKirbyPreviewCopyTable)
@@ -1029,7 +989,6 @@ sb32 ndsFTManagerSkeletonReady(s32 fkind)
     return FALSE;
 }
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* THE ONE MAPPING FROM FIGHTER KIND TO NATIVE OWNER-IMAGE SLOT. Shared by the
  * construction-time ensure below and the VS preload in ftManagerAllocFighter,
  * which orders the loads by size; two copies of this chain would drift. */
@@ -1055,48 +1014,36 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
         image_slot = NDS_NATIVE_IMAGE_SLOT_CAPTAIN;
     }
 #endif
-#if NDS_P2_SAMUS
     if (fkind == nFTKindSamus)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_SAMUS;
     }
-#endif
 #if NDS_P2_LINK
     if (fkind == nFTKindLink)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_LINK;
     }
 #endif
-#if NDS_P2_PIKACHU
     if (fkind == nFTKindPikachu)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_PIKACHU;
     }
-#endif
-#if NDS_P2_YOSHI
     if (fkind == nFTKindYoshi)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_YOSHI;
     }
-#endif
-#if NDS_P2_NESS
     if (fkind == nFTKindNess)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NESS;
     }
-#endif
-#if NDS_P2_PURIN
     if (fkind == nFTKindPurin)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_PURIN;
     }
-#endif
-#if NDS_P2_KIRBY
     if (fkind == nFTKindKirby)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_KIRBY;
     }
-#endif
 #if NDS_P2_MMARIO
     if (fkind == nFTKindMMario)
     {
@@ -1195,7 +1142,6 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 /* P4: a player's content picks its image before its (parent) kind does. */
 static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
 {
-#if NDS_P4
     u32 content = ndsP4MakeContent(player, fkind);
 
 #define NDS_P4_FTMANAGER_IMAGE_SLOT(id_, T_, N_, n_, parent_, model_, main_)   \
@@ -1205,9 +1151,6 @@ static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_FTMANAGER_IMAGE_SLOT)
 #undef NDS_P4_FTMANAGER_IMAGE_SLOT
-#else
-    (void)player;
-#endif
     return ndsFTManagerImageSlotForKind(fkind);
 }
 
@@ -1236,7 +1179,6 @@ u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot)
     }
     return FALSE;
 }
-#endif
 #endif
 
 /* P7 C1: in a campaign battle of three or four fighters a CPU keeps its
@@ -1289,7 +1231,6 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
         if (desc->fkind == nFTKindFox)
             (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1, 0u);
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
      * it has to be resident before anything can draw this fighter. HERE is the
      * right seam: fighter creation is load-time work in every caller (battle
@@ -1315,7 +1256,6 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
                  (desc->detail == nFTPartsDetailHigh)) ? 0u : 1u;
             u32 detail;
 
-#if NDS_P4
             /* Owner 2026-10-08 (S15): a content in a battle of three or
              * four fighters keeps its low-detail model in the close-ups
              * too (ftParamSetModelPartDetailAll), so only that image. */
@@ -1324,7 +1264,6 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
             {
                 first_detail = last_detail = 1u;
             }
-#endif
             if ((desc->pkind != nFTPlayerKindDemo) &&
                 (ndsFTManagerLowDetailOnly(desc->player) != FALSE))
             {
@@ -1364,18 +1303,11 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
             for (detail = first_detail; detail <= last_detail; detail++)
             {
                 (void)ndsRendererNativeEnsureOwnerImage(image_slot, detail);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-                (void)ndsRendererNativeVerifyOwnerImage(image_slot, detail);
-#endif
             }
         }
     }
-#else
-    (void)desc;
-#endif
 }
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* LOAD THE BIGGEST OWNER IMAGE FIRST, SO IT IS THE ONE THE SCRATCH HOLDS.
  *
  * The battle scratch in idle fighter-packet ports is a bump allocator, and the
@@ -1429,13 +1361,11 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
                (u32)nFTPartsDetailHigh) ?
                   0u : ndsRendererNativeOwnerImageSize(slot, 1u))) :
             0u;
-#if NDS_P4
         if ((slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) &&
             (ndsP4ContentLowDetailOnly(player) != FALSE))
         {
             bytes[count] = ndsRendererNativeOwnerImageSize(slot, 1u);
         }
-#endif
         count++;
     }
     /* Insertion sort, descending; equal sizes keep port order. */
@@ -1468,7 +1398,6 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
         ndsFTManagerEnsureOwnerImages(&desc);
     }
 }
-#endif
 
 /* include/nds/renderer_fighter_lean.h (not included here: it drags the
  * renderer's lean-path types into a decomp TU). */
@@ -1537,12 +1466,10 @@ static void ndsFTManagerBattleLowDetail(FTDesc *desc)
     {
         return;
     }
-#if NDS_P4
     if (ndsP4DuelHighDetail((s32)desc->player, desc->fkind) != FALSE)
     {
         return;
     }
-#endif
     if ((scene == (u32)nSCKindVSBattle) || (scene == (u32)nSCKind1PGame) ||
         (scene == (u32)nSCKind1PBonusStage) ||
         (scene == (u32)nSCKind1PTrainingMode))
@@ -1551,7 +1478,6 @@ static void ndsFTManagerBattleLowDetail(FTDesc *desc)
     }
 }
 
-#if NDS_P4
 /* S15: a content's VS-select preview draws its low detail
  * (ndsP4LowDetailSelect), and so does its Results podium after a match of
  * three or four fighters (ndsP4LowDetailResults): its pack is the battle
@@ -1567,7 +1493,6 @@ static void ndsFTManagerSelectLowDetail(FTDesc *desc)
         desc->detail = nFTPartsDetailLow;
     }
 }
-#endif
 
 #if NDS_P2_MMARIO
 /* P7 B5 (docs/P7/P7_Implementation_Plan.md Board 3, the owner's brief): in a
@@ -1620,9 +1545,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
     ndsP7OnePlayerMetalDesc(desc);
 #endif
     ndsFTManagerBattleLowDetail(desc);
-#if NDS_P4
     ndsFTManagerSelectLowDetail(desc);
-#endif
     ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
         (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&
@@ -1638,7 +1561,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             gNdsFTManagerFigatreeSlotKindMin = expect;
         }
     }
-#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
     /* Installed whenever the table is not, not only over a NULL pointer:
      * after a battle or Results that loaded Kirby, gFTDataKirbyMainMotion
      * still points into that scene's rewound arena (no select reloads it --
@@ -1667,12 +1590,9 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
     {
         GObj *fighter_gobj;
 
-#if NDS_P2_ARM9_WRAM
         /* The fighter GObj and top joint DObj are the source's first two
          * object allocations below: they take WRAM slots. */
         ndsGcDonateFighterObjs();
-#endif
-#if NDS_P4
         {
             u32 content = (desc != NULL) ?
                 ndsP4MakeContent(desc->player, desc->fkind) : 0u;
@@ -1693,7 +1613,6 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                 view[desc->fkind] = p4;
                 sNdsP4FtDataView = view;
             }
-#if NDS_P2_KIRBY
             /* S8: a battle Kirby beside a content whose power he can take
              * reads the power rows from the match's Kirby FTData. */
             else if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
@@ -1708,7 +1627,6 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                     sNdsP4FtDataView = view;
                 }
             }
-#endif
             ndsP4SetMakeContent((p4 != NULL) ? content : 0u);
             fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
             ndsP4SetMakeContent(0u);
@@ -1722,9 +1640,6 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                 ndsP4OnInitFighter(fighter_gobj);
             }
         }
-#else
-        fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
-#endif
 
         /* P2-2p8 Phase 1 slice 2b, the admission's creation seam (spec 2.8):
          * note every battle fighter; the last one of the battle runs the
@@ -1734,11 +1649,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         {
             ndsFtrLeanAdmitNoteFighter((u32)desc->player, (u32)desc->fkind,
                                        (u32)desc->costume, (u32)desc->detail,
-#if NDS_P4
                                        ftGetStruct(fighter_gobj)->nds_p4_content
-#else
-                                       0u
-#endif
                                        );
         }
 #if NDS_P2_MMARIO
@@ -1769,12 +1680,10 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
     if (fighter_gobj != NULL)
     {
         ndsFtPoseRelease(fighter_gobj);
-#if NDS_P4
         ftGetStruct(fighter_gobj)->nds_p4_content = 0u;
         ftGetStruct(fighter_gobj)->nds_p4_kirby_copy = 0u;
         ftGetStruct(fighter_gobj)->nds_p4_kirby_hat = 0u;
         ftGetStruct(fighter_gobj)->nds_kirby_metal = 0u;
-#endif
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);
 }

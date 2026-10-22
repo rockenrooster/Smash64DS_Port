@@ -12,9 +12,6 @@
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_ui_kit.h>
-#if NDS_R2_HWMATH_BENCH
-#include <nds/nds_r2_hwmath_bench.h>
-#endif
 #include <nds/nds_platform.h>
 #include <nds/nds_gx_dma.h>
 #include <nds/nds_reloc_assets.h>
@@ -43,21 +40,9 @@
 #endif
 
 
-#ifndef NDS_DEBUG_HUD
-#define NDS_DEBUG_HUD 0
-#endif
 
-#if NDS_DEBUG_HUD
-#error "NDS_DEBUG_HUD legacy debug wall is retired"
-#endif
 
-#ifndef NDS_SCENE_MIP_CACHE_LAB
-#define NDS_SCENE_MIP_CACHE_LAB 0
-#endif
 
-#if NDS_R2_SIM_MAC_SHADOW
-#include <nds/nds_r2_sim_mac_fixed.h>
-#endif
 
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
@@ -123,14 +108,6 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_BATTLE_FPS_HUD_PRINT(...) ndsPlatformPrintDebugLine(__VA_ARGS__)
 #else
 #define NDS_BATTLE_FPS_HUD_PRINT(...) ((void)0)
-#endif
-#if NDS_LAB_NO_CULL && !NDS_BATTLE_FPS_HUD_DRAW
-#error "the seam arm indicator prints into the FPS console"
-#endif
-#if NDS_LAB_NO_CULL && !NDS_BATTLE_FPS_HUD_ENABLED
-/* Same rule for the seam probe: an arm nobody can read off the screenshot is
- * not evidence. */
-#error "NDS_LAB_NO_CULL needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
 #endif
 static u32 sTicks;
 static u32 sHeldKeys;
@@ -231,12 +208,6 @@ static u32 sPerfLastPreviewCommitCount;
  * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
 extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
 #if NDS_BATTLE_FPS_HUD_ENABLED
-#if NDS_R204_FPSHUD_SHADOW
-volatile u32 gNdsR204FpsHudShadowX10;
-volatile u32 gNdsR204FpsHudShadowFrames;
-volatile u32 gNdsR204FpsHudShadowTicks;
-volatile u32 gNdsR204FpsHudShadowBusClock;
-#endif
 static u32 sBattleFpsHudSampleReady;
 static u32 sBattleFpsHudLastTick;
 static u32 sBattleFpsHudLastPresentedFrames;
@@ -267,12 +238,6 @@ static const char *const sMenuFpsHudNames[NDS_MENU_SHELL_SCREEN_COUNT] = {
     "TITLE", "MODE", "VS", "CSS", "SSS", "VSOPT",
     "ITEM", "OPTION", "BACKUP", "DATA", "SOUND", "VSREC"
 };
-#endif
-#if NDS_LAB_NO_CULL
-/* Its own repaint gate rather than a field of the text HUD's fingerprint: that
- * fingerprint is a function of match state only, so an arm flip would not
- * repaint until the clock or a damage value happened to change. */
-static u32 sBattleSeamArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
@@ -346,30 +311,6 @@ __attribute__((used)) volatile u32 gNdsVramBankDReturns;
  * never composite the previous 3D owner's retained frame. */
 static s32 s3dLayerEnableOnNextPresent;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
-#if NDS_SCENE_MIP_CACHE_LAB
-typedef struct NDSSceneWallpaperTransform
-{
-    s32 origin_x;
-    s32 origin_y;
-    u32 scale_x_q16;
-    u32 scale_y_q16;
-} NDSSceneWallpaperTransform;
-
-static u32 sSceneMipCapturePending;
-static u32 sSceneMipCaptureCompleted;
-static u32 sSceneMipCacheReady;
-static u32 sSceneMipCacheFailed;
-static NDSSceneWallpaperTransform sSceneWallpaperSeedTransform;
-static NDSSceneWallpaperTransform sSceneWallpaperLatestTransform;
-static u32 sSceneWallpaperLatestTransformValid;
-static u32 sSceneWallpaperSeedRasterCommitted;
-static s32 sSceneWallpaperPendingHdx;
-static s32 sSceneWallpaperPendingVdy;
-static s32 sSceneWallpaperPendingDx;
-static s32 sSceneWallpaperPendingDy;
-static u32 sSceneWallpaperAffinePending;
-static u32 sSceneWallpaperAffineResetPending;
-#endif
 static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
@@ -384,10 +325,6 @@ static u32 sOriginalSpriteDisplayPreviewHeight;
  * source has for ndsPlatformBeginOriginalDLPreview, exactly one survives into
  * the shipped battle ELF (ndsOpeningRoomRenderDLPreview), and the only functions
  * holding an address inside either array are the three API entry points here. */
-#if NDS_DEBUG_HUD
-static u32 sDebugTextFingerprint = 0xffffffffu;
-static u32 sDebugTextReady;
-#endif
 
 volatile u32 gNdsOriginalSpritePreviewReady;
 volatile u32 gNdsOriginalSpritePreviewCommitCount;
@@ -613,7 +550,7 @@ void ndsPlatformInit(void)
      * code can sample libultra time/count; BGM seam timing uses free timer 0. */
     cpuStartTiming(0);
     ndsPlatformFastTimingInit();
-#if NDS_FAST_MEM && NDS_TICK_HUD
+#if NDS_TICK_HUD
     {
         extern void ndsFastMemSelfTest(void);
 
@@ -676,20 +613,7 @@ void ndsPlatformInit(void)
     iprintf("\x1b[?25l");
     NDS_FREEZE_DIAGNOSTICS_INIT();
 
-#if NDS_R2_HWMATH_BENCH
-    /* Once, at boot, before any scene exists. It is loading-time work by
-     * construction -- the thing PROJECT_GOAL.md says is cheap -- and it cannot
-     * perturb a gameplay frame because it has finished before the first one.
-     * The counters it publishes are read at the end of the run by
-     * sample-tick-hud-buckets.ps1 -ExtraGlobals. */
-    ndsR2HwMathBenchRun();
-#endif
 
-#if NDS_DEBUG_HUD
-    iprintf("Smash 64 DS Port\n");
-    iprintf("================\n");
-    iprintf("melonDS visual debug active\n");
-#endif
 }
 
 /* libnds's text console is the image's only siscanf caller: its escape parser
@@ -778,15 +702,6 @@ u32 ndsPlatformReadInput(void)
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
 
-#if NDS_LAB_NO_CULL
-    /* BUGS.md #10 / P2-3r17 seam probe. SELECT is the only key the battle
-     * leaves unbound; keysDown() is READ, never re-scanned (the single
-     * scanKeys() above is the frame's only scan). */
-    if ((keysDown() & KEY_SELECT) != 0)
-    {
-        (void)ndsRendererLabSeamAdvanceArm();
-    }
-#endif
 
     if (held & KEY_LEFT) input |= NDS_INPUT_LEFT;
     if (held & KEY_RIGHT) input |= NDS_INPUT_RIGHT;
@@ -901,16 +816,6 @@ static u32 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(u32 layer)
 
 static u32 ndsPlatformOriginalSpriteOverlayClearPixels(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    if ((sSceneMipCapturePending != 0u) ||
-        ((sSceneMipCaptureCompleted != 0u) &&
-         (sSceneMipCacheReady == FALSE) &&
-         (sSceneMipCacheFailed == FALSE)))
-    {
-        /* Rows 192..255 stage already captured 128x128 scene textures. */
-        return SCREEN_WIDTH * SCREEN_HEIGHT;
-    }
-#endif
     return 256u * 256u;
 }
 
@@ -1602,9 +1507,6 @@ static void ndsPlatformTransitionCover(s32 retire_list)
          * list is empty. (A hold's Thaw may come mid-way through the next
          * scene's first frame, whose build list it must not swap in half
          * built -- hiding BG0 alone retires the old list there.) */
-#if NDS_TASK29_GX_CENSUS
-        ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
-#endif
         glFlush(GL_TRANS_MANUALSORT);
     }
     /* A scene-boundary wait, with no extra logic tick or gameplay present. */
@@ -2489,321 +2391,46 @@ void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y)
     gNdsTitleFireFrameCount++;
 }
 
-#if NDS_SCENE_MIP_CACHE_LAB
-static s32 ndsPlatformSceneWallpaperQ16ToQ8(s64 value_q16)
-{
-    if (value_q16 < 0)
-    {
-        return -(s32)(((-value_q16) + 0x80) >> 8);
-    }
-    return (s32)((value_q16 + 0x80) >> 8);
-}
-
-static void ndsPlatformSceneWallpaperQueueIdentity(void)
-{
-    sSceneWallpaperPendingHdx = 1 << 8;
-    sSceneWallpaperPendingVdy = 1 << 8;
-    sSceneWallpaperPendingDx = 0;
-    sSceneWallpaperPendingDy = 0;
-    sSceneWallpaperAffinePending = TRUE;
-}
-
-static u32 ndsPlatformSceneWallpaperBuildAffine(
-    const NDSSceneWallpaperTransform *live)
-{
-    const s64 preview_pixel_center_q16 = 0xa000;
-    u32 ratio_x_q16;
-    u32 ratio_y_q16;
-    s64 offset_x_q16;
-    s64 offset_y_q16;
-    s64 source_x_end_q8;
-    s64 source_y_end_q8;
-
-    if ((live == NULL) ||
-        (live->scale_x_q16 == 0u) || (live->scale_y_q16 == 0u) ||
-        (sSceneWallpaperSeedTransform.scale_x_q16 == 0u) ||
-        (sSceneWallpaperSeedTransform.scale_y_q16 == 0u))
-    {
-        return FALSE;
-    }
-    ratio_x_q16 = (u32)((
-        ((u64)sSceneWallpaperSeedTransform.scale_x_q16 << 16) +
-        (live->scale_x_q16 >> 1)) / live->scale_x_q16);
-    ratio_y_q16 = (u32)((
-        ((u64)sSceneWallpaperSeedTransform.scale_y_q16 << 16) +
-        (live->scale_y_q16 >> 1)) / live->scale_y_q16);
-    sSceneWallpaperPendingHdx = (s32)((ratio_x_q16 + 0x80u) >> 8);
-    sSceneWallpaperPendingVdy = (s32)((ratio_y_q16 + 0x80u) >> 8);
-    if ((sSceneWallpaperPendingHdx <= 0) ||
-        (sSceneWallpaperPendingVdy <= 0) ||
-        (sSceneWallpaperPendingHdx > 0x7fff) ||
-        (sSceneWallpaperPendingVdy > 0x7fff))
-    {
-        return FALSE;
-    }
-
-    /* The software compositor samples the 320x240 preview at pixel centers
-     * while reducing it to BG2's 256x192 window. Solve the same mapping for
-     * the retained seed image, including that 0.625-preview-pixel center. */
-    offset_x_q16 = (((s64)ratio_x_q16 *
-        (preview_pixel_center_q16 -
-         ((s64)live->origin_x << 16))) / 65536) +
-        ((s64)sSceneWallpaperSeedTransform.origin_x << 16) -
-        preview_pixel_center_q16;
-    offset_y_q16 = (((s64)ratio_y_q16 *
-        (preview_pixel_center_q16 -
-         ((s64)live->origin_y << 16))) / 65536) +
-        ((s64)sSceneWallpaperSeedTransform.origin_y << 16) -
-        preview_pixel_center_q16;
-    offset_x_q16 = (offset_x_q16 * 4) / 5;
-    offset_y_q16 = (offset_y_q16 * 4) / 5;
-    sSceneWallpaperPendingDx =
-        ndsPlatformSceneWallpaperQ16ToQ8(offset_x_q16);
-    sSceneWallpaperPendingDy =
-        ndsPlatformSceneWallpaperQ16ToQ8(offset_y_q16);
-
-    source_x_end_q8 = (s64)sSceneWallpaperPendingDx +
-        ((s64)sSceneWallpaperPendingHdx * (SCREEN_WIDTH - 1));
-    source_y_end_q8 = (s64)sSceneWallpaperPendingDy +
-        ((s64)sSceneWallpaperPendingVdy * (SCREEN_HEIGHT - 1));
-    if ((sSceneWallpaperPendingDx < 0) ||
-        (sSceneWallpaperPendingDy < 0) ||
-        (source_x_end_q8 >= ((s64)SCREEN_WIDTH << 8)) ||
-        (source_y_end_q8 >= ((s64)SCREEN_HEIGHT << 8)))
-    {
-        return FALSE;
-    }
-    sSceneWallpaperAffinePending = TRUE;
-    gNdsSceneWallpaperAffineHdx = sSceneWallpaperPendingHdx;
-    gNdsSceneWallpaperAffineVdy = sSceneWallpaperPendingVdy;
-    gNdsSceneWallpaperAffineDx = sSceneWallpaperPendingDx;
-    gNdsSceneWallpaperAffineDy = sSceneWallpaperPendingDy;
-    return TRUE;
-}
-
-static void ndsPlatformSceneWallpaperCommitAffine(void)
-{
-    if (sOriginalSpriteOverlayBg < 0)
-    {
-        return;
-    }
-    if (sSceneWallpaperAffineResetPending != FALSE)
-    {
-        ndsPlatformSetBg2Affine(1 << 8, 1 << 8, 0, 0);
-        sSceneWallpaperAffineResetPending = FALSE;
-        sSceneWallpaperAffinePending = FALSE;
-        return;
-    }
-    if (sSceneWallpaperAffinePending == FALSE)
-    {
-        return;
-    }
-    ndsPlatformSetBg2Affine(sSceneWallpaperPendingHdx,
-                            sSceneWallpaperPendingVdy,
-                            sSceneWallpaperPendingDx,
-                            sSceneWallpaperPendingDy);
-    sSceneWallpaperAffinePending = FALSE;
-    gNdsSceneWallpaperAffineApplyCount++;
-}
-#endif
 
 u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
                                              u32 scale_x_q16,
                                              u32 scale_y_q16)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    u32 profile_start = cpuGetTiming();
-
-    if (sSceneMipCacheFailed != FALSE)
-    {
-        gNdsSceneWallpaperAffineLastTicks =
-            cpuGetTiming() - profile_start;
-        return FALSE;
-    }
-    sSceneWallpaperLatestTransform.origin_x = origin_x;
-    sSceneWallpaperLatestTransform.origin_y = origin_y;
-    sSceneWallpaperLatestTransform.scale_x_q16 = scale_x_q16;
-    sSceneWallpaperLatestTransform.scale_y_q16 = scale_y_q16;
-    sSceneWallpaperLatestTransformValid =
-        ((scale_x_q16 != 0u) && (scale_y_q16 != 0u)) ? TRUE : FALSE;
-    if (sSceneMipCacheReady == FALSE)
-    {
-        gNdsSceneWallpaperAffineLastTicks =
-            cpuGetTiming() - profile_start;
-        return FALSE;
-    }
-    if (ndsPlatformSceneWallpaperBuildAffine(
-            &sSceneWallpaperLatestTransform) == FALSE)
-    {
-        gNdsSceneWallpaperAffineCoverageFailureCount++;
-        ndsPlatformSceneMipCacheAbort();
-        gNdsSceneWallpaperAffineLastTicks =
-            cpuGetTiming() - profile_start;
-        return FALSE;
-    }
-    gNdsSceneWallpaperAffineQueueCount++;
-    gNdsSceneWallpaperAffineLastTicks = cpuGetTiming() - profile_start;
-    return TRUE;
-#else
     (void)origin_x;
     (void)origin_y;
     (void)scale_x_q16;
     (void)scale_y_q16;
     return FALSE;
-#endif
 }
 
 void ndsPlatformSceneWallpaperConfirmRaster(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    if ((sSceneMipCapturePending != 0u) &&
-        (sSceneMipCacheReady == FALSE) &&
-        (sSceneMipCacheFailed == FALSE))
-    {
-        sSceneWallpaperSeedRasterCommitted = TRUE;
-    }
-#endif
 }
 
-#if NDS_SCENE_MIP_CACHE_LAB
-static void ndsPlatformSceneMipPublishWallpaperHash(const u16 *pixels)
-{
-    u32 hash = 2166136261u;
-    u32 nonzero = 0u;
-    u32 y;
-
-    for (y = 0u; y < SCREEN_HEIGHT; y++)
-    {
-        u32 x;
-
-        for (x = 0u; x < SCREEN_WIDTH; x++)
-        {
-            u16 pixel = pixels[(y * 256u) + x];
-
-            hash ^= pixel & 0xffu;
-            hash *= 16777619u;
-            hash ^= pixel >> 8;
-            hash *= 16777619u;
-            if ((pixel & BIT(15)) != 0u)
-            {
-                nonzero++;
-            }
-        }
-    }
-    gNdsSceneMipCacheLastHash = hash;
-    gNdsSceneMipCacheLastNonzeroPixels = nonzero;
-}
-
-static void ndsPlatformSceneMipFinishCapture(void)
-{
-    const u16 *wallpaper = (sOriginalSpriteOverlayBg >= 0) ?
-        (const u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg) : NULL;
-
-    if ((sSceneMipCapturePending != 1u) || (wallpaper == NULL) ||
-        (sSceneWallpaperLatestTransformValid == FALSE) ||
-        (sSceneWallpaperSeedRasterCommitted == FALSE))
-    {
-        sSceneMipCacheFailed = TRUE;
-        gNdsSceneMipCacheFailureCount++;
-        gNdsSceneMipCacheState = 3u;
-        sSceneMipCapturePending = 0u;
-        return;
-    }
-    /* Cut G freezes only BattleShip's already-composited BG2 wallpaper. The
-     * source stage and fighters continue through the live GX display graph,
-     * preserving the depth and parallax lost by a flattened scene texture. */
-    ndsPlatformSceneMipPublishWallpaperHash(wallpaper);
-    if (gNdsSceneMipCacheLastNonzeroPixels <
-        ((SCREEN_WIDTH * SCREEN_HEIGHT * 3u) / 4u))
-    {
-        sSceneMipCacheFailed = TRUE;
-        gNdsSceneMipCacheFailureCount++;
-        gNdsSceneMipCacheState = 3u;
-        sSceneMipCapturePending = 0u;
-        return;
-    }
-    sSceneWallpaperSeedTransform = sSceneWallpaperLatestTransform;
-    sSceneMipCaptureCompleted = 1u;
-    sSceneMipCapturePending = 0u;
-    gNdsSceneMipCacheCaptureCount = 1u;
-    gNdsSceneMipCacheUploadCount = 0u;
-    sSceneMipCacheReady = TRUE;
-    gNdsSceneMipCacheState = 2u;
-    ndsPlatformSceneWallpaperQueueIdentity();
-    ndsPlatformSetOriginalSpriteOverlayLayerMask(
-        NDS_ORIGINAL_SPRITE_OVERLAY_ALL);
-}
-#endif
 
 u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    if ((sSceneMipCacheReady != FALSE) ||
-        (sSceneMipCacheFailed != FALSE))
-    {
-        return FALSE;
-    }
-    if ((sSceneMipCapturePending != 0u) ||
-        (mip_index != 0u) ||
-        (mip_index != sSceneMipCaptureCompleted))
-    {
-        sSceneMipCacheFailed = TRUE;
-        gNdsSceneMipCacheFailureCount++;
-        gNdsSceneMipCacheState = 3u;
-        return FALSE;
-    }
-    sSceneMipCapturePending = mip_index + 1u;
-    sSceneWallpaperLatestTransformValid = FALSE;
-    sSceneWallpaperSeedRasterCommitted = FALSE;
-    gNdsSceneMipCacheState = 1u;
-    return TRUE;
-#else
     (void)mip_index;
     return FALSE;
-#endif
 }
 
 void ndsPlatformSceneMipCacheAbort(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    if (sSceneMipCacheFailed == FALSE)
-    {
-        sSceneMipCacheFailed = TRUE;
-        gNdsSceneMipCacheFailureCount++;
-        gNdsSceneMipCacheState = 3u;
-    }
-    sSceneMipCacheReady = FALSE;
-    sSceneMipCapturePending = 0u;
-    sSceneWallpaperAffinePending = FALSE;
-    sSceneWallpaperAffineResetPending = TRUE;
-#endif
 }
 
 u32 ndsPlatformSceneMipCaptureCompletedCount(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    return sSceneMipCaptureCompleted;
-#else
     return 0u;
-#endif
 }
 
 u32 ndsPlatformSceneMipCacheReady(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    return sSceneMipCacheReady;
-#else
     return FALSE;
-#endif
 }
 
 u32 ndsPlatformSceneMipCacheFailed(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    return sSceneMipCacheFailed;
-#else
     return FALSE;
-#endif
 }
 
 void ndsPlatformClearOriginalSpritePreview(void)
@@ -2928,32 +2555,6 @@ static volatile u32
 static u32 sBattleTickHudScratch[NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudRingHead;
 static u32 sBattleTickHudRingCount;
-#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
-/* Task 70. The native-owner counters are cumulative, and a run-level total
- * cannot say whether the frames that fell back are the frames that cost the
- * P95 or merely as numerous as them. Ringing the per-frame delta alongside the
- * buckets puts both on the same index, so the two medians can be compared
- * directly instead of correlated across separate runs.
- *
- * volatile because nothing in the ROM ever reads it: the bucket ring survives
- * because the HUD computes percentiles from it, but a static array that is only
- * ever stored to is a dead store and GCC deletes it outright -- the first build
- * linked with no such symbol at all.
- *
- * Task 75 E0 rides the same ring rather than adding a second one. The two
- * censuses answer the same shape of question about different counters and are
- * never built together, so one ring and one selected source keeps
- * scripts/sample-tick-hud-buckets.ps1 unchanged -- its two-stop baseline path
- * is proven and editing a .ps1 has corrupted these files before. Which counter
- * a dump holds is a property of the build, and each task's document records it. */
-#if NDS_TASK75_LOAD_CENSUS
-#define NDS_TICK_HUD_CENSUS_RING_SOURCE gNdsTask75AssetLoadCount
-#else
-#define NDS_TICK_HUD_CENSUS_RING_SOURCE gNdsTickHudNativeOwnerFallbackCount
-#endif
-static volatile u32 sBattleTickHudFallbackRing[NDS_TICK_HUD_WINDOW];
-static u32 sBattleTickHudFallbackPrev;
-#endif
 /* The values last printed. Retained so the HUD can be asserted over GDB
  * instead of only photographed - scripts/sample-tick-hud-buckets.ps1 computes
  * the same order statistics from the raw buckets and the two must agree. */
@@ -3036,9 +2637,6 @@ void ndsPlatformTickHudReset(void)
     sBattleTickHudRingCount = 0u;
     memset(sBattleTickHudP50, 0, sizeof(sBattleTickHudP50));
     memset(sBattleTickHudP95, 0, sizeof(sBattleTickHudP95));
-#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
-    sBattleTickHudFallbackPrev = NDS_TICK_HUD_CENSUS_RING_SOURCE;
-#endif
 #endif
 }
 
@@ -3052,14 +2650,6 @@ void ndsPlatformTickHudSample(void)
     {
         sBattleTickHudRing[bucket][head] = gNdsTickHudBuckets[bucket];
     }
-#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
-    {
-        u32 total = NDS_TICK_HUD_CENSUS_RING_SOURCE;
-
-        sBattleTickHudFallbackRing[head] = total - sBattleTickHudFallbackPrev;
-        sBattleTickHudFallbackPrev = total;
-    }
-#endif
     sBattleTickHudRingHead = (head + 1u) % NDS_TICK_HUD_WINDOW;
     if (sBattleTickHudRingCount < NDS_TICK_HUD_WINDOW)
     {
@@ -3249,9 +2839,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
         sBattleTextHudReady = FALSE;
         sBattleTextHudFingerprint = 0xffffffffu;
-#if NDS_LAB_NO_CULL
-        sBattleSeamArmPrinted = 0xffffffffu;
-#endif
         gNdsBattlePlayableHudFpsX10 = 0u;
         gNdsBattlePlayableHudFpsSampleCount = 0u;
         gNdsBattlePlayableHudFpsFrameWindow = 0u;
@@ -3260,9 +2847,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
         consoleClear();
         NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS --.-  UP --.-");
 #if NDS_BATTLE_PHASE_HUD_ENABLED
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        NDS_BATTLE_FPS_HUD_PRINT(11u, "FX 0/0/0 E0 A0");
-#endif
         sBattlePhaseHudLastSlipCount =
             gNdsBattlePlayablePacingCadenceViolationCount;
         sBattlePhaseHudUpdTickSum = 0u;
@@ -3274,26 +2858,16 @@ static void ndsPlatformRenderBattleFpsHud(void)
         NDS_BATTLE_FPS_HUD_PRINT(13u, "DRW        --");
         NDS_BATTLE_FPS_HUD_PRINT(14u, "ACT        --");
         NDS_BATTLE_FPS_HUD_PRINT(15u, "LOOP       --");
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_BATTLE_FPS_HUD_PRINT(16u, "PRE        --");
-        NDS_BATTLE_FPS_HUD_PRINT(17u, "PRP        --");
-        NDS_BATTLE_FPS_HUD_PRINT(18u, "CMT        --");
-#endif
         NDS_BATTLE_FPS_HUD_PRINT(19u, "SLIP        0");
         NDS_BATTLE_FPS_HUD_PRINT(21u, "VBI  --  --  --");
         NDS_BATTLE_FPS_HUD_PRINT(22u, "5+  --  max --  BGM --/--");
         NDS_BATTLE_FPS_HUD_PRINT(
-#if NDS_TASK36_HW_COMPOSE
             23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
             (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
             (unsigned long)(gNdsRendererTask36AdapterRejectReason |
                             gNdsRendererTask36RendererRejectReason |
                             gNdsRendererTask36PrepareRunRejectReason),
             (unsigned long)gNdsRendererM3PostArmFailureCount);
-#else
-            23u, "GIT %s DHT %u", NDS_TASK10_GIT_SHORT,
-            (unsigned int)NDS_TASK32_DRAW_HOT_TEXT);
-#endif
 #endif
 #if NDS_BATTLE_TICK_HUD_ENABLED
         /* Ring lifetime is owned by ndsBattlePlayablePacingStart(), before the
@@ -3368,20 +2942,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
         REG_IME = ime;
     }
     ndsPlatformPublishBattleFpsHudGroup();
-#if NDS_R204_FPSHUD_SHADOW
-    /* R2-04 E2. The Boundary assert recomputes fps from the frame/tick window
-     * published beside it and found 290 against 15/17,485,504, which is 288.
-     * These four stores are adjacent and the values are locals, so the group
-     * cannot be internally inconsistent at this instant -- yet the harness reads
-     * one that is. This shadow is written in the same breath from the same
-     * locals. If the shadow stays self-consistent while the primary does not,
-     * something rewrites the primary after this point; if both disagree with the
-     * harness, its BUS_CLOCK constant is the wrong one. */
-    gNdsR204FpsHudShadowX10 = fps_x10;
-    gNdsR204FpsHudShadowFrames = elapsed_frames;
-    gNdsR204FpsHudShadowTicks = elapsed_ticks;
-    gNdsR204FpsHudShadowBusClock = (u32)BUS_CLOCK;
-#endif
     sBattleFpsHudLastTick = now_tick;
     sBattleFpsHudLastPresentedFrames = presented_frames;
     sBattleFpsHudLastLogicFrames = logic_frames;
@@ -3415,27 +2975,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         NDS_BATTLE_FPS_HUD_PRINT(
             15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
             (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        NDS_BATTLE_FPS_HUD_PRINT(
-            11u, "FX %lu/%lu/%lu E%lx A%lu",
-            (unsigned long)gNdsTask39FxSpawnTicks,
-            (unsigned long)gNdsTask39FxUpdateTicks,
-            (unsigned long)gNdsTask39FxDrawTicks,
-            (unsigned long)gNdsTask39FxEngagementMask,
-            (unsigned long)gNdsTask39FxArenaRejectCount);
-#endif
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_BATTLE_FPS_HUD_PRINT(
-        16u, "PRE %10lu",
-        (unsigned long)gNdsRendererM3Phase0PreflightTicks);
-    NDS_BATTLE_FPS_HUD_PRINT(
-        17u, "PRP %10lu",
-        (unsigned long)gNdsRendererM3Phase0PrepareRunTicks);
-    NDS_BATTLE_FPS_HUD_PRINT(
-        18u, "CMT %10lu",
-        (unsigned long)gNdsRendererM3Phase0CommitTicks);
-#endif
     NDS_BATTLE_FPS_HUD_PRINT(
         19u, "SLIP%10lu",
         (unsigned long)(gNdsBattlePlayablePacingCadenceViolationCount -
@@ -3455,15 +2995,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
             NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax,
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        (unsigned long)gNdsAudioBgmRefillTicksLast,
-        (unsigned long)gNdsAudioBgmRefillTicksMax
-#else
         0ul,
         0ul
-#endif
         );
-#if NDS_TASK36_HW_COMPOSE
     NDS_BATTLE_FPS_HUD_PRINT(
         23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
         (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
@@ -3471,7 +3005,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
                         gNdsRendererTask36RendererRejectReason |
                         gNdsRendererTask36PrepareRunRejectReason),
         (unsigned long)gNdsRendererM3PostArmFailureCount);
-#endif
 #endif
 #if NDS_BATTLE_TICK_HUD_DRAW_ENABLED
     {
@@ -3576,38 +3109,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
                                       (unsigned long)gNdsGx3dRamOverflowFrames);
         }
     }
-#if NDS_LAB_NO_CULL
-    /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
-     * and 9/10 the two players, rows 11+ the tick HUD. */
-    {
-#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        static const char *const seam_arm_names[5] = {
-            "SEAM 0 shipped     [SELECT]",
-            "SEAM 1 cull NONE   [SELECT]",
-            "SEAM 2 cull FRONT  [SELECT]",
-            "SEAM 3 strips off  [SELECT]",
-            "SEAM 4 source world[SELECT]"
-        };
-        const u32 seam_arm_count = 5u;
-    #else
-        static const char *const seam_arm_names[4] = {
-            "SEAM 0 shipped     [SELECT]",
-            "SEAM 1 cull NONE   [SELECT]",
-            "SEAM 2 cull FRONT  [SELECT]",
-            "SEAM 3 source world[SELECT]"
-        };
-        const u32 seam_arm_count = 4u;
-    #endif
-        u32 arm = ndsRendererLabSeamArm();
-
-        if (arm != sBattleSeamArmPrinted)
-        {
-            sBattleSeamArmPrinted = arm;
-            NDS_BATTLE_FPS_HUD_PRINT(
-                3u, "%s", seam_arm_names[arm % seam_arm_count]);
-        }
-    }
-#endif
 }
 #endif
 
@@ -3630,36 +3131,6 @@ void ndsPlatformPublishBattleFrameCompleteGroups(void)
      * frame generation instead of whatever ARM9 D-cache state happens to have
      * reached main RAM. */
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_EFDESC_NATIVE_GROUP);
-#if NDS_TASK68_FALLBACK_CENSUS
-    /* Task 68's counters are sampled beside the frame-complete pacing group.
-     * Publish them at that same coherent stop so a route proof can compare the
-     * frame number, native plan engagement and fallback total without mixing
-     * ARM9 D-cache generations.  Lab flag only; shipping builds pay nothing. */
-    DC_FlushRange((const void *)&gNdsTickHudNativeOwnerFallbackCount,
-                  sizeof(gNdsTickHudNativeOwnerFallbackCount));
-    DC_FlushRange((const void *)&gNdsTickHudNativeOwnerFallbackByReason,
-                  sizeof(gNdsTickHudNativeOwnerFallbackByReason));
-    DC_FlushRange((const void *)&gNdsFtrPlanHit, sizeof(gNdsFtrPlanHit));
-#if NDS_R2_FOX_GUN_OVERLAY
-    DC_FlushRange((const void *)&gNdsRendererFoxGunDrawCount,
-                  sizeof(gNdsRendererFoxGunDrawCount));
-    DC_FlushRange((const void *)&gNdsRendererFoxGunTriangleCount,
-                  sizeof(gNdsRendererFoxGunTriangleCount));
-    DC_FlushRange((const void *)&gNdsRendererFoxGunFailCount,
-                  sizeof(gNdsRendererFoxGunFailCount));
-    DC_FlushRange((const void *)&gNdsRendererFoxGunBytes,
-                  sizeof(gNdsRendererFoxGunBytes));
-#endif
-#endif
-#if NDS_R2_STAGE_ROUTE_PROBE
-    ndsRendererPublishStageRouteProbeDiagnostics();
-#endif
-#if NDS_R2_SIM_MAC_SHADOW
-    /* The warm-MAC instrument's counters. A max-deviation counter is written
-     * only when a new maximum occurs, which is exactly the access pattern that
-     * is still dirty in the D-cache at the run's final stop and reads STALE. */
-    NDS_PUBLISH_DEBUGGER_GROUP(NDS_R2_SIM_MAC_GROUP);
-#endif
 }
 
 static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)
@@ -3878,9 +3349,6 @@ void ndsPlatformClearBattleTextHud(void)
     gNdsGx3dRdlinesMin = 46u;
     sBattleTextHudReady = FALSE;
     sBattleTextHudFingerprint = 0xffffffffu;
-#if NDS_LAB_NO_CULL
-    sBattleSeamArmPrinted = 0xffffffffu;
-#endif
 #endif
 }
 
@@ -3954,171 +3422,10 @@ static void ndsPlatformUpdatePerfCounters(void)
     sPerfLastPreviewCommitCount = preview_commit_count;
 }
 
-#if NDS_DEBUG_HUD
-static u32 ndsPlatformOpeningHudTickMilestone(void)
-{
-    u32 tick = gNdsOpeningRoomTickCount;
-
-    if ((gNdsOpeningRoomDrawResult == NDS_OPENING_ROOM_DRAW_PASS) ||
-        (tick >= 560u))
-    {
-        return 560u;
-    }
-    if ((gNdsOpeningRoomTick500RunResult ==
-         NDS_OPENING_ROOM_TICK500_RUN_PASS) ||
-        (tick >= 500u))
-    {
-        return 500u;
-    }
-    if ((gNdsOpeningRoomTick450RunResult ==
-         NDS_OPENING_ROOM_TICK450_RUN_PASS) ||
-        (tick >= 450u))
-    {
-        return 450u;
-    }
-    if ((gNdsOpeningRoomTick380DeferredResult ==
-         NDS_OPENING_ROOM_TICK380_DEFER_PASS) ||
-        (tick >= 380u))
-    {
-        return 380u;
-    }
-    if ((gNdsOpeningRoomFirstEventRunResult ==
-         NDS_OPENING_ROOM_FIRST_EVENT_RUN_PASS) ||
-        (tick >= 280u))
-    {
-        return 280u;
-    }
-    if (gNdsOpeningRoomFuncStartResult == NDS_OPENING_ROOM_FUNC_START_PASS)
-    {
-        return 1u;
-    }
-    return 0u;
-}
-
-static u32 ndsPlatformDebugTextFingerprint(void)
-{
-    u32 hash = 2166136261u;
-
-    hash = ndsPlatformMixDebugValue(hash, gNdsOriginalBootStage);
-    hash = ndsPlatformMixDebugValue(hash, gNdsBootSelfTestResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsSceneBoundaryResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsSceneBoundaryKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTaskmanReturnCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTaskmanBridgeResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTaskmanCleanupResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsRelocAssetInitResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocFileMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocHeaderMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocPayloadMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocWordSwapMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocWordSwapCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomRelocPointerFixupMask);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningRoomRelocPointerFixupCount);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningRoomFirstEventDeferredMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomTick380DeferredMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomTick450DeferredMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomTick500DeferredMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomTick560DeferredMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomSpotlightCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomScene1CameraCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomScene2CameraCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomLogoCameraCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDeskCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomHazeCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomOutsideCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomSunlightCreateMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomPencilsCreateResult);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningRoomFighterDeferredKind & 0xffu);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDLPreviewResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDLPreviewTriangleCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDLPreviewPixelCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDLPreviewTextureMask);
-    hash = ndsPlatformMixDebugValue(hash, ndsPlatformOpeningHudTickMilestone());
-    hash = ndsPlatformMixDebugValue(hash, sHeldKeys & 0xfffu);
-    hash = ndsPlatformMixDebugValue(hash, gNdsControllerLivePad0Button);
-    hash = ndsPlatformMixDebugValue(hash, (u32)gNdsControllerLivePad0StickX);
-    hash = ndsPlatformMixDebugValue(hash, (u32)gNdsControllerLivePad0StickY);
-    hash = ndsPlatformMixDebugValue(hash, gSYControllerDevices[0].button_hold);
-    hash = ndsPlatformMixDebugValue(hash, gSYControllerDevices[0].button_tap);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    (u32)gSYControllerDevices[0].stick_range.x);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    (u32)gSYControllerDevices[0].stick_range.y);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    (u32)gNdsFighterBattlePlayableFinalXMilli);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfSampleCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfPresentFps);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfLogicFps);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfDLDrawFps);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfPreviewCommitFps);
-    hash = ndsPlatformMixDebugValue(hash, gNdsPerfPreviewCommitCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomSkipToTitleCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDrawResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDrawBlocker);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningRoomDrawCameraCallbackCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningRoomDrawDObjCallbackCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieRoomHandoffResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieRoomHandoffTick);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieRoomHandoffScene);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsStartResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsFuncStartResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsUpdateResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsRelocResult);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningPortraitsSpriteNormalizeCount);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningPortraitsSpriteNormalizeFailCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsTickCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsDrawResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsDrawBlocker);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningPortraitsDrawVisibleSObjCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsDrawWidth);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsDrawHeight);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsDrawPixels);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsNextSceneResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningPortraitsNextSceneKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMarioTickCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMarioDrawResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMarioDrawVisibleSObjCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMarioDrawPixels);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningNameSceneDispatchMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningNameSceneDrawMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningNameSceneDispatchCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningNameSceneLastKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningNameSceneLastNextKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieBridgeResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieBridgeMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieBridgeCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieActionPreviewResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieActionPreviewMask);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieActionPreviewCount);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningMovieActionPreviewFrameCount);
-    hash = ndsPlatformMixDebugValue(hash,
-                                    gNdsOpeningMovieActionPreviewLastKind);
-    hash = ndsPlatformMixDebugValue(hash, gNdsOpeningMovieTitleResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleRelocResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitlePreviewResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleDrawResult);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleSpriteNormalizeCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleSpriteNormalizeFailCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleDrawVisibleSObjCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleDrawRenderableSObjCount);
-    hash = ndsPlatformMixDebugValue(hash, gNdsTitleDrawPixels);
-
-    return hash;
-}
-#endif
 
 void ndsPlatformRenderDebugHud(void)
 {
-#if NDS_BATTLE_FPS_HUD_ENABLED && !NDS_DEBUG_HUD
+#if NDS_BATTLE_FPS_HUD_ENABLED
 #if NDS_P2_MENU_SHELL
     if (gNdsMenuShellScreen < NDS_MENU_SHELL_SCREEN_COUNT)
     {
@@ -4149,116 +3456,6 @@ void ndsPlatformRenderDebugHud(void)
             ndsBattleHudClear();
         }
     }
-#endif
-#if NDS_DEBUG_HUD
-    u32 debug_text_fingerprint;
-
-    debug_text_fingerprint = ndsPlatformDebugTextFingerprint();
-    if ((sDebugTextReady != 0) &&
-        (debug_text_fingerprint == sDebugTextFingerprint))
-    {
-        return;
-    }
-    sDebugTextReady = 1;
-    sDebugTextFingerprint = debug_text_fingerprint;
-
-    ndsPlatformPrintDebugLine(0, "Smash64DS movie debug");
-    ndsPlatformPrintDebugLine(1, "text=change %08lx",
-                              (unsigned long)debug_text_fingerprint);
-    ndsPlatformPrintDebugLine(2, "boot=%08lx self=%08lx",
-                              (unsigned long)gNdsOriginalBootStage,
-                              (unsigned long)gNdsBootSelfTestResult);
-    ndsPlatformPrintDebugLine(3, "scene=%08lx k=%lu ret=%lu",
-                              (unsigned long)gNdsSceneBoundaryResult,
-                              (unsigned long)gNdsSceneBoundaryKind,
-                              (unsigned long)gNdsTaskmanReturnCount);
-    ndsPlatformPrintDebugLine(4, "task=%08lx clean=%08lx",
-                              (unsigned long)gNdsTaskmanBridgeResult,
-                              (unsigned long)gNdsTaskmanCleanupResult);
-    ndsPlatformPrintDebugLine(5, "rel=%08lx nfs=%08lx",
-                              (unsigned long)gNdsOpeningRoomRelocResult,
-                              (unsigned long)gNdsRelocAssetInitResult);
-    ndsPlatformPrintDebugLine(6, "file=%02lx hdr=%02lx pay=%02lx",
-                              (unsigned long)gNdsOpeningRoomRelocFileMask,
-                              (unsigned long)gNdsOpeningRoomRelocHeaderMask,
-                              (unsigned long)gNdsOpeningRoomRelocPayloadMask);
-    ndsPlatformPrintDebugLine(7, "fix sw=%02lx/%lu pt=%02lx/%lu",
-                              (unsigned long)gNdsOpeningRoomRelocWordSwapMask,
-                              (unsigned long)gNdsOpeningRoomRelocWordSwapCount,
-                              (unsigned long)gNdsOpeningRoomRelocPointerFixupMask,
-                              (unsigned long)gNdsOpeningRoomRelocPointerFixupCount);
-    ndsPlatformPrintDebugLine(8, "evt28=%02lx 38=%02lx 45=%02lx",
-                              (unsigned long)gNdsOpeningRoomFirstEventDeferredMask,
-                              (unsigned long)gNdsOpeningRoomTick380DeferredMask,
-                              (unsigned long)gNdsOpeningRoomTick450DeferredMask);
-    ndsPlatformPrintDebugLine(9, "evt50=%02lx 56=%02lx sp=%02lx",
-                              (unsigned long)gNdsOpeningRoomTick500DeferredMask,
-                              (unsigned long)gNdsOpeningRoomTick560DeferredMask,
-                              (unsigned long)gNdsOpeningRoomSpotlightCreateMask);
-    ndsPlatformPrintDebugLine(10, "cam s1=%03lx s2=%03lx l=%02lx",
-                              (unsigned long)gNdsOpeningRoomScene1CameraCreateMask,
-                              (unsigned long)gNdsOpeningRoomScene2CameraCreateMask,
-                              (unsigned long)gNdsOpeningRoomLogoCameraCreateMask);
-    ndsPlatformPrintDebugLine(11, "obj d=%02lx h=%02lx o=%02lx s=%02lx",
-                              (unsigned long)gNdsOpeningRoomDeskCreateMask,
-                              (unsigned long)gNdsOpeningRoomHazeCreateMask,
-                              (unsigned long)gNdsOpeningRoomOutsideCreateMask,
-                              (unsigned long)gNdsOpeningRoomSunlightCreateMask);
-    ndsPlatformPrintDebugLine(12, "pcl=%08lx fk=%02lx",
-                              (unsigned long)gNdsOpeningRoomPencilsCreateResult,
-                              (unsigned long)(gNdsOpeningRoomFighterDeferredKind & 0xffu));
-    ndsPlatformPrintDebugLine(13, "dlp=%08lx t=%lu p=%lu x=%02lx",
-                              (unsigned long)gNdsOpeningRoomDLPreviewResult,
-                              (unsigned long)gNdsOpeningRoomDLPreviewTriangleCount,
-                              (unsigned long)gNdsOpeningRoomDLPreviewPixelCount,
-                              (unsigned long)gNdsOpeningRoomDLPreviewTextureMask);
-    ndsPlatformPrintDebugLine(14, "tick~%lu key=%03lx skip=%lu",
-                              (unsigned long)ndsPlatformOpeningHudTickMilestone(),
-                              (unsigned long)(sHeldKeys & 0xfffu),
-                              (unsigned long)gNdsOpeningRoomSkipToTitleCount);
-    ndsPlatformPrintDebugLine(15, "draw=%08lx b=%lu c=%lu d=%lu",
-                              (unsigned long)gNdsOpeningRoomDrawResult,
-                              (unsigned long)gNdsOpeningRoomDrawBlocker,
-                              (unsigned long)gNdsOpeningRoomDrawCameraCallbackCount,
-                              (unsigned long)gNdsOpeningRoomDrawDObjCallbackCount);
-    ndsPlatformPrintDebugLine(16, "mv h=%08lx p=%08lx",
-                              (unsigned long)gNdsOpeningMovieRoomHandoffResult,
-                              (unsigned long)gNdsOpeningPortraitsStartResult);
-    ndsPlatformPrintDebugLine(17, "por t=%lu d=%08lx v=%lu",
-                              (unsigned long)gNdsOpeningPortraitsTickCount,
-                              (unsigned long)gNdsOpeningPortraitsDrawResult,
-                              (unsigned long)gNdsOpeningPortraitsDrawVisibleSObjCount);
-    ndsPlatformPrintDebugLine(18, "mario t=%lu v=%lu px=%lu",
-                              (unsigned long)gNdsOpeningMarioTickCount,
-                              (unsigned long)gNdsOpeningMarioDrawVisibleSObjCount,
-                              (unsigned long)gNdsOpeningMarioDrawPixels);
-    ndsPlatformPrintDebugLine(19, "name m=%02lx d=%02lx c=%lu",
-                              (unsigned long)gNdsOpeningNameSceneDispatchMask,
-                              (unsigned long)gNdsOpeningNameSceneDrawMask,
-                              (unsigned long)gNdsOpeningNameSceneDispatchCount);
-    ndsPlatformPrintDebugLine(20, "fps=%02lu up=%02lu dl=%02lu cv=%02lu",
-                              (unsigned long)gNdsPerfPresentFps,
-                              (unsigned long)gNdsPerfLogicFps,
-                              (unsigned long)gNdsPerfDLDrawFps,
-                              (unsigned long)gNdsPerfPreviewCommitFps);
-    ndsPlatformPrintDebugLine(21, "ch=%03lx pf=%03lx smp=%02lu win=%02lu",
-                              (unsigned long)(gNdsPerfPreviewCommitCount &
-                                              0xfffu),
-                              (unsigned long)(gNdsOpeningMoviePresentFrameCount &
-                                              0xfffu),
-                              (unsigned long)(gNdsPerfSampleCount & 0xffu),
-                              (unsigned long)(gNdsPerfSampleWindowTicks & 0xffu));
-    ndsPlatformPrintDebugLine(22, "inp k=%03lx p=%04lx %ld,%ld",
-                              (unsigned long)(sHeldKeys & 0xfffu),
-                              (unsigned long)gNdsControllerLivePad0Button,
-                              (long)gNdsControllerLivePad0StickX,
-                              (long)gNdsControllerLivePad0StickY);
-    ndsPlatformPrintDebugLine(23, "sy h=%04x t=%04x %d,%d x=%ld",
-                              (unsigned int)gSYControllerDevices[0].button_hold,
-                              (unsigned int)gSYControllerDevices[0].button_tap,
-                              (int)gSYControllerDevices[0].stick_range.x,
-                              (int)gSYControllerDevices[0].stick_range.y,
-                              (long)gNdsFighterBattlePlayableFinalXMilli);
 #endif
 }
 
@@ -4331,9 +3528,6 @@ static void ndsPlatformPostSwapCommit(void)
      * Covers 3D, both staging layers, and fade-only frames with no staging
      * commit; blackout precedence resolves inside the sole register owner. */
     ndsLBFadePushHardwareFrame();
-#if NDS_SCENE_MIP_CACHE_LAB
-    ndsPlatformSceneWallpaperCommitAffine();
-#endif
     ndsPlatformCommitNativeWallpaperAffine();
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();
@@ -4344,16 +3538,6 @@ static void ndsPlatformPostSwapCommit(void)
      * OAM and the later publisher wins; they are never live in the same scene,
      * so this ordering only decides which one pays for the oamUpdate. */
     ndsUiKitCommit();
-#endif
-#if NDS_SCENE_MIP_CACHE_LAB
-    if (sSceneMipCapturePending != 0u)
-    {
-        /* EndFrame runs after the SObj compositor committed BG2. Mark that
-         * exact source wallpaper as retained without copying it through GX
-         * texture VRAM or consuming a second VBlank. */
-        ndsPlatformSceneMipFinishCapture();
-        ndsPlatformSceneWallpaperCommitAffine();
-    }
 #endif
     /* A layer written this frame shows with the OBJ planes committed above. */
     ndsPlatformRevealOriginalSpriteOverlay();
@@ -4608,19 +3792,6 @@ void ndsPlatformEndFrame(void)
     u32 tickhud_flush_start;
     u32 tickhud_wait_start;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 profile_start;
-
-    gNdsRendererProfileFlushTicks = 0u;
-    gNdsRendererProfileVBlankWaitTicks = 0u;
-    gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
-    gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
-    gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 phase05_flush_prep_done = FALSE;
-    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
     u32 submitted;
 #if NDS_PRESENT_LEAD_LIVE
     u32 lead = FALSE;
@@ -4691,21 +3862,11 @@ void ndsPlatformEndFrame(void)
  * Four volatile register reads on the frame the renderer already flushes. It is
  * NOT in the published block on purpose: the cost is negligible but not zero,
  * and the instrument may carry a diagnostic the shipped ROM does not. */
-#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1) || NDS_TICK_HUD
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
         gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;
         gNdsHardwareRendererControl = GFX_CONTROL;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
-        gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05FlushPrepTicks, phase05_start);
-        phase05_flush_prep_done = TRUE;
-#endif
-        profile_start = cpuGetTiming();
 #endif
         NDS_FREEZE_DIAGNOSTICS_FLUSH();
         /* The previous frame's 3D faults (gNdsGx3dUnderflowFrames above):
@@ -4738,9 +3899,6 @@ void ndsPlatformEndFrame(void)
          * the flush is a FIFO command. Above the Task 29 record on purpose --
          * check-gbi-decode-fixtures pins the record adjacent to the flush. */
         ndsRendererFighterPacketDmaWait();
-#if NDS_TASK29_GX_CENSUS
-        ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
-#endif
 #if NDS_PRESENT_LEAD_LIVE
         if (lead != FALSE)
         {
@@ -4767,10 +3925,6 @@ void ndsPlatformEndFrame(void)
 #if NDS_TICK_HUD
         gNdsTickHudFlushTicks += cpuGetTiming() - tickhud_flush_start;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;
-        gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;
-#endif
         if (submitted != 0u)
         {
             NDS_DIAG(gNdsHardwareRendererFlushCount++);
@@ -4784,19 +3938,6 @@ void ndsPlatformEndFrame(void)
         }
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
-#if NDS_TASK29_GX_CENSUS
-    ndsRendererTask29GXPublishFrame();
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    if (phase05_flush_prep_done == FALSE)
-    {
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05FlushPrepTicks, phase05_start);
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    profile_start = cpuGetTiming();
-#endif
 #if NDS_TICK_HUD
     tickhud_wait_start = cpuGetTiming();
 #endif
@@ -4810,19 +3951,12 @@ void ndsPlatformEndFrame(void)
 #if NDS_TICK_HUD
         gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
-#endif
         return;
     }
 #endif
     ndsPlatformWaitForScheduledVBlank();
 #if NDS_TICK_HUD
     gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
-    profile_start = cpuGetTiming();
 #endif
     if ((submitted != 0u) && (s3dLayerEnableOnNextPresent != FALSE))
     {
@@ -4870,17 +4004,10 @@ void ndsPlatformEndFrame(void)
     DC_FlushRange((const void *)&gNdsVramBg3RefusedWrites, sizeof(u32));
 #endif
     ndsPlatformPostSwapCommit();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfilePostVBlankTicks +=
-        cpuGetTiming() - profile_start;
-#endif
 }
 
 void ndsPlatformProfileSampleFrameBoundaryGXState(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    ndsRendererProfileRecordFrameBoundaryGXState(GFX_STATUS, GFX_CONTROL);
-#endif
 }
 
 u32 ndsPlatformTicks(void)

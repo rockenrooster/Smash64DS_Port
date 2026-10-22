@@ -28,7 +28,6 @@
  * (ITFUSHIGIBANA_* rides on <it/item.h>; the 0x03 razor render flags and the
  * event-id clamp at 2 back to 1 are the source's own).
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <gm/gmsound.h>
@@ -405,4 +404,3 @@ GObj* itFushigibanaWeaponRazorMakeWeapon(GObj *item_gobj, Vec3f *pos)
     return weapon_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

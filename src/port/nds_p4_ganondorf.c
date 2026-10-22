@@ -12,7 +12,6 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_GANONDORF
 
 #include <ef/effect.h>
 #include <ft/fighter.h>
@@ -230,4 +229,3 @@ const NDSP4Overrides gNdsP4GanondorfOverrides = {
     .entry_case = ndsP4GanondorfEntryCase,
 };
 
-#endif /* NDS_P4_GANONDORF */

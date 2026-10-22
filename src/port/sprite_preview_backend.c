@@ -474,11 +474,7 @@ volatile u32 gNdsSObjWallpaperFinalDirectCount;
 volatile u32 gNdsSObjWallpaperFinalSkipCount;
 volatile u32 gNdsSObjWallpaperFinalKeyChangeCount;
 volatile u32 gNdsSObjWallpaperFinalPixelWriteCount;
-#if NDS_RENDERER_PROFILE_LEVEL == 0
 volatile u32 gNdsSObjWallpaperIncrementalMode = 1u;
-#else
-volatile u32 gNdsSObjWallpaperIncrementalMode;
-#endif
 volatile u32 gNdsSObjWallpaperMapOracleCheckCount;
 volatile u32 gNdsSObjWallpaperMapOracleMismatchCount;
 volatile u32 gNdsSObjWallpaperPixelOracleCheckCount;
@@ -513,16 +509,11 @@ volatile u32 gNdsSObjForegroundStagingClearBytes;
  * function stays free of state. */
 static s32 ndsSObjWallpaperIsResultsShape(const Sprite *sprite)
 {
-#if NDS_R2_RESULTS_AFFINE
     return ((sprite != NULL) && (sprite->bmfmt == G_IM_FMT_I) &&
             (sprite->bmsiz == G_IM_SIZ_4b) &&
             ((u32)(u16)sprite->nbitmaps == 9u) &&
             ((u32)(u16)sprite->width == 300u) &&
             ((u32)(u16)sprite->height == 220u)) ? TRUE : FALSE;
-#else
-    (void)sprite;
-    return FALSE;
-#endif
 }
 
 #define NDS_DREAMLAND_WALLPAPER_STRETCH_SHIFT 3u
@@ -839,7 +830,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
     u32 foreground = FALSE;
     u32 cache_wallpaper = FALSE;
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     u32 foreground_start = 0u;
     u32 profile_foreground = FALSE;
 #endif
@@ -853,7 +844,6 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
             ((gNdsSceneManagerCurrIsBattle != 0u) &&
              (gobj->id == nGCCommonKindWallpaper) &&
              (wallpaper_combine == 0u)) ? TRUE : FALSE;
-#if NDS_R2_RESULTS_AFFINE
         /* Results identifies its background by display link, not by `id`: the
          * scene builds it through `mnVSResultsMakeWallpaper`, which never sets
          * `nGCCommonKindWallpaper`. It also combines, so it is admitted here on
@@ -864,7 +854,6 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         {
             cache_wallpaper = TRUE;
         }
-#endif
     }
 
     if ((foreground != FALSE) && (sNdsSObjFrameForeground == FALSE))
@@ -872,7 +861,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         ndsSObjPreviewCommitLayer();
         sNdsSObjFrameForeground = TRUE;
     }
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     if ((foreground != FALSE) &&
         (gNdsSceneManagerCurrIsBattle != 0u))
     {
@@ -885,13 +874,10 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         (gNdsSceneManagerCurrIsBattle != 0u) &&
         (ndsIFCommonNativeOamDrawGObj(gobj) != FALSE))
     {
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
         if (profile_foreground != FALSE)
         {
             u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-            gNdsRendererProfileForegroundTicks += ticks;
-#endif
 #if NDS_TICK_HUD
             gNdsTickHudForegroundTicks += ticks;
 #endif
@@ -931,13 +917,10 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         }
         sobj = sobj->next;
     }
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     if (profile_foreground != FALSE)
     {
         u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileForegroundTicks += ticks;
-#endif
 #if NDS_TICK_HUD
         gNdsTickHudForegroundTicks += ticks;
 #endif
@@ -1098,7 +1081,7 @@ static u32 ndsMenuFillSinkMovieNativeOwner(void)
 
 void ndsSObjPreviewEndFrame(void)
 {
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     u32 profile_foreground =
         ((gNdsSceneManagerCurrIsBattle != 0u) &&
          (sNdsSObjFrameForeground != FALSE)) ? TRUE : FALSE;
@@ -1109,13 +1092,10 @@ void ndsSObjPreviewEndFrame(void)
     /* Diagnose any remaining source-only menu graphics before commit. */
     ndsMenuFillSinkEndFrame();
     ndsSObjPreviewCommitLayer();
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     if (profile_foreground != FALSE)
     {
         u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileForegroundTicks += ticks;
-#endif
 #if NDS_TICK_HUD
         gNdsTickHudForegroundTicks += ticks;
 #endif

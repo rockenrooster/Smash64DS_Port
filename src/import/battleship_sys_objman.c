@@ -24,12 +24,10 @@
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman
 #define gcMakeGObjSPAfter ndsBaseGcMakeGObjSPAfter
-#if NDS_P4_SONIC
 /* P4 Sonic: Remix's destroyed_target_fix_ at gcEjectGObj's head (the
  * wrapper below). The source's two deferred ejects inside this file call
  * the body directly; the request that deferred them came through here. */
 #define gcEjectGObj ndsBaseGcEjectGObj
-#endif
 /* Campaign 01 re-knapsack, 2026-08-17. 120 bytes carrying 2,513 I-cache-fill
  * tk/fr on the gate's own rank-80 frames -- 20.9 per byte, the densest
  * placeable candidate on the v4-c238 census. The attribute rides a declaration
@@ -52,7 +50,6 @@ GObjProcess *gcRunGObjProcess(GObjProcess *gobjproc) NDS_R2_ITCM_PACK2_CODE;
 #undef gcSetupObjman
 #undef gcMakeGObjSPAfter
 
-#if NDS_P4_SONIC
 #undef gcEjectGObj
 void ndsP4SonicOnEjectGObj(GObj *gobj);
 
@@ -61,11 +58,9 @@ void gcEjectGObj(GObj *gobj)
     ndsP4SonicOnEjectGObj(gobj);
     ndsBaseGcEjectGObj(gobj);
 }
-#endif
 
 extern void ndsBaseGcSetupObjman(GCSetup *setup);
 
-#if NDS_P2_ARM9_WRAM
 #include <nds/nds_arm9_wram.h>
 
 _Static_assert(sizeof(GObj) <= NDS_ARM9_WRAM_GOBJ_BYTES, "WRAM GObj slot");
@@ -102,7 +97,6 @@ void ndsGcDonateFighterObjs(void)
     dobj->alloc_free = sGCDrawHead;
     sGCDrawHead = dobj;
 }
-#endif
 
 /* AN EXHAUSTED ARENA IS A FROZEN GAME, SO THE LAST FEW KILOBYTES ARE NOT FOR
  * COSMETICS.
@@ -291,10 +285,6 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
  * it at ring stops gives the live peak with no hot-path code and no new bytes
  * on the traversal itself -- 512 is the starting guess against ~360 observed,
  * and it should be trimmed to the measured peak plus margin. */
-#ifndef NDS_FT_POSE
-#define NDS_FT_POSE 0
-#endif
-#if NDS_FT_POSE
 /* P2-2p6: the fighter pose engine keeps its joint tracks in its own pool
  * (`NDS_FT_POSE_POOL`, 20-byte tracks carved per fighter from this same
  * general heap), so the figatree joints no longer draw AObjs here. The live
@@ -305,10 +295,6 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
  * Undersizing still degrades to the per-AObj fallback, never a failure. */
 #define NDS_R2_AOBJ_POOL_COUNT 384
 #define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT 224
-#else
-#define NDS_R2_AOBJ_POOL_COUNT 512
-#define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT NDS_R2_AOBJ_POOL_COUNT
-#endif
 /* Two-player DObj pool when the idle ports merge (see gcSetupObjman). The
  * measured Fox-vs-Kirby peak is 93 live DObjs with and without the GObj latch
  * engaged; 144 keeps 51 spare, and any excess takes the source's per-DObj
@@ -446,9 +432,7 @@ void gcSetupObjman(GCSetup *setup)
     GCSetup ds_setup = *setup;
     size_t needed = ndsOsGObjThreadBlockBytes();
 
-#if NDS_P2_ARM9_WRAM
     sNdsGcWramObjSlotsUsed = 0u;
-#endif
     sNdsBattleIdleScratch = NULL;
     sNdsBattleIdleScratchBytes = 0u;
     gNdsBattleIdleScratchServedBytes = 0u;
@@ -461,7 +445,6 @@ void gcSetupObjman(GCSetup *setup)
     memset(sNdsGcNdlSerialSlots, 0, sizeof(sNdsGcNdlSerialSlots));
     sNdsGcNdlNextSerial = 1u;
 
-#if NDS_FT_POSE
     if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
         (gSCManagerBattleState != NULL))
     {
@@ -482,7 +465,6 @@ void gcSetupObjman(GCSetup *setup)
             aobj_pool_count = NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT;
         }
     }
-#endif
 
     if (ds_setup.gobjthreadstack_size < needed)
     {

@@ -17,7 +17,6 @@
  * itMainUpdateAttackEvent) are referenced verbatim and listed in the task
  * report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ef/effect.h>
@@ -535,4 +534,3 @@ void itTaruExplodeMakeEffectGotoSetStatus(GObj *item_gobj)
     itTaruExplodeSetStatus(item_gobj);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

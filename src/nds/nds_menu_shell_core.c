@@ -603,38 +603,6 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  *   test. Direct assignment is roster-independent because Mario and Fox are in
  *   every NDS_CSS_FIGHTER_MASK arm and admission only adds bits; it writes no
  *   level, so the clamp tour above still commits exactly 2 from any entry. */
-#if (NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
-    (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7))
-/* P2-3 focused proof descriptors enter CSS with their selected fighter already
- * in human slot 0. That is the state the real shell must preserve into battle:
- * moving the token through the historical Mario/Fox tour would overwrite the
- * descriptor and cease to be an admission proof. Dwell past the source's
- * 60-tic START arm and the entrance shutters, then commit the live selection
- * through the screen's ordinary START handler. */
-static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
-    { 0u, 90u },
-    { (u16)NDS_INPUT_START, 1u }
-};
-#elif NDS_P2_SHELL_ARGMAX_ROSTER
-/* P2-3f9 -- THE ARGMAX TOUR IS THE ONE THAT TOUCHES NOTHING.
- *
- * The descriptor already carries the four heaviest landed kinds
- * (nds_match_config.c), so mnPlayersVSInitPlayer's port -- ndsMenuShellCssInit
- * -- opens this screen with all four slots occupied and selected, every gate
- * open and every live preview built. The tour above would DESTROY that: its
- * first A lands on slot 0's token and its two slot-4 kind presses cycle an
- * occupied CP slot to NA and back, which re-rolls that slot's fighter through
- * mnPlayersVSRandFighterKind and makes the roster nondeterministic.
- *
- * So this arm waits and presses START. The wait is not padding: the source
- * refuses START until sMenuTics > NDS_CSS_START_ARM_TICS (60), and the entry
- * shutters slide 2 px a tic from door_offset 41. One dwell (40) plus a 90-frame
- * hold clears both with margin, on every lap. */
-static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
-    { 0u, 90u },
-    { (u16)NDS_INPUT_START, 1u }
-};
-#else
 static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_UP, 30u },
     { (u16)NDS_INPUT_RIGHT, 9u },
@@ -652,7 +620,6 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { 0u, 32u },
     { (u16)NDS_INPUT_A, 1u },
-#if NDS_P2_SAMUS
     /* P2-3 Samus production proof. BattleShip's portrait table is
      * Luigi/Mario/Donkey/Link/Samus/Captain on the top row
      * (mnplayersvs.c:338-346), with 45 source pixels between cells. After the
@@ -670,17 +637,6 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { 0u, 32u },
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_LEFT, 11u },
-#elif NDS_P2_DONKEY
-    /* THE NEGATIVE CONTROL HAS TO MOVE WHEN THE ROSTER GROWS. Donkey is a
-     * built fighter in this configuration, so pressing A on column 2 now
-     * DROPS the token there and the match that follows is not the one the
-     * gate measures. Link, column 3, is the nearest cell that is still
-     * locked, so the refusal this leg proves stays a refusal. Column pitch is
-     * 40 px at 4 px a held frame, hence ten frames per column. */
-    { (u16)NDS_INPUT_RIGHT, 31u },
-#else
-    { (u16)NDS_INPUT_RIGHT, 21u },
-#endif
 #else
     { (u16)NDS_INPUT_RIGHT, 10u },
 #endif
@@ -705,7 +661,6 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_A, 1u },
     { (u16)NDS_INPUT_START, 1u }
 };
-#endif /* NDS_P2_SHELL_ARGMAX_ROSTER */
 
 /* THE STAGE-SELECT TOUR (P2-1f), and it is TWO scripts because this screen has
  * two exits and both are the row's deliverable. The cursor opens on the cell

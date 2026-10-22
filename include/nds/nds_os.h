@@ -72,16 +72,5 @@ extern volatile u32 gNdsOsArenaThreadsDropped;
 extern volatile u32 gNdsOsArenaThreadDropEntries;
 extern volatile u32 gNdsOsArenaThreadDropLastId;
 
-#if NDS_TASK20_STACK_PROFILE
-extern volatile u32 gNdsTask20GameplayStackBase;
-extern volatile u32 gNdsTask20GameplayStackSize;
-extern volatile u32 gNdsTask20GameplayStackHighWater;
-extern volatile u32 gNdsTask20MainStackBottom;
-extern volatile u32 gNdsTask20MainStackPoisonStart;
-extern volatile u32 gNdsTask20MainStackTop;
-extern volatile u32 gNdsTask20MainStackHighWater;
-extern volatile u32 gNdsTask20SampleCount;
-extern volatile u32 gNdsTask20SampleRequest;
-#endif
 
 #endif

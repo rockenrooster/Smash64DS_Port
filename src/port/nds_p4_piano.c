@@ -32,22 +32,13 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_PIANO
 
-#if !NDS_P2_NESS
-#error "P4 Mad Piano's down special runs Ness's absorb (NDS_P2_NESS)"
-#endif
-#if !NDS_P2_YOSHI
-#error "P4 Mad Piano's down special runs Yoshi's command grab (NDS_P2_YOSHI)"
-#endif
 
 #include <ef/effect.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
 #include <wp/weapon.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -824,4 +815,3 @@ const NDSP4Overrides gNdsP4PianoOverrides = {
     .thrown_hidden = TRUE,
 };
 
-#endif /* NDS_P4_PIANO */

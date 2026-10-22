@@ -20,7 +20,6 @@ void ndsBaseFTCommonAttackAirLwProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonAttackAirProcMap(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj);
 
-#if NDS_P4
 #include <nds/nds_p4.h>
 /* P4: Remix's prevent_item_throw_ (PeachSpecial.asm) answers the aerial
  * interrupt's item-throw test, its one call in the file. A content's
@@ -29,12 +28,9 @@ sb32 ndsBaseFTCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj);
  * ftMainPlayAnimEventsAll). */
 #define ftCommonLightThrowCheckItemTypeThrow(fp_) ndsP4AirLightThrowCheck(fp_)
 #define ftMainPlayAnimEventsAll(g_) (ndsP4AttackAirStart(g_), ftMainPlayAnimEventsAll(g_))
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattackair.c"
-#if NDS_P4
 #undef ftCommonLightThrowCheckItemTypeThrow
 #undef ftMainPlayAnimEventsAll
-#endif
 
 #undef ftCommonAttackAirLwProcHit
 #undef ftCommonAttackAirLwProcUpdate

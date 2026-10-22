@@ -20,9 +20,7 @@
 #include <string.h>
 #include <sys/audio.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 /* BattleShip ftcommon.h:294-312, REGION_US arm. Restated beside the code that
  * consumes them rather than pulling the broad decomp header into the ABI. */
@@ -78,40 +76,7 @@ void ftCommonYoshiEggSetStatus(GObj *fighter_gobj);
 void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
                                        s32 damage);
 
-#if !NDS_P2_KIRBY
-/* BattleShip ft/ftchar/ftkirby/ftkirbyspecialn.c:20 (0x80161CA0), verbatim.
- * The source egg calls Kirby's capture-damage helper for the 5% the victim
- * takes on being laid ("Br0h why", the source's own comment); when Kirby's
- * TU is not built, the one body the egg needs is carried here with the rest
- * of Yoshi's capture seam. */
-void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
-                                       s32 damage);
-void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
-                                       s32 damage)
-{
-    FTStruct *kirby_fp = ftGetStruct(kirby_gobj);
-    FTStruct *victim_fp = ftGetStruct(victim_gobj);
-    s32 star_damage_victim = ftParamGetStaledDamage(
-        kirby_fp->player, damage, kirby_fp->motion_attack_id,
-        kirby_fp->motion_count);
 
-    damage = star_damage_victim;
-
-    ftCommonDamageUpdateDamageColAnim(
-        victim_gobj,
-        ftParamGetCommonKnockback(
-            victim_fp->percent_damage, star_damage_victim, star_damage_victim,
-            0, 100, 0, victim_fp->attr->weight, kirby_fp->handicap,
-            victim_fp->handicap),
-        0);
-    ftParamUpdateDamage(victim_fp, damage);
-    ftParamUpdatePlayerBattleStats(kirby_fp->player, victim_fp->player, damage);
-    ftParamUpdateStaleQueue(kirby_fp->player, victim_fp->player,
-                            kirby_fp->motion_attack_id, kirby_fp->motion_count);
-}
-#endif
-
-#if NDS_P4
 /* P4: Remix's yoshi_egg rows. The egg Yoshi lays around Bowser or Dedede is
  * their own size; the source reads dFTCommonYoshiEggDamageCollDescs at the
  * victim's kind in the egg's effect maker and its hurtbox setup, so a
@@ -126,9 +91,7 @@ static void ndsP4YoshiEggSetDamageCollCollisions(GObj *fighter_gobj);
  * victims enter ThrownDK, Shouldered here, for CaptureYoshi). */
 #define ftMainSetStatus(gobj_, status_, ...) \
     ftMainSetStatus((gobj_), ndsP4CommandCaptureStatus((gobj_), (status_)), __VA_ARGS__)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncaptureyoshi.c"
-#if NDS_P4
 #undef efManagerYoshiEggLayMakeEffect
 #undef ftCommonYoshiEggSetDamageCollCollisions
 #undef ftMainSetStatus
@@ -183,4 +146,3 @@ void ftCommonYoshiEggSetDamageCollCollisions(GObj *fighter_gobj)
 {
     ndsP4YoshiEggSetDamageCollCollisions(fighter_gobj);
 }
-#endif

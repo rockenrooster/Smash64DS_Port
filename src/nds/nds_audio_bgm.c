@@ -114,12 +114,8 @@
 #if NDS_P2_1P_GAME
 #define NDS_AUDIO_BGM_PATH_DATA "nitro:/audio/bgm_data_ima.bin"
 #endif
-#if NDS_P2_ITEM_CORE
 #define NDS_AUDIO_BGM_PATH_HAMMER "nitro:/audio/bgm_hammer_ima.bin"
-#endif
-#if NDS_P2_ITEM_CORE
 #define NDS_AUDIO_BGM_PATH_STAR "nitro:/audio/bgm_star_ima.bin"
-#endif
 #define NDS_AUDIO_BGM_NO_LOOP 0xffffffffu
 
 _Static_assert(NDS_AUDIO_BGM_RESIDENT_BYTES == 16392u,
@@ -791,7 +787,6 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_ITEM_CORE
     /* nSYAudioBGMHammer (sequence 45), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -805,8 +800,6 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_HAMMER_LOOP_RECORD,
         TRUE
     }
-#endif
-#if NDS_P2_ITEM_CORE
     /* nSYAudioBGMStar (sequence 46), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -820,11 +813,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_STAR_LOOP_RECORD,
         TRUE
     }
-#endif
-#if NDS_P4
     /* The P4 contents' Remix songs (scripts/p4/p4_audio.py). */
 #include "nds_p4_bgm.generated.inc"
-#endif
 #if NDS_P5
     /* The landed Remix stages' songs (scripts/p5/p5_audio.py). */
 #include "nds_p5_bgm.generated.inc"
@@ -856,10 +846,6 @@ volatile u32 gNdsAudioBgmLoopCount;
 volatile u32 gNdsAudioBgmRefillCount;
 __attribute__((used)) volatile u32 gNdsAudioBgmDirectReadCount;
 __attribute__((used)) volatile u32 gNdsAudioBgmDirectFallbackCount;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-volatile u32 gNdsAudioBgmRefillTicksLast;
-volatile u32 gNdsAudioBgmRefillTicksMax;
-#endif
 volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 volatile u32 gNdsAudioBgmWritePositionBytes;
 volatile u32 gNdsAudioBgmPlaybackHalf;
@@ -1087,10 +1073,6 @@ static void ndsBgmObserve(void)
         gNdsAudioBgmFirstMissFrame = gNdsRendererProfileFrameCount + 1u;
         gNdsAudioBgmFirstMissTrackID = snapshot.track_id;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsAudioBgmRefillTicksLast = snapshot.refill_ticks_last;
-    gNdsAudioBgmRefillTicksMax = snapshot.refill_ticks_max;
-#endif
     if ((snapshot.control & NDS_BGM_GENERATION_MASK) != sBgmGeneration) return;
     state = snapshot.control >> 17;
     gNdsAudioBgmPlaying = state == NDS_BGM_STARTING || state == NDS_BGM_PLAYING;
@@ -1160,10 +1142,6 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmRefillCount = 0u;
     gNdsAudioBgmDirectReadCount = 0u;
     gNdsAudioBgmDirectFallbackCount = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsAudioBgmRefillTicksLast = 0u;
-    gNdsAudioBgmRefillTicksMax = 0u;
-#endif
     gNdsAudioBgmPlaybackPositionBytes = 0u;
     gNdsAudioBgmWritePositionBytes = 0u;
     gNdsAudioBgmPlaybackHalf = 0u;

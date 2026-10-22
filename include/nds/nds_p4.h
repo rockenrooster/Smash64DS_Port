@@ -733,17 +733,12 @@ extern u8 gNdsP7BonusPracticeContent;
  * and a content compares unequal (the constant inside the expansion is not
  * expanded again). scripts/p4/parent_checks.py lists the compares and the
  * contents Remix's hooks on them name. */
-#if NDS_P4
 /* An fkind past every vanilla kind (FTKind ends at nFTKindGDonkey), as a
  * Remix fighter's own id is to the original code. */
 #define NDS_P4_FOREIGN_FKIND 0x7F
 #define NDS_P4_PARENT_KIND(fp_, kind_) \
     (((fp_)->nds_p4_content != 0u) ? NDS_P4_FOREIGN_FKIND : (s32)(kind_))
-#else
-#define NDS_P4_PARENT_KIND(fp_, kind_) (kind_)
-#endif
 
-#if NDS_P4
 
 const NDSP4Fighter *ndsP4Fighter(u32 content);
 /* `speed` times the fighter's content's animation rate (NDSP4Fighter
@@ -1296,24 +1291,5 @@ static inline u32 ndsP4EnvAlpha(const FTStruct *fp)
     return (color != 0u) ? (color & 0xFFu) : 0xFFu;
 }
 
-#else
-
-static inline u32 ndsP4Content(const FTStruct *fp)
-{
-    (void)fp;
-    return 0u;
-}
-static inline u32 ndsP4EnvAlpha(const FTStruct *fp)
-{
-    (void)fp;
-    return 0xFFu;
-}
-static inline u32 ndsP4PlayerContent(u32 player)
-{
-    (void)player;
-    return 0u;
-}
-
-#endif /* NDS_P4 */
 
 #endif /* NDS_P4_H */

@@ -16,7 +16,6 @@
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ft/fighter.h>
@@ -764,4 +763,3 @@ GObj* itNBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
     return item_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

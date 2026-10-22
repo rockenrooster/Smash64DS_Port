@@ -6,9 +6,6 @@
 #include <PR/ultratypes.h>
 #include <sys/vector.h>
 
-#ifndef NDS_IFCOMMON_HYBRID_OAM
-#define NDS_IFCOMMON_HYBRID_OAM 0
-#endif
 
 struct GObj;
 struct sprite;
@@ -25,7 +22,6 @@ s32 ndsIFCommonNativeOamBakePlayerTag(const struct sprite *sprite);
 /* Bake IFCommonItem's 9x7 I4 pickup arrow into its fixed native OBJ cell. */
 s32 ndsIFCommonNativeOamBakeItemArrow(const struct sprite *sprite);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
 /* P2-2p8 Phase 3 (A7): the compact IFCommonGameStatus handshake with the
  * loader (src/port/reloc_backend_assets.c). Payload ranges the image may
  * drop; both end messages pre-baked; retained pointers moved to the image
@@ -38,7 +34,6 @@ s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
 s32 ndsIFCommonNativeOamRebaseGameStatus(
     const void *old_base, size_t old_size, void *new_base, size_t new_size,
     s32 (*map)(u32 source_offset, u32 bytes, u32 *out_offset), u32 compact);
-#endif
 void ndsIFCommonNativeOamDiscardTextures(void);
 /* TRUE while this file's assets occupy main OBJ VRAM and OAM. P2-1c's UI kit
  * asks before claiming the same bank in a menu scene: the packing here bumps

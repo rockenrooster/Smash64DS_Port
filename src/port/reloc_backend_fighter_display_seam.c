@@ -19,14 +19,12 @@ void ftDisplayMainProcDisplay(GObj *fighter_gobj)
 
 static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     extern volatile u32 gNdsVSResultsFighterDisplayCount;
 
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
         NDS_DIAG(gNdsVSResultsFighterDisplayCount++);
     }
-#endif
     if ((ndsFighterMarioFoxDisplayProofEnabled() != FALSE) &&
         (sNdsFighterDisplayProbeActive != FALSE))
     {
@@ -106,32 +104,3 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
 
 sb32 (*dLBCommonFuncMatrixList[])(void) = { NULL };
 
-#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
-f32 dSCSubsysFighterScales[] =
-{
-    1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F,
-    1.0F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F,
-    1.0F, 1.0F, 1.0F, 1.0F
-};
-
-f32 scSubsysFighterGetLightAngleX(void)
-{
-    return 0.0F;
-}
-
-f32 scSubsysFighterGetLightAngleY(void)
-{
-    return 0.0F;
-}
-
-void scSubsysFighterSetLightParams(f32 light_angle_x, f32 light_angle_y,
-                                    u8 r, u8 g, u8 b, u8 a)
-{
-    (void)light_angle_x;
-    (void)light_angle_y;
-    (void)r;
-    (void)g;
-    (void)b;
-    (void)a;
-}
-#endif

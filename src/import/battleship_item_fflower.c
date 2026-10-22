@@ -23,7 +23,6 @@
  * port provider yet; it is referenced verbatim and listed in the task
  * report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <common.h>
@@ -420,4 +419,3 @@ void itFFlowerShootFlame(GObj *fighter_gobj, Vec3f *pos, s32 index, s32 ammo_sub
     ip->multi -= ammo_sub;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

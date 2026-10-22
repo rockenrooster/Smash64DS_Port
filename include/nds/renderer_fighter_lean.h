@@ -116,9 +116,6 @@ extern volatile u32 gNdsFtrLeanSlow;
  * entry, or a variant record of one) also materializes the key into the other
  * entry and compares the two (verify_*). Route 1 only (it needs both halves). */
 #define NDS_FTR_LEAN_SLOW_VERIFY 16u
-#ifndef NDS_FTR_LEAN_KTIME
-#define NDS_FTR_LEAN_KTIME 0
-#endif
 
 /* Decline reasons (gNdsFtrLean.decline[], per kind k_decline[][]): the draws
  * the lean path cannot take yet, each one named. A declined draw is the old
@@ -431,53 +428,9 @@ extern NDSFtrLeanCounters gNdsFtrLean;
 /* A build whose roster compiles in a lean kind (P2: Donkey, Samus, Link or
  * Kirby). P1's Mario/Fox build never engages the lean path, so the slice 5
  * placement and head changes stay out of it. */
-#if (defined(NDS_P2_DONKEY) && NDS_P2_DONKEY) || \
-    (defined(NDS_P2_SAMUS) && NDS_P2_SAMUS) || \
-    (defined(NDS_P2_LINK) && NDS_P2_LINK) || \
-    (defined(NDS_P2_KIRBY) && NDS_P2_KIRBY)
 #define NDS_FTR_LEAN_KINDS_BUILD 1
-#else
-#define NDS_FTR_LEAN_KINDS_BUILD 0
-#endif
-#if NDS_FTR_LEAN_LAB && NDS_FTR_LEAN_KTIME
-#define NDS_FTR_LEAN_ATTR_LIVE 1
-typedef struct NDSFtrLeanAttr
-{
-    u32 head_part_ticks[4][4];      /* 0 capture setup + camera LookAt,
-                                       1 ProcDisplay up to the head boundary,
-                                       2 boundary to its end (the walk, or
-                                       the memo's collapsed stub), 3 memo
-                                       finish + restore */
-    u32 guard_part_ticks[4][8];     /* gNdsFtrLean.guard_part_ticks, per kind */
-    u32 patch_part_ticks[4][8];     /* 0 tint tiles, 1 apply tint, 2 P',
-                                       3 light, 4 texgen, 5 input refresh,
-                                       6 root program + head key, 7 the rest
-                                       of the patch phase */
-    u32 submit_part_ticks[4][4];    /* gNdsFtrLean.submit_part_ticks, per kind */
-    u32 book_ticks[4];
-    u32 kernel_cold_ticks[4];       /* bit 32 draws: the draw's own pass */
-    u32 kernel_warm_ticks[4];       /* ... the same pass again at once */
-    u32 kernel_dcold_ticks[4];      /* ... and again after DC_FlushAll */
-    u32 kernel_attr_draws[4];
-    u32 kernel_attr_joints[4];
-    u32 quiet_wait_ticks[4];        /* bit 64: DMA0 drain before the kernel */
-    u32 quiet_draws[4];
-    u32 kernel_part_ticks[4][4];    /* bit 8, per kind (gNdsFtrLean's parts) */
-    u32 kernel_part_joints[4];
-    u32 event_part_ticks[8];        /* event path: 0 plan resolve, 1 program
-                                       + validate, 2 material rows + key,
-                                       3 refresh + identity + re-record key,
-                                       4 held entry (find, activate, shade),
-                                       5 materialize (+ learn), 6 joint table,
-                                       7 watch + proofs */
-    u32 event_part_count[8];
-} NDSFtrLeanAttr;
-extern NDSFtrLeanAttr gNdsFtrLeanAttr;
-#define NDS_FTR_LEAN_ATTR(...) do { __VA_ARGS__; } while (0)
-#else
 #define NDS_FTR_LEAN_ATTR_LIVE 0
 #define NDS_FTR_LEAN_ATTR(...) ((void)0)
-#endif
 
 /* A9: the per-draw phase clocks (head, guard and its parts, kernel, patch and
  * its parts, book, submit and its parts: ~30 clock reads per frame per
@@ -488,10 +441,7 @@ extern NDSFtrLeanAttr gNdsFtrLeanAttr;
  * the materializer's per-part clocks (materialize_part_ticks) are phase ticks.
  * Same-ROM A/B (clocks off vs on, counters written in both): WORK-H paired
  * median -4.9K, FTR -4.6K. */
-#ifndef NDS_FTR_LEAN_PHASE_TICKS
-#define NDS_FTR_LEAN_PHASE_TICKS 0
-#endif
-#if NDS_FTR_LEAN_LAB && (NDS_FTR_LEAN_PHASE_TICKS || NDS_FTR_LEAN_ATTR_LIVE)
+#if NDS_FTR_LEAN_LAB && NDS_FTR_LEAN_ATTR_LIVE
 #define NDS_FTR_LEAN_TIMED 1
 #define NDS_FTR_LEAN_CLOCK() cpuGetTiming()
 #define NDS_FTR_LEAN_TCTR(...) do { __VA_ARGS__; } while (0)
@@ -746,14 +696,12 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
 /* Returns the hardware triangles the list presents (slice 5: no stats
  * block; the frame summary is accounted directly). */
 u32 ndsFtrLeanPacketSubmit(u32 battle_slot);
-#if NDS_P4
 /* P4 S4 (Remix 0xD9): scale the active list's POLY_FORMAT alphas by
  * alpha/255 for its next submit; the restore puts them back (the next lean
  * draw and the frame end call it while one is pending). */
 extern u32 gNdsFtrLeanAlphaPending;
 void ndsFtrLeanPacketSetAlpha(u32 battle_slot, u32 alpha);
 void ndsFtrLeanPacketAlphaRestore(void);
-#endif
 /* Slice 6: a list longer than an entry (the high-detail Donkey and Link
  * lists, 3,535-3,873 words against 3,460) is materialized WIDE in route 1
  * (ndsFtrLeanMaterialize with NDS_FTR_LEAN_ENTRY_WIDE): entry 0 over the

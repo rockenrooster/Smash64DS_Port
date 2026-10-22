@@ -909,7 +909,6 @@ static sb32 ndsFighterDashRunProbeSourceOrderHurtboxes(
     return ((mask & 0x1ffffu) == 0x1ffffu) ? TRUE : FALSE;
 }
 
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
 static void ndsFighterDashRunMirrorImportedHitCollisionStats(
     GObj *target_gobj)
 {
@@ -976,7 +975,6 @@ static void ndsFighterDashRunMirrorImportedHitCollisionStats(
         target_fp->hitlag_mul = 1.5F;
     }
 }
-#endif
 
 static void ndsFighterDashRunBridgeImportedDamageHit(
     FTStruct *fp, u32 attack_id, FTAttackColl *attack_coll,
@@ -1010,9 +1008,7 @@ static void ndsFighterDashRunBridgeImportedDamageHit(
     hitlog->damage_coll = damage_coll;
     hitlog->attacker_player = fp->player;
     hitlog->attacker_player_num = fp->player_num;
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     ndsFighterDashRunMirrorImportedHitCollisionStats(target_gobj);
-#endif
 }
 
 static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
@@ -2068,7 +2064,6 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
     sNdsFighterDashRunProcParamsLagStartCount = saved_lagstart_count;
     gNdsStageMPLiveHitDamageLoopHurtboxDamageMask |=
         NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_RESTORE;
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     if ((gNdsStageMPLiveHitDamageLoopHurtboxDamageMask & 0x1ffu) == 0x1ffu)
     {
         /* Imported ftmain keeps the real repeat hitlog state private. */
@@ -2084,7 +2079,6 @@ static sb32 ndsFighterDashRunProbeHurtboxDamageConsume(
             NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT8 |
             NDS_STAGE_MPLIVEHIT_HURTBOX_DAMAGE_SLOT9;
     }
-#endif
 
     return ((gNdsStageMPLiveHitDamageLoopHurtboxDamageMask & 0x7ffffu) ==
             0x7ffffu) ? TRUE : FALSE;

@@ -26,37 +26,3 @@
 
 #include <nds/nds_r2_hwmath_unit.h>
 
-#if NDS_R2_FIXED_SQRT && defined(NDS_R2_HWMATH_ROUTE) && NDS_R2_HWMATH_ROUTE
-
-/* Mirror of nds_r2_sqrtf.c's helper, including the IME mask, so the two arms
- * differ in instruction selection and in nothing else. */
-static unsigned int ndsR2SqrtfHardware(unsigned long long value)
-{
-    unsigned int ime = REG_IME;
-    unsigned int result;
-
-    REG_IME = 0u;
-    result = ndsR2HwMathSqrt64(value);
-    REG_IME = ime;
-    return result;
-}
-
-#include <nds/nds_r2_sqrtf.h>
-
-extern float __ieee754_sqrtf(float x);
-
-float ndsR2SqrtfArmBody(float x)
-{
-    unsigned int bits;
-    unsigned int out;
-
-    __builtin_memcpy(&bits, &x, sizeof(bits));
-    if (ndsR2SqrtfBits(bits, &out) == NDS_R2_SQRTF_FALLBACK)
-    {
-        return __ieee754_sqrtf(x);
-    }
-    __builtin_memcpy(&x, &out, sizeof(x));
-    return x;
-}
-
-#endif

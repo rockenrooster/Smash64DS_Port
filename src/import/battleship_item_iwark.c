@@ -24,7 +24,6 @@
  * syVector, lbCommon, wpMap and effect entry points below are referenced
  * verbatim and listed in the task report.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -585,4 +584,3 @@ GObj* itIwarkWeaponRockMakeWeapon(GObj *parent_gobj, Vec3f *pos, u8 random)
     return weapon_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

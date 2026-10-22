@@ -92,9 +92,7 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_p4.h>
-#if NDS_P4
 #include "nds_p4_css_screen.generated.h"
-#endif
 
 #define sc1PChallengerStartScene ndsBaseSC1PChallengerStartScene
 void ndsBaseSC1PChallengerStartScene(void);
@@ -104,13 +102,11 @@ void sc1PChallengerFuncLights(Gfx **dls);
 void sc1PChallengerFuncStart(void);
 void efManagerInitEffects(void);
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Transient native seam (src/port/renderer_adapter_fighter.c): the
  * challenger is one Demo actor that nothing registers, drawn through the
  * scratch binding the 1P intro and the ending use. Cleared at entry so the
  * last visit's arena pointers can never match this one's fighter. */
 extern void ndsFighterIntroTransientReset(void);
-#endif
 
 /* THE SILHOUETTE'S BOX (sc1PChallengerDecalsProcDisplay, :125-138): a navy
  * PRIM rectangle, (207,92)-(287,216), that the fighter turns in front of --
@@ -215,7 +211,6 @@ static void ndsSC1PChallengerFillRect(Gfx *pkt, s32 ulx, s32 uly, s32 lrx,
 
 static void ndsSC1PChallengerDraw(void);
 
-#if NDS_P4
 /* P7 U5: a content challenger (battleship_sc1pmanager.c) turns in as its own
  * model -- its select-screen pack and motion file, the VS select's content
  * path (ndsFTManagerSetupPreviewFilesP4), in place of the source's whole
@@ -271,7 +266,6 @@ static sb32 ndsSC1PChallengerColAnim(GObj *fighter_gobj, s32 colanim_id, s32 unu
 #define ftManagerSetupFilesAllKind ndsSC1PChallengerSetupFiles
 #define dSCSubsysFighterScales (ndsSC1PChallengerScales())
 #define ftParamCheckSetFighterColAnimID ndsSC1PChallengerColAnim
-#endif
 
 #undef gDPSetPrimColor
 #define gDPSetPrimColor(pkt, m, l, r, g, b, a) \
@@ -281,11 +275,9 @@ static sb32 ndsSC1PChallengerColAnim(GObj *fighter_gobj, s32 colanim_id, s32 unu
     ndsSC1PChallengerFillRect((pkt), (ulx), (uly), (lrx), (lry))
 #define gcDrawAll ndsSC1PChallengerDraw
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pchallenger.c"
-#if NDS_P4
 #undef ftManagerSetupFilesAllKind
 #undef dSCSubsysFighterScales
 #undef ftParamCheckSetFighterColAnimID
-#endif
 #undef gcDrawAll
 #undef gDPFillRectangle
 #undef gDPSetPrimColor
@@ -313,9 +305,7 @@ static void ndsSC1PChallengerDraw(void)
 
 void sc1PChallengerStartScene(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterIntroTransientReset();
-#endif
     sNdsSC1PChallengerPrimRGBA = 0u;
     sNdsSC1PChallengerBoxPainted = FALSE;
     sNdsSC1PChallengerBackdropSet = FALSE;

@@ -10,7 +10,6 @@
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <gm/gmsound.h>
@@ -98,4 +97,3 @@ GObj* itTargetMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
     return item_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

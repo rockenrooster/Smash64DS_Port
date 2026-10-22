@@ -21,12 +21,10 @@ static void ndsPrepareTaskmanRun(void)
 
 static void ndsFinishTaskmanRun(void)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
     {
         syAudioStopBGMAll();
     }
-#endif
     func_80005BFC();
     ndsDrainTaskmanQueue(&sSYTaskmanContextMesgQueue);
     ndsDrainTaskmanQueue(&sSYTaskmanResetMesgQueue);

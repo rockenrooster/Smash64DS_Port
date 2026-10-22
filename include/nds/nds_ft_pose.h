@@ -50,15 +50,6 @@
 #include <ft/fighter.h>
 #include <sys/objman.h>
 
-#ifndef NDS_FT_POSE
-#define NDS_FT_POSE 0
-#endif
-#ifndef NDS_FT_POSE_HOLD
-#define NDS_FT_POSE_HOLD 0
-#endif
-#ifndef NDS_FT_POSE_ORACLE
-#define NDS_FT_POSE_ORACLE 0
-#endif
 
 #define NDS_FT_POSE_TRACKS 10u
 #define NDS_FT_POSE_FIGHTERS 4u
@@ -258,11 +249,6 @@ sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id);
  * Returns TRUE when the engine owns the fighter. */
 sb32 ndsFtPoseReapply(GObj *gobj, FTStruct *fp, Vec3f *translate_scales);
 
-#if NDS_FT_POSE_ORACLE
-/* Lab: after the generic path has run on the live joints, compare them with
- * the engine's shadows (counters above). */
-void ndsFtPoseOracleAfter(GObj *gobj);
-#endif
 
 /* TRUE when the engine evaluated this fighter's body pose on the current tick
  * (or the fighter is not engine-owned); FALSE on a held tick, which lets

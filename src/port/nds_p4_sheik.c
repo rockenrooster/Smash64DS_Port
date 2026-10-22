@@ -53,14 +53,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_SHEIK
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
-#if !NDS_P2_SAMUS
-#error "P4 Sheik runs Samus's charge routines (NDS_P2_SAMUS)"
-#endif
 
 #include <ef/effect.h>
 #include <macros.h>
@@ -512,14 +506,10 @@ static s32 *ndsP4SheikCharge(FTStruct *fp)
  * (0x80156E98, 0x801576B4) where hers are Samus's. */
 static s32 ndsP4SheikNSPStatus(GObj *fighter_gobj, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (ftGetStruct(fighter_gobj)->fkind == nFTKindKirby)
     {
         return NDS_P4_KIRBY_STATUS_SHEIK_NSP_GROUND_BEGIN + (status_id - SHEIK_STATUS_NSPG_BEGIN);
     }
-#else
-    (void)fighter_gobj;
-#endif
     return status_id;
 }
 
@@ -1290,4 +1280,3 @@ const NDSP4Overrides gNdsP4SheikOverrides = {
     .kirby_colanim_end = ndsP4SheikColAnimEnd,
 };
 
-#endif /* NDS_P4_SHEIK */

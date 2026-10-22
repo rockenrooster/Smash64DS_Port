@@ -246,9 +246,7 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
     int64_t predict_adjust_y;
     s32 fkind;
     sb32 target_falls = FALSE;
-#if NDS_P4
     const NDSP4Computer *p4_com;
-#endif
 
     if (gSCManagerBattleState->gkind == nGRKindInishie)
     {
@@ -289,7 +287,6 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
      * prediction (inputs_q12, below): most calls skip every attack first. */
     inputs_q12 = FALSE;
 
-#if NDS_P4
     /* P4: the content's attack list (Remix ai_behaviour). */
     p4_com = ndsP4Computer(this_fp);
     comattack = (FTComputerAttack *)ndsP4ComputerAttacks(this_fp);
@@ -297,9 +294,6 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
     {
         comattack = dFTComputerAttackList[this_fp->fkind];
     }
-#else
-    comattack = dFTComputerAttackList[this_fp->fkind];
-#endif
 
     if (this_fp->ga != nMPKineticsGround)
     {
@@ -376,7 +370,6 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                     break;
                 }
             }
-#if NDS_P4
             /* P4: the content's guard replaces the parent's switch (Remix
              * ai_attack_prevent, the jump table at 0x801334E4). */
             if ((p4_com != NULL) && (p4_com->prevent != NULL))
@@ -390,7 +383,6 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                 is_attempt_cliffcatch = (rule == NDS_P4_COMPUTER_CHECK_GROUND);
             }
             else
-#endif
             switch (this_fp->fkind)
             {
             case nFTKindMario:
@@ -621,14 +613,10 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                         {
                             if (user_data != NULL)
                             {
-#if NDS_P4
                                 /* Remix reads Character.fighter_reflect at
                                  * the target's id (Reflect.asm AI
                                  * extend_reflect_absorb_character_check_). */
                                 if (ndsP4ComputerTargetReflects((FTStruct *)user_data) != FALSE)
-#else
-                                if ((((FTStruct*)user_data)->fkind == nFTKindNess) || (((FTStruct*)user_data)->fkind == nFTKindFox))
-#endif
                                 {
                                     fkind = (this_fp->fkind == nFTKindKirby) ? this_fp->passive_vars.kirby.copy_id : this_fp->fkind;
 
@@ -826,11 +814,7 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                 }
                 else com->input_repeat_count = 0;
 
-#if NDS_P4
                 ndsP4ComputerSetCommandWaitShort(this_fp, input_kinds[i]);
-#else
-                ftComputerSetCommandWaitShort(this_fp, input_kinds[i]);
-#endif
 
                 com->input_kind = input_kinds[i];
 

@@ -11,13 +11,11 @@
 
 extern sb32 ndsSyMallocWouldFit(const SYMallocRegion *bp, size_t size,
                                 u32 alignment);
-#if NDS_P4
 /* nds_p4.h, without its fighter headers in this TU. */
 extern u32 ndsP4MatchContent(s32 player);
 extern u32 ndsP4Event32Commands(u32 content);
 extern u32 ndsP4Event32MatAnims(u32 content, sb32 low_only);
 extern u32 ndsP4Event32Allowance(u32 content);
-#endif
 
 /* Outside every configuration gate on purpose: `nds_anim_fixed.h` declares it
  * and `battleship_ftanim.c` includes that header whether or not this file's
@@ -40,19 +38,15 @@ volatile u32 gNdsObjAnimBitCompare __attribute__((used, section(".data"))) = 1u;
 #define gcParseMObjMatAnimJoint ndsBaseGcParseMObjMatAnimJoint
 #define gcPlayAnimAll ndsBaseGcPlayAnimAll
 #define gcSetupCustomDObjsWithMObj ndsBaseGcSetupCustomDObjsWithMObj
-#if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
 /* R2-03 E61/E64. Frees the name so the port-side player below is reached. Task
  * 95 proved this exact interposition end to end: the hot call is INTERNAL to
  * objanim.c (inside gcPlayAnimAll), so renaming the definition renames that
  * call with it and a port-side replacement actually runs. */
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
-#endif
-#if NDS_R2_CUBIC_FIXED
 /* 2026-10-05: the event32 parser and the value getter in Q form (the port
  * definitions follow the player below). */
 #define gcParseDObjAnimJoint ndsBaseGcParseDObjAnimJoint
 #define gcGetAObjValue ndsBaseGcGetAObjValue
-#endif
 
 /* Campaign 01 re-knapsack, 2026-08-17, gave ndsBaseGcPlayAnimAll 80 ITCM bytes
  * for 1,070 I-cache-fill tk/fr. P2-2p8 N04.08 removed its last call site --
@@ -85,10 +79,8 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 #undef gcParseMObjMatAnimJoint
 #undef gcPlayAnimAll
 #undef gcSetupCustomDObjsWithMObj
-#if NDS_R2_CUBIC_FIXED
 #undef gcParseDObjAnimJoint
 #undef gcGetAObjValue
-#endif
 
 /* P2-2p8 (2026-10-05): material animations at the presentation rate. An
  * MObj's animation is render state only: its tracks write the material's
@@ -173,7 +165,6 @@ void ndsGcParseMObjMatAnimJointNow(MObj *mobj)
     ndsBaseGcParseMObjMatAnimJoint(mobj);
 }
 
-#if NDS_R2_CUBIC_FIXED
 #undef gcPlayDObjAnimJoint
 
 /* R2-03 E64 — the cubic in fixed point. Owner-authorized 2026-07-29.
@@ -273,16 +264,7 @@ volatile u32 gNdsR2CubicEvals;
  * spill, no footprint. "Replace, don't coexist" is a board rule with a price
  * attached, and a permanent runtime selector would pay it forever to answer a
  * question that is already answered. */
-#ifndef NDS_R2_ANIM_CUT_ROUTE
-#define NDS_R2_ANIM_CUT_ROUTE 0
-#endif
-#if NDS_R2_ANIM_CUT_ROUTE
-volatile u32 gNdsR2AnimCutRoute
-    __attribute__((section(".data"), aligned(32))) = 15u;
-#define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
-#else
 #define NDS_R2_ANIM_CUT_ON(bit) (1)
-#endif
 
 /* NDS_R2_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_r2_cubic_error_bound.py`
  * extracts everything between this marker and the matching END, prepends
@@ -411,11 +393,7 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
  * the port defines the fcmp helpers itself) and
  * ndsRendererHardwareGetLightShadeLut (404 B, the miss-path LUT builder) --
  * plus the 512 B that were already free on the tick-HUD instrument. */
-#if NDS_R2_ANIM_Q_ITCM_ON && defined(__arm__)
-#define NDS_R2_ANIM_Q_ITCM __attribute__((section(".itcm")))
-#else
 #define NDS_R2_ANIM_Q_ITCM
-#endif
 
 /* `NDS_R2_AQ_T_MAX`, `NDS_R2_AQ_LEN_MAX`, `ndsR2AnimClamp` and
  * `ndsR2AnimClamp64` moved to `nds_anim_fixed.h` (P2-2p6) with the field
@@ -1327,189 +1305,7 @@ f32 gcGetAObjValue(AObj *aobj)
     }
     return ndsBaseGcGetAObjValue(aobj);
 }
-#else
-/* lb/lbcommon.c:1261, verbatim, for the NDS_R2_LAB_CUBIC_OFF escape hatch where
- * the decomp player above is the one in use. */
-void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
-{
-    f32 interp;
 
-    if (dobj->anim_wait != AOBJ_ANIM_NULL)
-    {
-        AObj *aobj = dobj->aobj;
-
-        while (aobj != NULL)
-        {
-            if (aobj->kind != nGCAnimKindNone)
-            {
-                if (dobj->anim_wait != AOBJ_ANIM_END)
-                {
-                    aobj->length += dobj->anim_speed;
-                }
-                if (!(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM))
-                {
-                    switch (aobj->track)
-                    {
-                    case nGCAnimTrackRotX:
-                        dobj->rotate.vec.f.x = gcGetAObjValue(aobj);
-                        break;
-                    case nGCAnimTrackRotY:
-                        dobj->rotate.vec.f.y = gcGetAObjValue(aobj);
-                        break;
-                    case nGCAnimTrackRotZ:
-                        dobj->rotate.vec.f.z = gcGetAObjValue(aobj);
-                        break;
-                    case nGCAnimTrackTraI:
-                        interp = gcGetAObjValue(aobj);
-                        if (interp < 0.0F)
-                        {
-                            interp = 0.0F;
-                        }
-                        else if (interp > 1.0F)
-                        {
-                            interp = 1.0F;
-                        }
-                        if (ndsTraIDescUsable(dobj, aobj, 2u) != FALSE)
-                        {
-                            syInterpCubic(&dobj->translate.vec.f,
-                                          aobj->interpolate, interp);
-                        }
-                        dobj->translate.vec.f.x *= scale->x;
-                        dobj->translate.vec.f.y *= scale->y;
-                        dobj->translate.vec.f.z *= scale->z;
-                        break;
-                    case nGCAnimTrackTraX:
-                        dobj->translate.vec.f.x = gcGetAObjValue(aobj) * scale->x;
-                        break;
-                    case nGCAnimTrackTraY:
-                        dobj->translate.vec.f.y = gcGetAObjValue(aobj) * scale->y;
-                        break;
-                    case nGCAnimTrackTraZ:
-                        dobj->translate.vec.f.z = gcGetAObjValue(aobj) * scale->z;
-                        break;
-                    case nGCAnimTrackScaX:
-                        dobj->scale.vec.f.x = gcGetAObjValue(aobj);
-                        break;
-                    case nGCAnimTrackScaY:
-                        dobj->scale.vec.f.y = gcGetAObjValue(aobj);
-                        break;
-                    case nGCAnimTrackScaZ:
-                        dobj->scale.vec.f.z = gcGetAObjValue(aobj);
-                        break;
-                    }
-                }
-            }
-            aobj = aobj->next;
-        }
-        if (dobj->anim_wait == AOBJ_ANIM_END)
-        {
-            dobj->anim_wait = AOBJ_ANIM_NULL;
-        }
-    }
-}
-#endif
-
-#if NDS_R2_ANIM_CENSUS
-#undef gcPlayDObjAnimJoint
-
-/* R2-03 E61. E60 priced this path at 146,942 ticks/frame inclusive -- larger
- * than the whole gap to the gate -- and 280 ticks per AObj node, which is what
- * a ~14-operation cubic costs in software float. Before any of that is
- * rewritten, three integers decide WHICH rewrite:
- *
- *   1. the kind mix. Cubic is ~14 float ops, Linear is 2, Step is 0. If the
- *      nodes are mostly Linear the arithmetic is not the target and E60's
- *      per-node arithmetic reading is wrong.
- *   2. anim_speed. `length` is a pure accumulator of it, so if it only ever
- *      takes 0 or 1 the pose is a function of an INTEGER frame index and a
- *      load-time table is bit-exact. Any other value and the index is
- *      continuous and no table can be exact.
- *   3. how many evaluations are discarded. The original computes `value`
- *      before checking GOBJ_FLAG_NOANIM... it does not, but it DOES skip the
- *      whole evaluation under that flag, so counting the skips separates
- *      "poses computed" from "poses used".
- *
- * Counting only -- the real work is delegated unchanged, so this cannot change
- * a value. Task 96 measured the chain (337.8 nodes/frame over 104.1 calls) with
- * the same interposition and its numbers are the cross-check. */
-extern void ndsBaseGcPlayDObjAnimJoint(DObj *dobj);
-
-volatile u32 gNdsR2AnimCensusCalls;
-volatile u32 gNdsR2AnimCensusNodes;
-volatile u32 gNdsR2AnimCensusKindNone;
-volatile u32 gNdsR2AnimCensusKindLinear;
-volatile u32 gNdsR2AnimCensusKindCubic;
-volatile u32 gNdsR2AnimCensusKindStep;
-volatile u32 gNdsR2AnimCensusKindOther;
-volatile u32 gNdsR2AnimCensusSpeedOne;
-volatile u32 gNdsR2AnimCensusSpeedZero;
-volatile u32 gNdsR2AnimCensusSpeedOther;
-volatile u32 gNdsR2AnimCensusSpeedOtherBits;
-volatile u32 gNdsR2AnimCensusNoAnimSkips;
-volatile u32 gNdsR2AnimCensusAnimEnd;
-volatile u32 gNdsR2AnimCensusLongestChain;
-
-void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
-void gcPlayDObjAnimJoint(DObj *dobj)
-{
-    const AObj *aobj;
-    u32 chain = 0u;
-    f32 speed;
-    u32 speed_bits;
-    u32 noanim;
-
-    NDS_DIAG(gNdsR2AnimCensusCalls++);
-    if (dobj->anim_wait != AOBJ_ANIM_NULL)
-    {
-        speed = dobj->anim_speed;
-        __builtin_memcpy(&speed_bits, &speed, sizeof(speed_bits));
-        if (speed_bits == 0x3f800000u)
-        {
-            NDS_DIAG(gNdsR2AnimCensusSpeedOne++);
-        }
-        else if ((speed_bits & 0x7fffffffu) == 0u)
-        {
-            NDS_DIAG(gNdsR2AnimCensusSpeedZero++);
-        }
-        else
-        {
-            NDS_DIAG(gNdsR2AnimCensusSpeedOther++);
-            gNdsR2AnimCensusSpeedOtherBits = speed_bits;
-        }
-        if (dobj->anim_wait == AOBJ_ANIM_END)
-        {
-            NDS_DIAG(gNdsR2AnimCensusAnimEnd++);
-        }
-        noanim = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) != 0) ? 1u : 0u;
-        for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
-        {
-            chain++;
-            if (aobj->kind == nGCAnimKindNone)
-            {
-                NDS_DIAG(gNdsR2AnimCensusKindNone++);
-                continue;
-            }
-            NDS_DIAG(gNdsR2AnimCensusNodes++);
-            if (noanim != 0u)
-            {
-                NDS_DIAG(gNdsR2AnimCensusNoAnimSkips++);
-            }
-            switch (aobj->kind)
-            {
-            case nGCAnimKindLinear: gNdsR2AnimCensusKindLinear++; break;
-            case nGCAnimKindCubic:  gNdsR2AnimCensusKindCubic++;  break;
-            case nGCAnimKindStep:   gNdsR2AnimCensusKindStep++;   break;
-            default:                gNdsR2AnimCensusKindOther++;  break;
-            }
-        }
-        if (chain > gNdsR2AnimCensusLongestChain)
-        {
-            gNdsR2AnimCensusLongestChain = chain;
-        }
-    }
-    ndsBaseGcPlayDObjAnimJoint(dobj);
-}
-#endif
 
 /* THE NORMALIZED SET IS A LEDGER, NOT A CACHE, so its capacity has to cover
  * the whole corpus a scene can reach -- it cannot be evicted from.
@@ -1929,7 +1725,6 @@ static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
 {
     u32 need = 0u;
     u32 i;
-#if NDS_P4
     u32 count = 0u;
     u32 seen = 0u;
 
@@ -1940,13 +1735,11 @@ static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
             count++;
         }
     }
-#endif
 
     for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
     {
         const SCPlayerData *player = &players[i];
 
-#if NDS_P4
         u32 content = (player->pkind != nFTPlayerKindNot) ?
             ndsP4MatchContent((s32)i) : 0u;
 
@@ -1965,7 +1758,6 @@ static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
             }
             continue;
         }
-#endif
         if ((player->pkind != nFTPlayerKindNot) &&
             (player->fkind <= nFTKindPlayableEnd))
         {
@@ -1992,7 +1784,6 @@ static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
  * latch). */
 static u32 ndsAObjEvent32RosterMargin(const SCPlayerData *players)
 {
-#if NDS_P4
     u32 i;
 
     for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
@@ -2004,10 +1795,6 @@ static u32 ndsAObjEvent32RosterMargin(const SCPlayerData *players)
         }
     }
     return 0u;
-#else
-    (void)players;
-    return NDS_AOBJ_EVENT32_ROSTER_MARGIN;
-#endif
 }
 
 static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
@@ -3601,7 +3388,6 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
             {
                 continue;
             }
-#if NDS_R2_CUBIC_FIXED
             /* A Q node (the stage parser's since 2026-10-05) advances in Q. */
             if (aobj->kind >= NDS_R2_AQ_KIND_BASE)
             {
@@ -3609,7 +3395,6 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
                     ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF));
                 continue;
             }
-#endif
             aobj->length += dobj->anim_speed;
         }
     }
@@ -3644,7 +3429,6 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
         }
         else
 #endif
-#if !NDS_R2_ANIM_CENSUS && NDS_R2_CUBIC_FIXED
         if (fixed_cubic != FALSE)
         {
             gcPlayDObjAnimJoint(dobj);
@@ -3653,11 +3437,6 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
         {
             ndsBaseGcPlayDObjAnimJoint(dobj);
         }
-#elif NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
-        ndsBaseGcPlayDObjAnimJoint(dobj);
-#else
-        gcPlayDObjAnimJoint(dobj);
-#endif
 
         /* mul 0: a batch's earlier tick, no material work (see
          * gNdsMObjTickMul). */
@@ -3855,63 +3634,10 @@ static sb32 ndsAObjEvent32NormalizeMObjTable(
     return TRUE;
 }
 
-#if NDS_R2_LOADFRAME_TIMING
-/* R2-06 E10. E8 attributed 8 of the 9 over-gate frames to the 16 frames that load a
- * fighter animation, showed the +139,072 premium is entirely `SRC` (the source
- * update), and showed the in-frame relocation is only 21.5% of it. The other ~78% is
- * the ACTION CHANGE that causes the load, and its two obvious costs are the O2R
- * script normalization and the decomp's own animation setup -- both of which happen
- * to run inside these two already-interposed wrappers, so pricing them needs no new
- * seam. Lab only, default off; `Max` is per-call, not per-frame. */
-volatile u32 gNdsR2AddDObjAnimCalls;
-volatile u32 gNdsR2AddDObjAnimTicks;
-volatile u32 gNdsR2AddDObjAnimMaxTicks;
-volatile u32 gNdsR2AddDObjNormalizeTicks;
-volatile u32 gNdsR2AddDObjBaseTicks;
-volatile u32 gNdsR2AddAnimAllCalls;
-volatile u32 gNdsR2AddAnimAllTicks;
-volatile u32 gNdsR2AddAnimAllMaxTicks;
-/* This TU pulls in no DS headers -- the decomp objanim.c includes only <sys/obj.h>
- * -- so declare the one libnds function the brackets need rather than dragging
- * nds/timers.h through the whole translation unit. */
-u32 cpuGetTiming(void);
-#endif
 
 void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
                         f32 anim_frame)
 {
-#if NDS_R2_LOADFRAME_TIMING
-    u32 enter = cpuGetTiming();
-    u32 phase = enter;
-    sb32 admit;
-
-    NDS_DIAG(gNdsR2AddDObjAnimCalls++);
-    admit = ((anim_joint == NULL) ||
-             (ndsRelocPointerIsFighterAObj16(anim_joint) != FALSE) ||
-             (ndsAObjEvent32NormalizeScript(
-                  anim_joint, nNDSAObjEvent32OwnerDObj) != FALSE)) ? TRUE : FALSE;
-    NDS_DIAG(gNdsR2AddDObjNormalizeTicks += cpuGetTiming() - phase);
-    if (admit != FALSE)
-    {
-        phase = cpuGetTiming();
-        ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
-        NDS_DIAG(gNdsR2AddDObjBaseTicks += cpuGetTiming() - phase);
-    }
-    else
-    {
-        ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
-        NDS_DIAG(gNdsAObjEvent32DetachCount++);
-    }
-    {
-        u32 total = cpuGetTiming() - enter;
-
-        NDS_DIAG(gNdsR2AddDObjAnimTicks += total);
-        if (total > gNdsR2AddDObjAnimMaxTicks)
-        {
-            gNdsR2AddDObjAnimMaxTicks = total;
-        }
-    }
-#else
     if ((anim_joint == NULL) ||
         (ndsRelocPointerIsFighterAObj16(anim_joint) != FALSE) ||
         (ndsAObjEvent32NormalizeScript(
@@ -3931,7 +3657,6 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
         ndsLabNoteDetach(dobj, anim_joint, __builtin_return_address(0));
 #endif
     }
-#endif
 }
 
 void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
@@ -3958,14 +3683,6 @@ __attribute__((used)) volatile u32 gNdsGcAddAnimJointAllRefusedLastTable;
 void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
                        f32 anim_frame)
 {
-#if NDS_R2_LOADFRAME_TIMING
-    /* The whole-GObj variant, which is what a fighter action change goes through:
-     * it walks the DObj tree and re-adds every joint's animation. If the action
-     * change is the excursion, this is where it should show. */
-    u32 enter = cpuGetTiming();
-
-    NDS_DIAG(gNdsR2AddAnimAllCalls++);
-#endif
     if ((gobj != NULL) &&
         (ndsAObjEvent32NormalizeDObjTable(gobj, anim_joints) != FALSE))
     {
@@ -3992,17 +3709,6 @@ void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
         gNdsGcAddAnimJointAllRefusedLastGObj = (u32)(uintptr_t)gobj;
         gNdsGcAddAnimJointAllRefusedLastTable = (u32)(uintptr_t)anim_joints;
     }
-#if NDS_R2_LOADFRAME_TIMING
-    {
-        u32 total = cpuGetTiming() - enter;
-
-        NDS_DIAG(gNdsR2AddAnimAllTicks += total);
-        if (total > gNdsR2AddAnimAllMaxTicks)
-        {
-            gNdsR2AddAnimAllMaxTicks = total;
-        }
-    }
-#endif
 }
 
 void gcAddMatAnimJointAll(GObj *gobj, AObjEvent32 ***p_matanim_joints,

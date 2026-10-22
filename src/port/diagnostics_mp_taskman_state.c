@@ -711,8 +711,6 @@ extern OSMesgQueue sSYTaskmanResetMesgQueue;
 extern OSMesgQueue sSYTaskmanGameTicMesgQueue;
 extern void func_80005BFC(void);
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-#if NDS_R2_BATTLEPACK_KEEP_CACHE
 /* See the NDS_R2_BATTLEPACK_KEEP_CACHE block in the Makefile.
  *
  * 0x17a000 (1,548,288) = 0x150000 + 172,032, and the size is MEASURED, not
@@ -770,12 +768,6 @@ extern void func_80005BFC(void);
  * per-project: the four-distinct-kind roster's larger ARM9 binary already cost
  * it 36,864 (AllocFail 9) before any of this. */
 #define NDS_TASKMAN_ARENA_SIZE 0x1a7000u
-#else
-#define NDS_TASKMAN_ARENA_SIZE 0x150000u
-#endif
-#else
-#define NDS_TASKMAN_ARENA_SIZE (1024u * 1024u)
-#endif
 #define NDS_STARTUP_BOUNDED_UPDATES 55u
 #define NDS_STARTUP_LOGO_DRAW_UPDATE 17u
 #define NDS_STARTUP_PRESENT_INTERVAL 10u

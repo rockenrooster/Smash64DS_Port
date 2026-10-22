@@ -9,18 +9,12 @@
 #include <sys/obj.h>
 
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 /* P4 builds name the source's definitions ndsSource*; the ndsBase* entry
  * points below send a P4 content to the files' P4 copy
  * (battleship_ftcommon_jab_p4.c) and everyone else here. */
-#if NDS_P4
 #define NDS_ATTACK1_NAME(name_) ndsSource##name_
-#else
-#define NDS_ATTACK1_NAME(name_) ndsBase##name_
-#endif
 #define ftCommonAttack11ProcUpdate NDS_ATTACK1_NAME(FTCommonAttack11ProcUpdate)
 #define ftCommonAttack12ProcUpdate NDS_ATTACK1_NAME(FTCommonAttack12ProcUpdate)
 #define ftCommonAttack13ProcUpdate NDS_ATTACK1_NAME(FTCommonAttack13ProcUpdate)
@@ -68,7 +62,6 @@ sb32 NDS_ATTACK1_NAME(FTCommonAttack13CheckGoto)(GObj *fighter_gobj);
 #undef ftCommonAttack12CheckGoto
 #undef ftCommonAttack13CheckGoto
 
-#if NDS_P4
 #define NDS_ATTACK1_ENTRY(n_)                                                     \
     void ndsBaseFTCommon##n_(GObj *fighter_gobj)                                  \
     {                                                                             \
@@ -104,4 +97,3 @@ NDS_ATTACK1_CHECK(Attack12CheckGoto)
 NDS_ATTACK1_CHECK(Attack13CheckGoto)
 #undef NDS_ATTACK1_ENTRY
 #undef NDS_ATTACK1_CHECK
-#endif

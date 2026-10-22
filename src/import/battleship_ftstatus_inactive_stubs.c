@@ -1,6 +1,5 @@
 #include <ft/fighter.h>
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 /* Source status tables name these callbacks, but their owning subsystems still
  * pull items, HUD, stage hazards, other fighters, or character specials. They
  * stay fenced until each original TU can be imported with its dependency chain.
@@ -12,36 +11,6 @@
         (void)fighter_gobj;                   \
     }
 
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-NDS_INACTIVE_STATUS_STUB(ftCommonDeadCommonProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpStarProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpFallProcUpdate)
-#endif
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-/* P2-3r14: `battleship_ftcommon_sleep.c` owns this callback wherever the battle
- * import is on, and it is the real one -- the team-battle stock steal. Leaving a
- * weak twin beside it would only make a future link-order accident silently
- * reinstate the no-op that this row was opened to remove. */
-#if !NDS_P2_PURIN
-NDS_INACTIVE_STATUS_STUB(ftCommonSleepProcUpdate)
-#endif
-#endif
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-NDS_INACTIVE_STATUS_STUB(ftCommonEntryNullProcUpdate)
-#endif
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-NDS_INACTIVE_STATUS_STUB(ftCommonRebirthDownProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonRebirthCommonProcMap)
-NDS_INACTIVE_STATUS_STUB(ftCommonRebirthStandProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonRebirthWaitProcInterrupt)
-#endif
-#if !(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-      NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)
-NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcInterrupt)
-NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcMap)
-#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcPhysics)
@@ -75,35 +44,7 @@ NDS_INACTIVE_STATUS_STUB(ftCommonHammerLandingProcUpdate)
  * Mario/Fox through the normal guard-break path, so they may not be inert
  * fallbacks.  The source TUs are linked beside this file and own the complete
  * Fly -> Fall -> Down -> Stand -> FuraFura lifecycle. */
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonCaptureKirbyProcPhysics)
-#endif
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcInterrupt)
-#endif
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcMap)
-#endif
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonThrownKirbyStarProcUpdate)
-#endif
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonThrownKirbyStarProcPhysics)
-#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCommonStarProcMap)
-#if !NDS_P2_KIRBY
-NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcPhysics)
-#endif
-#if !NDS_P2_YOSHI
-/* P2-3 Yoshi: battleship_ftcommon_captureyoshi.c owns the real bodies
- * wherever Yoshi is built, the same rule as Falcon's capture below. */
-NDS_INACTIVE_STATUS_STUB(ftCommonCaptureYoshiProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcInterrupt)
-NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcMap)
-#endif
 #if !NDS_P2_CAPTAIN
 /* P2-3f5: battleship_ftcommon_capturecaptain.c owns the real body wherever
  * Falcon is built. A strong definition wins over this weak twin at link either
@@ -115,44 +56,4 @@ NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
 #if !NDS_P2_DONKEY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
 #endif
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonAppearProcPhysics)
-#endif
-#if !NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcInterrupt)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialHiProcMap)
-#endif
-#if !NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialLwProcMap)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftMarioSpecialAirLwProcMap)
-#endif
-#if !NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiStartProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiStartProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiStartProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiStartProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiStartProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiHoldProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiHoldProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiHoldProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialHiEndProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiEndProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiEndProcMap)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftFoxSpecialAirHiBoundProcMap)
-#endif
 #undef NDS_INACTIVE_STATUS_STUB
-#endif

@@ -11,19 +11,6 @@
 #define NDS_AUDIO_FGM_KO_COUNT 5u
 #define NDS_AUDIO_FGM_KO_TRACE_CAPACITY 8u
 #define NDS_AUDIO_FGM_MISS_RING_CAPACITY 16u
-#ifndef NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS 0
-#endif
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-#define NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY 2u
-#define NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY 1u
-#define NDS_AUDIO_FGM_ARM7_ACK_KIND_STOP 3u
-#define NDS_AUDIO_FGM_RELEASE_REASON_RESET 1u
-#define NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST 2u
-#define NDS_AUDIO_FGM_RELEASE_REASON_DURATION 3u
-#define NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL 4u
-#define NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT 5u
-#endif
 /* BOTH of these must equal the generated pack exactly, and BOTH move together
  * whenever the pack is re-rendered.  ndsAudioFgmLoad checks the size against the
  * file length, the header field, and the envelope cursor, and checks the mapping
@@ -123,35 +110,6 @@
  * and 463 TitleWait render flat with their overlong fork tails
  * (624/528) omitted and declared. */
 
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-typedef struct NDSAudioFgmArm7AckEvent {
-    u32 kind;
-    u32 source_tick;
-    u32 value;
-    u32 service_tick;
-    u32 command_tick;
-    u32 command_return_tick;
-    u32 acknowledge_tick;
-    u32 active_channels;
-} NDSAudioFgmArm7AckEvent;
-
-typedef struct NDSAudioFgmArm7AckTrace {
-    u32 sequence;
-    u32 event_count;
-    u32 overflow_count;
-    u32 mismatch_count;
-    u32 fgm_id;
-    u32 generation;
-    u32 channel;
-    u32 instance_token;
-    u32 handle_start_tick;
-    u32 handle_end_tick;
-    u32 duration_ticks;
-    u32 envelope_count;
-    NDSAudioFgmArm7AckEvent
-        events[NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY];
-} NDSAudioFgmArm7AckTrace;
-#endif
 
 void ndsAudioFgmDiagnosticsReset(void);
 void ndsAudioFgmLoadFenced(void);
@@ -239,8 +197,5 @@ extern volatile u32 gNdsAudioFgmChildStartCount;
 extern volatile u32 gNdsAudioFgmChildStartFailCount;
 extern volatile u32 gNdsAudioFgmBlockNewStartCalls;
 extern volatile u32 gNdsAudioFgmBlockedPlayCount;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-extern volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
-#endif
 
 #endif

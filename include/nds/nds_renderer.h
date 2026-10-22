@@ -5,13 +5,7 @@
 #include <PR/gbi.h>
 #include <nds/nds_p4_contents.h>
 
-#ifndef NDS_RENDERER_PROFILE_LEVEL
-#define NDS_RENDERER_PROFILE_LEVEL 2
-#endif
 
-#if (NDS_RENDERER_PROFILE_LEVEL < 0) || (NDS_RENDERER_PROFILE_LEVEL > 2)
-#error "NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2"
-#endif
 
 #ifndef NDS_SHIP_TELEMETRY
 #define NDS_SHIP_TELEMETRY 1
@@ -60,78 +54,26 @@
 #define NDS_RENDERER_FRAME_SUMMARY_COUNTERS 1
 #endif
 
-#ifndef NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_RENDERER_M2_DETAILED_LEDGER 0
-#endif
 
-#if (NDS_RENDERER_M2_DETAILED_LEDGER != 0) && \
-    (NDS_RENDERER_M2_DETAILED_LEDGER != 1)
-#error "NDS_RENDERER_M2_DETAILED_LEDGER must be 0 or 1"
-#endif
 
-#if NDS_RENDERER_M2_DETAILED_LEDGER && \
-    (NDS_RENDERER_PROFILE_LEVEL != 1)
-#error "NDS_RENDERER_M2_DETAILED_LEDGER requires profile level 1"
-#endif
 
-#ifndef NDS_RENDERER_M3_PHASE0_PROFILE
-#define NDS_RENDERER_M3_PHASE0_PROFILE 0
-#endif
 
-#if (NDS_RENDERER_M3_PHASE0_PROFILE != 0) && \
-    (NDS_RENDERER_M3_PHASE0_PROFILE != 1)
-#error "NDS_RENDERER_M3_PHASE0_PROFILE must be 0 or 1"
-#endif
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE && \
-    (NDS_RENDERER_PROFILE_LEVEL != 1)
-#error "NDS_RENDERER_M3_PHASE0_PROFILE requires profile level 1"
-#endif
 
 /* Task 26 is compile-selected so disabled control builds retain the exact
  * existing stage executor and linked layout. */
-#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
-#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0
-#endif
 
-#if (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 0) && \
-    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 1)
-#error "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE must be 0 or 1"
-#endif
 
 /* Task 29's no-behavior GX census is a profile-1 lab surface only.  Shipping
  * builds retain no counters, wrappers, or state. */
-#ifndef NDS_TASK29_GX_CENSUS
-#define NDS_TASK29_GX_CENSUS 0
-#endif
 
-#if (NDS_TASK29_GX_CENSUS != 0) && (NDS_TASK29_GX_CENSUS != 1)
-#error "NDS_TASK29_GX_CENSUS must be 0 or 1"
-#endif
 
-#if NDS_TASK29_GX_CENSUS && (NDS_RENDERER_PROFILE_LEVEL != 1)
-#error "NDS_TASK29_GX_CENSUS requires profile level 1"
-#endif
 
 /* Task 34 E1 records the exact native-stage GX stream without changing it. */
-#ifndef NDS_TASK34_STAGE_STREAM_CENSUS
-#define NDS_TASK34_STAGE_STREAM_CENSUS 0
-#endif
 
-#if (NDS_TASK34_STAGE_STREAM_CENSUS != 0) && \
-    (NDS_TASK34_STAGE_STREAM_CENSUS != 1)
-#error "NDS_TASK34_STAGE_STREAM_CENSUS must be 0 or 1"
-#endif
 
-#ifndef NDS_TASK36_HW_COMPOSE
-#define NDS_TASK36_HW_COMPOSE 0
-#endif
 
-#if (NDS_TASK36_HW_COMPOSE < 0) || (NDS_TASK36_HW_COMPOSE > 2)
-#error "NDS_TASK36_HW_COMPOSE must be 0, 1, or 2"
-#endif
 
-#if NDS_TASK36_HW_COMPOSE
 /* Bindings 0-19 (layer0), 30-32 (layer2) and 39-41 (layer3).
  *
  * R2-02 E4 tried to widen this to the two flower segments (25-28, 33-38) on the
@@ -159,80 +101,26 @@
 #ifndef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
 #define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
-#endif
 
-#ifndef NDS_TASK56_FIGHTER_PRIMITIVES
-#define NDS_TASK56_FIGHTER_PRIMITIVES 0
-#endif
 
-#if (NDS_TASK56_FIGHTER_PRIMITIVES != 0) && (NDS_TASK56_FIGHTER_PRIMITIVES != 1) && \
-    (NDS_TASK56_FIGHTER_PRIMITIVES != 2)
-#error "NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2"
-#endif
 
 /* Task 56 emits fighter GL_TRIANGLE_STRIP/QUAD primitive streams; the native
  * fighter production path is compiled only when HW triangles are on and the
  * instrumentation level is below the forensic oracle. */
-#if NDS_TASK56_FIGHTER_PRIMITIVES && 0
-#error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_HW_TRIANGLES (native fighter path)"
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-#error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_PROFILE_LEVEL < 2"
-#endif
 
 /* Task 62: generated Dream Land DS-native static 3D mesh (candidate c120). The
  * runtime draw path bypasses the segment0 program and emits the baked blob
  * directly via GFX_FIFO. Default off; the published ROM is byte-identical at 0. */
-#ifndef NDS_DREAMLAND_DS_MESH
-#define NDS_DREAMLAND_DS_MESH 0
-#endif
 
-#if (NDS_DREAMLAND_DS_MESH != 0) && (NDS_DREAMLAND_DS_MESH != 1)
-#error "NDS_DREAMLAND_DS_MESH must be 0 or 1"
-#endif
 
-#if NDS_DREAMLAND_DS_MESH && 0
-#error "NDS_DREAMLAND_DS_MESH requires NDS_RENDERER_HW_TRIANGLES (native stage path)"
-#endif
-#if NDS_DREAMLAND_DS_MESH && (NDS_RENDERER_PROFILE_LEVEL >= 2)
-#error "NDS_DREAMLAND_DS_MESH requires NDS_RENDERER_PROFILE_LEVEL < 2"
-#endif
 
-#if (NDS_TASK36_HW_COMPOSE == 2) && \
-    (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
-#error "Compiled stage GX bypasses the Task 29/34 stream census"
-#endif
 
-#ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
-#define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
-#endif
 
-#if (NDS_RENDERER_SCREEN_SPACE_CENSUS != 0) && \
-    (NDS_RENDERER_SCREEN_SPACE_CENSUS != 1)
-#error "NDS_RENDERER_SCREEN_SPACE_CENSUS must be 0 or 1"
-#endif
 
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS && \
-    (NDS_RENDERER_PROFILE_LEVEL != 1)
-#error "NDS_RENDERER_SCREEN_SPACE_CENSUS requires profile level 1"
-#endif
 
-#ifndef NDS_RENDER_ECONOMY
-#define NDS_RENDER_ECONOMY 0
-#endif
 
-#ifndef NDS_RENDER_ECONOMY_OWNER_MASK
-#define NDS_RENDER_ECONOMY_OWNER_MASK 32
-#endif
 
-#if (NDS_RENDER_ECONOMY != 0) && (NDS_RENDER_ECONOMY != 1)
-#error "NDS_RENDER_ECONOMY must be 0 or 1"
-#endif
 
-#if (NDS_RENDER_ECONOMY_OWNER_MASK < 0) || \
-    (NDS_RENDER_ECONOMY_OWNER_MASK > 255)
-#error "NDS_RENDER_ECONOMY_OWNER_MASK must fit the eight Dream Land owners"
-#endif
 
 #define NDS_RENDERER_BENCHMARK_NONE 0
 #define NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP 1
@@ -275,17 +163,9 @@ extern volatile u32 gNdsG1SiteRemembers;
 extern volatile u32 gNdsG1SiteOverwrites;
 extern volatile u32 gNdsG1SiteOccupancy;
 
-#ifndef NDS_RENDERER_BENCHMARK_MODE
-#define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
-#endif
 
-#if NDS_TASK29_GX_CENSUS && \
-    (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE)
-#error "NDS_TASK29_GX_CENSUS requires real GX emission"
-#endif
 
-#if (NDS_RENDERER_BENCHMARK_MODE < NDS_RENDERER_BENCHMARK_NONE) || \
-    (NDS_RENDERER_BENCHMARK_MODE > NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD)
+#if (0 < NDS_RENDERER_BENCHMARK_NONE) || (0 > NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD)
 #error "NDS_RENDERER_BENCHMARK_MODE must be 0 through 4"
 #endif
 
@@ -301,7 +181,7 @@ extern volatile u32 gNdsG1SiteOccupancy;
  * modes into a build error instead of a fighter with no executor. */
 
 
-#if (((NDS_RENDERER_PROFILE_LEVEL != 0) || (!NDS_R2_FIGHTER_NO_ORACLE) || (!NDS_R2_FIGHTER_HW_LIGHT) || (NDS_TASK56_FIGHTER_PRIMITIVES < 1) || NDS_R2_STRIP_ROUTE) || NDS_RENDERER_SCREEN_SPACE_CENSUS) || (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE) || (NDS_RENDERER_FAST_RUN_DEFAULT < NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)
+#if (0 != NDS_RENDERER_BENCHMARK_NONE) || (9 < NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)
 #error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, Task 56 streams (no strip route or census) and fast-run mode 8 or 9"
 #endif
 
@@ -527,27 +407,15 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_CAPTAIN
     NDS_RENDERER_PROFILE_OWNER_CAPTAIN,
 #endif
-#if NDS_P2_SAMUS
     NDS_RENDERER_PROFILE_OWNER_SAMUS,
-#endif
 #if NDS_P2_LINK
     NDS_RENDERER_PROFILE_OWNER_LINK,
 #endif
-#if NDS_P2_PIKACHU
     NDS_RENDERER_PROFILE_OWNER_PIKACHU,
-#endif
-#if NDS_P2_YOSHI
     NDS_RENDERER_PROFILE_OWNER_YOSHI,
-#endif
-#if NDS_P2_NESS
     NDS_RENDERER_PROFILE_OWNER_NESS,
-#endif
-#if NDS_P2_PURIN
     NDS_RENDERER_PROFILE_OWNER_PURIN,
-#endif
-#if NDS_P2_KIRBY
     NDS_RENDERER_PROFILE_OWNER_KIRBY,
-#endif
 #if NDS_P2_MMARIO
     NDS_RENDERER_PROFILE_OWNER_MMARIO,
 #endif
@@ -592,12 +460,6 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_##N_,
     NDS_P4_CONTENT_ROWS(NDS_P4_PROFILE_OWNER_ENTRY)
 #undef NDS_P4_PROFILE_OWNER_ENTRY
-#if NDS_TASK49_GX_DIFFER
-    /* Task49/M1 effect-stream owner.  This diagnostic owner must not enlarge
-     * the production owner enum: several hot arrays and compact owner maps use
-     * COUNT as their exact fighter/stage domain. */
-    NDS_RENDERER_PROFILE_OWNER_EFFECT,
-#endif
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
@@ -660,38 +522,14 @@ typedef enum NDSRendererProfileOwner
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 14u
 #elif NDS_P2_MMARIO
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 13u
-#elif NDS_P2_KIRBY
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 12u
-#elif NDS_P2_PURIN
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 11u
-#elif NDS_P2_NESS
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 10u
-#elif NDS_P2_YOSHI
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 9u
-#elif NDS_P2_PIKACHU
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 8u
-#elif NDS_P2_LINK
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 7u
-#elif NDS_P2_SAMUS
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 6u
-#elif NDS_P2_CAPTAIN
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 5u
-#elif NDS_P2_DONKEY
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 4u
-#elif NDS_P2_LUIGI
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 3u
 #else
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 2u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 12u
 #endif
 /* P4 donor owners take the slots after Master Hand's: content id i owns
  * NDS_P4_RENDERER_OWNER_SLOT(i) (nds_p4_contents.h). */
-#if NDS_P4
 #undef NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT \
     (NDS_P4_RENDERER_OWNER_BASE + 1u + NDS_P4_CONTENT_MAX_ID)
-#endif
-#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
 typedef enum NDSRendererTask29GXClass
 {
     NDS_TASK29_GX_CONTROL = 0,
@@ -719,87 +557,10 @@ typedef enum NDSRendererTask29GXClass
     NDS_TASK29_GX_MATRIX_MULT4x3,  /* Task 51: 12-word model matrix under a once-loaded view. Appended so existing enum values (and the masks that index them) stay byte-stable at default. */
     NDS_TASK29_GX_CLASS_COUNT
 } NDSRendererTask29GXClass;
-#endif
 
-#if NDS_TASK29_GX_CENSUS
-#define NDS_TASK29_GX_OWNER_COUNT \
-    (NDS_RENDERER_PROFILE_OWNER_COUNT + 1u)
 
-extern volatile u32 gNdsTask29GXFrame;
-extern volatile u32 gNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXOwnerCommandCount
-    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXOwnerWordCount
-    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXOwnerRepeatCount
-    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
-extern volatile u32 gNdsTask29GXTotalCommandCount;
-extern volatile u32 gNdsTask29GXTotalWordCount;
-extern volatile u32 gNdsTask29GXTotalRepeatCount;
-extern volatile u32 gNdsTask29GXStreamHashA;
-extern volatile u32 gNdsTask29GXStreamHashB;
-extern volatile u32 gNdsTask29GXOwnerHashA[NDS_TASK29_GX_OWNER_COUNT];
-extern volatile u32 gNdsTask29GXOwnerHashB[NDS_TASK29_GX_OWNER_COUNT];
-extern volatile u32 gNdsTask29GXBoundaryHashA;
-extern volatile u32 gNdsTask29GXBoundaryHashB;
-extern volatile u32 gNdsTask29GXBoundaryCount;
-extern volatile u32 gNdsTask29GXFaultCount;
-extern volatile u32 gNdsTask29GXNeverSuppressMask;
-#endif
 
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-#define NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY 2800u
-#define NDS_TASK34_STAGE_STREAM_WORD_CAPACITY 7000u
-#define NDS_TASK34_STAGE_STREAM_DOBJ_NONE 0xffffu
 
-typedef struct NDSRendererTask34StageStreamEntry
-{
-    u16 word_offset;
-    u16 dobj_index;
-    u8 command_class;
-    u8 word_count;
-    u8 segment_index;
-    u8 reserved;
-} NDSRendererTask34StageStreamEntry;
-
-extern volatile u32 gNdsTask34StageStreamFrame;
-extern volatile u32 gNdsTask34StageStreamCaptureEnabled;
-extern volatile u32 gNdsTask34StageStreamEntryCount;
-extern volatile u32 gNdsTask34StageStreamWordCount;
-extern volatile u32 gNdsTask34StageStreamOverflowCount;
-extern volatile u32 gNdsTask34StageStreamFaultCount;
-extern volatile NDSRendererTask34StageStreamEntry
-    gNdsTask34StageStreamEntries[NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY];
-extern volatile u32
-    gNdsTask34StageStreamWords[NDS_TASK34_STAGE_STREAM_WORD_CAPACITY];
-
-void ndsRendererTask34StageStreamBeginSegment(u32 segment_index);
-void ndsRendererTask34StageStreamSetDObj(u32 dobj_index);
-void ndsRendererTask34StageStreamEndSegment(void);
-#endif
-
-#if NDS_TASK29_GX_CENSUS
-void ndsRendererTask29GXRecordFlush(u32 mode);
-void ndsRendererTask29GXSetOwner(NDSRendererProfileOwner owner);
-void ndsRendererTask29GXPublishFrame(void);
-#endif
-
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-#define NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT 42u
-#define NDS_RENDERER_SCREEN_SPACE_CENSUS_STAGE_OWNER_COUNT 8u
-
-typedef struct NDSRendererScreenSpaceCensusRow
-{
-    u32 identity;
-    u32 triangle_count;
-    u32 area_lt_1px_count;
-    u32 area_lt_4px_count;
-    u32 invalid_count;
-    u64 area2_q8_sum;
-} NDSRendererScreenSpaceCensusRow;
-#endif
 
 /* Diagnostic-only owner census.  Profile 0 never allocates or touches this
  * ledger; profiles 1/2 publish it once per synchronized frame. */
@@ -833,116 +594,8 @@ typedef struct NDSRendererOwnerProfile
     u32 light_signature;
     u32 texture_signature;
     u32 semantic_output_hash;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    /* M2 decision ledger.  These fields are deliberately absent from the
-     * shipping profile-0 owner and from the independent profile-2 oracle. */
-    u32 m2_contract_capture_ticks;
-    u32 m2_collection_ticks;
-    u32 m2_owner_validation_ticks;
-    u32 m2_census_ticks;
-    u32 m2_camera_fetch_ticks;
-    u32 m2_hash_parent_lookup_ticks;
-    u32 m2_local_matrix_ticks;
-    u32 m2_world_affine_ticks;
-    u32 m2_world_camera_ticks;
-    u32 m2_final_compose_ticks;
-    u32 m2_material_ticks;
-    u32 m2_production_total_ticks;
-    u32 m2_production_preflight_state_ticks;
-    u32 m2_lighting_shading_ticks;
-    u32 m2_root_gx_ticks;
-    u32 m2_run_prepare_ticks;
-    u32 m2_corner_emit_account_ticks;
-    u32 m2_owner_residual_ticks;
-    u32 m2_production_success_count;
-    u32 m2_production_failure_count;
-    u32 m2_production_phase_overlap_count;
-    u32 m2_owner_phase_overlap_count;
-    u32 m2_schedule_joint_count;
-    u32 m2_schedule_match_count;
-    u32 m2_binding_count;
-    u32 m2_binding_match_count;
-    u32 m2_xobj_count;
-    u32 m2_xobj_kind_4b_count;
-    u32 m2_xobj_kind_2_count;
-    u32 m2_xobj_other_count;
-    u32 m2_xobj_null_count;
-    u32 m2_parts_count;
-    u32 m2_parts_matrix_mode0_count;
-    u32 m2_parts_matrix_mode1_count;
-    u32 m2_parts_matrix_mode3_count;
-    u32 m2_parts_matrix_other_count;
-    u32 m2_animlock_active;
-    u32 m2_camera_fetch_count;
-    u32 m2_world_matrix_request_count;
-    u32 m2_world_matrix_cache_hit_count;
-    u32 m2_local_matrix_build_count;
-    u32 m2_world_affine_count;
-    u32 m2_world_camera_count;
-    u32 m2_final_compose_count;
-    u32 m2_root_gx_count;
-    u32 m2_lighting_epoch_count;
-    u32 m2_run_prepare_count;
-    u32 m2_corner_emit_run_count;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 semantic_output_hash2;
-    u32 semantic_event_count;
-    u32 semantic_overflow_count;
-    u32 semantic_occurrence_count;
-    u32 semantic_first_owner_occurrence;
-    u32 semantic_first_list_ordinal;
-    u32 semantic_first_branch_path;
-    u32 semantic_first_command_index;
-    u32 semantic_first_tri2_half;
-    u32 semantic_first_outcome;
-#endif
 } NDSRendererOwnerProfile;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-extern volatile NDSRendererOwnerProfile
-    gNdsRendererProfileOwners[NDS_RENDERER_PROFILE_OWNER_COUNT];
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-extern volatile u32 gNdsRendererSemanticOutputHash;
-extern volatile u32 gNdsRendererSemanticOutputHash2;
-extern volatile u32 gNdsRendererSemanticEventCount;
-extern volatile u32 gNdsRendererSemanticOverflowCount;
-extern volatile u32 gNdsRendererSemanticPrefixHash[
-    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
-extern volatile u32 gNdsRendererSemanticPrefixHash2[
-    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
-
-#define NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY 202u
-typedef struct NDSRendererStageDepthTrace
-{
-    u32 owner_occurrence;
-    u32 list_ordinal;
-    u32 branch_path;
-    u32 command_index;
-    s32 projected_z[3];
-    s16 submitted_z[3];
-    u8 submit_class;
-    u8 source_zbuffered;
-    u8 no_z_phase;
-    u8 tri2_half;
-} NDSRendererStageDepthTrace;
-
-extern volatile NDSRendererStageDepthTrace gNdsRendererStageDepthTrace[
-    NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY];
-extern volatile u32 gNdsRendererStageDepthTraceCount;
-extern volatile u32 gNdsRendererStageDepthTraceOverflowCount;
-extern volatile u32 gNdsRendererStageDepthTraceHash;
-extern volatile u32 gNdsRendererStageDepthTraceClassCount[8];
-extern volatile u32 gNdsRendererStageDepthTraceNoZCollisionCount;
-extern volatile u32 gNdsRendererStageDepthTraceBackgroundCount;
-extern volatile s32 gNdsRendererStageDepthTraceBackgroundMin;
-extern volatile s32 gNdsRendererStageDepthTraceBackgroundMax;
-extern volatile u32 gNdsRendererStageDepthTraceForegroundCount;
-extern volatile s32 gNdsRendererStageDepthTraceForegroundMin;
-extern volatile s32 gNdsRendererStageDepthTraceForegroundMax;
-#endif
 
 typedef struct NDSRendererCommand
 {
@@ -1107,13 +760,10 @@ typedef struct NDSRendererNativeFighterRoot
     const void *asset_base;
     const NDSRendererMatrix20p12 *composed_matrix;
     const NDSRendererMatrix20p12 *modelview_matrix;
-#if NDS_R2_FIGHTER_HW_MTX
     /* R2-03 E16b. With the split matrix load the hardware performs the
      * modelview x projection multiply, so the projection has to reach the
      * backend instead of being folded in by the adapter. */
     const NDSRendererMatrix20p12 *projection_matrix;
-#endif
-#if NDS_R2_FIGHTER_GX_COMPOSE
     /* Slice 43. E17 gave the geometry engine the modelview x projection
      * multiply; this gives it the joint chain as well, so `modelview_matrix`
      * above is not composed at all. `gx_locals` is this binding's chain from its
@@ -1141,12 +791,8 @@ typedef struct NDSRendererNativeFighterRoot
      * derives texture coordinates. When this is set, modelview_matrix is an
      * exact CPU mirror of the GX-composed binding rather than the seed placeholder. */
     u8 gx_modelview_mirror_valid;
-#endif
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
-#if NDS_RENDERER_M2_DETAILED_LEDGER
-    u32 owner_generation;
-#endif
     /* By reference, not by value. The preamble is built once per contract event
      * during the record pass and is immutable for the whole playback pass, so
      * copying its 24 bytes into every root every frame was re-materialising data
@@ -1223,9 +869,6 @@ typedef struct NDSRendererStats
     u32 first_opcode;
     u32 unsupported_opcode;
     u32 vertex_command_count;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 source_vertex_count;
-#endif
     u32 triangle_command_count;
     u32 matrix_command_count;
     u32 matrix_load_count;
@@ -1644,18 +1287,12 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
 void ndsRendererNativeKirbyHatSetKirbySlots(u32 slot_mask);
 void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail);
 s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail);
-#endif
 extern volatile u32 gNdsNativeOwnerImageLoadCount;
 extern volatile u32 gNdsNativeOwnerImageFailCount;
 extern volatile u32 gNdsNativeOwnerImageBytes;
 extern volatile u32 gNdsNativeOwnerImageMatchCount;
 extern volatile u32 gNdsNativeOwnerImageMismatchCount;
-#if NDS_P2_KIRBY
 extern volatile u32 gNdsNativeKirbyHatSuppressedCount;
-#endif
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 extern volatile u32 gNdsNativeKirbyHatLoadCount;
 extern volatile u32 gNdsNativeKirbyHatFailCount;
 extern volatile u32 gNdsNativeKirbyHatBytes;
@@ -1666,7 +1303,6 @@ extern volatile u32 gNdsNativeKirbyHatBytes;
  * them in nds_renderer_assets.c. */
 extern volatile u32 gNdsNativeKirbyHatTableHits[2];
 extern volatile u32 gNdsNativeKirbyHatTableMisses[2];
-#endif
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
@@ -1683,19 +1319,6 @@ void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
 void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out);
-#if NDS_TASK107_RENDER_STATE_CENSUS
-/* Task 107 sync-site indices:
- *   0 TEXTURE, 1 SETTILE, 2 SETTILESIZE, 3 resolve/bind preflight. */
-extern volatile u32 gNdsTask107SyncCalls[4];
-extern volatile u32 gNdsTask107SyncUnchanged[4];
-extern volatile u32 gNdsTask107SyncTrackerOverflow;
-extern volatile u32 gNdsTask107BindRequests;
-extern volatile u32 gNdsTask107BindZeroNameExits;
-extern volatile u32 gNdsTask107BindCurrentNameElisions;
-extern volatile u32 gNdsTask107BindIssues;
-extern volatile u32 gNdsTask107BindRevisitIssues;
-extern volatile u32 gNdsTask107BindNameSetOverflow;
-#endif
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
 typedef enum NDSRendererNativeFailureDomain {
@@ -1838,9 +1461,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program);
 u32 ndsRendererNativeFighterSelectRootProgram(
     u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
     u32 *programs_tried);
-#if NDS_R2_FIGHTER_GX_COMPOSE
 const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count);
-#endif
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats);
@@ -1876,24 +1497,8 @@ s32 ndsRendererValidateNativeFighterOwner(
     u32 root_count,
     const u32 *root_offsets,
     const u32 *material_counts);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
-void ndsRendererProfileCensusNativeFighterSchedule(
-    u32 slot,
-    const u8 *joint_parents,
-    const u8 *joint_bindings,
-    u32 joint_count,
-    u32 binding_count,
-    u32 *schedule_match_count,
-    u32 *binding_match_count);
-#endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
-#if NDS_R2_STAGE_ROUTE_PROBE
-/* Publish the route probe's exact GDB-read surface out of ARM9 D-cache before
- * the sparse debugger marker.  See ndsPlatformPublishBattleFrameCompleteGroups:
- * melonDS GDB reads main RAM, not dirty cache lines. */
-void ndsRendererPublishStageRouteProbeDiagnostics(void);
-#endif
 /* Scene-owned texture-VRAM lifecycle (R2-07 E3/E4 root cause; see the comment on
  * the definition). Every entry into the battle scene resets libnds's texture and
  * palette allocators, so entry N allocates identically to entry 1. The caller
@@ -1913,7 +1518,6 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
  * texture data is read, converted, allocated, or uploaded by this operation. */
 s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void);
 
-#if NDS_R2_PARTICLE_RUNTIME
 /* R2-07 particle draw path. One RGB555+A1 atlas, one GL name, one bind for
  * every particle in the frame -- see the definition for why an atlas rather
  * than a texture per frame. Prepared once per battle beside the static set and
@@ -2035,7 +1639,6 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
                                     f32 scale_x, f32 scale_y,
                                     s32 facing);
-#if NDS_R2_FOX_GUN_OVERLAY
 /* BUGS.md "Fox's pistol model is missing". Submits the blaster's 22 baked
  * triangles at joint 17's WORLD matrix, immediately after the fighter's own
  * production run, so it inherits that draw's camera and projection. `world` is
@@ -2053,7 +1656,6 @@ extern volatile u32 gNdsRendererFoxGunFailCount;
 extern volatile u32 gNdsRendererFoxGunBytes;
 extern volatile u32 gNdsRendererFoxGunDrawCount;
 extern volatile u32 gNdsRendererFoxGunTriangleCount;
-#endif
 /* A fighter's afterimage trail (ftDisplayMainDrawAfterImage's strip: Link's
  * sword, the Beam Sword swing, Remix sword trails), submitted natively right
  * after the fighter. `xyz` are positions relative to the origin `composed`
@@ -2103,7 +1705,6 @@ extern volatile u32 gNdsRendererFoxBlasterGlowBytes;
 extern volatile u32 gNdsParticleWorldClampCount;
 extern volatile u32 gNdsParticleScaleEscalations;
 extern volatile u32 gNdsParticleScaleShiftMax;
-#endif
 void ndsRendererHardwareArmBattleStaticTextures(void);
 /* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts
  * at two named frames and clears the running ones. Declared unconditionally so
@@ -2157,11 +1758,7 @@ void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
 void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control);
 void ndsRendererProfileRecordMaterialOperations(u32 count);
 u32 ndsRendererProfileGlobalStateHash(void);
-#if NDS_RENDER_ECONOMY
-void ndsRendererProfileFrameBegin(u32 render_economy_allowed);
-#else
 void ndsRendererProfileFrameBegin(void);
-#endif
 void ndsRendererProfileFramePublish(void);
 extern volatile u32 gNdsRendererFastRunMode;
 extern volatile u32 gNdsRendererFastRunCount;
@@ -2177,31 +1774,6 @@ extern volatile u32 gNdsRendererFastFallbackCount[3];
     X(gNdsRendererFastTriangleCount) \
     X(gNdsRendererFastOwnerTriangleCount) \
     X(gNdsRendererFastFallbackCount)
-#if NDS_LAB_NO_CULL
-/* BUGS.md #10 / P2-3r17 seam probe, lab builds only. SELECT advances the arm;
- * the arm table and its rationale live beside
- * ndsRendererNativeLabSeamPolyFmt in src/nds/nds_renderer.c. */
-u32 ndsRendererLabSeamAdvanceArm(void);
-u32 ndsRendererLabSeamArm(void);
-#endif
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-extern volatile NDSRendererScreenSpaceCensusRow
-    gNdsRendererScreenSpaceCensus[NDS_RENDERER_PROFILE_OWNER_COUNT]
-                                   [NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT];
-extern volatile u64 gNdsRendererScreenSpaceStageOwnerTicks[
-    NDS_RENDERER_SCREEN_SPACE_CENSUS_STAGE_OWNER_COUNT];
-extern volatile u32 gNdsRendererScreenSpaceCensusArmed;
-extern volatile u32 gNdsRendererScreenSpaceCensusResetRequested;
-extern volatile u32 gNdsRendererScreenSpaceCensusFrameCount;
-extern volatile u32 gNdsRendererScreenSpaceCensusOverflowCount;
-#endif
-#if NDS_RENDER_ECONOMY
-extern volatile u32 gNdsRendererEconomyConfiguredOwnerMask;
-extern volatile u32 gNdsRendererEconomyActiveOwnerMask;
-extern volatile u32 gNdsRendererEconomyAppliedOwnerMask;
-extern volatile u32 gNdsRendererEconomySkippedRunCount;
-extern volatile u32 gNdsRendererEconomySkippedTriangleCount;
-#endif
 /* BUGS ROW 6, AND DELIBERATELY OUTSIDE EVERY GUARD BELOW.
  * ndsRendererAdapterPrepareNativeStageOwner's reject path aborts the pinned
  * static-texture corpus, which discards the whole hardware texture cache and
@@ -2220,145 +1792,6 @@ extern volatile u32 gNdsRendererStageOwnerAbortCount;
 extern volatile u32 gNdsRendererStageOwnerPostArmRejectCount;
 extern volatile u32 gNdsRendererStaticTexturePreparedNow;
 
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-extern volatile u32 gNdsRendererM3PreflightAttemptCount;
-extern volatile u32 gNdsRendererM3PreflightSuccessCount;
-extern volatile u32 gNdsRendererM3PreflightFallbackCount;
-extern volatile u32 gNdsRendererM3SegmentCount;
-extern volatile u32 gNdsRendererM3SegmentMask;
-extern volatile u32 gNdsRendererM3PostArmFailureCount;
-extern volatile u32 gNdsRendererM3DObjCount;
-extern volatile u32 gNdsRendererM3BindingCount;
-extern volatile u32 gNdsRendererM3RunCount;
-extern volatile u32 gNdsRendererM3TriangleCount;
-extern volatile u32 gNdsRendererM3ResidentEpochCount;
-extern volatile u32 gNdsRendererM3MaterialShadowCount;
-extern volatile u32 gNdsRendererM3MaterialCommitCount;
-extern volatile u32 gNdsRendererM3CrossRunCount;
-extern volatile u32 gNdsRendererM3CrossTriangleCount;
-extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
-extern volatile u32 gNdsRendererM3TopologyFullValidationCount;
-extern volatile u32 gNdsRendererM3TopologyCacheHitCount;
-extern volatile u32 gNdsRendererM3TopologyStampMismatchCount;
-#if NDS_TASK36_HW_COMPOSE
-extern volatile u32 gNdsRendererTask36HardwareComposedDObjCount;
-extern volatile u32 gNdsRendererTask36CameraLoadCount;
-extern volatile u32 gNdsRendererTask36WorldMultCount;
-extern volatile u32 gNdsRendererTask36AdapterRejectReason;
-extern volatile u32 gNdsRendererTask36RendererRejectReason;
-extern volatile u32 gNdsRendererTask36PrepareRunRejectReason;
-extern volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
-extern volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
-extern volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
-#if NDS_TASK44_STAGE_STEADY
-/* Task 44 item 3 accounting. Admit = generation compare passed and the full
- * four-asset/topology validation was skipped. Revalidate = the generation moved
- * or the cheap segment guard failed, so the full path ran. Their sum is the
- * preparation count; a revalidation that never fires across a stage-asset
- * invalidation event is the failure this pair exists to catch. */
-extern volatile u32 gNdsRendererTask44SteadyAdmitCount;
-extern volatile u32 gNdsRendererTask44RevalidateCount;
-extern volatile u32 gNdsRendererTask44AdmissionGeneration;
-#endif
-#endif
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
-extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0SuccessCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0PreGxFallbackCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0RunCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0TriangleCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0EpochCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0MaterialCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0CertificateValidationCount;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowDenseCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowStateEntryCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowSyncCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowMismatchCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount;
-extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount;
-#endif
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-extern volatile u32 gNdsRendererM3TopologyFaultInjectionCount;
-extern volatile u32 gNdsRendererM3TopologyFaultRevalidationCount;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-extern volatile u32 gNdsRendererM3Phase0PreflightTicks;
-extern volatile u32 gNdsRendererM3Phase0PrepareRunTicks;
-extern volatile u32 gNdsRendererM3Phase0VertexPrepareTicks;
-extern volatile u32 gNdsRendererM3Phase0NearTransformTicks;
-extern volatile u32 gNdsRendererM3Phase0RunTransitionTicks;
-extern volatile u32 gNdsRendererM3Phase0RawEmitTicks;
-extern volatile u32 gNdsRendererM3Phase0RangeEmitTicks;
-extern volatile u32 gNdsRendererM3Phase0NoZEmitTicks;
-extern volatile u32 gNdsRendererM3Phase0NoZMatrixTicks;
-extern volatile u32 gNdsRendererM3Phase0AccountingTicks;
-extern volatile u32 gNdsRendererM3Phase0CommitTicks;
-extern volatile u32 gNdsRendererM3Phase0TimerReadCount;
-extern volatile u32 gNdsRendererM3Phase0TimerSpanCount;
-extern volatile u32 gNdsRendererM3Phase0CalibrationTicks;
-extern volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
-extern volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
-extern volatile u32 gNdsRendererM3Phase0NearTransformCount;
-extern volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
-extern volatile u32 gNdsRendererM3ResidualPrepareTicks;
-extern volatile u32 gNdsRendererM3ResidualVertexTicks;
-extern volatile u32 gNdsRendererM3ResidualNearTicks;
-extern volatile u32 gNdsRendererM3ResidualKeyTicks;
-extern volatile u32 gNdsRendererM3ResidualKeyHitCount;
-extern volatile u32 gNdsRendererM3ResidualKeyMissCount;
-extern volatile u32 gNdsRendererM3ResidualKeyByteCount;
-extern volatile u32 gNdsRendererM3ResidualRunCount;
-extern volatile u32 gNdsRendererM3ResidualDenseCount;
-extern volatile u32 gNdsRendererM3ResidualNearCount;
-extern volatile u32 gNdsRendererM3G2TextureParamWriteCount;
-extern volatile u32 gNdsRendererM3G2TextureParamSkipCount;
-extern volatile u32 gNdsRendererM3G2MatrixModeWriteCount;
-extern volatile u32 gNdsRendererM3G2MatrixModeSkipCount;
-extern volatile u32 gNdsRendererM3G2PolyFmtWriteCount;
-extern volatile u32 gNdsRendererM3G2PolyFmtSkipCount;
-extern volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
-extern volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
-extern volatile u32 gNdsRendererPhase05PresentHardwareTicks;
-extern volatile u32 gNdsRendererPhase05GCDrawAllTicks;
-extern volatile u32 gNdsRendererPhase05StageTransitionTicks;
-extern volatile u32 gNdsRendererPhase05FighterWrapperTicks;
-extern volatile u32 gNdsRendererPhase05FrameResetTicks;
-extern volatile u32 gNdsRendererPhase05PresentTailTicks;
-extern volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
-extern volatile u32 gNdsRendererPhase05ProfilePublishTicks;
-extern volatile u32 gNdsRendererPhase05FlushPrepTicks;
-extern volatile u32 gNdsRendererPhase05TimerReadCount;
-extern volatile u32 gNdsRendererPhase05TimerSpanCount;
-extern volatile u32 gNdsRendererPhase05CalibrationTicks;
-extern volatile u32 gNdsRendererPhase05CalibrationIntervals;
-extern volatile u32 gNdsRendererPhase05WallpaperRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
-extern volatile u32 gNdsRendererPhase05WallpaperFullRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperIncrementalRowCount;
-extern volatile u32 gNdsRendererPhase05WallpaperChangedXCount;
-extern volatile u32 gNdsRendererPhase05WallpaperChangedRunCount;
-extern volatile u32 gNdsRendererPhase05WallpaperLongestChangedRun;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Count;
-extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Pixels;
-extern volatile u32 gNdsRendererPhase05WallpaperScalarStoreCount;
-extern volatile u32 gNdsRendererPhase05WallpaperPackedStoreCount;
-extern volatile u32 gNdsRendererPhase05WallpaperDmaPixelCount;
-extern volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
-#endif
-#endif
 extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
@@ -2555,7 +1988,7 @@ extern volatile u32 gNdsRendererBattleTextureFallbackFirstHeight;
 extern volatile u32 gNdsRendererBattleTextureFallbackFirstFlags;
 extern volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW0;
 extern volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW1;
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 extern volatile u32 gNdsRendererBenchmarkSinkHashA;
 extern volatile u32 gNdsRendererBenchmarkSinkHashB;
 extern volatile u32 gNdsRendererBenchmarkSegment0SinkWords;

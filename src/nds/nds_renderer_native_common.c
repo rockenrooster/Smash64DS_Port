@@ -209,96 +209,6 @@ static inline void ndsRendererFastEmitRawCommand(
     }
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererFastCommitRawSemanticTriangle(
-    NDSRendererStats *stats,
-    NDSRendererTraversalState *state,
-    u32 packed,
-    const u32 *indices)
-{
-    NDSRendererSemanticEvent event;
-    u32 vertex_number;
-
-    memset(&event, 0, sizeof(event));
-    event.owner = (u32)sNdsRendererProfileOwner;
-    event.owner_occurrence =
-        sNdsRendererSemanticSourceProvenance.owner_occurrence;
-    event.list_ordinal =
-        sNdsRendererSemanticSourceProvenance.list_ordinal;
-    event.branch_path = state->semantic_branch_path;
-    event.command_index = state->semantic_command_index;
-    event.tri2_half = state->semantic_tri2_half;
-    event.outcome = NDS_RENDERER_SEMANTIC_EMITTED;
-    event.packed = packed;
-    event.submit_class =
-        NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
-    event.source_state_hash = ndsRendererSemanticSourceStateHash(stats);
-    event.raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
-    event.context_flags = state->texture_prepare_vertex_flags;
-    event.source_zbuffered = TRUE;
-    event.zbuffered = TRUE;
-    event.raw_submit = TRUE;
-    event.poly_alpha = state->texture_prepare_poly_alpha;
-    event.poly_fmt = state->texture_prepare_poly_fmt;
-    event.alpha_key = ndsRendererHardwareAlphaStateKey(stats);
-    event.fog_key = ndsRendererHardwareFogStateKey(stats);
-    event.fog_color = stats->fog_color;
-    event.fog_min = stats->fog_min;
-    event.fog_max = stats->fog_max;
-    event.fog_status = stats->fog_status;
-    event.texture_name = state->texture_prepare_name;
-    event.texture_key_hash = state->texture_prepare_key_hash;
-    event.texture_params = state->texture_prepare_params;
-    event.matrix_loaded = sNdsRendererHardwareMatrixLoaded;
-    event.matrix_mode = sNdsRendererHardwareMatrixMode;
-    event.matrix_generation = sNdsRendererHardwareMatrixGeneration;
-    event.matrix_signature = sNdsRendererHardwareMatrixSignature;
-    event.no_z_depth_before = sNdsRendererHardwareProjectedDepth;
-    event.no_z_depth_after = sNdsRendererHardwareProjectedDepth;
-    event.no_z_background_before =
-        sNdsRendererHardwareProjectedBackground;
-    event.no_z_background_after =
-        sNdsRendererHardwareProjectedBackground;
-
-    ndsRendererHardwareRecordOracleTriangle(
-        state, indices[0], indices[1], indices[2]);
-    stats->hardware_oracle_triangle_count++;
-    for (vertex_number = 0u; vertex_number < 3u; vertex_number++)
-    {
-        u32 vertex_index = indices[vertex_number];
-        const NDSRendererInputVertex *vtx =
-            &state->input_vertices[vertex_index];
-        NDSRendererSemanticVertex *vertex = &event.vertex[vertex_number];
-
-        event.vertex_index[vertex_number] = vertex_index;
-        event.vertex_matrix_snapshot[vertex_number] =
-            state->vertex_matrix_snapshot[vertex_index];
-        event.vertex_clip_snapshot[vertex_number] =
-            state->vertex_clip_snapshot[vertex_index];
-        vertex->x = (v16)((s32)vtx->x *
-            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
-        vertex->y = (v16)((s32)vtx->y *
-            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
-        vertex->z = (v16)((s32)vtx->z *
-            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
-        vertex->color = state->prepared_vertex_colors[vertex_index];
-        vertex->valid_flags =
-            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID |
-            NDS_RENDERER_SEMANTIC_VERTEX_COLOR_VALID;
-        if (state->texture_prepare_enabled != 0u)
-        {
-            vertex->s = state->prepared_texcoord_s[vertex_index];
-            vertex->t = state->prepared_texcoord_t[vertex_index];
-            vertex->valid_flags |= NDS_RENDERER_SEMANTIC_VERTEX_ST_VALID;
-            ndsRendererProfileTextureCoord(vertex->s, vertex->t);
-            ndsRendererProfileTextureSample(vertex->s, vertex->t);
-        }
-        ndsRendererProfileVertexRange(
-            vtx, vertex->x, vertex->y, vertex->z);
-    }
-    ndsRendererSemanticCommitEvent(&event);
-}
-#endif
 
 static inline void ndsRendererFastAccountRawTriangles(
     NDSRendererStats *stats,
@@ -307,29 +217,6 @@ static inline void ndsRendererFastAccountRawTriangles(
 {
     sNdsRendererHardwareSubmitClassCounts[
         NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += triangle_count;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    {
-        NDSRendererProfileOwnerHotLedger *owner =
-            ndsRendererProfileCurrentOwner();
-
-        if (owner != NULL)
-        {
-            owner->submit_class_count[
-                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] +=
-                    triangle_count;
-        }
-    }
-    NDS_DIAG(gNdsRendererProfileRawCurrentCandidateCount += triangle_count);
-    NDS_DIAG(gNdsRendererProfileHardwareBatchReuseCount += reuse_count);
-    NDS_DIAG(gNdsRendererProfileTexturePrepareReuseCount += reuse_count);
-    gNdsRendererProfileHardwareTriangles += triangle_count;
-    gNdsRendererProfileHardwareVertices += triangle_count * 3u;
-    if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
-        (gNdsRendererProfileHardwareVertices > 6144u))
-    {
-        gNdsRendererProfileHardwareOverLimit = 1u;
-    }
-#else
     sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
         triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
@@ -339,11 +226,10 @@ static inline void ndsRendererFastAccountRawTriangles(
     sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_vertices +=
         triangle_count * 3u;
-#endif
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_zbuffer_triangle_count += triangle_count;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount += triangle_count;
 #endif
     sNdsRendererHardwareSubmitted = TRUE;
@@ -432,9 +318,7 @@ static s32 ndsRendererNativePrepareDirectRun(
     state->texture_prepare_decal_depth = FALSE;
     state->texture_prepare_prim_depth = FALSE;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (state->texture_prepare_valid == 0u)
-#endif
     {
         material_color = ndsRendererHardwareColorSource(stats);
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
@@ -445,19 +329,6 @@ static s32 ndsRendererNativePrepareDirectRun(
                  NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u) |
             ((use_vertex_color != FALSE) ?
                  NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (stats->texture_combine_count != 0u)
-        {
-            if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
-            {
-                NDS_DIAG(gNdsRendererProfileLitShadeCombineCount++);
-            }
-            if (use_material_color != FALSE)
-            {
-                NDS_DIAG(gNdsRendererProfileMaterialCombineCount++);
-            }
-        }
-#endif
     }
     if (state->texture_prepare_valid == 0u)
     {
@@ -480,12 +351,6 @@ static s32 ndsRendererNativePrepareDirectRun(
             ndsRendererHardwareTextureImplicitStateOn(stats);
         use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
             ndsRendererHardwareBindTexture(stats, config, state) : FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->texture_prepare_key_hash = (use_texture != FALSE) ?
-            sNdsRendererSemanticLastTextureKeyHash : 0u;
-        state->texture_prepare_params = (use_texture != FALSE) ?
-            sNdsRendererSemanticLastTextureParams : 0u;
-#endif
         state->texture_prepare_valid = TRUE;
         state->texture_prepare_enabled =
             (use_texture != FALSE) ? TRUE : FALSE;
@@ -525,22 +390,7 @@ static s32 ndsRendererNativePrepareDirectRun(
         use_texture =
             (state->texture_prepare_enabled != 0u) ? TRUE : FALSE;
         ndsRendererProfileRecordTexturePrepareReuse();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (use_texture != FALSE)
-        {
-            state->texture_prepare_vertex_flags |=
-                NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
-        }
-#endif
     }
-#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
-    if (use_texture != FALSE)
-    {
-        state->texture_prepare_vertex_flags &=
-            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
-              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
-    }
-#endif
 
     state->texture_prepare_vertex_flags =
         (state->texture_prepare_vertex_flags &
@@ -581,27 +431,6 @@ static s32 ndsRendererNativePrepareDirectRun(
 #define NDS_R2_DELTA_CENSUS \
     (NDS_TASK91_DRAW_PHASE_CENSUS && !NDS_R2_SPAN_LEAN_TIMING)
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E20 falsifier state. Indexed by NDSNativeStateDelta::effect; 16 covers
- * the eleven cases the switch handles with room to spare. */
-#define NDS_R2_DELTA_EFFECT_MAX 16u
-/* R2-03 E25c. Indexed by NDS_NATIVE_STATE_*; 2..14 are the live effects. */
-u32 gNdsR2DeltaEffectCounts[16];
-u32 gNdsR2SpanIdenticalOperands;
-u32 gNdsR2SpanIdenticalGeometry;
-u32 gNdsR2SpanMaterialInvalidations;
-/* R2-03 E27 is REFUTED and its probe is gone. It counted material applications
- * arriving with the texture prepare still valid -- the full re-prepares a split
- * validity would avoid -- and measured 2.0/frame against 28.0 material
- * applications: 26 of 28 invalidate a prepare the before-span deltas had already
- * dirtied. ~1,800 ticks, below the noise floor. See
- * docs/optimization/ClaudeOpus5_R203_E28_DeadSoftLight_20260728.md. The probe
- * also read state.texture_prepare_valid here, which the M3 stage falsifier
- * rejects as an unclassified read in this function. */
-static u32 sNdsR2DeltaLastW0[NDS_R2_DELTA_EFFECT_MAX];
-static u32 sNdsR2DeltaLastW1[NDS_R2_DELTA_EFFECT_MAX];
-static u8 sNdsR2DeltaLastValid[NDS_R2_DELTA_EFFECT_MAX];
-#endif
 
 /* P2-2 placement-only reclaim: this 72-byte root preamble is the companion to
  * the 152-byte production preamble moved out above.  Both execute at root
@@ -631,9 +460,6 @@ ndsRendererNativeApplyRootLightPreamble(
     stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK |
         NDS_RENDERER_LIGHT_COLOR_2_MASK;
     stats->light_color_command_count += 4u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    NDS_DIAG(gNdsRendererProfileLightColorCommands += 4u);
-#endif
 }
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
@@ -789,27 +615,6 @@ ndsRendererNativeApplyStateDelta(
     }
 }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E20. E19 established that the state spans cannot be priced by deleting
- * them -- they are load-bearing, and removing them takes the emit with them. So
- * this asks R2-02 F's question instead: how much of the replay is REDUNDANT.
- * There are 70 fighter state deltas; a frame stamp per delta says how many of
- * the applications in a frame are re-applying a delta that frame already
- * applied. That fraction, not the phase total, is what a guard could actually
- * elide -- it prices the achievable cut rather than the whole phase. */
-u32 gNdsR2SpanCalls;
-u32 gNdsR2SpanDeltasApplied;
-u32 gNdsR2SpanDeltaRepeats;
-/* R2-03 E38. Splits the replay across the material that sits between the two
- * spans, which decides how much of E26 is worth building. */
-u32 gNdsR2SpanBeforeTicks;
-u32 gNdsR2SpanBeforeDeltas;
-u32 gNdsR2SpanAfterTicks;
-u32 gNdsR2SpanAfterDeltas;
-#if NDS_R2_DELTA_CENSUS
-static u32 sNdsR2DeltaLastFrame[70];
-#endif
-#endif
 
 static void
 ndsRendererNativeApplyStateSpan(
@@ -832,9 +637,6 @@ ndsRendererNativeApplyStateSpan(
     {
         return;
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    NDS_DIAG(gNdsR2SpanCalls++);
-#endif
     for (i = 0u; i < count; i++)
     {
         u32 delta_index =
@@ -876,17 +678,6 @@ static void ndsRendererNativeApplyMaterial(
         return;
     }
     ndsRendererNativeSourceBoundary(state);
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    {
-        u32 e;
-
-        NDS_DIAG(gNdsR2SpanMaterialInvalidations++);
-        for (e = 0u; e < NDS_R2_DELTA_EFFECT_MAX; e++)
-        {
-            sNdsR2DeltaLastValid[e] = 0u;
-        }
-    }
-#endif
     effects = material->effects;
     /* Root DE call + generated segment-E table DE jump. The root command is
      * already included in the generated source count; only the table word
@@ -1035,7 +826,6 @@ static void ndsRendererNativeApplyMaterialPreflight(
     sNdsRendererHardwareTriangleBatchOpen = batch_open;
 }
 
-#if NDS_R2_IMPACT_WAVE_NATIVE
 static s32 ndsRendererHardwareBindImpactWaveTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 variant)
@@ -1070,7 +860,6 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
     NDS_DIAG(gNdsImpactWaveNativeTextureBindCount++);
     return TRUE;
 }
-#endif
 
 s32 ndsRendererSubmitNativeImpactWave(
     const NDSRendererInputVertex *vertices, u32 vertex_count,
@@ -1082,7 +871,6 @@ s32 ndsRendererSubmitNativeImpactWave(
     NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_R2_IMPACT_WAVE_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
     const NDSRendererTileState *render_tile;
@@ -1288,14 +1076,6 @@ s32 ndsRendererSubmitNativeImpactWave(
         state.texture_prepare_vertex_flags |=
             NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
     }
-#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
-    if (use_texture != FALSE)
-    {
-        state.texture_prepare_vertex_flags &=
-            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
-              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
-    }
-#endif
     /* Raw-slot preparation supplies colour and UV only. GX receives source
      * positions below and performs the world/view/projection work. */
     ndsRendererFastPrepareRawSlots(
@@ -1335,7 +1115,7 @@ s32 ndsRendererSubmitNativeImpactWave(
                 glVertex3v16(out_x, out_y, out_z);
             }
             sNdsRendererHardwareSubmitted = TRUE;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
             sNdsRendererBenchmarkTriangleCount++;
 #endif
             stats->triangle_count++;
@@ -1377,18 +1157,6 @@ s32 ndsRendererSubmitNativeImpactWave(
 #undef NDS_IMPACT_INVALIDATE
 #undef NDS_IMPACT_HASH
     return TRUE;
-#else
-    (void)vertices;
-    (void)vertex_count;
-    (void)triangle_indices;
-    (void)triangle_count;
-    (void)source_setup;
-    (void)material;
-    (void)variant;
-    (void)config;
-    (void)stats;
-    return FALSE;
-#endif
 }
 
 /* ------------------------------------------------------------------------
@@ -1641,13 +1409,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
                 (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
             inside_mask |= mask;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        else
-        {
-            /* The clipper is not built at this profile level. */
-            return FALSE;
-        }
-#endif
         state.vertex_valid_mask |= mask;
         stats->matrix_transform_count++;
         stats->transformed_vertex_count++;
@@ -1727,7 +1488,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
         const u8 *tri = &indices[i * 3u];
         s32 depth = ndsRendererHardwareNextProjectedDepth();
         u32 corner;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         u32 tri_mask = (1u << tri[0]) | (1u << tri[1]) | (1u << tri[2]);
 
         if ((inside_mask & tri_mask) != tri_mask)
@@ -1750,7 +1510,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
             stats->hardware_projected_depth_triangle_count += fanned;
             continue;
         }
-#endif
         for (corner = 0u; corner < 3u; corner++)
         {
             u32 index = (u32)tri[corner];
@@ -1762,7 +1521,7 @@ s32 ndsRendererSubmitNativeVisualEffect(
             glVertex3v16(projected_x[index], projected_y[index], out_z);
         }
         sNdsRendererHardwareSubmitted = TRUE;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
         sNdsRendererBenchmarkTriangleCount++;
 #endif
         stats->triangle_count++;
@@ -1777,14 +1536,7 @@ s32 ndsRendererSubmitNativeVisualEffect(
     return TRUE;
 }
 
-#if NDS_R2_REBIRTH_HALO_NATIVE
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-volatile u32 gNdsRebirthHaloPhaseTicks[8];
-#define NDS_REBIRTH_PHASE_MARK(slot, before) \
-    do { gNdsRebirthHaloPhaseTicks[(slot)] += cpuGetTiming() - (before); } while (0)
-#else
 #define NDS_REBIRTH_PHASE_MARK(slot, before) do { (void)(before); } while (0)
-#endif
 static s32 ndsRendererHardwareBindRebirthHaloTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 texture_slot, u32 upload_width, u32 upload_height, u32 format)
@@ -2051,7 +1803,6 @@ static void ndsRendererRebirthHaloFinishRoot(
     NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
 }
 
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
 static s32 ndsRendererRebirthHaloBoundsInsideNearPlane(
     const NDSRendererMatrix20p12 *matrix,
     const NDSRebirthHaloBounds *bounds)
@@ -2111,34 +1862,7 @@ static void ndsRendererRebirthHaloLoadNoZMatrix(
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
 
-#if NDS_R2_REBIRTH_HALO_SPLIT_MTX && NDS_R2_REBIRTH_HALO_SPLIT_NOZ
-static void ndsRendererRebirthHaloLoadSplitNoZProjection(
-    const NDSRendererMatrix20p12 *projection,
-    s16 projected_z)
-{
-    NDSRendererMatrix20p12 matrix = *projection;
-    m4x4 hardware;
-    u32 row;
 
-    /* Row-vector convention: clip.z is the dot against projection column 2,
-     * clip.w against column 3.  Setting Zcol = painter_z * Wcol therefore gives
-     * clip.z = painter_z * clip.w for every vertex while leaving X/Y/W and the
-     * modelview/vector matrix untouched. */
-    for (row = 0u; row < 4u; row++)
-    {
-        matrix.m[row][2] = (s32)ndsRendererRoundShiftS64(
-            (s64)matrix.m[row][3] * projected_z, 12u);
-    }
-    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
-    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(&hardware);
-    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    ndsRendererProfileRecordMatrixLoad();
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-}
-#endif
-
-#if NDS_R2_REBIRTH_HALO_HW_LIGHT
 #define NDS_REBIRTH_HALO_NORMAL_PACK(x, y, z) \
     ((((u32)(x)) & 0x3ffu) | \
      (((((u32)(y)) & 0x3ffu)) << 10) | \
@@ -2176,9 +1900,7 @@ static u16 ndsRendererRebirthHaloMaterialColor15(
     return ndsRendererHardwareModulatePackedColor(
         RGB15(r, g, b), color_modulate);
 }
-#endif
 
-#if NDS_R2_REBIRTH_HALO_PACKED_FIFO
 #define NDS_REBIRTH_HALO_PACKET_WORDS 256u
 typedef struct NDSRebirthHaloPacket
 {
@@ -2329,7 +2051,6 @@ static s32 ndsRendererRebirthHaloBuildPackedGroup(
         v16 y = ndsRendererHardwareVertexCoord(vtx->y, TRUE);
         v16 z = ndsRendererHardwareVertexCoord(vtx->z, TRUE);
 
-#if NDS_R2_REBIRTH_HALO_HW_LIGHT
         if (use_hw_light != FALSE)
         {
             u32 normal = NDS_REBIRTH_HALO_NORMAL_PACK(
@@ -2343,7 +2064,6 @@ static s32 ndsRendererRebirthHaloBuildPackedGroup(
             }
         }
         else
-#endif
         {
             u32 shade = ndsRendererHardwareLitShadeColorPrepared(
                 stats, vtx, prepared_direction);
@@ -2441,127 +2161,17 @@ static s32 ndsRendererRebirthHaloPatchPackedColors(
     return TRUE;
 }
 
-#if NDS_R2_REBIRTH_HALO_PACKED_PROJECTED
-static s32 ndsRendererRebirthHaloBuildPackedProjectedGroup(
-    u32 group_index, const NDSRebirthHaloGroup *group,
-    NDSRendererStats *stats, NDSRendererTraversalState *state,
-    const NDSRendererHardwareLightDirection *prepared_direction,
-    u32 use_texture)
-{
-    NDSRebirthHaloPacket *packet;
-    u32 context_flags;
-    u32 triangle;
-
-    if ((group_index >= NDS_REBIRTH_HALO_GROUP_COUNT) ||
-        (group == NULL) || (stats == NULL) || (state == NULL))
-    {
-        return FALSE;
-    }
-    packet = &sNdsRebirthHaloPackets[group_index];
-    packet->valid = 0u;
-    packet->word_count = 0u;
-    packet->pending_count = 0u;
-    packet->dynamic_color_count = 0u;
-    context_flags = state->texture_prepare_vertex_flags;
-
-    for (triangle = 0u; triangle < (u32)group->triangle_count; triangle++)
-    {
-        s32 depth = ndsRendererHardwareNextProjectedDepth();
-        u32 corner;
-
-        for (corner = 0u; corner < 3u; corner++)
-        {
-            u32 source_index =
-                (u32)group->first_vertex + triangle * 3u + corner;
-            const NDSRendererInputVertex *vtx =
-                &sNdsRebirthHaloVertices[source_index];
-            NDSRendererClipVertex20p12 clip;
-            u32 shade = ndsRendererHardwareLitShadeColorPrepared(
-                stats, vtx, prepared_direction);
-            u16 packed_color = ndsRendererHardwarePackedVertexColor(
-                stats, vtx, state->texture_prepare_material_color,
-                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
-                (s32)(context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
-                shade, TRUE, state->color_modulate);
-            v16 projected_x;
-            v16 projected_y;
-            v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
-
-            if (ndsRendererRebirthHaloPacketCommand(
-                    packet, FIFO_COLOR, 1u, (u32)packed_color, 0u, FALSE) == FALSE)
-            {
-                return FALSE;
-            }
-            if (use_texture != FALSE)
-            {
-                t16 s = ndsRendererHardwareTexCoord(
-                    vtx->s, state->texture_prepare_scale_s,
-                    state->texture_prepare_origin_s,
-                    state->texture_prepare_offset);
-                t16 t = ndsRendererHardwareTexCoord(
-                    vtx->t, state->texture_prepare_scale_t,
-                    state->texture_prepare_origin_t,
-                    state->texture_prepare_offset);
-                if (ndsRendererRebirthHaloPacketCommand(
-                        packet, FIFO_TEX_COORD, 1u,
-                        (u32)TEXTURE_PACK(s, t), 0u, FALSE) == FALSE)
-                {
-                    return FALSE;
-                }
-            }
-            ndsRendererTransformVertex20p12(&state->matrix, vtx, &clip);
-            projected_x = ndsRendererHardwareProjectToV16(
-                (s64)clip.x * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
-            projected_y = ndsRendererHardwareProjectToV16(
-                (s64)clip.y * NDS_RENDERER_HW_PROJECTED_VERTEX, clip.w);
-            stats->matrix_transform_count++;
-            stats->transformed_vertex_count++;
-            ndsRendererProfileRecordCPUTransform();
-            ndsRendererProfileRecordSourceVertexLoad();
-            ndsRendererProfileHWVertexRange(projected_x, projected_y, out_z);
-            if (ndsRendererRebirthHaloPacketCommand(
-                    packet, FIFO_VERTEX16, 2u,
-                    ((u32)(u16)projected_x) |
-                        ((u32)(u16)projected_y << 16),
-                    (u32)(s32)out_z, FALSE) == FALSE)
-            {
-                return FALSE;
-            }
-        }
-    }
-    if (ndsRendererRebirthHaloPacketFlush(packet) == FALSE)
-    {
-        return FALSE;
-    }
-    DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
-    packet->valid = 1u;
-    NDS_DIAG(gNdsRebirthHaloPackedBuildCount++);
-    NDS_DIAG(gNdsRebirthHaloPackedWordCount += packet->word_count);
-    return TRUE;
-}
-#endif
 
 static void ndsRendererRebirthHaloSubmitPackedGroup(u32 group_index)
 {
     const NDSRebirthHaloPacket *packet = &sNdsRebirthHaloPackets[group_index];
-#if NDS_R2_REBIRTH_HALO_PACKED_FIFO == 2
     NDS_GX_DMA0_WAIT(2u);
     DMA_SRC(0) = (u32)packet->words;
     DMA_DEST(0) = (u32)&GFX_FIFO;
     DMA_CR(0) = DMA_FIFO | packet->word_count;
     NDS_GX_DMA0_WAIT(3u);
-#else
-    u32 word;
-    for (word = 0u; word < (u32)packet->word_count; word++)
-    {
-        GFX_FIFO = packet->words[word];
-    }
-#endif
     NDS_DIAG(gNdsRebirthHaloPackedSubmitCount++);
 }
-#endif
-#endif
-#endif
 
 s32 ndsRendererSubmitNativeRebirthHalo(
     u32 root_offset,
@@ -2569,23 +2179,12 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_R2_REBIRTH_HALO_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
-#if !NDS_R2_REBIRTH_HALO_SPLIT_MTX
-    NDSRendererMatrix20p12 rebirth_raw_matrix;
-#endif
-#endif
     u32 first_group;
     u32 last_group;
     u32 group_index;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
     u32 root_bounds_index;
-#endif
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-    u32 rebirth_phase_t0 = cpuGetTiming();
-#endif
 
     if ((config == NULL) || (stats == NULL))
     {
@@ -2595,25 +2194,19 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     {
         first_group = 0u;
         last_group = 4u;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
         root_bounds_index = 0u;
-#endif
     }
     else if (root_offset == 0x2a88u)
     {
         first_group = 4u;
         last_group = 5u;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
         root_bounds_index = 1u;
-#endif
     }
     else if (root_offset == 0x27e8u)
     {
         first_group = 5u;
         last_group = 6u;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
         root_bounds_index = 2u;
-#endif
     }
     else
     {
@@ -2647,10 +2240,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
      * immutable AABB instead: the near predicate is linear in clip space, so
      * all eight AABB corners inside implies every enclosed source vertex is
      * inside.  Anything touching the danger band still falls back before GX. */
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
-#if NDS_R2_REBIRTH_HALO_SPLIT_MTX && !NDS_R2_REBIRTH_HALO_SPLIT_NOZ && \
-    !NDS_R2_REBIRTH_HALO_PACKED_PROJECTED && \
-    ((NDS_R2_REBIRTH_HALO_GX_GROUP_MASK & 0x3f) == 0x3f)
     /* Split source matrices, natural Z, every group transformed by the GX:
      * the hardware owns the multiply, divide and near-plane clip, and no CPU
      * projection or synthetic depth is made, so the danger band does not
@@ -2662,63 +2251,21 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     {
         NDS_DIAG(gNdsRebirthHaloNearPlaneGxCount++);
     }
-#else
-    if (ndsRendererRebirthHaloBoundsInsideNearPlane(
-            &state.matrix, &sNdsRebirthHaloRootBounds[root_bounds_index]) == FALSE)
-    {
-        return FALSE;
-    }
-#endif
-#else
-    for (group_index = first_group; group_index < last_group; group_index++)
-    {
-        const NDSRebirthHaloGroup *group = &sNdsRebirthHaloGroups[group_index];
-        u32 corner_count = (u32)group->triangle_count * 3u;
-        u32 corner;
 
-        for (corner = 0u; corner < corner_count; corner++)
-        {
-            NDSRendererClipVertex20p12 clip;
-            const NDSRendererInputVertex *vtx =
-                &sNdsRebirthHaloVertices[(u32)group->first_vertex + corner];
-            ndsRendererTransformVertex20p12(&state.matrix, vtx, &clip);
-            if (ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w) == FALSE)
-            {
-                return FALSE;
-            }
-        }
-    }
-#endif
-
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-    NDS_REBIRTH_PHASE_MARK(0u, rebirth_phase_t0);
-    rebirth_phase_t0 = cpuGetTiming();
-#endif
 
     ndsRendererHardwareEndBatch();
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
     /* Two lab routes are deliberately kept side by side.  The composed route
      * preserves the accepted owner's CPU multiply and synthetic no-Z contract.
      * SPLIT_MTX retries the earlier experiment whose screenshot was externally
      * contaminated: the DS receives source projection and modelview separately
      * and owns their multiply, projection, divide, clipping, and natural Z. */
-#if NDS_R2_REBIRTH_HALO_SPLIT_MTX
     if ((state.projection_valid == 0u) || (state.modelview_valid == 0u))
     {
         return FALSE;
     }
     ndsRendererLoadHardwareSplitMatrices(
         &state.projection, &state.modelview, state.matrix_generation);
-#else
-    ndsRendererLoadHardwareRawComposedMatrix(
-        &state.matrix, state.matrix_generation);
-    ndsRendererBuildRawHardwareMatrix(&state.matrix, &rebirth_raw_matrix);
-#endif
     NDS_DIAG(gNdsRebirthHaloFullOffloadRootCount++);
-#endif
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-    NDS_REBIRTH_PHASE_MARK(1u, rebirth_phase_t0);
-#endif
     for (group_index = first_group; group_index < last_group; group_index++)
     {
         const NDSRebirthHaloGroup *group = &sNdsRebirthHaloGroups[group_index];
@@ -2726,31 +2273,19 @@ s32 ndsRendererSubmitNativeRebirthHalo(
         NDSRendererHardwareLightDirection direction;
         u32 use_texture;
         u32 triangle;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
         u32 use_gx_group =
             ((NDS_R2_REBIRTH_HALO_GX_GROUP_MASK & (1u << group_index)) != 0u) ?
                 TRUE : FALSE;
-#endif
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && \
-    (NDS_R2_REBIRTH_HALO_HW_LIGHT || NDS_R2_REBIRTH_HALO_PACKED_FIFO)
         u32 use_hw_light = FALSE;
-#endif
 
         /* Seed slot 0 before deriving the group's alpha/material preparation. */
         state.input_vertices[0] =
             sNdsRebirthHaloVertices[(u32)group->first_vertex];
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-        rebirth_phase_t0 = cpuGetTiming();
-#endif
         if (ndsRendererRebirthHaloPrepareGroup(
                 group_index, stats, &state, &use_texture) == FALSE)
         {
             return FALSE;
         }
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-        NDS_REBIRTH_PHASE_MARK(2u, rebirth_phase_t0);
-        rebirth_phase_t0 = cpuGetTiming();
-#endif
         if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
             ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
         {
@@ -2760,15 +2295,10 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                 &direction);
             prepared_direction = &direction;
         }
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
         if (use_gx_group == FALSE)
         {
             ndsRendererLoadHardwareMatrices(NULL, FALSE);
         }
-#else
-        ndsRendererLoadHardwareMatrices(NULL, FALSE);
-#endif
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
         {
             use_hw_light = ((group_index <= 1u) &&
                             (prepared_direction != NULL)) ? TRUE : FALSE;
@@ -2802,22 +2332,12 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                 state.texture_prepare_poly_fmt |= POLY_FORMAT_LIGHT0;
             }
         }
-#endif
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-        NDS_REBIRTH_PHASE_MARK(3u, rebirth_phase_t0);
-        rebirth_phase_t0 = cpuGetTiming();
-#endif
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, state.texture_prepare_name,
             state.texture_prepare_poly_fmt,
             sNdsRendererHardwareMatrixMode,
             sNdsRendererHardwareMatrixGeneration);
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-        NDS_REBIRTH_PHASE_MARK(4u, rebirth_phase_t0);
-        rebirth_phase_t0 = cpuGetTiming();
-#endif
 
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_PACKED_FIFO
         /* Packet topology/geometry/texcoords are immutable. Software-lit groups
          * record the COLOR parameter offsets once, then patch only those live
          * words before DMA; hardware-lit packets need no per-frame patching. */
@@ -2828,73 +2348,22 @@ s32 ndsRendererSubmitNativeRebirthHalo(
             ndsRendererRebirthHaloPatchPackedColors(
                 group_index, group, stats, &state, prepared_direction) != FALSE)
         {
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-            NDS_REBIRTH_PHASE_MARK(5u, rebirth_phase_t0);
-            rebirth_phase_t0 = cpuGetTiming();
-#endif
-            ndsRendererRebirthHaloSubmitPackedGroup(group_index);
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-            NDS_REBIRTH_PHASE_MARK(6u, rebirth_phase_t0);
-            rebirth_phase_t0 = cpuGetTiming();
-#endif
-            sNdsRendererHardwareSubmitted = TRUE;
-            stats->triangle_count += group->triangle_count;
-            stats->transformed_triangle_count += group->triangle_count;
-            stats->hardware_triangle_count += group->triangle_count;
-            stats->hardware_vertex_count += (u32)group->triangle_count * 3u;
-            ndsRendererHardwareEndBatch();
-#if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
-            NDS_REBIRTH_PHASE_MARK(7u, rebirth_phase_t0);
-#endif
-            continue;
-        }
-#if NDS_R2_REBIRTH_HALO_PACKED_PROJECTED
-        if ((use_gx_group == FALSE) &&
-            ndsRendererRebirthHaloBuildPackedProjectedGroup(
-                group_index, group, stats, &state, prepared_direction,
-                use_texture) != FALSE)
-        {
-            u32 profile_triangle;
             ndsRendererRebirthHaloSubmitPackedGroup(group_index);
             sNdsRendererHardwareSubmitted = TRUE;
             stats->triangle_count += group->triangle_count;
             stats->transformed_triangle_count += group->triangle_count;
             stats->hardware_triangle_count += group->triangle_count;
             stats->hardware_vertex_count += (u32)group->triangle_count * 3u;
-            stats->hardware_projected_depth_triangle_count +=
-                group->triangle_count;
-            for (profile_triangle = 0u;
-                 profile_triangle < (u32)group->triangle_count;
-                 profile_triangle++)
-            {
-                ndsRendererProfileRecordProjectedSubmit();
-                ndsRendererProfileRecordHardwareTriangle();
-            }
             ndsRendererHardwareEndBatch();
             continue;
         }
-#endif
-#endif
 
         for (triangle = 0u; triangle < (u32)group->triangle_count; triangle++)
         {
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
             if (use_gx_group != FALSE)
             {
                 u32 context_flags = state.texture_prepare_vertex_flags;
                 u32 corner;
-#if NDS_R2_REBIRTH_HALO_SPLIT_MTX
-#if NDS_R2_REBIRTH_HALO_SPLIT_NOZ
-                s16 depth = (s16)ndsRendererHardwareNextProjectedDepth();
-
-                ndsRendererRebirthHaloLoadSplitNoZProjection(
-                    &state.projection, depth);
-#endif
-#else
-                s16 depth = (s16)ndsRendererHardwareNextProjectedDepth();
-
-                ndsRendererRebirthHaloLoadNoZMatrix(&rebirth_raw_matrix, depth);
-#endif
 
                 /* Every source corner is already immutable/AOT and the group
                  * state above is constant for the whole run.  Bypass the
@@ -2905,7 +2374,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                         (u32)group->first_vertex + triangle * 3u + corner;
                     const NDSRendererInputVertex *vtx =
                         &sNdsRebirthHaloVertices[source_index];
-#if NDS_R2_REBIRTH_HALO_HW_LIGHT
                     if (use_hw_light != FALSE)
                     {
                         glNormal(NDS_REBIRTH_HALO_NORMAL_PACK(
@@ -2915,7 +2383,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                     }
                     else
                     {
-#endif
                     u32 shade = ndsRendererHardwareLitShadeColorPrepared(
                         stats, vtx, prepared_direction);
                     u16 packed_color = ndsRendererHardwarePackedVertexColor(
@@ -2927,9 +2394,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                         shade, TRUE, state.color_modulate);
 
                     glColor(packed_color);
-#if NDS_R2_REBIRTH_HALO_HW_LIGHT
                     }
-#endif
                     if (use_texture != FALSE)
                     {
                         glTexCoord2t16(
@@ -2949,14 +2414,11 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                 }
             }
             else
-#endif
             {
             v16 projected_x[3];
             v16 projected_y[3];
             u16 packed_color[3];
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
             u32 packed_normal[3];
-#endif
             t16 prepared_s[3];
             t16 prepared_t[3];
             u32 context_flags = state.texture_prepare_vertex_flags;
@@ -2979,7 +2441,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                     (s32)(context_flags &
                           NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
                     shade, TRUE, state.color_modulate);
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
                 if (use_hw_light != FALSE)
                 {
                     packed_normal[corner] = NDS_REBIRTH_HALO_NORMAL_PACK(
@@ -2987,7 +2448,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
                         ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->g),
                         ndsRendererRebirthHaloNormalComponent((s32)(s8)vtx->b));
                 }
-#endif
                 if (use_texture != FALSE)
                 {
                     prepared_s[corner] = ndsRendererHardwareTexCoord(
@@ -3013,13 +2473,11 @@ s32 ndsRendererSubmitNativeRebirthHalo(
             {
                 v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
 
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD && NDS_R2_REBIRTH_HALO_HW_LIGHT
                 if (use_hw_light != FALSE)
                 {
                     glNormal(packed_normal[corner]);
                 }
                 else
-#endif
                 {
                     glColor(packed_color[corner]);
                 }
@@ -3037,16 +2495,11 @@ s32 ndsRendererSubmitNativeRebirthHalo(
             stats->transformed_triangle_count++;
             stats->hardware_triangle_count++;
             stats->hardware_vertex_count += 3u;
-#if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
             if (use_gx_group == FALSE)
             {
                 stats->hardware_projected_depth_triangle_count++;
                 ndsRendererProfileRecordProjectedSubmit();
             }
-#else
-            stats->hardware_projected_depth_triangle_count++;
-            ndsRendererProfileRecordProjectedSubmit();
-#endif
             ndsRendererProfileRecordHardwareTriangle();
         }
         ndsRendererHardwareEndBatch();
@@ -3054,12 +2507,6 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     ndsRendererRebirthHaloFinishRoot(root_offset, stats, &state);
     stats->end_command_count++;
     return TRUE;
-#else
-    (void)root_offset;
-    (void)config;
-    (void)stats;
-    return FALSE;
-#endif
 }
 #undef NDS_REBIRTH_PHASE_MARK
 
@@ -3105,15 +2552,10 @@ static void ndsRendererNativeLoadVertexBlock(
     NDSRendererTraversalState *state)
 {
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u32 *prepared_light_shade_lut = NULL;
-#endif
     u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     u32 i;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    stats->source_vertex_count += count;
-#endif
     if ((v0 + count) > stats->vertex_count)
     {
         stats->vertex_count = v0 + count;
@@ -3134,7 +2576,6 @@ static void ndsRendererNativeLoadVertexBlock(
             state->prepared_light_direction_valid = TRUE;
         }
         prepared_light_direction = &state->prepared_light_direction;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((stats->light_color_mask &
              (NDS_RENDERER_LIGHT_COLOR_1_MASK |
               NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
@@ -3144,7 +2585,6 @@ static void ndsRendererNativeLoadVertexBlock(
             prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut(
                 stats->light_color_1, stats->light_color_2);
         }
-#endif
     }
     for (i = 0u; i < count; i++)
     {
@@ -3162,7 +2602,6 @@ static void ndsRendererNativeLoadVertexBlock(
         {
             state->raw_vertex_fit_mask &= ~mask;
         }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (prepared_light_shade_lut != NULL)
         {
             state->vertex_colors[index] =
@@ -3171,7 +2610,6 @@ static void ndsRendererNativeLoadVertexBlock(
                     prepared_light_shade_lut);
         }
         else
-#endif
         {
             state->vertex_colors[index] =
                 ndsRendererHardwareLitShadeColorPrepared(
@@ -3187,20 +2625,12 @@ static void ndsRendererNativeLoadVertexBlock(
         {
             state->current_transform_vertex_mask |= mask;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (state->matrix_valid != 0u)
-        {
-            (void)ndsRendererTransformCachedVertex(
-                stats, state, index, &state->matrix, matrix_snapshot);
-        }
-#else
         if ((state->matrix_valid != 0u) &&
             (matrix_snapshot == NDS_RENDERER_MATRIX_SNAPSHOT_INVALID))
         {
             (void)ndsRendererTransformCachedVertex(
                 stats, state, index, &state->matrix, matrix_snapshot);
         }
-#endif
     }
     sNdsRendererHardwareSourceVertexLoadCount += count;
 }
@@ -3257,13 +2687,8 @@ static void ndsRendererNativeSubmitGenericTriangle(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    state->semantic_command_index = command_index;
-    state->semantic_tri2_half = tri2_half;
-#else
     (void)command_index;
     (void)tri2_half;
-#endif
     if (sNdsRendererHardwareNoOracle == 0u)
     {
         ndsRendererRecordTransformedTriangle(
@@ -3287,7 +2712,6 @@ static inline u32 ndsRendererNativeDecodeTriangle(
            (indices[2] << 1);
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static u32 ndsRendererNativeNormalizeGeometryMode(u32 mode)
 {
     u32 source_cull = mode &
@@ -3332,82 +2756,6 @@ ndsRendererNativeDirectReject(NDSRendererStats *stats)
     return FALSE;
 }
 
-#if NDS_LAB_NO_CULL
-/* BUGS.md #10 / P2-3r17 seam probe. One binary, four arms, cycled by SELECT --
- * the only DS key the battle input map leaves unbound -- so a single
- * capture-melonds.ps1 session photographs the CONTROL and a candidate arm at
- * the same camera, from the same ROM, with the arm printed on the HUD.
- *
- * The two failures this shape exists to prevent have both actually happened on
- * this row. 2026-07-27's "culling REFUTED" was worthless because the probe only
- * patched ndsRendererNativeBeginHierarchyBatch, which the production owner
- * (mode 8/9) never calls: it looked exactly like a probe that had run and
- * found nothing. And comparing two separate builds/captures put a pose and a
- * camera between the arms. Arm 2 INVERTS the cull, so a probe that is not
- * reaching the geometry cannot be mistaken for one that is -- the fighter must
- * render visibly inside-out.
- *
- *   0  shipped
- *   1  POLY_CULL_NONE   -- both faces drawn. Splits "the geometry never
- *                          reached the GX" from "the GX culled it", which no
- *                          counter can tell apart.
- *   2  POLY_CULL_FRONT  -- inverted; the arm that proves the probe fires.
- *   3  strips off       -- the Task 56 primitive-group emitter is bypassed for
- *                          the raw corner emitters. Only exists when
- *                          NDS_R2_STRIP_ROUTE compiled both emitters in.
- *
- * AND A CULL ARM IS NOT AN ORACLE FOR MISSING GEOMETRY. Drawing both faces
- * fills a hole's COLOUR in without closing the hole, so an arm judged on "does
- * it look better" reports a fix that is not there -- which is how P2-3r17 read
- * a fix into arm 1 before the owner falsified the whole cull family in one
- * sentence. Judge only on whether the seam is GONE, and only against a
- * frame-locked control.
- *
- * Fighters only: un-culling the stage as well blows past the polygon limits and
- * hangs the ROM. */
-#if NDS_FIGHTER_PACKET_LIVE
-/* THE TRAP THIS PROBE EXISTS TO AVOID, AND IT CAUGHT ME TOO (2026-08-25).
- * With NDS_R2_FIGHTER_PACKET the shipped fighter draw is a DMA replay of a
- * prebuilt GX list (the lean path; the packet recorder until 2026-10-05): the
- * production execute never runs, and the list took
- * `state->texture_prepare_poly_fmt` -- the UNPATCHED value -- before the
- * begin-batch site the probe patches. Arms 1 and 2 then produce
- * BYTE-IDENTICAL frames, which reads exactly like "culling makes no
- * difference". Build the probe with NDS_R2_FIGHTER_PACKET=0. */
-#error "NDS_LAB_NO_CULL needs NDS_R2_FIGHTER_PACKET=0; a packet replay ignores every arm"
-#endif
-#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
-#define NDS_LAB_SEAM_ARM_COUNT 5u
-#define NDS_LAB_SEAM_STRIP_ARM 3u
-#define NDS_LAB_SEAM_SOURCE_WORLD_ARM 4u
-#else
-#define NDS_LAB_SEAM_ARM_COUNT 4u
-#define NDS_LAB_SEAM_STRIP_ARM 0xffu
-#define NDS_LAB_SEAM_SOURCE_WORLD_ARM 3u
-#endif
-/* DTCM, not cached main RAM. CSS preview rendering can read this before the
- * battle-start GDB selector writes it; an aligned private main-RAM cache line
- * still retains that old zero behind melonDS's physical-memory write. Keeping
- * the lab control in DTCM makes both SELECT and exact-frame GDB selection
- * coherent without a production cache flush. */
-volatile u32 gNdsLabSeamArm
-    __attribute__((section(".dtcm.bss"), aligned(32)));
-
-static inline u32 ndsRendererNativeLabSeamPolyFmt(u32 poly_fmt)
-{
-    u32 arm = gNdsLabSeamArm;
-
-    if (arm == 2u)
-    {
-        return (poly_fmt & ~(u32)POLY_CULL_NONE) | (u32)POLY_CULL_FRONT;
-    }
-    if (arm == 1u)
-    {
-        return (poly_fmt & ~(u32)POLY_CULL_NONE) | (u32)POLY_CULL_NONE;
-    }
-    return poly_fmt;
-}
-#endif
 
 /* Captain is the first production fighter whose source roots use
  * G_AC_THRESHOLD. Keep the DS register writes out of the packed ITCM submit
@@ -3439,11 +2787,6 @@ static inline void ndsRendererNativeBeginDirectBatch(
     u32 alpha_key =
         (stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) |
         ((stats->blend_color & 0xffu) << 8);
-#if NDS_LAB_NO_CULL
-    /* THE production owner's batch. Mode 8 and mode 9 both come here and never
-     * reach the hierarchy batch, so this is the site the probe has to patch. */
-    poly_fmt = ndsRendererNativeLabSeamPolyFmt(poly_fmt);
-#endif
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
@@ -3525,14 +2868,9 @@ static void ndsRendererNativeApplyProductionPreamble(
 /* Hoisted from the shade block below so BindProductionRoot can test it: with the
  * skip active the fighter path never prepares a software light direction, which
  * is what removes the last reader of the traversal state's own modelview. */
-#if NDS_R2_FIGHTER_HW_LIGHT && !NDS_RENDERER_M2_DETAILED_LEDGER && \
-    !NDS_R2_FIGHTER_SOFT_LIGHT_KEEP
 #define NDS_R2_SHADE_SKIP_SOFT_LIGHT 1
-#else
-#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 0
-#endif
 
-#if NDS_R2_FIGHTER_GX_COMPOSE && !NDS_R2_SHADE_SKIP_SOFT_LIGHT
+#if !NDS_R2_SHADE_SKIP_SOFT_LIGHT
 /* Slice 43's other half of the assertion at the GX compose loader. Without the
  * skip, BindProductionRoot below copies `input->modelview_matrix` into the
  * traversal state for the software light -- and under GX compose that pointer is
@@ -3558,7 +2896,7 @@ static void ndsRendererNativeBindProductionRoot(
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
     state->projection_valid = 0u;
-#if NDS_R2_FIGHTER_HW_MTX && NDS_R2_SHADE_SKIP_SOFT_LIGHT
+#if NDS_R2_SHADE_SKIP_SOFT_LIGHT
     /* E16b traced every consumer of the composed matrix and found only the
      * hardware load, which the split loader replaces. Finishing that trace for
      * the two halves: on this path the split loader takes them from `input`
@@ -3579,7 +2917,6 @@ static void ndsRendererNativeBindProductionRoot(
      * declined owner has the adapter's exact CPU fallback, while Link carries
      * the same compose as an explicit CPU mirror solely because source
      * G_TEXTURE_GEN consumes the finished current modelview. */
-#if NDS_R2_FIGHTER_GX_COMPOSE
     if ((input->gx_valid == 0u) ||
         (input->gx_modelview_mirror_valid != 0u))
     {
@@ -3590,19 +2927,12 @@ static void ndsRendererNativeBindProductionRoot(
     {
         state->modelview_valid = FALSE;
     }
-#else
-    state->modelview_valid = FALSE;
-#endif
     state->projection_valid = FALSE;
-#elif NDS_R2_FIGHTER_HW_MTX
+#else
     state->modelview = *input->modelview_matrix;
     state->modelview_valid = TRUE;
     state->projection = *input->projection_matrix;
     state->projection_valid = TRUE;
-#else
-    state->modelview = *input->modelview_matrix;
-    state->modelview_valid = TRUE;
-    state->matrix = *input->composed_matrix;
 #endif
     state->matrix_valid = TRUE;
     state->matrix_word_valid = FALSE;
@@ -3664,11 +2994,7 @@ static s32 ndsRendererNativePreflightProductionOwner(
         u32 epoch_index;
 
         if ((root == NULL) || (root_asset_base == NULL) ||
-#if NDS_R2_FIGHTER_HW_MTX
             (input->projection_matrix == NULL) ||
-#else
-            (input->composed_matrix == NULL) ||
-#endif
             (input->modelview_matrix == NULL) ||
             (input->config == NULL) ||
             (input->preamble == NULL) ||
@@ -3692,13 +3018,6 @@ static s32 ndsRendererNativePreflightProductionOwner(
         sNdsNativeProductionResolvedLightPreambles[root_index] = light_preambles;
         sNdsNativeProductionResolvedLightPreambleCounts[root_index] =
             light_preamble_count;
-#if NDS_RENDERER_M2_DETAILED_LEDGER
-        if ((input->owner_generation == 0u) ||
-            (input->owner_generation != inputs[0].owner_generation))
-        {
-            return FALSE;
-        }
-#endif
         for (epoch_index = 0u;
              epoch_index < root->epoch_count;
              epoch_index++)
@@ -3718,156 +3037,8 @@ static s32 ndsRendererNativePreflightProductionOwner(
     return TRUE;
 }
 
-#if NDS_R2_FIGHTER_SHADE_PROOF
-/* R2-03 E1 falsifier. ndsRendererNativeShadeProductionActions is 48,422
- * ticks/frame -- the largest non-idle, non-soft-float function in the frame
- * (R2-03 E0) -- and it re-lights every one of the 541 fighter dense vertices
- * every frame. Whether it needs to is a question about the data, and R2-02 E3
- * is the standing reminder to answer that with a counter rather than an
- * argument.
- *
- * Two hashes, because they imply different cuts. The INPUT hash covers
- * everything the shaded colour is a function of besides the constant tables:
- * the epoch policy, the material and modulate colours, the light masks and
- * colours, and the prepared light direction. The OUTPUT hash covers the
- * packed_color and shaded_rgba the loop actually writes.
- *
- * Input constant  -> the whole loop is a memo on a dozen words.
- * Input moves, output constant -> RGB15 quantisation is absorbing the motion,
- *   and the memo wants a quantised key.
- * Both move -> there is nothing to memoise and the lever is the per-vertex
- *   math instead. That is a real answer too, and it costs one build to get. */
-volatile u32 gNdsR2ShadeInputHash;
-volatile u32 gNdsR2ShadeInputChangeCount;
-volatile u32 gNdsR2ShadeOutputHash;
-volatile u32 gNdsR2ShadeOutputChangeCount;
-volatile u32 gNdsR2ShadeCallCount;
-volatile u32 gNdsR2ShadeFrameCount;
-static u32 sNdsR2ShadeFrameInputHash = 2166136261u;
-static u32 sNdsR2ShadeFrameCallCount;
 
-#define NDS_R2_SHADE_HASH(hash, value) \
-    ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
 
-static void ndsRendererR2FighterShadeProofFrame(void)
-{
-    u32 output = 2166136261u;
-    u32 i;
-
-    for (i = 0u; i < sNdsNativeFighterActiveTables->dense_count; i++)
-    {
-        /* R2-03 E29 removed both fields under NDS_R2_FIGHTER_HW_LIGHT. The
-         * output hash covers what the per-vertex loop writes, and under that
-         * flag the loop is compiled out, so the hash falls back to the vertex
-         * words the emit does read. Only comparable within one build. */
-#if NDS_R2_FIGHTER_HW_LIGHT
-        NDS_R2_SHADE_HASH(
-            output, sNdsNativeFighterActiveTables->prepared_dense[i].gx_xy);
-        NDS_R2_SHADE_HASH(
-            output, sNdsNativeFighterActiveTables->prepared_dense[i].gx_z);
-#else
-        NDS_R2_SHADE_HASH(
-            output,
-            sNdsNativeFighterActiveTables->prepared_dense[i].shaded_rgba);
-        NDS_R2_SHADE_HASH(
-            output,
-            sNdsNativeFighterActiveTables->prepared_dense[i].packed_color);
-#endif
-    }
-    if (gNdsR2ShadeFrameCount != 0u)
-    {
-        if (sNdsR2ShadeFrameInputHash != gNdsR2ShadeInputHash)
-        {
-            NDS_DIAG(gNdsR2ShadeInputChangeCount++);
-        }
-        if (output != gNdsR2ShadeOutputHash)
-        {
-            NDS_DIAG(gNdsR2ShadeOutputChangeCount++);
-        }
-    }
-    gNdsR2ShadeInputHash = sNdsR2ShadeFrameInputHash;
-    gNdsR2ShadeOutputHash = output;
-    gNdsR2ShadeCallCount = sNdsR2ShadeFrameCallCount;
-    gNdsR2ShadeFrameCount++;
-    sNdsR2ShadeFrameInputHash = 2166136261u;
-    sNdsR2ShadeFrameCallCount = 0u;
-}
-#endif
-
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E16 premise check. The software shade computes
- * `ambient + diffuse * dot(normal, light_dir) / 127` per vertex, which is the
- * DS geometry engine's hardware lighting equation, on the CPU, while E14
- * measured that engine idle. Before designing anything around that, the premise
- * has to hold on the data: lighting must actually be ON for fighter epochs, and
- * the vertices must actually be going through the lit path rather than the
- * pass-through or the shared-colour copy. Counters, not timers, so this barely
- * perturbs. */
-u32 gNdsR2ShadeLitEpochs;
-u32 gNdsR2ShadeUnlitEpochs;
-u32 gNdsR2ShadeVerticesLit;
-u32 gNdsR2ShadeVerticesCopied;
-u32 gNdsR2ShadeLutEpochs;
-u32 gNdsR2ShadeMaterialEpochs;
-/* R2-03 E16a. How often the light and material terms actually move. */
-u32 gNdsR2LightEpochs;
-u32 gNdsR2LightDirChanges;
-u32 gNdsR2LightColorChanges;
-u32 gNdsR2LightMaterialChanges;
-
-/* Deliberately outside .itcm.native_fighter and noinline: the shade function is
- * ITCM-resident and full, and inlining this probe overflowed the region by 100
- * bytes. A census arm must not change what fits in ITCM, or it measures a
- * different build's cache behaviour than the one it is reasoning about.
- *
- * The question: GFX_LIGHT_VECTOR stores the vector transformed by the vector
- * matrix at write time, so it can only be written while that matrix is identity
- * -- once per root, before the root's modelview is loaded. That is legal only if
- * the light direction is constant across the epochs of a root. The colours
- * decide the same for GFX_LIGHT_COLOR, and the material terms decide whether
- * GFX_DIFFUSE_AMBIENT has to be written per epoch. */
-static void __attribute__((noinline)) ndsRendererR2E16aLightCensus(
-    const NDSRendererStats *stats,
-    u32 material_color,
-    u32 color_modulate)
-{
-    static s32 last_dir[3];
-    static u32 last_color[2];
-    static u32 last_material[2];
-    static u8 last_valid;
-
-    NDS_DIAG(gNdsR2LightEpochs++);
-    if (last_valid != 0u)
-    {
-        if ((stats->light_dir_x != last_dir[0]) ||
-            (stats->light_dir_y != last_dir[1]) ||
-            (stats->light_dir_z != last_dir[2]))
-        {
-            NDS_DIAG(gNdsR2LightDirChanges++);
-        }
-        if ((stats->light_color_1 != last_color[0]) ||
-            (stats->light_color_2 != last_color[1]))
-        {
-            NDS_DIAG(gNdsR2LightColorChanges++);
-        }
-        if ((material_color != last_material[0]) ||
-            (color_modulate != last_material[1]))
-        {
-            NDS_DIAG(gNdsR2LightMaterialChanges++);
-        }
-    }
-    last_dir[0] = stats->light_dir_x;
-    last_dir[1] = stats->light_dir_y;
-    last_dir[2] = stats->light_dir_z;
-    last_color[0] = stats->light_color_1;
-    last_color[1] = stats->light_color_2;
-    last_material[0] = material_color;
-    last_material[1] = color_modulate;
-    last_valid = 1u;
-}
-#endif
-
-#if NDS_R2_FIGHTER_HW_LIGHT
 /* R2-03 E16. The fighter's per-vertex shade evaluates
  *
  *     colour = light_color_2 + (light_color_1 * dot(N, L)) / 127
@@ -3947,16 +3118,6 @@ static u32 sNdsNativeCaptainFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
-#if NDS_P2_SAMUS
-#if !NDS_NATIVE_OWNER_IMAGE_SAMUS
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativeSamusFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativeSamusFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
 #if NDS_P2_LINK
 #if !NDS_NATIVE_OWNER_IMAGE_LINK
 /* P2-3f49: the shipping build reads these words from the NitroFS owner
@@ -3965,56 +3126,6 @@ static u32 sNdsNativeLinkFighterDenseNormalsBake[
     NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeLinkFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
-#if NDS_P2_PIKACHU
-#if !NDS_NATIVE_OWNER_IMAGE_PIKACHU
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativePikachuFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativePikachuFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
-#if NDS_P2_YOSHI
-#if !NDS_NATIVE_OWNER_IMAGE_YOSHI
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativeYoshiFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativeYoshiFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
-#if NDS_P2_NESS
-#if !NDS_NATIVE_OWNER_IMAGE_NESS
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativeNessFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativeNessFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
-#if NDS_P2_PURIN
-#if !NDS_NATIVE_OWNER_IMAGE_PURIN
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativePurinFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativePurinFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT];
-#endif
-#endif
-#if NDS_P2_KIRBY
-#if !NDS_NATIVE_OWNER_IMAGE_KIRBY
-/* P2-3f49: the shipping build reads these words from the NitroFS owner
- * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativeKirbyFighterDenseNormalsBake[
-    NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativeKirbyFighterDenseNormalsBakeLow[
-    NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
 #if NDS_P2_MMARIO
@@ -4115,46 +3226,10 @@ static u8 sNdsNativeCaptainFighterDenseNormalsBuilt;
 static u8 sNdsNativeCaptainFighterDenseNormalsBuiltLow;
 #endif
 #endif
-#if NDS_P2_SAMUS
-#if !NDS_NATIVE_OWNER_IMAGE_SAMUS
-static u8 sNdsNativeSamusFighterDenseNormalsBuilt;
-static u8 sNdsNativeSamusFighterDenseNormalsBuiltLow;
-#endif
-#endif
 #if NDS_P2_LINK
 #if !NDS_NATIVE_OWNER_IMAGE_LINK
 static u8 sNdsNativeLinkFighterDenseNormalsBuilt;
 static u8 sNdsNativeLinkFighterDenseNormalsBuiltLow;
-#endif
-#endif
-#if NDS_P2_PIKACHU
-#if !NDS_NATIVE_OWNER_IMAGE_PIKACHU
-static u8 sNdsNativePikachuFighterDenseNormalsBuilt;
-static u8 sNdsNativePikachuFighterDenseNormalsBuiltLow;
-#endif
-#endif
-#if NDS_P2_YOSHI
-#if !NDS_NATIVE_OWNER_IMAGE_YOSHI
-static u8 sNdsNativeYoshiFighterDenseNormalsBuilt;
-static u8 sNdsNativeYoshiFighterDenseNormalsBuiltLow;
-#endif
-#endif
-#if NDS_P2_NESS
-#if !NDS_NATIVE_OWNER_IMAGE_NESS
-static u8 sNdsNativeNessFighterDenseNormalsBuilt;
-static u8 sNdsNativeNessFighterDenseNormalsBuiltLow;
-#endif
-#endif
-#if NDS_P2_PURIN
-#if !NDS_NATIVE_OWNER_IMAGE_PURIN
-static u8 sNdsNativePurinFighterDenseNormalsBuilt;
-static u8 sNdsNativePurinFighterDenseNormalsBuiltLow;
-#endif
-#endif
-#if NDS_P2_KIRBY
-#if !NDS_NATIVE_OWNER_IMAGE_KIRBY
-static u8 sNdsNativeKirbyFighterDenseNormalsBuilt;
-static u8 sNdsNativeKirbyFighterDenseNormalsBuiltLow;
 #endif
 #endif
 #if NDS_P2_MMARIO
@@ -4330,62 +3405,24 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_SAMUS
     if (slot == 5u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_SAMUS
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeSamusFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeSamusFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeSamusFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeSamusFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
-#if NDS_P2_KIRBY
     if (slot == 11u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_KIRBY
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeKirbyFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeKirbyFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeKirbyFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeKirbyFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
 #if NDS_P2_MMARIO
     if (slot == 12u)
     {
@@ -4467,7 +3504,6 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P4
     if ((slot > NDS_P4_RENDERER_OWNER_BASE) &&
         (slot <= NDS_P4_RENDERER_OWNER_SLOT(NDS_P4_CONTENT_MAX_ID)))
     {
@@ -4479,7 +3515,6 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeImageDenseNormalsReady;
         return TRUE;
     }
-#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -4750,118 +3785,42 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_PURIN
     if (slot == 10u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_PURIN
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePurinFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativePurinFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePurinFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativePurinFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
-#if NDS_P2_NESS
     if (slot == 9u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_NESS
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeNessFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeNessFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeNessFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeNessFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
-#if NDS_P2_YOSHI
     if (slot == 8u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_YOSHI
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeYoshiFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeYoshiFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeYoshiFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativeYoshiFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
-#if NDS_P2_PIKACHU
     if (slot == 7u)
     {
-#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
         /* P2-3f49: precomputed words from the bound image; see the ready flag. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
             &sNdsNativeImageDenseNormalsReady;
-#else
-        if (use_low_detail != 0u)
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePikachuFighterDenseNormalsBakeLow;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativePikachuFighterDenseNormalsBuiltLow;
-        }
-        else
-        {
-            sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePikachuFighterDenseNormalsBake;
-            sNdsNativeFighterActiveDenseNormalsBuilt =
-                &sNdsNativePikachuFighterDenseNormalsBuilt;
-        }
-#endif
         return TRUE;
     }
-#endif
 #if NDS_P2_LINK
     if (slot == 6u)
     {
@@ -5302,28 +4261,6 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     return NULL;
 }
 
-#if NDS_P2_LINK_SPECIAL_TOUR
-/* Lab-only exact-root query for the controller-driven Link acceptance tour.
- * The renderer already keeps one draw counter per generated native root; this
- * accessor lets the guest prove the exact immutable packet that was submitted
- * without halting melonDS on every renderer call. */
-__attribute__((used))
-u32 ndsRendererEntryEffectNativeRootDrawCount(u32 owner_asset_id,
-                                               u32 root_offset)
-{
-    const NDSEntryEffectRoot *root =
-        ndsRendererEntryEffectRoot(owner_asset_id, root_offset);
-    u32 root_index;
-
-    if (root == NULL)
-    {
-        return 0u;
-    }
-    root_index = (u32)(root - sNdsEntryEffectRoots);
-    return (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT) ?
-        gNdsEntryEffectNativeRootDraws[root_index] : 0u;
-}
-#endif
 
 /* Rehydrate one exact decoded source corner from the compact immutable packet.
  * No numeric conversion happens here: every dictionary entry is the same s16
@@ -5964,8 +4901,7 @@ __attribute__((used)) volatile u32 gNdsEntryEffectPacketReplays;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketFaults;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketArenaWords;
 
-#if NDS_FIGHTER_PACKET_LIVE && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_FIGHTER_PACKET_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
 #define NDS_ENTRY_PACKET_LIVE 1
 #else
 #define NDS_ENTRY_PACKET_LIVE 0
@@ -6048,47 +4984,6 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
 __attribute__((used)) volatile u32 gNdsEntryEffectNativeNoZGroupDraws;
 __attribute__((used)) volatile u32 gNdsEntryShieldWitnessPolyFmt;
 
-#if NDS_ENTRY_EFFECT_DIAG
-/* P2-3r6 lab instrument. The owner reports Mario's entry pipe draws its rim and
- * not its body, and every cheap check says the body IS submitted: root 0x04c0
- * takes 60 draws a match with fallback 0, valid config and matrix pointers, and
- * the same combine/othermode/texture as the rim. What has never been read
- * reliably is the MATRIX each root is submitted under -- a gdb read of the
- * caller's stack matrix returns dcache residue on this fork, which already cost
- * one wrong "garbage matrix" conclusion. So the renderer records it into
- * globals, where a stub read is sound, one row per root index.
- *
- * Lab only: NDS_ENTRY_EFFECT_DIAG defaults to 0 and the shipped ROM pays
- * nothing. */
-__attribute__((used)) volatile s32 gNdsEntryEffectRootModelview[2][16];
-__attribute__((used)) volatile s32 gNdsEntryEffectRootProjection[2][4];
-__attribute__((used)) volatile u32 gNdsEntryEffectRootPolyFmt[2];
-__attribute__((used)) volatile u32 gNdsEntryEffectRootGeom[2];
-__attribute__((used)) volatile u32 gNdsEntryEffectRootTriangles[2];
-__attribute__((used)) volatile s32 gNdsEntryEffectRootFirstVertex[2][3];
-
-static void ndsRendererEntryEffectDiagMatrices(u32 root_index,
-                                               const NDSRendererConfig *config)
-{
-    u32 i;
-    u32 j;
-
-    if (root_index >= 2u)
-    {
-        return;
-    }
-    for (i = 0u; i < 4u; i++)
-    {
-        for (j = 0u; j < 4u; j++)
-        {
-            gNdsEntryEffectRootModelview[root_index][(i * 4u) + j] =
-                config->initial_modelview->m[i][j];
-        }
-        gNdsEntryEffectRootProjection[root_index][i] =
-            config->initial_projection->m[3][i];
-    }
-}
-#endif
 
 static void ndsRendererEntryEffectApplyLiveMaterial(
     const NDSRendererNativeMaterial *material, NDSRendererStats *stats)
@@ -6583,7 +5478,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     const NDSEntryEffectRoot *root;
     u32 group_offset;
     u32 matrix_generation;
@@ -7119,10 +6014,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
     ndsRendererLoadHardwareSplitMatrices(
         config->initial_projection, config->initial_modelview,
         matrix_generation);
-#if NDS_ENTRY_EFFECT_DIAG
-    ndsRendererEntryEffectDiagMatrices(
-        (u32)(root - &sNdsEntryEffectRoots[0]), config);
-#endif
 
     if ((static_proven != FALSE) && (material_count == 0u) &&
         (root_offset != gNdsEntryEffectWitnessRoot))
@@ -7844,9 +6735,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 stats->transformed_vertex_count++;
                 ndsRendererHardwareClipVertex(
                     &clip, (no_z_group != FALSE) ? painter_depth : clip.z
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                    , NULL
-#endif
                     );
             }
             else
@@ -7874,38 +6762,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             ndsRendererHardwareEnterProjectedForeground();
         }
-#if NDS_ENTRY_EFFECT_DIAG
-        {
-            u32 diag_root = (u32)(root - &sNdsEntryEffectRoots[0]);
-
-            if (diag_root == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST)
-            {
-                gNdsEntryShieldWitnessPolyFmt = poly_fmt;
-            }
-            if (diag_root < 2u)
-            {
-                NDSRendererInputVertex first_vertex;
-                const NDSRendererInputVertex *first = &first_vertex;
-
-                if (ndsRendererEntryEffectVertex(
-                        group->first_vertex, &first_vertex) == FALSE)
-                {
-                    NDS_ENTRY_EFFECT_REJECT();
-                }
-
-                gNdsEntryEffectRootPolyFmt[diag_root] = poly_fmt;
-                gNdsEntryEffectRootGeom[diag_root] = stats->geometry_mode;
-                gNdsEntryEffectRootTriangles[diag_root] +=
-                    group->triangle_count;
-                gNdsEntryEffectRootFirstVertex[diag_root][0] =
-                    ndsRendererHardwareVertexCoord(first->x, TRUE);
-                gNdsEntryEffectRootFirstVertex[diag_root][1] =
-                    ndsRendererHardwareVertexCoord(first->y, TRUE);
-                gNdsEntryEffectRootFirstVertex[diag_root][2] =
-                    ndsRendererHardwareVertexCoord(first->z, TRUE);
-            }
-        }
-#endif
         sNdsRendererHardwareSubmitted = TRUE;
         stats->triangle_count += group->triangle_count;
         stats->transformed_triangle_count += group->triangle_count;
@@ -8287,7 +7143,7 @@ ndsRendererPrepareEntryKoPalettes(void)
     return TRUE;
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
 
 /* EACH TEXTURE FAILS ALONE. The first refused texture used to end the setup,
@@ -8482,9 +7338,7 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
         }
         gNdsEntryEffectNativeTexturePrepareCount++;
     }
-#if NDS_P4
     ndsRendererEntryTexelsClose();
-#endif
     if (ndsRendererPrepareEntryKoPalettes() == FALSE)
     {
         ok = FALSE;
@@ -8495,7 +7349,7 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
 
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 #ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
     ndsRendererEntryP4CornersLoad();
 #endif
@@ -8507,7 +7361,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 
 s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     return ndsRendererPrepareEntryEffectTextureSet(1u);
 #else
     return FALSE;
@@ -9105,18 +7959,6 @@ static inline u32 ndsRendererR2MaterialChannel(
 /* Cleared per owner execute; set once the light vector has been written. */
 static u8 sNdsR2LightVectorWritten;
 
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-/* R2-03 E49. Set per epoch by the shade pass, read by the run prepare and by the
- * four emit loops -- all of which run after it for the same epoch.
- *
- * E48 measured the rule the native owner was missing: when the generic path sees
- * a valid vertex colour and no material it emits that colour raw and never
- * lights it (273 of 273 vertices on hitlag frame 911, material 0,
- * use_material_color FALSE). The native owner decided `epoch_lit` from
- * `geometry_mode & LIGHTING` alone and ran the geometry engine's light, which is
- * E32's dark-maroon hurt flash. */
-static u8 sNdsR2EpochUnlitVertexColor;
-#endif
 
 /* The resident tint tile this epoch's untextured runs modulate by, or 0 for the
  * folded-material path. Written once per epoch by
@@ -9128,19 +7970,6 @@ static u8 sNdsR2EpochUnlitVertexColor;
 static u32 sNdsR2EpochTintTexture;
 /* P2-2p8 Phase 1 slice 1: the 24-bit colour that chose the tile above. */
 static u32 sNdsR2EpochTintRgb;
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-
-/* Byte-for-byte the expression ndsRendererHardwarePackedResolvedColor uses on
- * its no-material route, so the two paths cannot drift. */
-static inline u16 ndsRendererR2DenseVertexColor15(u32 dense_id)
-{
-    u32 rgba = sNdsNativeFighterActiveTables->dense_vertices[dense_id].rgba;
-
-    return RGB15((u8)((rgba >> 27) & 0x1fu),
-                 (u8)((rgba >> 19) & 0x1fu),
-                 (u8)((rgba >> 11) & 0x1fu));
-}
-#endif
 /* Engagement proof. The ambient-only bisect showed the material path working
  * end to end while the diffuse term stayed zero, which leaves only the light
  * vector -- and "the write never ran" and "the write ran and did not stick" are
@@ -9806,101 +8635,7 @@ static void __attribute__((noinline)) ndsRendererR2OpenTintBatch(
                                       matrix_generation);
     GFX_TEX_COORD = word;
 }
-#endif
 
-#if NDS_R2_FIGHTER_EPOCH_STATE_PROOF
-/* R2-03 E34. Decides whether E26's baked per-epoch state is even possible.
- *
- * E26 proposes replacing the 194.4 state-delta applications a frame with a
- * table indexed by epoch. That is sound only if the state an epoch hands to its
- * runs is a function of the epoch index. It may not be:
- * ndsRendererNativeApplyMaterial writes prim/env/blend colour and texture state
- * from `input->materials[]`, which is live, so a material applied in epoch N
- * survives into epoch N+1's state through any field N+1's before-span does not
- * itself rewrite. E26's §2a correction saw the material as a per-epoch problem;
- * this is the harder version, where contamination propagates forward.
- *
- * `noinline` and deliberately outside .itcm.native_fighter: the 2026-09-09
- * isolated linker witness leaves only 192 bytes free, and E16 has already been
- * caught overflowing ITCM with an inline probe. */
-#define NDS_R2_EPOCH_STATE_MAX 64u
-#define NDS_R2_EPOCH_TILE_MASK 7u
-#define NDS_R2_EPOCH_HASH(hash, value) \
-    ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
-static u32 sNdsR2EpochStateHash[NDS_R2_EPOCH_STATE_MAX];
-static u8 sNdsR2EpochStateSeen[NDS_R2_EPOCH_STATE_MAX];
-static u8 sNdsR2EpochStateEverChanged[NDS_R2_EPOCH_STATE_MAX];
-u32 gNdsR2EpochStateSamples;
-u32 gNdsR2EpochStateChanges;
-u32 gNdsR2EpochStateUnstableEpochs;
-
-static void __attribute__((noinline))
-ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
-{
-    u32 hash;
-
-    if (epoch_index >= NDS_R2_EPOCH_STATE_MAX)
-    {
-        return;
-    }
-    /* ndsRendererSemanticSourceStateHash is behind PROFILE_LEVEL >= 2 and the
-     * tick-HUD build is level 0, so hash the fields E26 would actually bake --
-     * the ones PrepareProductionRun and the shade read -- rather than the whole
-     * semantic state. Narrower is also the right question: a field nothing reads
-     * moving does not stop the fold. */
-    hash = 2166136261u;
-    NDS_R2_EPOCH_HASH(hash, stats->geometry_mode);
-    NDS_R2_EPOCH_HASH(hash, stats->othermode_h);
-    NDS_R2_EPOCH_HASH(hash, stats->othermode_l);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w0);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w1);
-#if NDS_R2_FIGHTER_EPOCH_STATE_PROOF < 2
-    /* Level 2 drops the two colours the material writes live. If the change
-     * count goes to zero, they are the whole of the 0.48% and the fold is clean
-     * with colour as its only runtime input. */
-    NDS_R2_EPOCH_HASH(hash, stats->env_color);
-    NDS_R2_EPOCH_HASH(hash, stats->prim_color);
-#endif
-    NDS_R2_EPOCH_HASH(hash, stats->texture_state_flags);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_tile);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_on);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_scale_s);
-    NDS_R2_EPOCH_HASH(hash, stats->texture_scale_t);
-    NDS_R2_EPOCH_HASH(hash, stats->light_color_1);
-    NDS_R2_EPOCH_HASH(hash, stats->light_color_2);
-    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_x);
-    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_y);
-    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_z);
-    {
-        const u32 *tile =
-            (const u32 *)&stats->texture_tiles[stats->texture_tile &
-                                               NDS_R2_EPOCH_TILE_MASK];
-        u32 w;
-
-        for (w = 0u; w < (sizeof(NDSRendererTileState) / sizeof(u32)); w++)
-        {
-            NDS_R2_EPOCH_HASH(hash, tile[w]);
-        }
-    }
-    NDS_DIAG(gNdsR2EpochStateSamples++);
-    if (sNdsR2EpochStateSeen[epoch_index] == 0u)
-    {
-        sNdsR2EpochStateSeen[epoch_index] = 1u;
-        sNdsR2EpochStateHash[epoch_index] = hash;
-        return;
-    }
-    if (sNdsR2EpochStateHash[epoch_index] != hash)
-    {
-        NDS_DIAG(gNdsR2EpochStateChanges++);
-        if (sNdsR2EpochStateEverChanged[epoch_index] == 0u)
-        {
-            sNdsR2EpochStateEverChanged[epoch_index] = 1u;
-            NDS_DIAG(gNdsR2EpochStateUnstableEpochs++);
-        }
-        sNdsR2EpochStateHash[epoch_index] = hash;
-    }
-}
-#endif
 
 /* R2-03 E28. Once E16 moved the fighter's diffuse term onto the geometry
  * engine, the software light direction and the shade LUT became dead: both are
@@ -9951,34 +8686,15 @@ ndsRendererNativeShadeProductionActions(
      * This runs once per epoch (46.4/frame), not per vertex, so deriving it is
      * not on any hot path. A rendering-correctness fix owed regardless of E32 --
      * E32 only decides whether these frames reach the native owner at all. */
-#if NDS_R2_MATERIAL_DYNAMIC
-    u32 use_material =
-        (ndsRendererHardwareUseMaterialColor(stats) != FALSE) ?
-            NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u;
-    u32 material_color = ndsRendererHardwareColorSource(stats);
-#else
     u32 use_material =
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
     u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
-#endif
     u32 action_offset;
     /* Identical to `prepared_direction != NULL` in every build that prepares
      * the direction, and still correct in the build that skips it. */
     u32 epoch_lit = FALSE;
-#if NDS_R2_FIGHTER_HW_LIGHT
     u32 hardware_lit = FALSE;
-#endif
 
-#if NDS_R2_MATERIAL_DYNAMIC
-    (void)policy;
-#endif
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-    /* R2-03 E49. Same two predicates the generic path keys on, evaluated once
-     * per epoch (46.4/frame) rather than per vertex. */
-    sNdsR2EpochUnlitVertexColor =
-        ((ndsRendererHardwareUseVertexColor(stats) != FALSE) &&
-         (ndsRendererHardwareUseMaterialColor(stats) == FALSE)) ? 1u : 0u;
-#endif
     /* Cleared for EVERY epoch, not only the lit ones: the run prepare reads it
      * unconditionally, and an epoch that never reaches the shade write below
      * must not inherit the previous epoch's tile. */
@@ -9988,18 +8704,6 @@ ndsRendererNativeShadeProductionActions(
         return TRUE;
     }
     ndsRendererNativeSourceBoundary(state);
-#if NDS_R2_FLASH_PROBE
-    /* R2-03 E59, owner side. Same fields at the native owner's shade entry, so
-     * one frame's snapshot carries BOTH paths: E54 showed only one fighter falls
-     * back per hitlag frame, so on frame 911 the struck fighter runs generic
-     * while the other still runs the owner. Slots 12..14 vs 15..18 is therefore
-     * a same-frame comparison, not a cross-frame one. */
-    gNdsR2FlashLive[15] = stats->light_color_1;
-    gNdsR2FlashLive[16] = stats->light_color_2;
-    gNdsR2FlashLive[17] = stats->light_color_mask;
-    gNdsR2FlashLive[18] = stats->geometry_mode;
-    gNdsR2FlashLive[19]++;
-#endif
     if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
@@ -10037,61 +8741,10 @@ ndsRendererNativeShadeProductionActions(
 #endif
     }
 
-#if NDS_R2_FIGHTER_SHADE_PROOF
-    {
-        u32 hash = sNdsR2ShadeFrameInputHash;
-        u32 i;
-
-        NDS_R2_SHADE_HASH(hash, epoch_policy);
-        NDS_R2_SHADE_HASH(hash, packet_mode);
-        NDS_R2_SHADE_HASH(hash, epoch->first_action);
-        NDS_R2_SHADE_HASH(hash, epoch->action_count);
-        NDS_R2_SHADE_HASH(hash, stats->prim_color);
-        NDS_R2_SHADE_HASH(hash, stats->geometry_mode);
-        NDS_R2_SHADE_HASH(hash, stats->light_dir_mask);
-        NDS_R2_SHADE_HASH(hash, stats->light_color_mask);
-        NDS_R2_SHADE_HASH(hash, stats->light_color_1);
-        NDS_R2_SHADE_HASH(hash, stats->light_color_2);
-        NDS_R2_SHADE_HASH(hash, state->color_modulate);
-        NDS_R2_SHADE_HASH(hash, (prepared_direction != NULL) ? 1u : 0u);
-        NDS_R2_SHADE_HASH(hash, (shade_lut != NULL) ? 1u : 0u);
-        if (prepared_direction != NULL)
-        {
-            const u32 *direction = (const u32 *)prepared_direction;
-
-            for (i = 0u;
-                 i < sizeof(NDSRendererHardwareLightDirection) / sizeof(u32);
-                 i++)
-            {
-                NDS_R2_SHADE_HASH(hash, direction[i]);
-            }
-        }
-        sNdsR2ShadeFrameInputHash = hash;
-        sNdsR2ShadeFrameCallCount++;
-    }
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    if (epoch_lit != FALSE)
-    {
-        NDS_DIAG(gNdsR2ShadeLitEpochs++);
-    }
-    else
-    {
-        NDS_DIAG(gNdsR2ShadeUnlitEpochs++);
-    }
-    if (shade_lut != NULL) { gNdsR2ShadeLutEpochs++; }
-    if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
-    ndsRendererR2E16aLightCensus(stats, material_color, state->color_modulate);
-#endif
     ndsRendererR2RecordShadeWitness(
         epoch_lit,
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-        sNdsR2EpochUnlitVertexColor,
-#else
         0u,
-#endif
         use_material, material_color);
-#if NDS_R2_FIGHTER_HW_LIGHT
     /* R2-03 E16. The per-dense-vertex shading below becomes one register write:
      * the engine evaluates the dot product per vertex from GFX_NORMAL.
      *
@@ -10102,12 +8755,6 @@ ndsRendererNativeShadeProductionActions(
      * which the Boundary harness caught as the complete-stage owner having
      * entered the generic transform path. Only the inner loop is skipped. */
     if ((epoch_lit != FALSE)
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-        /* The polygon attribute drops POLY_FORMAT_LIGHT0 for this epoch, so the
-         * engine ignores diffuse/ambient -- writing them would be dead FIFO
-         * traffic, and the light vector write is a push/identity/pop bracket. */
-        && (sNdsR2EpochUnlitVertexColor == 0u)
-#endif
         )
     {
         u32 diffuse;
@@ -10132,15 +8779,6 @@ ndsRendererNativeShadeProductionActions(
         (void)tinted;
         hardware_lit = TRUE;
     }
-#endif
-#if NDS_R2_FIGHTER_SHADE_SKIP
-    /* R2-03 E18. Prices E16's ceiling directly instead of inferring it from a
-     * bracket that also contains the epoch preamble. Skips the per-vertex
-     * lighting outright, leaving sNdsNativeFighterPreparedDense holding whatever
-     * the previous frame left -- so the fighters draw with stale, visibly wrong
-     * colours. Lab only; the engagement proof is the screenshot. */
-    return TRUE;
-#endif
     for (action_offset = 0u;
          action_offset < epoch->action_count;
          action_offset++)
@@ -10148,14 +8786,6 @@ ndsRendererNativeShadeProductionActions(
         u32 action_index = epoch->first_action + action_offset;
         const NDSNativeVertexAction *action =
             &sNdsNativeFighterActiveTables->vertex_actions[action_index];
-#if !NDS_R2_FIGHTER_HW_LIGHT
-        u32 span =
-            sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
-        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
-        u32 dense_count = NDS_NATIVE_SPAN_COUNT(wide, span, action);
-        u32 dense_offset;
-#endif
 
         if (action->kind == NDS_NATIVE_VERTEX_BLOCK)
         {
@@ -10170,91 +8800,11 @@ ndsRendererNativeShadeProductionActions(
                 sNdsRendererHardwareSourceVertexLoadCount += action->count;
             }
         }
-#if NDS_R2_FIGHTER_HW_LIGHT
         /* R2-03 E29 / P2-2. The software shade span has no consumer in the
          * hardware-light owner. Do not even retain its generated Low-detail
          * alias/span tables in this configuration; the action itself remains
          * because source vertex-count accounting is part of the contract. */
         (void)hardware_lit;
-#else
-        for (dense_offset = 0u;
-             dense_offset < dense_count;
-             dense_offset++)
-        {
-            u32 dense_id = dense_first + dense_offset;
-            u32 color_source =
-                sNdsNativeFighterActiveTables->dense_color_source[dense_id];
-
-            if (color_source != dense_id)
-            {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-                NDS_DIAG(gNdsR2ShadeVerticesCopied++);
-#endif
-                sNdsNativeFighterActiveTables->prepared_dense[
-                    dense_id].shaded_rgba =
-                    sNdsNativeFighterActiveTables->prepared_dense[
-                        color_source].shaded_rgba;
-            }
-            else
-            {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-                NDS_DIAG(gNdsR2ShadeVerticesLit++);
-#endif
-                const NDSNativeDenseVertex *dense =
-                    &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
-                NDSRendererInputVertex input;
-
-                input.r = (u8)(dense->rgba >> 24);
-                input.g = (u8)(dense->rgba >> 16);
-                input.b = (u8)(dense->rgba >> 8);
-                input.a = (u8)dense->rgba;
-                if (shade_lut != NULL)
-                {
-                    sNdsNativeFighterActiveTables->prepared_dense[
-                        dense_id].shaded_rgba =
-                        ndsRendererHardwareLitShadeColorLut(
-                            &input, prepared_direction, shade_lut);
-                }
-                else
-                {
-                    sNdsNativeFighterActiveTables->prepared_dense[
-                        dense_id].shaded_rgba =
-                        ndsRendererHardwareLitShadeColorPrepared(
-                            stats, &input, prepared_direction);
-                }
-            }
-            {
-                NDSNativePreparedDenseVertex *prepared =
-                    &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
-                u32 color = prepared->shaded_rgba;
-
-                if (use_material != 0u)
-                {
-                    u32 r = ndsRendererHardwareScaleMaterialChannel5(
-                        (color >> 24) & 0xffu,
-                        (material_color >> 24) & 0xffu);
-                    u32 g = ndsRendererHardwareScaleMaterialChannel5(
-                        (color >> 16) & 0xffu,
-                        (material_color >> 16) & 0xffu);
-                    u32 b = ndsRendererHardwareScaleMaterialChannel5(
-                        (color >> 8) & 0xffu,
-                        (material_color >> 8) & 0xffu);
-
-                    prepared->packed_color = RGB15(r, g, b);
-                }
-                else
-                {
-                    prepared->packed_color =
-                        RGB15((color >> 27) & 0x1fu,
-                              (color >> 19) & 0x1fu,
-                              (color >> 11) & 0x1fu);
-                }
-                prepared->packed_color =
-                    ndsRendererHardwareModulatePackedColor(
-                        prepared->packed_color, state->color_modulate);
-            }
-        }
-#endif /* !NDS_R2_FIGHTER_HW_LIGHT */
     }
     return TRUE;
 }
@@ -10262,242 +8812,6 @@ ndsRendererNativeShadeProductionActions(
 /* sNdsNativeFighterRuns[67]. Shared by the E5 proof and the E12 memo, so it
  * lives outside both flags' guards. */
 #define NDS_R2_RUN_MEMO_MAX 67u
-#if NDS_R2_FIGHTER_RUN_PROOF
-/* R2-03 E5 falsifier. The switch plan's section 7 for this phase asks for a
- * per-epoch generated submit "consuming only baked facts ... no
- * PrepareProductionRun policy re-checks, no per-frame texture identity proof".
- * That is E1a's cut moved to the fighter, and R2-02 E1a was worth 94,784
- * ticks/frame on a table of the same shape. The question is whether those facts
- * are constant per epoch, and the fighter differs from the stage in a way that
- * could decide it: its materials are live (Task 39's hurt flash writes colour)
- * where Dream Land's are not.
- *
- * Hooked here rather than in the hierarchy preflight. Canonical mode 9
- * (NATIVE_COMPLETE_STAGE) selects native_owner_production_mode and leaves
- * native_owner_hierarchy_mode FALSE, so hierarchy_runs[] is mode 7's table and
- * the shipping build never writes it -- an earlier revision of this falsifier
- * hooked that table and honestly reported zero calls. This is the function the
- * live path calls, once per run per frame, with hierarchy_run == NULL: the
- * facts are recomputed and consumed on the spot, never stored. That recompute
- * is the cost R2-03 exists to remove.
- *
- * Three hashes, because they imply different cuts and R2-02 E3 is the standing
- * reminder to answer a data question with a counter rather than an argument.
- *
- *   STABLE constant -> the texture and geometry facts are a per-epoch memo,
- *     which is exactly E1a.
- *   STABLE constant but MATERIAL moves -> bake the table and write colour per
- *     frame. Still E1a's shape: it kept the table and recomputed the one field
- *     that moved.
- *   STABLE moves -> refuted for this build, and the cost has to come out of the
- *     per-run work itself.
- *
- * FULL adds the texture cache entry pointer, which rotates for reasons
- * unrelated to what is drawn; STABLE omits it deliberately. */
-volatile u32 gNdsR2RunFullHash;
-volatile u32 gNdsR2RunFullChangeCount;
-volatile u32 gNdsR2RunStableHash;
-volatile u32 gNdsR2RunStableChangeCount;
-volatile u32 gNdsR2RunMaterialHash;
-volatile u32 gNdsR2RunMaterialChangeCount;
-volatile u32 gNdsR2RunCallCount;
-volatile u32 gNdsR2RunFrameCount;
-static u32 sNdsR2RunFrameFullHash = 2166136261u;
-static u32 sNdsR2RunFrameStableHash = 2166136261u;
-static u32 sNdsR2RunFrameMaterialHash = 2166136261u;
-static u32 sNdsR2RunFrameCallCount;
-
-/* The per-frame hashes fold every prepared run in submission order, so they
- * cannot separate "a run's facts changed" from "a different set of runs was
- * prepared". The first sweep saw exactly two whole-frame values with 67 and 37
- * runs, and 67 is the whole of sNdsNativeFighterRuns[] -- which points at the
- * set changing, not the facts. That distinction decides the memo's key, so
- * measure it directly: keep one digest per run index and count the calls whose
- * facts differ from the copy already stored for that index.
- *
- * MISS == 0 after the fills means the facts are a property of the run index
- * alone, the memo needs no per-frame revalidation, and R2-03's baked table can
- * be generated rather than discovered. */
-volatile u32 gNdsR2RunMemoHitCount;
-volatile u32 gNdsR2RunMemoMissCount;
-volatile u32 gNdsR2RunMemoFillCount;
-volatile u32 gNdsR2RunMemoOutOfRange;
-volatile u32 gNdsR2RunEntryCount;
-/* E11. Level 2 splits the call into the four spans a memo would treat
- * differently: validation (skippable outright -- E5 proved it never rejects),
- * texture prepare (a live GX bind a memo must still pay, split by whether the
- * caller's per-DObj reuse flag was already set), the UV loop (E5 measured it
- * tiny), and the tail. Sizing before designing, per E8. */
-volatile u32 gNdsR2RunValidateTicks;
-volatile u32 gNdsR2RunTexPrepTicks;
-volatile u32 gNdsR2RunTexPrepCount;
-volatile u32 gNdsR2RunTexReuseTicks;
-volatile u32 gNdsR2RunTexReuseCount;
-volatile u32 gNdsR2RunUvTicks;
-volatile u32 gNdsR2RunTailTicks;
-volatile u32 gNdsR2RunSuccessCount;
-static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
-static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
-
-
-
-/* The facts being constant is not on its own a licence to skip the UV loop.
- * 28 of the 541 dense vertices belong to more than one run (13..18 overlap), so
- * each sharing run rewrites them and the emit between two prepares reads
- * whatever the last one left. Skipping is safe only if those writes are
- * idempotent -- if no write ever changes the value it lands on.
- *
- * Measure that directly rather than infer it from the per-run digests: compare
- * before storing, and count the writes that actually changed something. CHANGE
- * settling to zero after the first fill means the whole loop is recomputing
- * values that are already there. */
-/* PrepareProductionRun is NDS_RENDERER_NATIVE_FIGHTER_CODE, i.e. ITCM. Inlining
- * a proof body there overflowed the region by 100 bytes, so take the Task 29
- * census treatment: out of line, size-optimised, and in its own .text section.
- * The extra branch per run is measurement cost that never ships. */
-#define NDS_R2_RUN_PROOF_CODE \
-    __attribute__((noinline, noclone, cold, optimize("Os"), \
-                   section(".text.r2_run_proof")))
-
-#define NDS_R2_UV_PROOF_MAX 541u
-volatile u32 gNdsR2UvWriteCount;
-volatile u32 gNdsR2UvChangeCount;
-volatile u32 gNdsR2UvFillCount;
-volatile u32 gNdsR2UvOutOfRange;
-static s16 sNdsR2UvS[NDS_R2_UV_PROOF_MAX];
-static s16 sNdsR2UvT[NDS_R2_UV_PROOF_MAX];
-static u8 sNdsR2UvValid[NDS_R2_UV_PROOF_MAX];
-
-static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterUvProofWrite(
-    u32 dense_id,
-    s16 s,
-    s16 t)
-{
-    NDS_DIAG(gNdsR2UvWriteCount++);
-    if (dense_id >= NDS_R2_UV_PROOF_MAX)
-    {
-        NDS_DIAG(gNdsR2UvOutOfRange++);
-    }
-    else if (sNdsR2UvValid[dense_id] == 0u)
-    {
-        sNdsR2UvValid[dense_id] = 1u;
-        sNdsR2UvS[dense_id] = s;
-        sNdsR2UvT[dense_id] = t;
-        NDS_DIAG(gNdsR2UvFillCount++);
-    }
-    else if ((sNdsR2UvS[dense_id] != s) || (sNdsR2UvT[dense_id] != t))
-    {
-        sNdsR2UvS[dense_id] = s;
-        sNdsR2UvT[dense_id] = t;
-        NDS_DIAG(gNdsR2UvChangeCount++);
-    }
-}
-
-#define NDS_R2_RUN_HASH(hash, value)     ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
-
-static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterRunProofCall(
-    u32 run_index,
-    const NDSRendererTraversalState *state,
-    const NDSRendererHardwareResolvedTexture *resolved)
-{
-    u32 full = sNdsR2RunFrameFullHash;
-    u32 stable = sNdsR2RunFrameStableHash;
-    u32 material = sNdsR2RunFrameMaterialHash;
-    u32 fields[13];
-    u32 i;
-
-    fields[0] = run_index;
-    fields[1] = state->texture_prepare_name;
-    fields[2] = resolved->params;
-    fields[3] = resolved->format;
-    fields[4] = resolved->width;
-    fields[5] = resolved->height;
-    fields[6] = state->texture_prepare_poly_fmt;
-    fields[7] = state->texture_prepare_scale_s;
-    fields[8] = state->texture_prepare_scale_t;
-    fields[9] = state->texture_prepare_origin_s;
-    fields[10] = state->texture_prepare_origin_t;
-    fields[11] = (u32)state->texture_prepare_offset;
-    fields[12] = state->texture_prepare_vertex_flags;
-    for (i = 0u; i < 13u; i++)
-    {
-        NDS_R2_RUN_HASH(full, fields[i]);
-        NDS_R2_RUN_HASH(stable, fields[i]);
-    }
-    NDS_R2_RUN_HASH(full, state->texture_prepare_enabled);
-    NDS_R2_RUN_HASH(stable, state->texture_prepare_enabled);
-    /* The live field the STABLE hash deliberately excludes. */
-    NDS_R2_RUN_HASH(material, run_index);
-    NDS_R2_RUN_HASH(material, state->texture_prepare_material_color);
-    NDS_R2_RUN_HASH(full, state->texture_prepare_material_color);
-    /* A pointer into the hardware texture cache, which rotates for reasons
-     * unrelated to what is drawn. */
-    NDS_R2_RUN_HASH(full, (u32)(uintptr_t)resolved->entry);
-    {
-        /* Same field set as STABLE plus the colour, but seeded per run so the
-         * digest describes this run alone rather than the frame's sequence. */
-        u32 own = 2166136261u;
-
-        for (i = 0u; i < 13u; i++)
-        {
-            NDS_R2_RUN_HASH(own, fields[i]);
-        }
-        NDS_R2_RUN_HASH(own, state->texture_prepare_enabled);
-        NDS_R2_RUN_HASH(own, state->texture_prepare_material_color);
-        if (run_index >= NDS_R2_RUN_MEMO_MAX)
-        {
-            NDS_DIAG(gNdsR2RunMemoOutOfRange++);
-        }
-        else if (sNdsR2RunMemoValid[run_index] == 0u)
-        {
-            sNdsR2RunMemoValid[run_index] = 1u;
-            sNdsR2RunMemoHash[run_index] = own;
-            NDS_DIAG(gNdsR2RunMemoFillCount++);
-        }
-        else if (sNdsR2RunMemoHash[run_index] != own)
-        {
-            sNdsR2RunMemoHash[run_index] = own;
-            NDS_DIAG(gNdsR2RunMemoMissCount++);
-        }
-        else
-        {
-            NDS_DIAG(gNdsR2RunMemoHitCount++);
-        }
-    }
-    sNdsR2RunFrameFullHash = full;
-    sNdsR2RunFrameStableHash = stable;
-    sNdsR2RunFrameMaterialHash = material;
-    sNdsR2RunFrameCallCount++;
-}
-
-static void ndsRendererR2FighterRunProofFrame(void)
-{
-    if (gNdsR2RunFrameCount != 0u)
-    {
-        if (sNdsR2RunFrameFullHash != gNdsR2RunFullHash)
-        {
-            NDS_DIAG(gNdsR2RunFullChangeCount++);
-        }
-        if (sNdsR2RunFrameStableHash != gNdsR2RunStableHash)
-        {
-            NDS_DIAG(gNdsR2RunStableChangeCount++);
-        }
-        if (sNdsR2RunFrameMaterialHash != gNdsR2RunMaterialHash)
-        {
-            NDS_DIAG(gNdsR2RunMaterialChangeCount++);
-        }
-    }
-    gNdsR2RunFullHash = sNdsR2RunFrameFullHash;
-    gNdsR2RunStableHash = sNdsR2RunFrameStableHash;
-    gNdsR2RunMaterialHash = sNdsR2RunFrameMaterialHash;
-    gNdsR2RunCallCount = sNdsR2RunFrameCallCount;
-    gNdsR2RunFrameCount++;
-    sNdsR2RunFrameFullHash = 2166136261u;
-    sNdsR2RunFrameStableHash = 2166136261u;
-    sNdsR2RunFrameMaterialHash = 2166136261u;
-    sNdsR2RunFrameCallCount = 0u;
-}
-#endif
 
 /* E12 counters live outside the flag so a build with the memo off reads five
  * honest zeros instead of whatever the linker left at those addresses. Two
@@ -10519,7 +8833,6 @@ volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
  * moved (ndsRendererR2RunTextureMemoFence). */
 volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFenceCount;
 
-#if NDS_R2_FIGHTER_RUN_MEMO
 /* E12. E5 proved every field below is invariant in run_index over a whole
  * canonical match, and E11 measured what recomputing them costs: 45.3 of 60.9
  * calls take the full texture prepare at 1,013 ticks, because the caller resets
@@ -10783,74 +9096,6 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     gNdsR2TexMemoFillCount++;
 }
 
-#if NDS_R2_FIGHTER_RUN_MEMO >= 2
-/* Level 2 never takes the memo branch. It lets the full path run and then asks
- * whether the memo would have answered differently, so a disagreement is
- * counted instead of drawn. E8 was refuted by a key that was subtly incomplete
- * three times running, each caught by a verify arm exactly like this one. */
-static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
-    u32 run_index,
-    const NDSRendererStats *stats,
-    u32 texture_name,
-    u32 scale_s,
-    u32 scale_t,
-    u32 origin_s,
-    u32 origin_t,
-    s32 offset)
-{
-    const NDSR2RunTextureMemo *memo;
-    const NDSRendererHardwareTextureCacheEntry *entry;
-
-    if (run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX)
-    {
-        return;
-    }
-    memo = ndsRendererR2RunTextureMemoFor(
-        run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
-    if ((memo->valid == 0u) || (memo->run != (u8)run_index))
-    {
-        return;
-    }
-    if (memo->owner_key !=
-        sNdsNativeFighterOwnerExecution.texture_memo_owner_key)
-    {
-        /* A different live instance is not a memo disagreement.  Level 2 runs
-         * the full resolver precisely so the new identity can replace this row
-         * after verification. */
-        return;
-    }
-    entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
-    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name) ||
-        (entry->key_generation != memo->entry_generation))
-    {
-        /* A stale entry is not a mismatch: the live path would have refilled
-         * it. Counted separately so the two are never conflated. */
-        gNdsR2TexMemoStaleCount++;
-        return;
-    }
-    if ((memo->name != texture_name) ||
-        (memo->format != stats->hardware_texture_format) ||
-        (memo->width != stats->hardware_texture_width) ||
-        (memo->height != stats->hardware_texture_height) ||
-        (memo->scale_s != scale_s) || (memo->scale_t != scale_t) ||
-        (memo->origin_s != origin_s) || (memo->origin_t != origin_t) ||
-        (memo->offset != offset))
-    {
-        gNdsR2TexMemoVerifyFail++;
-    }
-    else
-    {
-        gNdsR2TexMemoHitCount++;
-    }
-}
-#endif
-#else
-void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
-{
-    (void)owner_key;
-    (void)material_identity;
-}
-#endif
 
 /* Cycle 110, Requirement 3: the prepared dense UVs are IMMUTABLE fighter state,
  * not per-frame work.
@@ -11315,10 +9560,6 @@ ndsRendererNativeRebuildProductionRunUv(
             scaled_t -
             ((s32)state->texture_prepare_origin_t << 2) +
             state->texture_prepare_offset);
-#if NDS_R2_FIGHTER_RUN_PROOF
-        ndsRendererR2FighterUvProofWrite(dense_id, prepared->s,
-                                         prepared->t);
-#endif
     }
     if (uv != NULL)
     {
@@ -11370,31 +9611,9 @@ ndsRendererNativePrepareProductionRunCore(
     u32 unique_count;
     s32 texture_offset = 0;
     NDSRendererHardwareResolvedTexture resolved_texture;
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    u32 t_r2e11_phase;
-    u32 t_r2e11_tex_valid = (state != NULL) ? state->texture_prepare_valid : 0u;
-#endif
 
     memset(&resolved_texture, 0, sizeof(resolved_texture));
 
-#if NDS_R2_FIGHTER_RUN_PROOF
-    /* Counted at entry, because the proof hook sits before the single
-     * `return TRUE` and so cannot see a rejected call. entries - hook calls is
-     * the reject count, and the memo's safety depends on it: a run that is
-     * sometimes accepted and sometimes rejected must not be baked. */
-    NDS_DIAG(gNdsR2RunEntryCount++);
-#endif
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    /* E11 sizing. The census puts this function at 22,205 ticks/frame self time
-     * over ~67 runs -- 331 per call -- and E5 already proved every output is
-     * invariant in run_index. Before designing a memo, split the call: the
-     * policy validation is what a memo could skip outright, the texture-prepare
-     * block has a live GX side effect a memo must still pay, and the UV loop E5
-     * measured is tiny. E8 was refuted because its key cost as much as the work
-     * it skipped; this one is keyed on an integer index, so the question is only
-     * how much work there is to skip. */
-    t_r2e11_phase = cpuGetTiming();
-#endif
     if ((config == NULL) || (stats == NULL) || (state == NULL) ||
         (run_index >= sNdsNativeFighterActiveTables->run_count) ||
         (family >= (sizeof(sNdsNativeFighterDirectPolicies) /
@@ -11406,19 +9625,10 @@ ndsRendererNativePrepareProductionRunCore(
     run_unlit = ndsRendererNativeRunUsesVertexColor(run);
     run_poly_alpha = (run_unlit != FALSE) ?
         ndsRendererNativeRunPolyAlpha(run) : 31u;
-#if NDS_R2_FIGHTER_HW_LIGHT
     if (run_unlit == FALSE)
     {
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-        if (sNdsR2EpochUnlitVertexColor == 0u)
-        {
-            run_poly_light = POLY_FORMAT_LIGHT0;
-        }
-#else
         run_poly_light = POLY_FORMAT_LIGHT0;
-#endif
     }
-#endif
     policy = &sNdsNativeFighterDirectPolicies[family];
     geometry_cull = stats->geometry_mode &
         (NDS_RENDERER_GEOM_CULL_FRONT | NDS_RENDERER_GEOM_CULL_BACK);
@@ -11464,10 +9674,6 @@ ndsRendererNativePrepareProductionRunCore(
         return ndsRendererNativeDirectReject(stats);
     }
 
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    NDS_DIAG(gNdsR2RunValidateTicks += cpuGetTiming() - t_r2e11_phase);
-    t_r2e11_phase = cpuGetTiming();
-#endif
     material_color =
         ((policy->vertex_flags &
           NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u) ?
@@ -11482,7 +9688,6 @@ ndsRendererNativePrepareProductionRunCore(
         u32 texture_name = 0u;
 
         use_texture = FALSE;
-#if NDS_R2_FIGHTER_RUN_MEMO == 1
         if ((policy->textured != 0u) && (hierarchy_run == NULL) &&
             (ndsRendererR2RunTextureMemoApply(
                  run_index, stats, &texture_name,
@@ -11493,7 +9698,6 @@ ndsRendererNativePrepareProductionRunCore(
             use_texture = TRUE;
         }
         else
-#endif
         if (policy->textured != 0u)
         {
             u32 render_tile_index =
@@ -11558,21 +9762,13 @@ ndsRendererNativePrepareProductionRunCore(
                 ((stats->othermode_h & NDS_RENDERER_TEXTFILT_MASK) !=
                  NDS_RENDERER_TF_POINT) ?
                     NDS_RENDERER_TEXCOORD_FILTER_OFFSET : 0;
-#if NDS_R2_FIGHTER_RUN_MEMO
             if (hierarchy_run == NULL)
             {
-#if NDS_R2_FIGHTER_RUN_MEMO >= 2
-                ndsRendererR2RunTextureMemoVerify(
-                    run_index, stats, texture_name,
-                    texture_scale_s, texture_scale_t,
-                    texture_origin_s, texture_origin_t, texture_offset);
-#endif
                 ndsRendererR2RunTextureMemoFill(
                     run_index, stats, texture_name,
                     texture_scale_s, texture_scale_t,
                     texture_origin_s, texture_origin_t, texture_offset);
             }
-#endif
         }
         state->texture_prepare_valid = TRUE;
         state->texture_prepare_enabled = use_texture;
@@ -11652,28 +9848,7 @@ ndsRendererNativePrepareProductionRunCore(
         }
         state->texture_prepare_name = resolved_texture.name;
     }
-#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
-    if (use_texture != FALSE)
-    {
-        state->texture_prepare_vertex_flags &=
-            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
-              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
-    }
-#endif
 
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    if (t_r2e11_tex_valid == 0u)
-    {
-        NDS_DIAG(gNdsR2RunTexPrepTicks += cpuGetTiming() - t_r2e11_phase);
-        NDS_DIAG(gNdsR2RunTexPrepCount++);
-    }
-    else
-    {
-        NDS_DIAG(gNdsR2RunTexReuseTicks += cpuGetTiming() - t_r2e11_phase);
-        NDS_DIAG(gNdsR2RunTexReuseCount++);
-    }
-    t_r2e11_phase = cpuGetTiming();
-#endif
     unique_first = sNdsNativeFighterActiveTables->run_first_unique[run_index];
     unique_count = sNdsNativeFighterActiveTables->run_unique_count[run_index];
     /* Hierarchy preflight records immutable UV policy only; commit evaluates
@@ -11735,10 +9910,6 @@ ndsRendererNativePrepareProductionRunCore(
         }
     }
 
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    NDS_DIAG(gNdsR2RunUvTicks += cpuGetTiming() - t_r2e11_phase);
-    t_r2e11_phase = cpuGetTiming();
-#endif
     if (hierarchy_run != NULL)
     {
         hierarchy_run->texture_entry = resolved_texture.entry;
@@ -11778,13 +9949,6 @@ ndsRendererNativePrepareProductionRunCore(
                 state->texture_prepare_poly_fmt, state->matrix_generation);
         }
     }
-#if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    NDS_DIAG(gNdsR2RunTailTicks += cpuGetTiming() - t_r2e11_phase);
-    NDS_DIAG(gNdsR2RunSuccessCount++);
-#endif
-#if NDS_R2_FIGHTER_RUN_PROOF
-    ndsRendererR2FighterRunProofCall(run_index, state, &resolved_texture);
-#endif
     return TRUE;
 }
 
@@ -11821,35 +9985,10 @@ ndsRendererNativePrepareHierarchyRun(
 }
 
 
-#if NDS_LAB_CULL_PROBE
-/* BUGS.md #10 probe. Paints each fighter run a distinct colour so a capture
- * says which joint owns the pixels bordering the hole, and which joint is
- * absent from it. Every earlier attempt guessed at that from the model data;
- * this reads it off the screen. Lab only. */
-static u16 ndsRendererNativeLabRunTint(u32 run_index)
-{
-    static const u16 palette[8] = {
-        0x001fu, 0x03e0u, 0x7c00u, 0x03ffu,
-        0x7c1fu, 0x7fe0u, 0x421fu, 0x7fffu
-    };
-
-    return palette[(run_index >> NDS_LAB_TINT_SHIFT) & 7u];
-}
-#endif
 
 static inline void ndsRendererNativeEmitProductionShade(
     u32 run_index, u32 dense_id)
 {
-#if NDS_LAB_CULL_PROBE
-    /* Intentional fighter-writer use. This tint is emitted inside the native
-     * fighter corner loop, so it must take the fighter GX-record path just as
-     * production FIFO_COLOR does. ndsRendererHardwareWriteColorWord carries
-     * the broader stage/capture hooks that are provably inactive for fighters
-     * and were split out of this hot path; using it here would reintroduce that
-     * instrumentation distinction into a probe that changes colour only. */
-    ndsRendererHardwareWriteFighterColorWord(
-        ndsRendererNativeLabRunTint(run_index));
-#elif NDS_R2_FIGHTER_HW_LIGHT
     const NDSNativeRun *run = &sNdsNativeFighterActiveTables->runs[run_index];
     const u8 *submit_class = &run->submit_class;
 
@@ -11867,20 +10006,8 @@ static inline void ndsRendererNativeEmitProductionShade(
             sNdsNativeFighterActiveDenseNormals[dense_id]);
         return;
     }
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-    if (sNdsR2EpochUnlitVertexColor != 0u)
-    {
-        ndsRendererHardwareWriteFighterColorWord(
-            ndsRendererR2DenseVertexColor15(dense_id));
-        return;
-    }
-#endif
     ndsRendererHardwareWriteNormalWord(
         sNdsNativeFighterActiveDenseNormals[dense_id]);
-#else
-    ndsRendererHardwareWriteFighterColorWord(
-        sNdsNativeFighterActiveTables->prepared_dense[dense_id].packed_color);
-#endif
 }
 
 static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
@@ -11930,7 +10057,6 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     }
 }
 
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* The one-binary A/B for the strips, same instrument as gNdsR2AnimCutRoute.
  * .data and aligned(32) so it owns its cache line and no neighbouring
  * counter's write-back can stamp the poke. Default 1 = strips, so an unpoked
@@ -11938,39 +10064,8 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
  * control, in the SAME binary at the SAME placement. Compile-time gated
  * because the route is an instrument, not a feature: at NDS_R2_STRIP_ROUTE=0
  * the test folds to a constant and the unselected emitter is dead-coded. */
-#if NDS_R2_STRIP_ROUTE
-volatile u32 gNdsR2FighterStripRoute
-    __attribute__((section(".data"), aligned(32))) = 1u;
-#define NDS_R2_STRIP_ROUTE_ON() (gNdsR2FighterStripRoute != 0u)
-#else
 #define NDS_R2_STRIP_ROUTE_ON() (1)
-#endif
 
-#if NDS_LAB_NO_CULL
-/* The seam probe's one control surface. Defined here because arm 3 drives the
- * strip route above; the poly-format arms are read at the two begin-batch
- * sites. Returns the arm now selected so the caller can label the screen -- an
- * unlabelled arm is how a probe capture becomes unattributable evidence. */
-u32 ndsRendererLabSeamAdvanceArm(void)
-{
-    u32 arm = gNdsLabSeamArm + 1u;
-
-    if (arm >= NDS_LAB_SEAM_ARM_COUNT)
-    {
-        arm = 0u;
-    }
-    gNdsLabSeamArm = arm;
-#if NDS_LAB_SEAM_STRIP_ARM != 0xffu
-    gNdsR2FighterStripRoute = (arm == NDS_LAB_SEAM_STRIP_ARM) ? 0u : 1u;
-#endif
-    return arm;
-}
-
-u32 ndsRendererLabSeamArm(void)
-{
-    return gNdsLabSeamArm;
-}
-#endif
 
 /* Task 56: emit a RAW run's triangles as DS-native primitive groups
  * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
@@ -12071,7 +10166,6 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
         glBegin(GL_TRIANGLE);
     }
 }
-#endif
 
 static void NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeEmitProductionCrossRun(
@@ -12081,15 +10175,9 @@ ndsRendererNativeEmitProductionCrossRun(
     u32 current_palette_slot,
     const u8 *binding_palette_slots)
 {
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
     u32 group = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
     const u16 *corner = &sNdsNativeFighterActiveTables->primitive_vertices[
         sNdsNativeFighterActiveTables->primitive_group_first_vertex[group]];
-#else
-    const u16 *corner =
-        &sNdsNativeFighterActiveTables->packed_corners[
-            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
-#endif
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 
@@ -12160,43 +10248,12 @@ static inline void ndsRendererNativeAccountGXCrossTriangles(
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_zbuffer_triangle_count += triangle_count;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount += triangle_count;
 #endif
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E15. E14 put ndsRendererExecuteNativeFighterOwnerProduction at 279,617
- * ticks/frame -- 56% of the fighter, 447 ticks per hardware triangle, with the
- * geometry engine measured idle. This function is the whole of it: prepare the
- * run, then emit it as either a CROSS_MATRIX run or a Task 56 primitive group.
- * Which of the three carries the cost decides whether the answer is a captured
- * command stream (R2-02 E2's lever), a cheaper prepare, or moving work onto the
- * idle hardware -- so it is measured before any of them is proposed.
- *
- * `Calls` is the liveness counter. The first cut of this experiment
- * instrumented ndsRendererNativeSubmitRunDirect, which is the non-production
- * path and never executes in the canonical mode, and every counter read a
- * perfectly plausible zero. */
-u32 gNdsR2SubmitCalls;
-u32 gNdsR2SubmitPrepTicks;
-u32 gNdsR2SubmitRawEmitTicks;
-u32 gNdsR2SubmitRawCalls;
-u32 gNdsR2SubmitRawTriangles;
-u32 gNdsR2SubmitCrossEmitTicks;
-u32 gNdsR2SubmitCrossCalls;
-u32 gNdsR2SubmitCrossTriangles;
-u32 gNdsR2SubmitTotalTicks;
-/* E15b. The run loop turned out to be only 37% of the execute, so the rest is
- * the per-root and per-epoch preamble that runs before any triangle is emitted.
- * These name it. */
-u32 gNdsR2ExecPreflightTicks;
-u32 gNdsR2ExecRootTicks;
-u32 gNdsR2ExecStateTicks;
-u32 gNdsR2ExecShadeTicks;
-u32 gNdsR2ExecEpochCalls;
-#endif
 
 #if NDS_FIGHTER_PACKET_LIVE
 extern u16 gSYFramebufferSets[1][231][320];
@@ -12216,11 +10273,7 @@ extern u16 gSYFramebufferSets[1][231][320];
 /* The KTIME attribution ROM's timers do not fit ITCM beside the rest (64 B
  * over): there, and only there, the tint core stays in main RAM, so that
  * ROM's apply_tint part reads a little high. */
-#if NDS_FTR_LEAN_KTIME
-#define NDS_FTR_LEAN_TINT_CODE
-#else
 #define NDS_FTR_LEAN_TINT_CODE NDS_FTR_LEAN_DRAW_CODE
-#endif
 
 static u32 ndsFighterPacketMix(u32 hash, u32 value)
 {
@@ -13169,9 +11222,6 @@ static u32 ndsFtrLeanOwnerIsFighter(void)
     u32 owner = (u32)sNdsRendererRuntimeOwner;
 
     return ((owner != (u32)NDS_RENDERER_PROFILE_OWNER_STAGE) &&
-#if NDS_TASK49_GX_DIFFER
-            (owner != (u32)NDS_RENDERER_PROFILE_OWNER_EFFECT) &&
-#endif
             (owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)) ? TRUE : FALSE;
 }
 
@@ -15199,14 +13249,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         ndsRendererNativeRunPolyAlpha(run) : 31u;
     if (run_unlit == FALSE)
     {
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-        if (sNdsR2EpochUnlitVertexColor == 0u)
-        {
-            run_poly_light = POLY_FORMAT_LIGHT0;
-        }
-#else
         run_poly_light = POLY_FORMAT_LIGHT0;
-#endif
     }
     policy = &sNdsNativeFighterDirectPolicies[family];
     geometry_cull = stats->geometry_mode &
@@ -18655,7 +16698,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
             packet->raw_reuse;
         sNdsRendererRuntimeFrameSummary.hardware_triangles += raw;
         sNdsRendererRuntimeFrameSummary.hardware_vertices += raw * 3u;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
         sNdsRendererBenchmarkTriangleCount += raw;
 #endif
         sNdsRendererHardwareSubmitted = TRUE;
@@ -18676,7 +16719,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         {
             sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
         }
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
         sNdsRendererBenchmarkTriangleCount += cross;
 #endif
         sNdsRendererHardwareSubmitted = TRUE;
@@ -18744,7 +16787,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     return raw + cross;
 }
 
-#if NDS_P4
 /* P4 S4, Remix SET ENV COLOR (0xD9): a content whose env-colour alpha is
  * under 0xFF draws translucent, as Remix's alpha render modes draw it. The
  * active list's POLY_FORMAT alphas are scaled in place for its one DMA and
@@ -18876,7 +16918,6 @@ void __attribute__((noinline, cold)) ndsFtrLeanPacketSetAlpha(u32 battle_slot,
     gNdsFtrLeanAlphaPending = (sites != 0u) ? 1u : 0u;
     (void)state;
 }
-#endif
 
 #if NDS_FTR_LEAN_LAB
 /* Census of the texture cache; also the admission's print-first number. */
@@ -19042,7 +17083,7 @@ void ndsFtrLeanNoteTextureUpload(u32 bytes)
 #endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
 /* Slice 2b lab words outside this TU's structs (nds_platform.c). */
 extern volatile u32 gNdsVramBankDLent;
 extern volatile u32 gNdsVramBg3RefusedWrites;
@@ -19058,7 +17099,7 @@ void ndsFtrLeanCountersPublish(void)
 #if NDS_FTR_LEAN_ATTR_LIVE
     DC_FlushRange(&gNdsFtrLeanAttr, sizeof(gNdsFtrLeanAttr));
 #endif
-#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
     /* Slice 2b: the admission lab and the words the sampler reads once at
      * the end -- flushed every frame so a GDB read is never a stale line. */
     DC_FlushRange(&gNdsFtrAdmitLab, sizeof(gNdsFtrAdmitLab));
@@ -19231,7 +17272,6 @@ u32 ndsFtrLeanPacketSubmit(u32 battle_slot)
     return 0u;
 }
 
-#if NDS_P4
 u32 gNdsFtrLeanAlphaPending;
 
 void ndsFtrLeanPacketAlphaRestore(void)
@@ -19243,7 +17283,6 @@ void ndsFtrLeanPacketSetAlpha(u32 battle_slot, u32 alpha)
     (void)battle_slot;
     (void)alpha;
 }
-#endif
 
 void ndsFtrLeanTextureCensus(void)
 {
@@ -19329,96 +17368,41 @@ static s32 ndsRendererNativeSubmitProductionRun(
 {
     u32 run_index;
     u32 submit_class;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    volatile NDSRendererOwnerProfile *m2_owner =
-        ndsRendererProfileM2Owner();
-    u32 m2_phase_start = 0u;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    u32 e15_t0;
-    u32 e15_mark;
-#endif
 
     if ((run == NULL) || (run->triangle_count == 0u))
     {
         return ndsRendererNativeDirectReject(stats);
     }
     submit_class = ndsRendererNativeRunSubmitClass(run);
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    e15_t0 = cpuGetTiming();
-    e15_mark = e15_t0;
-    NDS_DIAG(gNdsR2SubmitCalls++);
-#endif
     run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
     (void)epoch_policy;
     (void)current_palette_slot;
     (void)binding_palette_slots;
     (void)config;
     (void)state;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    m2_phase_start = cpuGetTiming();
-#endif
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    m2_phase_start = cpuGetTiming();
-#endif
+#elif 0 == NDS_RENDERER_BENCHMARK_NONE
     if (ndsRendererNativePrepareProductionRun(
             run_index, epoch_policy,
             FALSE,
             config, stats, state) == FALSE)
     {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        if (m2_owner != NULL)
-        {
-            m2_owner->m2_run_prepare_ticks +=
-                cpuGetTiming() - m2_phase_start;
-            m2_owner->m2_run_prepare_count++;
-        }
-#endif
         return FALSE;
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_run_prepare_ticks +=
-            cpuGetTiming() - m2_phase_start;
-        m2_owner->m2_run_prepare_count++;
-    }
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    e15_mark = cpuGetTiming();
-    NDS_DIAG(gNdsR2SubmitPrepTicks += e15_mark - e15_t0);
-#endif
     if ((submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
         (current_palette_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX))
     {
         return ndsRendererNativeDirectReject(stats);
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    m2_phase_start = cpuGetTiming();
-#endif
     if (submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
     {
         ndsRendererNativeEmitProductionCrossRun(
             run_index, (u32)run->triangle_count * 3u,
             state->texture_prepare_enabled,
             current_palette_slot, binding_palette_slots);
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        NDS_DIAG(gNdsR2SubmitCrossEmitTicks += cpuGetTiming() - e15_mark);
-        NDS_DIAG(gNdsR2SubmitCrossCalls++);
-        NDS_DIAG(gNdsR2SubmitCrossTriangles += run->triangle_count);
-#endif
     }
     else
     {
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && (NDS_RENDERER_PROFILE_LEVEL < 2)
         /* Task 56: RAW runs emit DS-native primitive groups (strips + residual
          * triangles) compiled host-side. The first group's begin-batch already
          * ran in PrepareProductionRun; this walk re-begins only on type change
@@ -19432,7 +17416,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
                 run_index, state->texture_prepare_enabled);
         }
         else
-#endif
         if (state->texture_prepare_enabled != 0u)
         {
             ndsRendererNativeEmitProductionRawTexturedRun(
@@ -19443,11 +17426,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        NDS_DIAG(gNdsR2SubmitRawEmitTicks += cpuGetTiming() - e15_mark);
-        NDS_DIAG(gNdsR2SubmitRawCalls++);
-        NDS_DIAG(gNdsR2SubmitRawTriangles += run->triangle_count);
-#endif
     }
 #else
     (void)epoch_policy;
@@ -19470,29 +17448,8 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        if (m2_owner != NULL)
-        {
-            m2_owner->m2_corner_emit_account_ticks +=
-                cpuGetTiming() - m2_phase_start;
-            m2_owner->m2_corner_emit_run_count++;
-        }
-#endif
         return ndsRendererNativeDirectReject(stats);
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_corner_emit_account_ticks +=
-            cpuGetTiming() - m2_phase_start;
-        m2_owner->m2_corner_emit_run_count++;
-    }
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    NDS_DIAG(gNdsR2SubmitTotalTicks += cpuGetTiming() - e15_t0);
-#endif
     return TRUE;
 }
 
@@ -19575,21 +17532,19 @@ static inline void ndsRendererNativeAccountProjectedCrossTriangle(
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_projected_depth_triangle_count += triangle_count;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount += triangle_count;
 #endif
     sNdsRendererHardwareSubmitted = TRUE;
 }
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererNativeSubmitRunDirect(
     const NDSNativeRun *run,
     const NDSRendererConfig *config,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
     if ((run == NULL) || (config == NULL) || (stats == NULL) ||
         (state == NULL) || (run->triangle_count == 0u))
     {
@@ -19611,7 +17566,7 @@ static s32 ndsRendererNativeSubmitRunDirect(
             stats, run->triangle_count);
     }
     return TRUE;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#elif 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 emitted_triangles = 0u;
     u32 run_index;
     u32 i;
@@ -19712,7 +17667,6 @@ static s32 ndsRendererNativeSubmitRunDirect(
 #endif
     return FALSE;
 }
-#endif
 
 static void ndsRendererNativeSubmitRun(
     const NDSNativeRun *run,
@@ -19728,11 +17682,9 @@ static void ndsRendererNativeSubmitRun(
 {
     const u16 *triangle;
     s32 native_raw_ready = FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     s32 native_snapshot_ready = FALSE;
     u32 native_raw_submitted = 0u;
     u32 native_cross_submitted = 0u;
-#endif
     u32 i;
 
     stats->triangle_count += run->triangle_count;
@@ -19750,7 +17702,6 @@ static void ndsRendererNativeSubmitRun(
             run, first_indices[0], FALSE,
             config, stats, state);
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     else if ((ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_CROSS_MATRIX) &&
              (run->triangle_count != 0u) &&
              (NDS_RENDERER_BENCHMARK_MODE !=
@@ -19764,7 +17715,6 @@ static void ndsRendererNativeSubmitRun(
             run, first_indices[0], TRUE,
             config, stats, state);
     }
-#endif
     for (i = 0u; i < run->triangle_count; i++)
     {
         u16 encoded = triangle[i];
@@ -19785,12 +17735,8 @@ static void ndsRendererNativeSubmitRun(
         }
         if (((ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_RAW_CURRENT) &&
              (native_raw_ready == FALSE)) ||
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             ((ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_CROSS_MATRIX) &&
              (native_snapshot_ready == FALSE)) ||
-#else
-            (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_CROSS_MATRIX) ||
-#endif
             (NDS_RENDERER_BENCHMARK_MODE ==
              NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP))
         {
@@ -19815,7 +17761,6 @@ static void ndsRendererNativeSubmitRun(
         }
         else
         {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             if (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_CROSS_MATRIX)
             {
                 if (ndsRendererHardwareTriangleInsideNearPlane(
@@ -19850,29 +17795,15 @@ static void ndsRendererNativeSubmitRun(
                 native_cross_submitted++;
             }
             else
-#endif
             {
             if (sNdsRendererHardwareNoOracle == 0u)
             {
                 ndsRendererRecordTransformedTriangle(
                     stats, state, packed);
             }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            state->semantic_command_index = command_index;
-            state->semantic_tri2_half = command_half;
-#endif
             ndsRendererFastEmitRawCommand(
                 state, indices, 1u, state->texture_prepare_enabled);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            ndsRendererFastCommitRawSemanticTriangle(
-                stats, state, packed, indices);
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             native_raw_submitted++;
-#else
-            ndsRendererFastAccountRawTriangles(
-                stats, 1u, (i == 0u) ? 0u : 1u);
-#endif
             }
         }
         if ((encoded & 0x8000u) != 0u)
@@ -19885,7 +17816,6 @@ static void ndsRendererNativeSubmitRun(
             *tri2_half = 0u;
         }
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (native_raw_submitted != 0u)
     {
         ndsRendererFastAccountRawTriangles(
@@ -19897,10 +17827,8 @@ static void ndsRendererNativeSubmitRun(
         ndsRendererNativeAccountProjectedCrossTriangle(
             stats, native_cross_submitted);
     }
-#endif
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsRendererNativeBindOwnerRootState(
     NDSRendererTraversalState *state,
     const NDSRendererConfig *config,
@@ -19941,7 +17869,6 @@ static void ndsRendererNativeBindOwnerRootState(
         stats->hardware_matrix_seed_count++;
     }
 }
-#endif
 
 static s32 ndsRendererExecuteNativeFighterRootHardware(
     u32 slot,
@@ -19967,9 +17894,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     u32 last_callback_command = 0xffffffffu;
     NDSRendererTraversalState local_state;
     NDSRendererTraversalState *state_ptr = &local_state;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     s32 shared_owner_state = FALSE;
-#endif
 #define state (*state_ptr)
 
     if ((asset_base == NULL) || (config == NULL) || (stats == NULL) ||
@@ -19977,7 +17902,6 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     {
         return FALSE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     /* This legacy root entry point predates P2-2 and has no detail argument.
      * Keep its historical contract explicitly high-detail so a preceding low
      * owner cannot leave the shared serialized table view pointed elsewhere. */
@@ -19985,7 +17909,6 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     {
         return FALSE;
     }
-#endif
     if (slot == 0u)
     {
         roots = sNdsNativeMarioRoots;
@@ -20017,7 +17940,6 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
         }
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (sNdsNativeFighterOwnerExecution.active != 0u)
     {
         if ((sNdsNativeFighterOwnerExecution.slot != slot) ||
@@ -20032,7 +17954,6 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
         ndsRendererNativeBindOwnerRootState(&state, config, stats);
     }
     else
-#endif
     {
         ndsRendererInitTraversalState(
             &state, config, stats, NULL,
@@ -20090,12 +18011,10 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
             const NDSNativeRun *run =
                 &sNdsNativeFighterRuns[epoch->first_run + run_index];
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             if ((callback != NULL) ||
                 (sNdsRendererHardwareNoOracle == 0u) ||
                 (ndsRendererNativeSubmitRunDirect(
                      run, config, stats, &state) == FALSE))
-#endif
             {
                 ndsRendererNativeSubmitRun(
                     run, root_base, callback, callback_user,
@@ -20124,9 +18043,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
         stats->end_command_count++;
     }
     ndsRendererHardwareEndBatch();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (shared_owner_state == FALSE)
-#endif
     {
         vertex_cache->transformed_valid_mask = state.vertex_valid_mask;
         vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
@@ -20146,14 +18063,12 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
                 (u32)sNdsRendererRuntimeOwner] += native_triangle_count;
         }
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((shared_owner_state != FALSE) &&
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE))
     {
         ndsRendererAbortNativeFighterOwner();
         return FALSE;
     }
-#endif
     return TRUE;
 #undef state
 }
@@ -20162,16 +18077,11 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
  * ramps. */
 void ndsRendererCommitDeferredPalettes(void)
 {
-#if NDS_R2_PARTICLE_RUNTIME
     ndsRendererParticleEnvVariantCommit();
-#endif
-#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_R2_FIGHTER_HW_LIGHT
     ndsRendererEntryRampPaletteCommit();
-#endif
 }
 
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 typedef struct NDSNativeHierarchyTables
 {
     const NDSNativeRoot *roots;
@@ -20250,7 +18160,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeCaptainJointSchedule[0]);
     }
 #endif
-#if NDS_P2_SAMUS
     else if (slot == 5u)
     {
         tables->roots = sNdsNativeSamusRoots;
@@ -20262,7 +18171,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativeSamusJointSchedule) /
             sizeof(sNdsNativeSamusJointSchedule[0]);
     }
-#endif
 #if NDS_P2_LINK
     else if (slot == 6u)
     {
@@ -20276,7 +18184,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeLinkJointSchedule[0]);
     }
 #endif
-#if NDS_P2_PIKACHU
     else if (slot == 7u)
     {
         tables->roots = sNdsNativePikachuRoots;
@@ -20288,8 +18195,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativePikachuJointSchedule) /
             sizeof(sNdsNativePikachuJointSchedule[0]);
     }
-#endif
-#if NDS_P2_YOSHI
     else if (slot == 8u)
     {
         tables->roots = sNdsNativeYoshiRoots;
@@ -20301,8 +18206,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativeYoshiJointSchedule) /
             sizeof(sNdsNativeYoshiJointSchedule[0]);
     }
-#endif
-#if NDS_P2_NESS
     else if (slot == 9u)
     {
         tables->roots = sNdsNativeNessRoots;
@@ -20314,8 +18217,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativeNessJointSchedule) /
             sizeof(sNdsNativeNessJointSchedule[0]);
     }
-#endif
-#if NDS_P2_PURIN
     else if (slot == 10u)
     {
         tables->roots = sNdsNativePurinRoots;
@@ -20327,8 +18228,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativePurinJointSchedule) /
             sizeof(sNdsNativePurinJointSchedule[0]);
     }
-#endif
-#if NDS_P2_KIRBY
     else if (slot == 11u)
     {
         tables->roots = sNdsNativeKirbyRoots;
@@ -20340,7 +18239,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
         tables->joint_count = sizeof(sNdsNativeKirbyJointSchedule) /
             sizeof(sNdsNativeKirbyJointSchedule[0]);
     }
-#endif
 #if NDS_P2_MMARIO
     else if (slot == 12u)
     {
@@ -20380,7 +18278,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeNFoxJointSchedule[0]);
     }
 #endif
-#if NDS_P4
 #define NDS_P4_OWNER_HIERARCHY(id_, T_, N_, n_, parent_, model_, main_)        \
     else if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                           \
     {                                                                           \
@@ -20395,7 +18292,6 @@ static s32 ndsRendererNativeGetHierarchyTables(
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_HIERARCHY)
 #undef NDS_P4_OWNER_HIERARCHY
-#endif
 #if NDS_P2_NDONKEY
     else if (slot == 15u)
     {
@@ -20590,7 +18486,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeCaptainBindingParents;
     }
 #endif
-#if NDS_P2_SAMUS
     if (slot == 5u)
     {
 #if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
@@ -20623,7 +18518,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativeSamusBindingParents[0]));
         return sNdsNativeSamusBindingParents;
     }
-#endif
 #if NDS_P2_LINK
     if (slot == 6u)
     {
@@ -20673,7 +18567,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeLinkBindingParents;
     }
 #endif
-#if NDS_P2_PIKACHU
     if (slot == 7u)
     {
 #if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
@@ -20688,8 +18581,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativePikachuBindingParents[0]));
         return sNdsNativePikachuBindingParents;
     }
-#endif
-#if NDS_P2_YOSHI
     if (slot == 8u)
     {
 #if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
@@ -20711,8 +18602,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativeYoshiBindingParents[0]));
         return sNdsNativeYoshiBindingParents;
     }
-#endif
-#if NDS_P2_NESS
     if (slot == 9u)
     {
 #if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
@@ -20747,8 +18636,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativeNessBindingParents[0]));
         return sNdsNativeNessBindingParents;
     }
-#endif
-#if NDS_P2_PURIN
     if (slot == 10u)
     {
 #if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
@@ -20763,8 +18650,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativePurinBindingParents[0]));
         return sNdsNativePurinBindingParents;
     }
-#endif
-#if NDS_P2_KIRBY
     if (slot == 11u)
     {
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -20810,7 +18695,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                        sizeof(sNdsNativeKirbyBindingParents[0]));
         return sNdsNativeKirbyBindingParents;
     }
-#endif
 #if NDS_P2_MMARIO
     if (slot == 12u)
     {
@@ -20835,7 +18719,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeNFoxBindingParents;
     }
 #endif
-#if NDS_P4
 #define NDS_P4_OWNER_PARENTS(id_, T_, N_, n_, parent_, model_, main_)          \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
@@ -20852,7 +18735,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PARENTS)
 #undef NDS_P4_OWNER_PARENTS
-#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -20936,7 +18818,6 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
     return NULL;
 }
 
-#if NDS_R2_FIGHTER_GX_COMPOSE
 /* Slice 43. The same baked table the cross-run emitter reads through
  * `binding_palette_slots`, exported so the adapter can reuse a binding's
  * existing slot as its parent-store instead of allocating a second one. Most
@@ -20989,7 +18870,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         return sNdsNativeCaptainCrossPaletteSlots;
     }
 #endif
-#if NDS_P2_SAMUS
     if (slot == 5u)
     {
 #if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
@@ -21022,7 +18902,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativeSamusCrossPaletteSlots[0]));
         return sNdsNativeSamusCrossPaletteSlots;
     }
-#endif
 #if NDS_P2_LINK
     if (slot == 6u)
     {
@@ -21072,7 +18951,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         return sNdsNativeLinkCrossPaletteSlots;
     }
 #endif
-#if NDS_P2_PIKACHU
     if (slot == 7u)
     {
 #if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
@@ -21087,8 +18965,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativePikachuCrossPaletteSlots[0]));
         return sNdsNativePikachuCrossPaletteSlots;
     }
-#endif
-#if NDS_P2_YOSHI
     if (slot == 8u)
     {
 #if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
@@ -21110,8 +18986,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativeYoshiCrossPaletteSlots[0]));
         return sNdsNativeYoshiCrossPaletteSlots;
     }
-#endif
-#if NDS_P2_NESS
     if (slot == 9u)
     {
 #if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
@@ -21138,8 +19012,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativeNessCrossPaletteSlots[0]));
         return sNdsNativeNessCrossPaletteSlots;
     }
-#endif
-#if NDS_P2_PURIN
     if (slot == 10u)
     {
 #if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
@@ -21154,8 +19026,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativePurinCrossPaletteSlots[0]));
         return sNdsNativePurinCrossPaletteSlots;
     }
-#endif
-#if NDS_P2_KIRBY
     if (slot == 11u)
     {
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -21201,7 +19071,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                        sizeof(sNdsNativeKirbyCrossPaletteSlots[0]));
         return sNdsNativeKirbyCrossPaletteSlots;
     }
-#endif
 #if NDS_P2_MMARIO
     if (slot == 12u)
     {
@@ -21226,7 +19095,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         return sNdsNativeNFoxCrossPaletteSlots;
     }
 #endif
-#if NDS_P4
 #define NDS_P4_OWNER_CROSS(id_, T_, N_, n_, parent_, model_, main_)            \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
@@ -21243,7 +19111,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_CROSS)
 #undef NDS_P4_OWNER_CROSS
-#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -21326,7 +19193,6 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #endif
     return NULL;
 }
-#endif
 
 static void ndsRendererNativeMatrix3From20p12(
     const NDSRendererMatrix20p12 *source,
@@ -21415,11 +19281,6 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
     u32 binding_seen = 0u;
     u32 joint_index;
     u32 root_index;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    volatile NDSRendererOwnerProfile *m2_owner =
-        ndsRendererProfileM2Owner();
-#endif
 
     if ((asset_base == NULL) || (hierarchy == NULL) || (callback != NULL) ||
         (stats == NULL) || (tables == NULL) ||
@@ -21560,10 +19421,6 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
             NDSNativeHierarchyPreparedEpoch *prepared_epoch =
                 &execution->hierarchy_epochs[epoch_index];
             u32 run_offset;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            u32 m2_lighting_start;
-#endif
 
             if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
                 ((input->materials == NULL) ||
@@ -21586,10 +19443,6 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
             {
                 return FALSE;
             }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            m2_lighting_start = cpuGetTiming();
-#endif
             prepared_epoch->light_direction_valid = FALSE;
             if ((epoch->action_count != 0u) &&
                 ((scratch->geometry_mode &
@@ -21621,14 +19474,6 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
                         scratch->light_color_2);
                 }
             }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (m2_owner != NULL)
-            {
-                m2_owner->m2_lighting_shading_ticks +=
-                    cpuGetTiming() - m2_lighting_start;
-            }
-#endif
             memset(&execution->hierarchy_runs[epoch_index], 0,
                    sizeof(execution->hierarchy_runs[epoch_index]));
             for (run_offset = 0u;
@@ -21636,32 +19481,12 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
                  run_offset++)
             {
                 u32 run_index = epoch->first_run + run_offset;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                u32 m2_run_start = cpuGetTiming();
-                s32 run_ready;
-#endif
 
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                run_ready = ndsRendererNativePrepareHierarchyRun(
-                    run_index,
-                    sNdsNativeFighterEpochDirectPolicy[epoch_index],
-                    TRUE, hierarchy->config, scratch, state,
-                    &execution->hierarchy_runs[epoch_index]);
-                if (m2_owner != NULL)
-                {
-                    m2_owner->m2_run_prepare_ticks +=
-                        cpuGetTiming() - m2_run_start;
-                }
-                if (run_ready == FALSE)
-#else
                 if (ndsRendererNativePrepareHierarchyRun(
                         run_index,
                         sNdsNativeFighterEpochDirectPolicy[epoch_index],
                         TRUE, hierarchy->config, scratch, state,
                         &execution->hierarchy_runs[epoch_index]) == FALSE)
-#endif
                 {
                     return FALSE;
                 }
@@ -21736,15 +19561,7 @@ static inline void ndsRendererNativeBeginHierarchyBatch(
 {
     u32 texture_name = (prepared_run->textured != 0u) ?
         prepared_run->texture_name : 0u;
-#if NDS_LAB_NO_CULL
-    /* The hierarchy batch is mode 10's; the seam probe patches it too so an arm
-     * means the same thing whichever owner path a capture is on. See
-     * ndsRendererNativeLabSeamPolyFmt for the arm table and the two failures
-     * this shape exists to prevent. */
-    u32 poly_fmt = ndsRendererNativeLabSeamPolyFmt(prepared_run->poly_fmt);
-#else
     u32 poly_fmt = prepared_run->poly_fmt;
-#endif
 
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured ==
@@ -21818,11 +19635,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
         &sNdsNativeFighterOwnerExecution;
     NDSRendererMatrix20p12 light_modelview;
     u32 epoch_offset;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    volatile NDSRendererOwnerProfile *m2_owner =
-        ndsRendererProfileM2Owner();
-#endif
 
     ndsRendererNativeMatrix3To20p12(
         &execution->hierarchy_world[binding_joint], &light_modelview);
@@ -21856,10 +19668,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
         const NDSNativeHierarchyPreparedEpoch *prepared_epoch =
             &execution->hierarchy_epochs[epoch_index];
         u32 run_offset;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        u32 m2_lighting_start;
-#endif
 
         ndsRendererNativeApplyStateSpan(
             epoch->before_state_first, epoch->before_state_count,
@@ -21876,21 +19684,9 @@ static void ndsRendererNativeCommitHierarchyRoot(
             prepared_epoch->light_direction;
         state->prepared_light_direction_valid =
             prepared_epoch->light_direction_valid;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        m2_lighting_start = cpuGetTiming();
-#endif
         (void)ndsRendererNativeShadeProductionActions(
             epoch, sNdsNativeFighterEpochDirectPolicy[epoch_index],
             FALSE, stats, state);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        if (m2_owner != NULL)
-        {
-            m2_owner->m2_lighting_shading_ticks +=
-                cpuGetTiming() - m2_lighting_start;
-        }
-#endif
 
         for (run_offset = 0u;
              run_offset < epoch->run_count;
@@ -21903,23 +19699,10 @@ static void ndsRendererNativeCommitHierarchyRoot(
                 NDS_NATIVE_RUN_SUBMIT_CLASS_MASK;
             const NDSNativeHierarchyPreparedRun *prepared_run =
                 &execution->hierarchy_runs[epoch_index];
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            u32 m2_phase_start = cpuGetTiming();
-#endif
 
             ndsRendererNativePrepareHierarchyTexcoords(
                 run_index, prepared_run);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (m2_owner != NULL)
-            {
-                m2_owner->m2_run_prepare_ticks +=
-                    cpuGetTiming() - m2_phase_start;
-            }
-            m2_phase_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
             ndsRendererNativeBeginHierarchyBatch(
                 stats, prepared_run, matrix_generation);
             if (submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
@@ -21957,14 +19740,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
             }
             (*run_count)++;
             *triangle_count += run->triangle_count;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (m2_owner != NULL)
-            {
-                m2_owner->m2_corner_emit_account_ticks +=
-                    cpuGetTiming() - m2_phase_start;
-            }
-#endif
         }
     }
     ndsRendererNativeApplyStateSpan(
@@ -21972,4 +19747,3 @@ static void ndsRendererNativeCommitHierarchyRoot(
         root->tail_sync_count, asset_base, stats, state);
     stats->end_command_count++;
 }
-#endif

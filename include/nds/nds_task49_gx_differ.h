@@ -24,9 +24,6 @@
  * force-included via CFLAGS -include at Makefile:535). If the flag is undefined
  * the include order is broken and the build must fail loudly rather than silently
  * compile the recorder out -- this project has paid for silent no-ops. */
-#ifndef NDS_TASK49_GX_DIFFER
-#error "nds_task49_gx_differ.h needs nds_build_config.h (CFLAGS -include)"
-#endif
 
 #include <nds/nds_renderer.h>
 
@@ -46,28 +43,7 @@ typedef struct NDSRendererTask49GxDifferEntry
     u8 reserved;
 } NDSRendererTask49GxDifferEntry;
 
-#if NDS_TASK49_GX_DIFFER
-extern volatile u32 gNdsTask49GxDifferFrame;
-extern volatile u32 gNdsTask49GxDifferCaptureEnabled;
-extern volatile u32 gNdsTask49GxDifferSelectedOwner;
-extern volatile u32 gNdsTask49GxDifferEntryCount;
-extern volatile u32 gNdsTask49GxDifferWordCount;
-extern volatile u32 gNdsTask49GxDifferOverflowCount;
-extern volatile u32 gNdsTask49GxDifferFaultCount;
-extern volatile u32 gNdsTask49GxDifferBindingCount;
-extern volatile NDSRendererTask49GxDifferEntry
-    gNdsTask49GxDifferEntries[NDS_TASK49_GX_DIFFER_ENTRY_CAPACITY];
-extern volatile u32
-    gNdsTask49GxDifferWords[NDS_TASK49_GX_DIFFER_WORD_CAPACITY];
-
-/* Called from the single funnel ndsRendererTask29GXRecord hook site
- * (src/nds/nds_renderer.c). The owner is passed in because the runtime owner
- * is a file-static of nds_renderer.c that this TU cannot name. */
-void ndsRendererTask49GxDifferRecord(
-    u32 owner, u32 command_class, const u32 *words, u32 word_count);
-#else
 #define NDS_TASK49_GX_DIFFER_RECORD(owner, command_class, words, word_count) \
     ((void)0)
-#endif
 
 #endif

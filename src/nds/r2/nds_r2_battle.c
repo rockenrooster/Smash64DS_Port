@@ -52,13 +52,6 @@ extern volatile u32 gNdsMObjTickMul;
 #error "src/nds/r2 is specialized for the battle_playable harness (mode 163)"
 #endif
 
-#if NDS_SCENE_MIP_CACHE_LAB
-/* The Runtime 1 loop carries a mip-cache seeding excursion at i == 0. It is a
- * lab path (default 0) and deliberately has no R2 equivalent; failing closed is
- * correct, because silently dropping it would make the two paths differ in a
- * configuration nobody is watching. */
-#error "NDS_R2_PATH does not implement the NDS_SCENE_MIP_CACHE_LAB seed path"
-#endif
 
 /* P2-2p8 (2026-09-27): each source tick runs on the DTCM hot stack
  * (src/port/coroutine.c). The top 1.5 KB of the gameplay coroutine's

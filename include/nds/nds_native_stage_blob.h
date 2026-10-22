@@ -52,9 +52,6 @@ typedef struct NDSNativeStageBlobPacket
     const void *state_deltas;
     const void *state_sequence;
     const void *state_spans;
-#if NDS_TASK51_STAGE_NATIVE
-    const void *baked_world;
-#endif
     u16 asset_count;
     u16 segment_count;
     u16 dobj_count;

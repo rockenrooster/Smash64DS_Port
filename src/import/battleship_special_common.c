@@ -1,7 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || \
-    NDS_IMPORT_BATTLESHIP_FOX_BLASTER || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
 
 #include <ft/fighter.h>
 
@@ -92,7 +88,6 @@ NDS_SPECIAL_COMMON_WEAK_STATUS(ftNessSpecialAirLwStartSetStatus)
 void ftKirbySpecialNSetStatusSelect(GObj *fighter_gobj);
 void ftKirbySpecialAirNSetStatusSelect(GObj *fighter_gobj);
 
-#if NDS_P4
 /* Remix's special-move starter tables (S3): the source checks run with the
  * content's rows lent to its kind's entries (ndsP4CheckSpecialLent). */
 #include <nds/nds_p4.h>
@@ -102,10 +97,8 @@ void ftKirbySpecialAirNSetStatusSelect(GObj *fighter_gobj);
     ndsP4SourceFTCommonSpecialAirCheckInterruptCommon
 sb32 ndsP4SourceFTCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsP4SourceFTCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj);
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c"
-#if NDS_P4
 #undef ftCommonSpecialNCheckInterruptCommon
 #undef ftCommonSpecialAirCheckInterruptCommon
 
@@ -137,22 +130,13 @@ sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
                                  ndsP4SourceFTCommonSpecialAirCheckInterruptCommon,
                                  tables, slots, ARRAY_COUNT(slots));
 }
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
-#if NDS_P4
 #define ftCommonSpecialHiCheckInterruptCommon \
     ndsP4SourceFTCommonSpecialHiCheckInterruptCommon
 sb32 ndsP4SourceFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj);
-#else
-#define ftCommonSpecialHiCheckInterruptCommon \
-    ndsBaseFTCommonSpecialHiCheckInterruptCommon
-#endif
 sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialhi.c"
 #undef ftCommonSpecialHiCheckInterruptCommon
-#if NDS_P4
 sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 {
     static NDSP4SpecialStart *const tables[] = { dFTCommonSpecialHiStatusList };
@@ -162,7 +146,4 @@ sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
                                  ndsP4SourceFTCommonSpecialHiCheckInterruptCommon,
                                  tables, slots, ARRAY_COUNT(slots));
 }
-#endif
-#endif
 
-#endif

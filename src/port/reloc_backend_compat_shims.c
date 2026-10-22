@@ -17,36 +17,21 @@
 #include "nds_p5_native_stages.generated.h"
 #endif
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
-#endif
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
  * include/nds/nds_startup.h beside the declarations. */
 extern volatile u32 gNdsShieldAnimJointInstallCalls;
 extern volatile u32 gNdsShieldAnimJointAttachCount;
 extern volatile u32 gNdsShieldAnimJointNullCount;
-#if NDS_ANIM_JOINT_AUDIT
-extern volatile u32 gNdsAnimJointFlagFrames;
-extern volatile u32 gNdsAnimJointIdleSkip32Count;
-extern volatile u32 gNdsAnimJointDispatch32Count;
-extern volatile u32 gNdsAnimJointDispatchFigatreeCount;
-extern volatile u32 gNdsAnimJointDispatchMisalignCount;
-extern volatile u32 gNdsAnimJointDispatchFigatreeScript;
-extern s32 ndsRelocPointerIsFighterAObj16(const void *ptr);
-#endif
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-static void ndsSamusTumbleTourPrepareDamageFallMap(FTStruct *fp);
-#endif
 
 static sb32 ndsBattlePlayableRuntimeEnabled(void)
 {
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
     return TRUE;
 #else
     return FALSE;
@@ -402,30 +387,6 @@ u8 gSC1PGameBonusStarCount;
 u8 gSC1PGameBonusGiantImpact;
 #endif
 
-#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
-static FTOpeningDesc sNdsDefaultOpeningDesc = { 0xFFFFFFFF, NULL };
-
-FTOpeningDesc D_ovl1_80390BE8[] = { { 0x00010000, NULL } };
-
-FTOpeningDesc *D_ovl1_80390D20[] = {
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc,
-    &sNdsDefaultOpeningDesc
-};
-#endif
 
 #define NDS_GM_COL_FIELD(value, start, len) \
     ((((u32)(value)) & ((1u << (len)) - 1u)) << (start))
@@ -507,7 +468,6 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
  * direct command-for-command transcription of gmcolscripts.c; keeping them in
  * the DS-native event layout avoids reintroducing source relocation work while
  * preserving BattleShip's priorities, looping and effect requests. */
-#if NDS_P4
 /* P4: Remix's extended colour animations (ids 0x56 on) the enabled contents
  * reach (scripts/p4/p4_colanims.py), appended to the table below. */
 #include "nds_p4_colanims.generated.inc"
@@ -542,9 +502,6 @@ static s32 ndsP4ColAnimRemap(const FTStruct *fp, s32 colanim_id)
     }
     return colanim_id;
 }
-#else
-#define NDS_GM_COL_DESC_COUNT nGMColAnimEnumCount
-#endif
 
 static u32 sNdsGMColScriptsFighterComPlayer[] = {
     NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x30),
@@ -950,7 +907,6 @@ static u32 sNdsGMColScriptsFighterFoxSpecialHi[] = {
     NDS_GM_COL_COMMAND_END()
 };
 
-#if NDS_TASK39_FX_FLASH
 /* Exact decomp gmcolscripts.c dGMColScriptsFighterDamageCommon commands. */
 static u32 sNdsGMColScriptsFighterDamageCommon[] = {
     NDS_GM_COL_COMMAND_SET_LIGHT(90, 0),
@@ -963,7 +919,6 @@ static u32 sNdsGMColScriptsFighterDamageCommon[] = {
     NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
     NDS_GM_COL_COMMAND_END()
 };
-#endif
 
 /* BattleShip gmcolscripts.c:62-74. Donkey/Samus/Kirby install this when their
  * stored neutral-special charge reaches max. The old compatibility table had
@@ -1282,10 +1237,8 @@ GMColDesc dGMColScriptsDescs[NDS_GM_COL_DESC_COUNT] = {
         { sNdsGMColScriptsFighterDamageIceFly, 100, FALSE },
     [nGMColAnimFighterCommonSpecialNCharge] =
         { sNdsGMColScriptsFighterCommonSpecialNCharge, 10, FALSE },
-#if NDS_TASK39_FX_FLASH
     [nGMColAnimFighterDamageCommon] =
         { sNdsGMColScriptsFighterDamageCommon, 100, FALSE },
-#endif
     [nGMColAnimFighterShieldBreakFly] =
         { sNdsGMColScriptsFighterShieldBreakFly, 60, TRUE },
     [nGMColAnimFighterFuraFura] =
@@ -1358,9 +1311,7 @@ GMColDesc dGMColScriptsDescs[NDS_GM_COL_DESC_COUNT] = {
         { sNdsGMColScriptsScreenFlashDamageElectric, 60, TRUE },
     [nGMColAnimScreenFlashDamageIce] =
         { sNdsGMColScriptsScreenFlashDamageIce, 60, TRUE },
-#if NDS_P4
     NDS_P4_COLANIM_ROWS
-#endif
 };
 
 _Static_assert(nGMColAnimScreenFlashDamageIce + 1 == nGMColAnimEnumCount,
@@ -1372,52 +1323,6 @@ static FTParts sNdsFTManagerPartsAllocPool[64];
 static FTParts *sNdsFTManagerPartsAllocFree;
 static sb32 sNdsFTManagerPartsAllocInit;
 
-#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
-static void ndsFTManagerInitPartsAllocPool(void)
-{
-    s32 i;
-
-    if (sNdsFTManagerPartsAllocInit != FALSE)
-    {
-        return;
-    }
-    for (i = 0; i < (ARRAY_COUNT(sNdsFTManagerPartsAllocPool) - 1); i++)
-    {
-        sNdsFTManagerPartsAllocPool[i].next =
-            &sNdsFTManagerPartsAllocPool[i + 1];
-    }
-    sNdsFTManagerPartsAllocPool[ARRAY_COUNT(sNdsFTManagerPartsAllocPool) - 1]
-        .next = NULL;
-    sNdsFTManagerPartsAllocFree = &sNdsFTManagerPartsAllocPool[0];
-    sNdsFTManagerPartsAllocInit = TRUE;
-}
-
-FTParts *ftManagerGetNextPartsAlloc(void)
-{
-    FTParts *parts;
-
-    ndsFTManagerInitPartsAllocPool();
-    parts = sNdsFTManagerPartsAllocFree;
-    if (parts == NULL)
-    {
-        return NULL;
-    }
-    sNdsFTManagerPartsAllocFree = parts->next;
-    bzero(parts, sizeof(*parts));
-    return parts;
-}
-
-void ftManagerSetPrevPartsAlloc(FTParts *parts)
-{
-    if (parts == NULL)
-    {
-        return;
-    }
-    ndsFTManagerInitPartsAllocPool();
-    parts->next = sNdsFTManagerPartsAllocFree;
-    sNdsFTManagerPartsAllocFree = parts;
-}
-#endif
 
 static SYAudioCSPlayerCompat sNdsAudioCSPlayerCompat;
 SYAudioCSPlayerCompat *gSYAudioCSPlayers[1] = {
@@ -1509,9 +1414,6 @@ void func_800266A0_272A0(void)
     ndsAudioFgmStopAll();
 }
 
-#if !NDS_IMPORT_BATTLESHIP_AUDIO_FGM
-static alSoundEffect sNdsStubSoundEffect;
-#endif
 
 void func_80026738_27338(alSoundEffect *sfx)
 {
@@ -1615,265 +1517,6 @@ sb32 syAudioGetRestarting(void)
     return FALSE;
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
-void ftManagerSetupFileSize(void)
-{
-}
-
-/* THE FIGATREE HEAP IS SIZED FROM THE ASSETS, NOT FROM A CONSTANT.
- *
- * Owner, 2026-08-23 and again 2026-08-24: "the Mario intro green tube ... only
- * the rim renders" and then "the intro animation for mario is broken".
- *
- * One fighter animation is loaded at a time, into a single heap whose size the
- * source computes in `ftManagerAllocFighter` (ft/ftmanager.c:79-206) as the
- * LARGEST animation file across every fighter it allocates -- it walks each
- * kind's motion descriptors and takes the max of `lbRelocGetFileSize`. This
- * port's shim used a flat `0x1000`, so every figatree over 4 KB failed to load:
- * the pointer resolve in `lbCommonAddFighterPartsFigatree` then handed
- * `ndsFtPoseBindEntry` a NULL script, the joint bound with
- * `anim_wait = AOBJ_ANIM_NULL`, and nothing ever published the GObj clock.
- *
- * The symptom was character-specific in a way that hid the cause: Wait and the
- * other short motions fit 4 KB and animate, so fighters looked fine, while
- * Mario's entry (motion 197, `nFTMarioMotionAppearR`) did not fit and left
- * `fighter_gobj->anim_frame` at its bind value. `ftCommonAppearProcUpdate` ends
- * Appear on `anim_frame <= 0.0F`, so both fighters left their entry on the tick
- * they began it -- measured, Mario `status_id=222 motion_id=197
- * anim_frame=0x80000000` and Fox `status_id=223 motion_id=198` identically --
- * and stood in Wait while their own entry effect played on beside them. The
- * pipe was never the defect; its animation is byte-faithful to the asset.
- *
- * This is the source's own computation, restricted to the kinds this build
- * actually carries (`dFTManagerDataFiles` entries are NULL for the rest) and
- * floored at the previous constant so a build whose tables are not yet
- * populated behaves exactly as it did before rather than allocating nothing. */
-#define NDS_FTMANAGER_FIGATREE_HEAP_FLOOR 0x1000u
-
-static size_t ndsFTManagerLargestFigatree(const FTMotionDescArray *array,
-                                          s32 count)
-{
-    size_t largest = 0u;
-    s32 i;
-
-    if ((array == NULL) || (count <= 0))
-    {
-        return 0u;
-    }
-    for (i = 0; i < count; i++)
-    {
-        const FTMotionDesc *motion_desc = &array->motion_desc[i];
-        size_t size;
-
-        if (motion_desc->anim_file_id == 0u)
-        {
-            continue;
-        }
-        /* Shield poses live inside the fighter's own shieldpose file and are
-         * addressed by offset, never loaded into this heap (ftmain.c:4617). */
-        if (motion_desc->anim_desc.flags.is_use_shieldpose != FALSE)
-        {
-            continue;
-        }
-        size = lbRelocGetFileSize((const void *)motion_desc->anim_file_id);
-        if (size > largest)
-        {
-            largest = size;
-        }
-    }
-    return largest;
-}
-
-/* One fighter's worst animation, which is all a slot holding that fighter can
- * ever need. */
-static size_t ndsFTManagerFigatreeHeapSizeKind(u32 data_flags, s32 kind)
-{
-    size_t largest = NDS_FTMANAGER_FIGATREE_HEAP_FLOOR;
-    const FTData *data;
-    size_t size;
-
-    if ((kind < 0) || (kind >= nFTKindEnumCount))
-    {
-        return 0;
-    }
-    data = dFTManagerDataFiles[kind];
-    if (data == NULL)
-    {
-        return 0;
-    }
-    if ((data_flags & FTDATA_FLAG_MAINMOTION) != 0u)
-    {
-        size = ndsFTManagerLargestFigatree(data->mainmotion,
-                                           data->mainmotion_array_count);
-        if (size > largest)
-        {
-            largest = size;
-        }
-    }
-    if (((data_flags & FTDATA_FLAG_SUBMOTION) != 0u) &&
-        (data->submotion_array_count != NULL))
-    {
-        size = ndsFTManagerLargestFigatree(data->submotion,
-                                           *data->submotion_array_count);
-        if (size > largest)
-        {
-            largest = size;
-        }
-    }
-    return largest;
-}
-
-static size_t ndsFTManagerFigatreeHeapSize(u32 data_flags)
-{
-    size_t largest = NDS_FTMANAGER_FIGATREE_HEAP_FLOOR;
-    s32 kind;
-
-    for (kind = 0; kind < nFTKindEnumCount; kind++)
-    {
-        size_t size = ndsFTManagerFigatreeHeapSizeKind(data_flags, kind);
-
-        if (size > largest)
-        {
-            largest = size;
-        }
-    }
-    return largest;
-}
-
-__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapMeasured;
-/* Per-slot figatree sizing, P2-3f49. The roster maximum below is what the
- * source computes and what every allocation used, which is correct on a
- * console whose whole roster is twelve fighters and whose binary is small.
- * Here the same rule made admitting a fighter raise the cost of EVERY match:
- * a slot's heap holds one animation of the fighter that occupies it, so
- * sizing it by the worst animation in the roster charges four slots for a
- * fighter who is not in the match. The flags the roster pass ran with are
- * kept so a per-kind size can be computed later, at the point the kind is
- * finally known. */
-static u32 sNdsFTManagerFigatreeDataFlags;
-__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapKindCount;
-__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapKindBytes;
-__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapSavedBytes;
-
-void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
-{
-    (void)allocs_num;
-    gNdsSCVSBattleCompatManagerMask |= 1u << 0;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
-    sNdsFTManagerFigatreeDataFlags = data_flags;
-    if (gFTManagerFigatreeHeapSize == 0)
-    {
-        gFTManagerFigatreeHeapSize = ndsFTManagerFigatreeHeapSize(data_flags);
-        gNdsFTManagerFigatreeHeapMeasured =
-            (u32)gFTManagerFigatreeHeapSize;
-    }
-    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
-    {
-        ndsFighterMarioFoxSetupManagerFiles();
-    }
-}
-
-void ftManagerSetupFilesAllKind(s32 fkind)
-{
-    gNdsSCVSBattleCompatManagerMask |= 1u << 1;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
-    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
-    {
-        ndsFighterMarioFoxSetupFilesKind(fkind);
-    }
-}
-
-void ftManagerSetupFilesPlayablesAll(void)
-{
-    gNdsSCVSBattleCompatManagerMask |= 1u << 2;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
-    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
-    {
-        ndsFighterMarioFoxSetupFilesKind(nFTKindMario);
-        ndsFighterMarioFoxSetupFilesKind(nFTKindFox);
-    }
-}
-
-void *ftManagerAllocFigatreeHeapKind(s32 fkind)
-{
-    /* The kind was already a parameter and was already being discarded. Use
-     * it: this heap parses one animation at a time for the fighter in this
-     * slot, so the roster maximum is only ever an upper bound, never a
-     * requirement. Falls back to that maximum when the kind has no data --
-     * the caller must still get a heap the source's parse can use. */
-    size_t kind_size =
-        ndsFTManagerFigatreeHeapSizeKind(sNdsFTManagerFigatreeDataFlags, fkind);
-
-    if ((kind_size == 0u) || (kind_size > gFTManagerFigatreeHeapSize))
-    {
-        kind_size = gFTManagerFigatreeHeapSize;
-    }
-    NDS_DIAG(gNdsFTManagerFigatreeHeapKindCount++);
-    gNdsFTManagerFigatreeHeapKindBytes = (u32)kind_size;
-    gNdsFTManagerFigatreeHeapSavedBytes +=
-        (u32)(gFTManagerFigatreeHeapSize - kind_size);
-    return syTaskmanMalloc(kind_size, 0x10);
-}
-
-GObj *ftManagerMakeFighter(FTDesc *desc)
-{
-    if (ndsFighterMarioFoxModelProofEnabled() != FALSE)
-    {
-        GObj *model_gobj = ndsFighterMarioFoxMakeFighter(desc);
-
-        if (model_gobj != NULL)
-        {
-            return model_gobj;
-        }
-    }
-
-    GObj *fighter_gobj = gcMakeGObjSPAfter(nGCCommonKindFighter,
-                                           NULL,
-                                           nGCCommonLinkIDFighter,
-                                           GOBJ_PRIORITY_DEFAULT);
-
-    if (fighter_gobj != NULL)
-    {
-        fighter_gobj->user_data.s = desc->player;
-        gcAddDObjForGObj(fighter_gobj, NULL);
-        gNdsSCVSBattleOriginalFighterGObjCount++;
-        NDS_DIAG(gNdsSCVSBattleOriginalFighterCreateCount++);
-        NDS_DIAG(gNdsSCVSBattleOriginalActivePlayerCount++);
-        gNdsSCVSBattleOriginalActivePlayerMask |= 1u << (desc->player & 3);
-        /* P2-3r15: one byte per slot, `fkind + 1`, so a four-name roster is
-         * readable at all -- the P0/P1 kind pair below stops at two. The
-         * recorder that actually runs in a VSBattle is
-         * ndsFighterManagerRecordCreatedFighter; this path is the compat/proof
-         * twin and writes the same field the same way. */
-        gNdsSCVSBattleOriginalFighterKinds =
-            (gNdsSCVSBattleOriginalFighterKinds &
-             ~(0xffu << ((desc->player & 3u) * 8u))) |
-            ((((u32)desc->fkind + 1u) & 0xffu) << ((desc->player & 3u) * 8u));
-        if (desc->player == 0)
-        {
-            gNdsSCVSBattleOriginalP0FKind = (u32)desc->fkind;
-            gNdsSCVSBattleOriginalP0LR = (u32)desc->lr;
-        }
-        else if (desc->player == 1)
-        {
-            gNdsSCVSBattleOriginalP1FKind = (u32)desc->fkind;
-            gNdsSCVSBattleOriginalP1LR = (u32)desc->lr;
-        }
-        gNdsSCVSBattleCompatManagerMask |= 1u << 3;
-        gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
-        ndsFighterMarioFoxRecordStubFighter(desc, fighter_gobj);
-    }
-    return fighter_gobj;
-}
-
-void ftManagerDestroyFighter(GObj *fighter_gobj)
-{
-    if (fighter_gobj != NULL)
-    {
-        gcEjectGObj(fighter_gobj);
-    }
-}
-#endif
 
 /* FTTEXTUREPART IS THREE BYTES, AND THE FILE HOLDING IT IS WORD-SWAPPED.
  *
@@ -2102,14 +1745,12 @@ void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
         0xFF;
     ftParamInitTexturePartAll(fighter_gobj);
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     /* The source operation above replaces MObjs in place. The DS native
      * renderer caches immutable material conversion by MObj identity, and the
      * source allocator may immediately reuse the just-freed MObj address. Tell
      * that cache about the source lifetime boundary so a costume can never
      * inherit the previous costume's converted texture/material block. */
     ndsFighterRendererInvalidateMaterialCachesForSlot((u32)fp->player);
-#endif
 }
 
 sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
@@ -2182,12 +1823,10 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
         gNdsDonkeyChargePresentationAppliedID = colanim_id;
 #endif
     }
-#if NDS_P4
     if (fp != NULL)
     {
         colanim_id = ndsP4ColAnimRemap(fp, colanim_id);
     }
-#endif
 
     ndsTask39EffectCensusRecord(
         NDS_TASK39_EFFECT_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,
@@ -2202,20 +1841,12 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
             sNdsFighterDashRunDamageSetupColAnimCount++;
         }
     }
-#if NDS_TASK39_FX_FLASH
     if ((fighter_gobj != NULL) && (ftGetStruct(fighter_gobj) != NULL))
     {
         return ftParamCheckSetColAnimID(&ftGetStruct(fighter_gobj)->colanim,
                                        colanim_id, unused);
     }
     return FALSE;
-#else
-    (void)fighter_gobj;
-    return ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-            (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-               ? TRUE
-               : FALSE;
-#endif
 }
 
 sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
@@ -2457,11 +2088,9 @@ void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
                                u32 victim_group_id,
                                sb32 ignore_damage_or_hit)
 {
-#if NDS_P4
     /* The source's own calls take the hook in battleship_ftmain.c; this
      * wrapper serves the other units (an item's hurtbox, itprocess.c). */
     ndsP4OnHitInteract(fp, attack_type);
-#endif
     battleship_ftMainSetHitInteractStats(fp, attack_group_id, victim_gobj,
                                          attack_type, victim_group_id,
                                          ignore_damage_or_hit);
@@ -2756,16 +2385,11 @@ static sb32 ndsFTParamApplyModelPartCurrent(GObj *fighter_gobj, FTStruct *fp,
 static void ndsFTParamInvalidateModelPartRenderer(GObj *fighter_gobj,
                                                    FTStruct *fp)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateDObjStateCaches(fighter_gobj);
     if (fp != NULL)
     {
         ndsFighterRendererInvalidateMaterialCachesForSlot((u32)fp->player);
     }
-#else
-    (void)fighter_gobj;
-    (void)fp;
-#endif
 }
 
 void ftParamResetModelPartAll(GObj *fighter_gobj)
@@ -2796,12 +2420,10 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
     }
     /* Source clears this after all requested parts have been restored. */
     fp->is_modelpart_modify = FALSE;
-#if NDS_P4 && NDS_P2_KIRBY
     if (fp->nds_p4_kirby_copy != 0u)
     {
         ndsP4KirbyRefreshHat(fp);
     }
-#endif
     if (changed != FALSE)
     {
         ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
@@ -3054,9 +2676,6 @@ static void ndsFTParamsInvalidateFighterParts(
  *
  * NDS_FTPARTS_FLAT_SLOTS is a build knob so the miss rate and the fix can be
  * measured on the same instrument. The default preserves the shipped four. */
-#ifndef NDS_FTPARTS_FLAT_SLOTS
-#define NDS_FTPARTS_FLAT_SLOTS GMCOMMON_PLAYERS_MAX
-#endif
 _Static_assert((NDS_FTPARTS_FLAT_SLOTS & (NDS_FTPARTS_FLAT_SLOTS - 1u)) == 0u,
                "flat fighter-parts cache hash requires a power-of-two slot count");
 
@@ -3092,9 +2711,6 @@ _Static_assert((NDS_FTPARTS_FLAT_SLOTS & (NDS_FTPARTS_FLAT_SLOTS - 1u)) == 0u,
  * footprint changed nothing, while removing the whole table to DTCM moved
  * -10,176. What matters here is whether the table is in the dcache at all, not
  * how big it is -- so there is no partial credit to collect on size. */
-#ifndef NDS_FTPARTS_FLAT_MAX
-#define NDS_FTPARTS_FLAT_MAX 48u
-#endif
 
 typedef struct NDSFtPartsFlatWalk
 {
@@ -3125,7 +2741,7 @@ volatile u32 gNdsFtPartsLatchWrites;
 volatile u32 gNdsLabFtPartsCleanSkipViolations __attribute__((used));
 volatile u32 gNdsLabFtPartsCleanVerify __attribute__((used, section(".data"))) = 0u;
 #endif
-#if NDS_P2_JOINT_RESIDENT && NDS_P2_HURTBOX_REJECT
+#if NDS_P2_JOINT_RESIDENT
 volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 1u;
 #else
 volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 0u;
@@ -3401,14 +3017,10 @@ ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
     }
 }
 
-#if NDS_P2_HURTBOX_REJECT
 /* src/port/nds_p2_hurtbox_reject.c: its cached fixed worlds live exactly as
  * long as the FTParts latches these functions clear. */
 extern volatile u32 gNdsP2HurtboxLatchEpoch;
 #define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() (gNdsP2HurtboxLatchEpoch++)
-#else
-#define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() ((void)0)
-#endif
 
 /* ITCM (2026-09-27 census: ~0.6K ticks/frame non-memory stall at 88 B). */
 void __attribute__((noinline, optimize("Os"))) __attribute__((section(".itcm")))
@@ -3514,35 +3126,10 @@ sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
 #define NDS_R2_ANIM_PARSER 1
 #endif
 void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj);
-#if NDS_R2_ANIM_CUT_ROUTE
-extern volatile u32 gNdsR2AnimCutRoute;
-#endif
 
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
-#if NDS_R2_FTANIM_TRACK
-    /* Stage 3. One range compare against a static array decides it: a joint
-     * bound to precompiled rows carries its own cursor block in
-     * `anim_joint.event16`, and nothing else in the tree reads that field for a
-     * figatree joint (`gcParseDObjAnimJoint` owns the AObj32 path and is
-     * selected by `is_anim_joint` at the caller). At dispatch 0 no block is
-     * ever installed, so this is FALSE for every joint on the same binary. */
-    if (ndsFtAnimTrackIsDense(root_dobj->anim_joint.event16) != FALSE)
-    {
-        ndsFtAnimTrackStep(root_dobj);
-        return;
-    }
-#endif
-#if NDS_R2_ANIM_CUT_ROUTE
-    if ((gNdsR2AnimCutRoute & 4u) != 0u)
-    {
-        ndsR2FtAnimParseDObjFigatree(root_dobj);
-    }
-    else
-    {
-        battleship_ftAnimParseDObjFigatree(root_dobj);
-    }
-#elif NDS_R2_ANIM_PARSER
+#if NDS_R2_ANIM_PARSER
     ndsR2FtAnimParseDObjFigatree(root_dobj);
 #else
     battleship_ftAnimParseDObjFigatree(root_dobj);
@@ -3573,12 +3160,7 @@ static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
  * compiled out (every published ROM) `NDS_R2_ANIM_CUT_ON` folds to 1 and the
  * pre-cut arm dead-codes away -- the skip is not optional, it is the shipped
  * path, because it is provably equivalent rather than an approximation. */
-#if NDS_R2_ANIM_CUT_ROUTE
-extern volatile u32 gNdsR2AnimCutRoute;
-#define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
-#else
 #define NDS_R2_ANIM_CUT_ON(bit) (1)
-#endif
 
 /* Joints skipped whole. The parser's own `gNdsR2FtAnimParseCalls` stops seeing
  * these, so calls + skips is the figure that stays comparable across the cut --
@@ -3603,15 +3185,6 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
     p_joint = &fp->joints[nFTPartsJointTopN];
     joint_limit = ndsFTStructJointLoopLimit(fp);
     mobj_mul = gNdsMObjTickMul;
-#if NDS_ANIM_JOINT_AUDIT
-    /* Once per call, OUTSIDE the idle-joint skip, so a Dispatch32 of zero can be
-     * read: FlagFrames 0 means the flag was never set here, FlagFrames high with
-     * Dispatch32 0 means every joint was already stopped. */
-    if (fp->anim_desc.flags.is_anim_joint)
-    {
-        NDS_DIAG(gNdsAnimJointFlagFrames++);
-    }
-#endif
 
     if (fp->motion_id != -2)
     {
@@ -3697,22 +3270,6 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             {
                 if (fp->anim_desc.flags.is_anim_joint)
                 {
-#if NDS_ANIM_JOINT_AUDIT
-                    /* The invariant fttypes.h:59 states, checked where it is
-                     * consumed. See nds_startup.h for the legend. */
-                    NDS_DIAG(gNdsAnimJointDispatch32Count++);
-                    if (ndsRelocPointerIsFighterAObj16(
-                            joint->anim_joint.event32) != FALSE)
-                    {
-                        NDS_DIAG(gNdsAnimJointDispatchFigatreeCount++);
-                        gNdsAnimJointDispatchFigatreeScript =
-                            (u32)(uintptr_t)joint->anim_joint.event32;
-                        if ((((uintptr_t)joint->anim_joint.event32) & 3u) != 0u)
-                        {
-                            NDS_DIAG(gNdsAnimJointDispatchMisalignCount++);
-                        }
-                    }
-#endif
                     gcParseDObjAnimJoint(joint);
                 }
                 else
@@ -3733,12 +3290,6 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             else
             {
                 NDS_DIAG(gNdsR2FtAnimNullSkips++);
-#if NDS_ANIM_JOINT_AUDIT
-                if (fp->anim_desc.flags.is_anim_joint)
-                {
-                    NDS_DIAG(gNdsAnimJointIdleSkip32Count++);
-                }
-#endif
             }
             if (translate_scales != NULL)
             {
@@ -3752,14 +3303,6 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 gcPlayMObjMatAnim(mobj);
             }
         }
-#if NDS_FT_POSE_ORACLE
-        /* Lab: the engine ran on its shadows before the generic path ran on
-         * the live joints; compare them now, bit for bit. */
-        if (!fp->anim_desc.flags.is_anim_joint)
-        {
-            ndsFtPoseOracleAfter(fighter_gobj);
-        }
-#endif
     }
     else
     {
@@ -3844,19 +3387,6 @@ void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
     ndsBaseFTCommonShieldBreakFlyReflectorSetStatus(fighter_gobj);
 }
 
-#if !NDS_P2_NESS
-/* ftnessspeciallw.c:42 owns this once Ness is built (P2-3f47). */
-void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp != NULL)
-    {
-        fp->lr = fp->absorb_lr;
-        fp->is_absorb = TRUE;
-    }
-}
-#endif
 
 __attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
 {
@@ -4128,11 +3658,9 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
             fighter_gobj, nGMColAnimFighterHitStatusIntangible, 0);
         break;
     }
-#if NDS_P4
     /* Remix's gfx_routine_end table: a content's own routine replaces its
      * parent's case (Dedede's and Sheik's full charge). */
     if (ndsP4ColAnimEnd(fighter_gobj) == FALSE)
-#endif
     switch (fp->fkind)
     {
     case nFTKindDonkey:
@@ -4154,7 +3682,6 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
                 fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
         }
         break;
-#if NDS_P2_KIRBY
     /* ftparam.c:1285-1299: a Kirby holding a full copied charge. */
     case nFTKindKirby:
     case nFTKindNKirby:
@@ -4180,8 +3707,6 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
             }
         }
         break;
-#endif
-#if NDS_P2_NESS
     /* ftparam.c:1300-1305: PSI Magnet's hold glow. */
     case nFTKindNess:
     case nFTKindNNess:
@@ -4191,7 +3716,6 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
                 fighter_gobj, nGMColAnimFighterNessSpecialLwHold, 0);
         }
         break;
-#endif
     }
     if (fp->damage_heal != 0)
     {
@@ -4220,54 +3744,6 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
  * fthammer.c whole. These no-op/counter shims are why picking the Hammer up
  * started its timer and music but the fighter never entered any Hammer
  * state. */
-#if !NDS_P2_ITEM_CORE
-sb32 ftHammerCheckHoldHammer(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
-    {
-        sNdsFighterDashRunDamageHammerCheckCount++;
-        return sNdsFighterDashRunDamageHammerHold;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopActive != FALSE))
-    {
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingJumpAnimEndActive != FALSE))
-    {
-        return FALSE;
-    }
-    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWaitHammerCheckCount++);
-    }
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterJumpHammerHoldCheckCount++);
-    }
-    return FALSE;
-}
-
-void ftHammerProcInterrupt(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
-    {
-        sNdsFighterDashRunDamageHammerGroundCount++;
-    }
-}
-
-void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWaitHammerDeniedCount++);
-    }
-}
-#endif
 
 sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
 {
@@ -4462,17 +3938,12 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
     {
         NDS_DIAG(gNdsFighterJumpSpecialHiCheckCount++);
     }
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
     {
         extern sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(
             GObj *fighter_gobj);
 
         return ndsBaseFTCommonSpecialHiCheckInterruptCommon(fighter_gobj);
     }
-#else
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
-#endif
 }
 
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
@@ -4569,28 +4040,10 @@ sb32 ftCommonAttack11CheckGoto(GObj *fighter_gobj)
 /* The real ones come with battleship_ftcommon_itemuse.c, which imports
  * ftcommonitemshoot.c whole. These no-ops are why a fighter holding a Ray Gun
  * or a Fire Flower pressed A and nothing came out. */
-#if !NDS_P2_ITEM_CORE
-void ftCommonItemShootSetStatus(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-
-void ftCommonItemShootAirSetStatus(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-#endif
 
 /* The real one lives in battleship_ftcommon_get.c wherever the item core is on.
  * This shim answered "no item here" unconditionally, which was correct while
  * nothing could be picked up and is a gameplay hole now that something can. */
-#if !NDS_P2_ITEM_CORE
-sb32 ftCommonGetCheckInterruptCommon(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return FALSE;
-}
-#endif
 
 sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 {
@@ -4706,31 +4159,12 @@ sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
     return ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
 }
 
-#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
-sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
-{
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
-}
-#endif
 
 sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonEscapeCheckInterruptGuard(fighter_gobj);
 }
 
-#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
-sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
-{
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunEscapeInterruptActive != FALSE))
-    {
-        (void)fighter_gobj;
-        NDS_DIAG(gNdsFighterDashRunEscapeInterruptCount++);
-        return FALSE;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
-}
-#endif
 
 sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj)
 {
@@ -4754,69 +4188,6 @@ sb32 ftCommonAppealCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftKirbySpecialNLoseCopy(GObj *fighter_gobj);
 void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj);
-#if !NDS_P2_KIRBY
-/* ftkirbyspecialn.c:945/960 own these once Kirby is built (P2-3f47); the
- * diagnostic globals they publish stay defined in diagnostics_state.c. */
-#ifndef FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM
-#define FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM (1.0F / 12.0F)
-#endif
-
-void ftKirbySpecialNLoseCopy(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    gNdsFighterDashRunDamageKirbyCopyBefore =
-        (u32)fp->passive_vars.kirby.copy_id;
-    (void)func_800269C0_275C0(nSYAudioFGMKirbySpecialNLoseCopy);
-    fp->passive_vars.kirby.copy_id = nFTKindKirby;
-    fp->passive_vars.kirby.is_ignore_losecopy = FALSE;
-    gNdsFighterDashRunDamageKirbyCopyAfter =
-        (u32)fp->passive_vars.kirby.copy_id;
-    gNdsFighterDashRunDamageKirbyCopyFGM =
-        nSYAudioFGMKirbySpecialNLoseCopy;
-}
-
-void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    u32 mask = 0u;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    if ((fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby))
-    {
-        mask |= 0x1u;
-    }
-    if (fp->passive_vars.kirby.copy_id != nFTKindKirby)
-    {
-        mask |= 0x2u;
-    }
-    if (fp->passive_vars.kirby.is_ignore_losecopy == FALSE)
-    {
-        mask |= 0x4u;
-    }
-    if ((mask & 0x7u) == 0x7u)
-    {
-        if (syUtilsRandFloat() < FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM)
-        {
-            mask |= 0x8u;
-            ftKirbySpecialNLoseCopy(fighter_gobj);
-            if (fp->passive_vars.kirby.copy_id == nFTKindKirby)
-            {
-                mask |= 0x10u;
-            }
-        }
-        mask |= 0x20u;
-    }
-    gNdsFighterDashRunDamageKirbyCopyMask = mask;
-}
-#endif /* !NDS_P2_KIRBY */
 
 sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 {
@@ -4856,22 +4227,8 @@ sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
 
 /* The real one comes with battleship_ftcommon_itemthrow.c, which is now gated
  * on the item core as well as Link. */
-#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
-void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id)
-{
-    (void)fighter_gobj;
-    (void)status_id;
-}
-#endif
 
 /* Same, for the Star Rod and Harisen swing (ftcommonitemswing.c:114). */
-#if !NDS_P2_ITEM_CORE
-void ftCommonItemSwingSetStatus(GObj *fighter_gobj, s32 swing_type)
-{
-    (void)fighter_gobj;
-    (void)swing_type;
-}
-#endif
 
 sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
 {
@@ -5002,13 +4359,6 @@ sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj)
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
  * TU imports the whole of ftcommonhammerfall.c, which is where this check
  * lives. */
-#if !NDS_P2_ITEM_CORE
-sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return FALSE;
-}
-#endif
 
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 {
@@ -5201,18 +4551,6 @@ sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
  * TU imports the whole of ftcommonhammerkneebend.c. */
-#if !NDS_P2_ITEM_CORE
-sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterJumpHammerKneeBendCheckCount++);
-        NDS_DIAG(gNdsFighterJumpDeferredInterruptCheckCount++);
-    }
-    return FALSE;
-}
-#endif
 
 void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
 {
@@ -5321,25 +4659,6 @@ void ftCommonOttottoSetStatus(GObj *fighter_gobj)
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
  * TU imports the whole of ftcommonhammerfall.c, which is where both of these
  * live. */
-#if !NDS_P2_ITEM_CORE
-void ftCommonHammerFallSetStatus(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterLandingDeniedStatusCount++);
-    }
-}
-
-void ftCommonHammerFallProcInterrupt(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if (sNdsFighterDashRunDamageHammerCheckActive != FALSE)
-    {
-        sNdsFighterDashRunDamageHammerAirCount++;
-    }
-}
-#endif
 
 void ftCommonLandingProcInterrupt(GObj *fighter_gobj)
 {
@@ -5525,13 +4844,11 @@ void ftPhysicsApplyGravityClampTVel(FTStruct *fp, f32 gravity, f32 tvel)
     {
         return;
     }
-#if NDS_P4
     /* Remix's head of this function (PeachFloat.handle_physics_). */
     if (ndsP4Gravity(fp) != FALSE)
     {
         return;
     }
-#endif
     fp->physics.vel_air.y -= gravity;
     if (fp->physics.vel_air.y < -tvel)
     {
@@ -6091,12 +5408,10 @@ extern void ftPublicPlayCliffReact(GObj *fighter_gobj, f32 knockback);
  * never ran; the cue being silent while this counts is a different fault. */
 volatile u32 gNdsFtPublicCliffReactCount;
 
-#if NDS_P4
 /* TRUE while the cliff-catch seam (ndsMPCommonRunFighterCliffFloorCeil-
  * Collisions) runs the landing params: Remix's ledge_flag (Peach.asm
  * ledge_patch_), which her grounded_script reads. */
 static sb32 sNdsP4CliffLanding;
-#endif
 
 void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
 {
@@ -6146,11 +5461,7 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
         }
     }
     fp->public_knockback = 0.0F;
-#if NDS_P4
     switch (ndsP4GroundedKind(fp))
-#else
-    switch (fp->fkind)
-#endif
     {
     case nFTKindMario:
     case nFTKindMMario:
@@ -6181,11 +5492,9 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
     default:
         break;
     }
-#if NDS_P4
     /* A content's own grounded_script routine, which Remix's row runs in
      * place of a case (Peach's); the cliff seam marks a ledge catch. */
     ndsP4OnLanding(fp, sNdsP4CliffLanding);
-#endif
     if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
@@ -6519,28 +5828,6 @@ void ftParamSetThrowParams(FTStruct *fp, GObj *throw_gobj)
     }
 }
 
-#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
-sb32 ftCommonLightThrowCheckItemTypeThrow(FTStruct *fp)
-{
-    (void)fp;
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchItemThrowCheckCount++;
-    }
-    return FALSE;
-}
-
-void ftCommonLightThrowDecideSetStatus(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchActive != FALSE))
-    {
-        NDS_DIAG(gNdsStageMPPassiveLoopCatchItemThrowSetStatusCount++);
-    }
-}
-#endif
 
 void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 {
@@ -6551,12 +5838,10 @@ void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
                                       GObj *capture_gobj)
 {
-#if NDS_P4
     if (ndsP4CustomCapture(fighter_gobj, capture_gobj) != FALSE)
     {
         return;
     }
-#endif
     ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
     return;
 }
@@ -6794,10 +6079,8 @@ void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
     {
         gNdsStageMPPassiveLoopCaptureVoiceStopCount++;
     }
-#if NDS_P4
     /* Remix's head of this function (PeachFloat.end_float_on_hit_). */
     ndsP4OnDamage(fp);
-#endif
     ndsFtParamStopVoice(fp);
     if (fp->proc_damage != NULL)
     {
@@ -6828,7 +6111,6 @@ void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
  * followed the damage animation instead of falling, rolling or breaking. */
 void ftSetupDropItem(FTStruct *fp)
 {
-#if NDS_P2_ITEM_CORE
     Vec3f vel;
 
     if ((fp == NULL) || (fp->item_gobj == NULL))
@@ -6837,12 +6119,6 @@ void ftSetupDropItem(FTStruct *fp)
     }
     vel.x = vel.y = vel.z = 0.0F;
     itMainSetFighterDrop(fp->item_gobj, &vel, 1.0F);
-#else
-    if (fp != NULL)
-    {
-        fp->item_gobj = NULL;
-    }
-#endif
 }
 
 void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
@@ -7008,106 +6284,6 @@ void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
 
 extern void gmCollisionCopyMatrix(Mtx44f dst, Mtx44f src);
 
-#if NDS_R2_POSITION_PROBE
-/* BUGS.md Fox crouch-under-Blaster diagnostic.
- *
- * This is probe-only observation of the SAME source matrices the gameplay
- * collision path consumes. gmCollisionCheckWeaponAttackFighterDamageCollide
- * calls func_ovl2_800EDBA4 through func_ovl2_800EDE00 before testing each
- * FTDamageColl; calling the builder here merely fills that cache a little
- * earlier in a diagnostic ROM. No status, animation, collision descriptor,
- * weapon coordinate, or fighter coordinate is changed.
- *
- * Capture the first source Wait pose and first source SquatWait pose in one ROM
- * so standing-vs-crouching hurtbox geometry cannot be confused by a rebuild,
- * RNG seed, or a later respawn. Slots [0..10] are Wait; [11..21] are
- * SquatWait. `used` keeps the arrays readable by GDB with no in-ROM consumer. */
-#define NDS_MARIO_HURT_PROBE_SLOTS (FTDAMAGECOLL_NUM_MAX * 2)
-__attribute__((used)) volatile u32 gNdsMarioHurtProbeCaptureMask;
-__attribute__((used)) s32 gNdsMarioHurtProbeJoint[NDS_MARIO_HURT_PROBE_SLOTS];
-__attribute__((used)) f32 gNdsMarioHurtProbeCenterY[NDS_MARIO_HURT_PROBE_SLOTS];
-__attribute__((used)) f32 gNdsMarioHurtProbeExtentY[NDS_MARIO_HURT_PROBE_SLOTS];
-__attribute__((used)) f32 gNdsMarioHurtProbeJointY[NDS_MARIO_HURT_PROBE_SLOTS];
-__attribute__((used)) f32 gNdsMarioHurtProbeRootY[2];
-
-void ndsPositionProbeCaptureMarioHurtboxes(GObj *fighter_gobj)
-{
-    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    DObj *root = (fighter_gobj != NULL) ? DObjGetStruct(fighter_gobj) : NULL;
-    u32 mode;
-    u32 base;
-    u32 i;
-
-    if ((fp == NULL) || (root == NULL) || (fp->attr == NULL))
-    {
-        return;
-    }
-    if (fp->status_id == nFTCommonStatusWait)
-    {
-        mode = 0u;
-    }
-    else if (fp->status_id == nFTCommonStatusSquatWait)
-    {
-        mode = 1u;
-    }
-    else
-    {
-        return;
-    }
-    if ((gNdsMarioHurtProbeCaptureMask & (1u << mode)) != 0u)
-    {
-        return;
-    }
-
-    base = mode * FTDAMAGECOLL_NUM_MAX;
-    gNdsMarioHurtProbeRootY[mode] = root->translate.vec.f.y;
-    for (i = 0u; i < FTDAMAGECOLL_NUM_MAX; i++)
-    {
-        FTDamageColl *dc = &fp->damage_colls[i];
-        FTParts *parts;
-        f32 b0;
-        f32 b1;
-        f32 b2;
-        f32 center_y;
-        f32 extent_y;
-
-        gNdsMarioHurtProbeJoint[base + i] = -1;
-        gNdsMarioHurtProbeCenterY[base + i] = 0.0F;
-        gNdsMarioHurtProbeExtentY[base + i] = 0.0F;
-        gNdsMarioHurtProbeJointY[base + i] = 0.0F;
-        if ((dc->joint_id < 0) || (dc->joint == NULL))
-        {
-            continue;
-        }
-
-        func_ovl2_800EDBA4(dc->joint);
-        parts = ftGetParts(dc->joint);
-        if (parts == NULL)
-        {
-            continue;
-        }
-        center_y =
-            (parts->mtx_translate[0][1] * dc->offset.x) +
-            (parts->mtx_translate[1][1] * dc->offset.y) +
-            (parts->mtx_translate[2][1] * dc->offset.z) +
-            parts->mtx_translate[3][1];
-        b0 = parts->mtx_translate[0][1];
-        b1 = parts->mtx_translate[1][1];
-        b2 = parts->mtx_translate[2][1];
-        if (b0 < 0.0F) b0 = -b0;
-        if (b1 < 0.0F) b1 = -b1;
-        if (b2 < 0.0F) b2 = -b2;
-        extent_y = (b0 * dc->size.x) + (b1 * dc->size.y) +
-                   (b2 * dc->size.z);
-
-        gNdsMarioHurtProbeJoint[base + i] = dc->joint_id;
-        gNdsMarioHurtProbeCenterY[base + i] = center_y;
-        gNdsMarioHurtProbeExtentY[base + i] = extent_y;
-        gNdsMarioHurtProbeJointY[base + i] = parts->mtx_translate[3][1];
-    }
-    gNdsMarioHurtProbeCaptureMask |= 1u << mode;
-}
-#endif /* NDS_R2_POSITION_PROBE */
 
 /* BUGS.md #2: this returned identity plus the joint's *local* translate, so a
  * grab placed the victim at the capturer's hand offset measured from the world
@@ -7169,12 +6345,10 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     {
         return;
     }
-#if NDS_P4 && NDS_P2_KIRBY
     if (fp->nds_p4_kirby_copy != 0u)
     {
         modelpart_id = ndsP4KirbyModelPart(fp, joint_id, modelpart_id);
     }
-#endif
     slot = joint_id - nFTPartsJointCommonStart;
     if (((u32)slot >= ARRAY_COUNT(fp->modelpart_status)) ||
         (fp->joints[joint_id] == NULL))
@@ -7212,7 +6386,6 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
         detail = nFTPartsDetailLow;
     }
 
-#if NDS_P4
     /* Owner 2026-10-08 (S15): the KO and pause close-ups keep a content's
      * low-detail model in a battle of three or four fighters (its high
      * image is not admitted there). */
@@ -7222,7 +6395,6 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
     {
         detail = nFTPartsDetailLow;
     }
-#if NDS_P2_KIRBY
     /* S8: so does a Kirby holding a content's power, in any VS battle: the
      * match admits his Remix hats in the low detail only
      * (nds_kirby_hat_residency.c), whatever its fighter count. */
@@ -7232,8 +6404,6 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
     {
         detail = nFTPartsDetailLow;
     }
-#endif
-#endif
     if ((fp == NULL) || (detail == fp->detail_curr))
     {
         return;
@@ -7281,12 +6451,10 @@ void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
 #if NDS_P2_DONKEY
 void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_P4
     if (ndsP4ShoulderedInterrupt(fighter_gobj) != FALSE)
     {
         return;
     }
-#endif
     ndsBaseFTCommonCaptureShoulderedProcInterrupt(fighter_gobj);
 }
 #endif
@@ -7716,14 +6884,6 @@ void ndsFighterDashRunRecordPublicCheck(GObj *fighter_gobj, f32 knockback,
 void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
                          sb32 is_force_curr_knockback);
 
-#if !NDS_IMPORT_BATTLESHIP_FT_PUBLIC
-void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
-                         sb32 is_force_curr_knockback)
-{
-    ndsFighterDashRunRecordPublicCheck(fighter_gobj, knockback,
-                                       is_force_curr_knockback);
-}
-#endif
 
 GObj *ftParamGetPlayerNumGObj(s32 player_num)
 {
@@ -8290,17 +7450,14 @@ sb32 ftCommonCaptureTrappedUpdateBreakoutVars(FTStruct *fp)
     return is_mash;
 }
 
-#if NDS_P2_ITEM_CORE
 extern s32 syUtilsRandIntRange(s32 range);
 extern sb32 itMainCheckShootNoAmmo(GObj *item_gobj);
-#endif
 
 void ftParamUpdateDamage(FTStruct *fp, s32 damage)
 {
     if (fp != NULL)
     {
         s32 percent_before;
-#if NDS_P4
         /* Remix hooks this function's head on a character id (Marth's
          * counter, MarthDSP.detection_patch_). */
         const NDSP4Overrides *p4 = ndsP4Overrides(fp);
@@ -8309,7 +7466,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
         {
             damage = p4->update_damage(fp, damage);
         }
-#endif
         percent_before = fp->percent_damage;
         if (((gNdsFighterNaturalMovesetPhase == 13u) ||
              (gNdsFighterNaturalMovesetPhase == 14u)) &&
@@ -8340,7 +7496,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gNdsFighterNaturalMovesetThrowDamageAfter =
                 (u32)fp->percent_damage;
         }
-#if NDS_P2_ITEM_CORE
         /* decomp ft/ftparam.c:1539-1553: a knockback hit knocks the held
          * item loose with probability damage/60 (a spent shooter on a coin
          * flip as well); Donkey Kong keeps a heavy item, which his damage
@@ -8368,7 +7523,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
                 }
             }
         }
-#endif
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
@@ -8577,7 +7731,6 @@ static void ndsFTParamGetVisualPosition(GObj *fighter_gobj, s32 joint_id,
     gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], pos);
 }
 
-#if NDS_R2_SOURCE_EFFECTS_PARTICLE
 /* Verbatim from decomp/src/ef/efmanager.h, which this TU does not include.
  * Each is defined by the decomp efmanager.c that src/import/battleship_efmanager.c
  * compiles, unwrapped -- see ndsFTParamMakeSourceEffect below. */
@@ -8695,46 +7848,6 @@ extern LBParticle *efManagerFlameLRMakeEffect(Vec3f *pos, s32 lr);
 extern LBParticle *efManagerFlameRandomMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerFlameStaticMakeEffect(Vec3f *pos);
 
-#if NDS_R2_POSITION_PROBE
-/* Far-end proof for the fire-position row. GDB cannot safely correlate a
- * just-written cached stack/global value with a breakpoint in optimized code;
- * c132 demonstrated that by observing gNdsFlameProbeCount==0 at an instruction
- * which is statically after its increment. Record the pointer's VALUE here,
- * inside the dispatch helper and immediately before the real Flame maker. This
- * is the exact argument the maker receives and can be read later after the
- * cache has naturally drained. Probe builds only. */
-__attribute__((used)) u32 gNdsFlameMakerProbeCount;
-__attribute__((used)) u32 gNdsFlameMakerProbeKind[8];
-__attribute__((used)) u32 gNdsFlameMakerProbeSubstep[8];
-__attribute__((used)) f32 gNdsFlameMakerProbeX[8];
-__attribute__((used)) f32 gNdsFlameMakerProbeY[8];
-__attribute__((used)) f32 gNdsFlameMakerProbeZ[8];
-__attribute__((used)) uintptr_t gNdsFlameMakerProbeParticle[8];
-extern volatile u32 gNdsPositionProbeUpdateInPresent;
-static u32 ndsFTParamProbeFlameMakerInput(s32 effect_id, const Vec3f *pos)
-{
-    u32 slot;
-
-    /* Keep a stable first-eight correspondence between maker inputs and the
-     * LBParticle pointers filled after each maker returns. The old modulo ring
-     * could overwrite an input before its first draw and manufacture a bogus
-     * position delta in the diagnostic itself. */
-    if (gNdsFlameMakerProbeCount >= 8u)
-    {
-        return 8u;
-    }
-    slot = gNdsFlameMakerProbeCount;
-
-    gNdsFlameMakerProbeKind[slot] = (u32)effect_id;
-    gNdsFlameMakerProbeSubstep[slot] = gNdsPositionProbeUpdateInPresent;
-    gNdsFlameMakerProbeX[slot] = pos->x;
-    gNdsFlameMakerProbeY[slot] = pos->y;
-    gNdsFlameMakerProbeZ[slot] = pos->z;
-    gNdsFlameMakerProbeParticle[slot] = 0u;
-    gNdsFlameMakerProbeCount++;
-    return slot;
-}
-#endif
 
 static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
                                        void **effect)
@@ -8747,52 +7860,13 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
      * below. Bank script 0x12 (FlameLR) and 0x55 (FlameRandom/Static) are
     * packed for exactly this. */
     case nEFKindFlameLR:
-#if NDS_R2_POSITION_PROBE
-        {
-            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
-
-            *effect = efManagerFlameLRMakeEffect(pos, lr);
-            if (probe_slot < 8u)
-            {
-                gNdsFlameMakerProbeParticle[probe_slot] =
-                    (uintptr_t)*effect;
-            }
-        }
-#else
         *effect = efManagerFlameLRMakeEffect(pos, lr);
-#endif
         return TRUE;
     case nEFKindFlameRandom:
-#if NDS_R2_POSITION_PROBE
-        {
-            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
-
-            *effect = efManagerFlameRandomMakeEffect(pos);
-            if (probe_slot < 8u)
-            {
-                gNdsFlameMakerProbeParticle[probe_slot] =
-                    (uintptr_t)*effect;
-            }
-        }
-#else
         *effect = efManagerFlameRandomMakeEffect(pos);
-#endif
         return TRUE;
     case nEFKindFlameStatic:
-#if NDS_R2_POSITION_PROBE
-        {
-            u32 probe_slot = ndsFTParamProbeFlameMakerInput(effect_id, pos);
-
-            *effect = efManagerFlameStaticMakeEffect(pos);
-            if (probe_slot < 8u)
-            {
-                gNdsFlameMakerProbeParticle[probe_slot] =
-                    (uintptr_t)*effect;
-            }
-        }
-#else
         *effect = efManagerFlameStaticMakeEffect(pos);
-#endif
         return TRUE;
     case nEFKindDustLight:
         *effect = efManagerDustLightMakeEffect(pos, lr, 1.0F);
@@ -8816,7 +7890,6 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
     case nEFKindImpactWave:
         *effect = efManagerImpactWaveMakeEffect(pos, 4, 0.0F);
         return TRUE;
-#if NDS_P2_PIKACHU
     /* Pikachu's Thunder self-hit burst. efdef.h names the kind outright --
      * "Pikachu's Thunder self-hit" -- and the source Hit motion script
      * dPikachuMainMotion_GettingThundered_0x1668 issues it when the descending
@@ -8834,7 +7907,6 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
     case nEFKindThunderAmp:
         *effect = efManagerThunderAmpMakeEffect(pos);
         return TRUE;
-#endif
     case nEFKindDustHeavy:
         *effect = efManagerDustHeavyMakeEffect(pos, lr);
         return TRUE;
@@ -8916,7 +7988,6 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
         return FALSE;
     }
 }
-#endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
 
 /* BUGS.md "Fighter burn flames spawn at the wrong places on the damaged
  * fighter." ftparam.c:1899-1912 has all three Flame kinds DISCARD the generic
@@ -8968,41 +8039,6 @@ static void ndsFTParamGetEffectJointPosition(FTStruct *fp, Vec3f *pos)
     gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], pos);
 }
 
-#if NDS_R2_POSITION_PROBE
-/* Records what the override replaced beside what it produced, so the row's
- * acceptance reads the shipped path rather than a shadow of it. */
-/* `used` because GDB is the only consumer and --gc-sections collects a global
- * with no in-ROM reader -- which has already taken Boundary RED once. */
-#define NDS_FLAME_PROBE_GLOBAL __attribute__((used))
-NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeCount;
-NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeKind[8];
-NDS_FLAME_PROBE_GLOBAL u32 gNdsFlameProbeSelIndex[8];
-NDS_FLAME_PROBE_GLOBAL s32 gNdsFlameProbeJointID[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointX[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointY[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeJointZ[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericX[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericY[8];
-NDS_FLAME_PROBE_GLOBAL f32 gNdsFlameProbeGenericZ[8];
-static void ndsFTParamProbeFlamePosition(FTStruct *fp, s32 effect_id,
-                                         const Vec3f *generic,
-                                         const Vec3f *at)
-{
-    u32 slot = gNdsFlameProbeCount & 7u;
-
-    gNdsFlameProbeKind[slot] = (u32)effect_id;
-    gNdsFlameProbeSelIndex[slot] = (u32)fp->effect_joint_array_id;
-    gNdsFlameProbeJointID[slot] =
-        fp->attr->effect_joint_ids[fp->effect_joint_array_id];
-    gNdsFlameProbeJointX[slot] = at->x;
-    gNdsFlameProbeJointY[slot] = at->y;
-    gNdsFlameProbeJointZ[slot] = at->z;
-    gNdsFlameProbeGenericX[slot] = generic->x;
-    gNdsFlameProbeGenericY[slot] = generic->y;
-    gNdsFlameProbeGenericZ[slot] = generic->z;
-    gNdsFlameProbeCount++;
-}
-#endif /* NDS_R2_POSITION_PROBE */
 
 void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
                         Vec3f *effect_pos, Vec3f *effect_scatter, s32 lr,
@@ -9099,16 +8135,9 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
 
         if ((flame_fp != NULL) && (flame_fp->attr != NULL))
         {
-#if NDS_R2_POSITION_PROBE
-            Vec3f generic = pos;
-#endif
             ndsFTParamGetEffectJointPosition(flame_fp, &pos);
-#if NDS_R2_POSITION_PROBE
-            ndsFTParamProbeFlamePosition(flame_fp, effect_id, &generic, &pos);
-#endif
         }
     }
-#if NDS_R2_SOURCE_EFFECTS_PARTICLE
     /* ftparam.c:1894: the normal hit spark at the source's fixed size 10. Its
      * bank script is picked by the requesting fighter's player
      * (dEFManagerDamageNormalLightIDs), which the seam below does not carry;
@@ -9127,7 +8156,6 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
             return source_effect;
         }
     }
-#endif
     switch (effect_id)
     {
     case nEFKindDamageNormal:
@@ -9232,7 +8260,6 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         effect_gobj = ndsEFManagerMakeVisualEffect(
             nNDSVisualEffectDust, &pos, 0.8F, lr, NULL);
         break;
-#if NDS_P2_YOSHI
     case nEFKindYoshiEggEscape:
         {
             FTStruct *fp = (fighter_gobj != NULL) ?
@@ -9251,7 +8278,6 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
             }
         }
         break;
-#endif
     case nEFKindQuakeMag0:
         return efManagerQuakeMakeEffect(0);
     case nEFKindQuakeMag1:
@@ -9340,15 +8366,7 @@ efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
     ndsTask39EffectCensusRecord(
         NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
         NDS_TASK39_EFFECT_SUBSTITUTE);
-#if NDS_TASK39_FX_SPRITES
     ndsTask39HitSparkSpawn(pos, player, size, is_static, FALSE);
-#else
-    (void)player;
-    (void)is_static;
-    (void)ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectHitNormal, pos,
-        ndsVisualDamageScale(size, 0.45F, 0.025F), 1, NULL);
-#endif
     return NULL;
 }
 
@@ -9359,14 +8377,7 @@ efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
     ndsTask39EffectCensusRecord(
         NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_HEAVY_MAKE_EFFECT,
         NDS_TASK39_EFFECT_SUBSTITUTE);
-#if NDS_TASK39_FX_SPRITES
     ndsTask39HitSparkSpawn(pos, player, size, FALSE, TRUE);
-#else
-    (void)player;
-    (void)ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectHitNormal, pos,
-        ndsVisualDamageScale(size, 0.70F, 0.035F), 1, NULL);
-#endif
     return NULL;
 }
 
@@ -9418,20 +8429,7 @@ __attribute__((weak)) LBParticle *efManagerSetOffMakeEffect(Vec3f *pos,
 
 /* The real one comes with battleship_ftcommon_hammer.c, which imports
  * fthammer.c whole. */
-#if !NDS_P2_ITEM_CORE
-void ftHammerUpdateStats(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-#endif
 
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return FALSE;
-}
-#endif
 
 void ftParamKirbyTryMakeMapStarEffect(GObj *fighter_gobj)
 {
@@ -9573,24 +8571,18 @@ static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
     return NULL;
 }
 
-#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_FT_POSE && NDS_R2_FTANIM_STREAM
 void ndsR2AnimZeroCopyNoteBind(GObj *gobj, const void *figatree);
-#endif
 
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
-#if NDS_R2_BATTLEPACK
     figatree = ndsRelocResolveAuthoritativeForceFile(figatree);
-#endif
-#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_FT_POSE && NDS_R2_FTANIM_STREAM
     /* A zero-copy cache clip is now this fighter's binding (see
      * sNdsR2AnimPins in reloc_backend_assets.c). */
     if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
     {
         ndsR2AnimZeroCopyNoteBind(root_dobj->parent_gobj, figatree);
     }
-#endif
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
     /* P2-2p6: the fighter pose engine takes the attach when it can hold the
@@ -9602,14 +8594,6 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     u32 pose_entries = 0u;
     sb32 pose_engine;
     sb32 bind_anim_joint = FALSE;
-#if NDS_R2_FTANIM_TRACK
-    /* Stage 3: status/motion selection binds the precompiled rows ONCE, here.
-     * This is the only site that attaches a fighter figatree, and the tree walk
-     * below indexes the figatree's own entry table -- which is exactly how the
-     * AOT pack is keyed, so the bind is one array index per joint. */
-    const s32 trk_base = ndsFtAnimTrackBeginClip(root_dobj, figatree);
-    s32 trk_index = 0;
-#endif
 
     if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
     {
@@ -9685,7 +8669,6 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     {
         AObjEvent32 *anim_joint = *figatree_entries;
         FTParts *parts = ftGetParts(current_dobj);
-#if NDS_P4
         /* EXTRA's static part (nds_p4.h static_parts): unless a hidden part
          * of the motion is rooted at it, it has no track in the figatree and
          * takes no entry (StaticPart.asm skip_static_parts_). */
@@ -9698,34 +8681,17 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
         anim_joint = (static_skip != FALSE) ? NULL :
             ndsRelocResolvePointerFromFileBase(figatree, anim_joint,
                                                sizeof(*anim_joint));
-#else
-        anim_joint = ndsRelocResolvePointerFromFileBase(figatree,
-                                                        anim_joint,
-                                                        sizeof(*anim_joint));
-#endif
         if (anim_joint != NULL)
         {
             if (pose_engine != FALSE)
             {
                 ndsFtPoseBindEntry(pose_entries, current_dobj,
                                    (AObjEvent16 *)anim_joint, anim_frame);
-#if NDS_FT_POSE_ORACLE
-                /* The oracle keeps the generic bind on the live joint; the
-                 * engine bound its shadow copy above. */
-                gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
-#endif
             }
             else
             {
                 gcAddDObjAnimJoint(current_dobj, anim_joint, anim_frame);
             }
-#if NDS_R2_FTANIM_TRACK
-            /* AFTER the generic bind, never instead of it: `gcAddDObjAnimJoint`
-             * resets every AObj to `nGCAnimKindNone`, sets `anim_wait` to
-             * AOBJ_ANIM_CHANGED and stores the anim frame, and all three are
-             * load-bearing. This only replaces the cursor. */
-            (void)ndsFtAnimTrackBindJoint(current_dobj, trk_base, trk_index);
-#endif
             NDS_DIAG(gNdsFighterNaturalMotionFigatreeAttachCount++);
             if (parts != NULL)
             {
@@ -9767,14 +8733,9 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                 parts->is_have_anim = FALSE;
             }
         }
-#if NDS_P4
         if (static_skip == FALSE)
-#endif
         {
             figatree_entries++;
-#if NDS_R2_FTANIM_TRACK
-            trk_index++;
-#endif
         }
         pose_entries++;
         current_dobj =
@@ -9830,7 +8791,6 @@ void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
     {
         AObjEvent32 *script;
 
-#if NDS_P4
         /* The guard's walk passes over EXTRA's static parts: no animation,
          * no entry (StaticPart.asm lbCommonAddDObjAnimJointAll_extended_). */
         if (ndsP4StaticPartDObj(current_dobj) != FALSE)
@@ -9840,7 +8800,6 @@ void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
                 ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, dobj);
             continue;
         }
-#endif
         script = ndsRelocResolvePointerFromFileBase(file_base, *anim_joint,
                                                     sizeof(AObjEvent32));
 
@@ -10686,9 +9645,6 @@ void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDamageFallProcMap(GObj *fighter_gobj)
 {
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-    ndsSamusTumbleTourPrepareDamageFallMap(ftGetStruct(fighter_gobj));
-#endif
     ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
     return;
 }
@@ -10707,25 +9663,6 @@ void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
  * TU imports the whole of ftcommonhammerfall.c. */
-#if !NDS_P2_ITEM_CORE
-sb32 ftCommonHammerFallCheckInterruptDamageFall(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallHammerCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
-    {
-        NDS_DIAG(gNdsStageMPCliffWaitDamageLoopDamageFallHammerCheckCount++);
-    }
-    return FALSE;
-}
-#endif
 
 static sb32 ndsStageMPPassiveLoopRunNaturalFloorCollision(GObj *fighter_gobj,
                                                           FTStruct *fp)
@@ -11999,13 +10936,9 @@ static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
         }
         cliffcatch_gobj = cliffcatch_gobj->link_next;
     }
-#if NDS_P4
     sNdsP4CliffLanding = TRUE;
-#endif
     mpCommonSetFighterLandingParams(fighter_gobj);
-#if NDS_P4
     sNdsP4CliffLanding = FALSE;
-#endif
     coll_data->is_coll_end = TRUE;
     return TRUE;
 }
@@ -12731,7 +11664,6 @@ void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
             fp->physics.vel_ground.x = -fp->physics.vel_ground.x;
             fp->physics.vel_ground.z = -fp->physics.vel_ground.z;
         }
-#if NDS_P4
         /* Remix Command.asm apply_ground_z_/apply_ground_x_: the 0xD3 TOPJOINT
          * TRANSLATION MULTIPLIER scales both TransN terms before the air
          * transfer. Only P4 scripts ever set it off 1.0. */
@@ -12740,7 +11672,6 @@ void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
             fp->physics.vel_ground.x *= ndsP4TranslationMultiplier(fp);
             fp->physics.vel_ground.z *= ndsP4TranslationMultiplier(fp);
         }
-#endif
         ftPhysicsSetGroundVelTransferAir(fighter_gobj);
     }
 }
@@ -12782,7 +11713,6 @@ void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
         next_z =
             (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
             -fp->lr * topn_joint->scale.vec.f.x;
-#if NDS_P4
         /* Remix apply_air_z_/_y_/_x_: the same multiplier on all three. */
         if (ndsP4TranslationMultiplier(fp) != 1.0F)
         {
@@ -12790,7 +11720,6 @@ void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
             next_y *= ndsP4TranslationMultiplier(fp);
             next_z *= ndsP4TranslationMultiplier(fp);
         }
-#endif
     }
     if (vel_x != NULL)
     {
@@ -12997,13 +11926,6 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
     (void)ymax;
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FT_PUBLIC
-void ftPublicMakeActor(void)
-{
-    gNdsSCVSBattleCompatManagerMask |= 1u << 4;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
-}
-#endif
 
 void ftParamInitGame(void)
 {
@@ -13177,51 +12099,7 @@ s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
     return (s32)dNdsFTParamCostumeTeam[fkind][color];
 }
 
-#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
-void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
-{
-    (void)fighter_gobj;
-    (void)status_id;
-    if (ndsFighterMarioFoxInitProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterInitStatusSetCount++);
-    }
-}
-#endif
 
-#if !NDS_R2_PARTICLE_RUNTIME
-void efParticleInitAll(void)
-{
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
-}
-
-s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
-                            uintptr_t texture_lo, uintptr_t texture_hi)
-{
-    (void)script_lo;
-    (void)script_hi;
-    (void)texture_lo;
-    (void)texture_hi;
-    /* Any fight on Dream Land (the scene table's BATTLE flag, not the VS
-     * kind: the 1P ladder visits Pupupu twice, 2026-09-05). */
-    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
-        (gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindPupupu))
-    {
-        gNdsPupupuGroundDeferredMask |= 1u << 1;
-        gNdsPupupuGroundSetupMask |= 1u << 9;
-        gNdsPupupuGroundParticleBankID = 1;
-        return 1;
-    }
-    return 0;
-}
-
-s32 efParticleGetBankID(uintptr_t scripts_lo)
-{
-    (void)scripts_lo;
-    return 0;
-}
-#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 __attribute__((weak)) void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
 {
@@ -13270,7 +12148,6 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
     {
         return;
     }
-#if NDS_P2_KIRBY
     /* BattleShip ftKirbySpecialNCopyInitCopyVars writes copy_id immediately
      * before this call, then resets all modelparts.  Make the DS-native hat
      * executable first. If the synchronous NitroFS beat fails, reject the copy
@@ -13288,14 +12165,12 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
             NDS_DIAG(gNdsNativeKirbyHatSuppressedCount++);
             modelpart_id = 0;
         }
-#if NDS_P4
         /* P4 S8: a Kirby holding a content's power defaults to the power's
          * Remix hat, whose image is bound in the source hat's place; the
          * parent's copy row the source passes first draws nothing. */
         else if (ndsP4KirbyDefaultHat(fp, modelpart_id) != FALSE)
         {
         }
-#endif
         else
         {
             /* LOAD THE LOW HAT ONLY WHEN THIS FIGHTER CAN EVER SELECT IT.
@@ -13375,7 +12250,6 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
             }
         }
     }
-#endif
     /* BattleShip ftparam.c:821-828 changes only the reset/default id. The live
      * part remains untouched until the normal reset path consumes this value. */
     fp->modelpart_status[slot].modelpart_id_base = (s8)modelpart_id;
@@ -13403,22 +12277,6 @@ void ftParamUnlockPlayerControl(GObj *fighter_gobj)
     fp->is_control_disable = FALSE;
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTCOMPUTER
-void ftComputerSetupAll(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-
-void ftComputerProcessAll(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-
-void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-}
-#endif
 
 void battleship_ftKeyProcessKeyEvents(GObj *fighter_gobj);
 
@@ -13463,36 +12321,7 @@ void ftParamTryUpdateItemMusic(void)
     }
 }
 
-#if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
-void ftCommonEntrySetStatus(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, nFTCommonStatusEntry, 0.0F, 1.0F,
-                    FTSTATUS_PRESERVE_NONE);
-    if (fp != NULL)
-    {
-        fp->is_invisible = TRUE;
-        fp->is_shadow_hide = TRUE;
-        fp->is_ghost = TRUE;
-        fp->is_playertag_hide = TRUE;
-    }
-}
-#endif
-
-#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
-void scSubsysFighterProcUpdate(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    ftMainPlayAnimEventsAll(fighter_gobj);
-    ftMainRunUpdateColAnim(fighter_gobj);
-    if ((fp != NULL) && (fp->proc_update != NULL))
-    {
-        fp->proc_update(fighter_gobj);
-    }
-}
-#endif
 
 GObj *ftShadowMakeShadow(GObj *fighter_gobj)
 {
@@ -13503,46 +12332,6 @@ GObj *ftShadowMakeShadow(GObj *fighter_gobj)
 /* Skipped-particle shims. NDS_R2_PARTICLE_RUNTIME=1 compiles the original
  * lb/lbparticle.c in place (src/import/battleship_lbparticle.c), which owns
  * every symbol below. */
-#if !NDS_R2_PARTICLE_RUNTIME
-LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_SCRIPT_I_D,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)bank_id;
-    (void)script_id;
-    NDS_DIAG(gNdsPupupuUpdateParticleScriptCount++);
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-    return NULL;
-}
-
-LBTransform *lbParticleAddTransformForStruct(LBParticle *pc, u8 status)
-{
-    (void)pc;
-    (void)status;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-    return NULL;
-}
-
-void LBParticleProcessStruct(LBParticle *pc)
-{
-    (void)pc;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-}
-
-void lbParticleEjectStruct(LBParticle *pc)
-{
-    (void)pc;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-}
-
-void lbParticleEjectStructID(u16 generator_id, s32 index)
-{
-    (void)generator_id;
-    (void)index;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-}
-#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 /* The source quake is the only driver of camera shake: efManagerQuakeProcUpdate
  * feeds the effect's animated translate into gmCameraSetVelAt, which
@@ -13552,9 +12341,7 @@ void lbParticleEjectStructID(u16 generator_id, s32 index)
  * the pieces it needs are compiled in: battleship_efmanager.c supplies the
  * effect and battleship_gmcamera.c supplies gGMCameraGObj, which only
  * NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE builds have. */
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 GObj *ndsBaseEFManagerQuakeMakeEffect(s32 magnitude);
-#endif
 
 GObj *efManagerQuakeMakeEffect(s32 id)
 {
@@ -13564,62 +12351,9 @@ GObj *efManagerQuakeMakeEffect(s32 id)
         NDS_DIAG(gNdsStageMPPassiveLoopWallDamageQuakeCount++);
     }
     NDS_DIAG(gNdsPupupuUpdateQuakeCount++);
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
     return ndsBaseEFManagerQuakeMakeEffect(id);
-#else
-    (void)id;
-    gNdsPupupuGroundDeferredMask |= 1u << 2;
-    return NULL;
-#endif
 }
 
-#if !NDS_R2_PARTICLE_RUNTIME
-LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_GENERATOR,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)bank_id;
-    (void)generator_id;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-    return NULL;
-}
-
-LBParticle *lbParticleMakeCommon(s32 bank_id, s32 script_id)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_COMMON,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)bank_id;
-    (void)script_id;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-    return NULL;
-}
-
-LBParticle *lbParticleMakePosVel(s32 bank_id, s32 script_id, f32 pos_x,
-                                 f32 pos_y, f32 pos_z, f32 vel_x,
-                                 f32 vel_y, f32 vel_z)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_POS_VEL,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)bank_id;
-    (void)script_id;
-    (void)pos_x;
-    (void)pos_y;
-    (void)pos_z;
-    (void)vel_x;
-    (void)vel_y;
-    (void)vel_z;
-    gNdsPupupuGroundDeferredMask |= 1u << 1;
-    return NULL;
-}
-
-void lbParticleDrawTextures(GObj *gobj)
-{
-    (void)gobj;
-}
-#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 /* renderer_adapter_matrix.c, included later in this translation unit. */
 void ndsRendererAdapterNativeStagePreloadAssets(void);
@@ -13923,139 +12657,12 @@ void mpCollisionInitGroundData(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 extern GObj *gGMCameraGObj;
 
 static GObj *ndsBattleCompatMainCameraGObj(void)
 {
     return gGMCameraGObj;
 }
-#else
-void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry)
-{
-    (void)ulx;
-    (void)uly;
-    (void)lrx;
-    (void)lry;
-}
-
-GObj *gmCameraMakeWallpaperCamera(void)
-{
-    return NULL;
-}
-
-static GObj *ndsMakeBattleCompatCamera(u32 bit)
-{
-    gNdsSCVSBattleCompatCameraMask |= bit;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GAMEPLAY_CAMERA;
-
-    return gcMakeCameraGObj(nGCCommonKindSceneCamera,
-                            NULL,
-                            nGCCommonLinkIDCamera,
-                            GOBJ_PRIORITY_DEFAULT,
-                            func_80017EC0,
-                            10,
-                            ~0,
-                            ~0,
-                            FALSE,
-                            nGCProcessKindFunc,
-                            NULL,
-                            1,
-                            FALSE);
-}
-
-static GObj *sNdsBattleCompatMainCameraGObj;
-
-static GObj *ndsBattleCompatMainCameraGObj(void)
-{
-    return sNdsBattleCompatMainCameraGObj;
-}
-
-GObj *gmCameraMakeBattleCamera(void)
-{
-    GObj *camera_gobj = ndsMakeBattleCompatCamera(1u << 0);
-    CObj *cobj;
-    XObj *xobj;
-
-    if (camera_gobj == NULL)
-    {
-        return NULL;
-    }
-
-    cobj = CObjGetStruct(camera_gobj);
-    if (cobj == NULL)
-    {
-        return camera_gobj;
-    }
-
-    xobj = gcAddXObjForCamera(cobj, 0x4C, 0);
-    (void)xobj;
-    cobj->projection.persp.xobj = NULL;
-    cobj->projection.persp.norm = 0;
-    cobj->projection.persp.fovy = 38.0F;
-    cobj->projection.persp.aspect = 15.0F / 11.0F;
-    cobj->projection.persp.near = 256.0F;
-    cobj->projection.persp.far = 39936.0F;
-    cobj->projection.persp.scale = 1.0F;
-    cobj->vec.xobj = NULL;
-    cobj->vec.eye.x = 0.0F;
-    cobj->vec.eye.y = 300.0F;
-    cobj->vec.eye.z = 10000.0F;
-    cobj->vec.at.x = 0.0F;
-    cobj->vec.at.y = 300.0F;
-    cobj->vec.at.z = 0.0F;
-    cobj->vec.up.x = 0.0F;
-    cobj->vec.up.y = 1.0F;
-    cobj->vec.up.z = 0.0F;
-
-    sNdsBattleCompatMainCameraGObj = camera_gobj;
-
-    return camera_gobj;
-}
-
-GObj *gmCameraMakePlayerArrowsCamera(void)
-{
-    return ndsMakeBattleCompatCamera(1u << 1);
-}
-
-GObj *gmCameraMakePlayerMagnifyCamera(void)
-{
-    return ndsMakeBattleCompatCamera(1u << 2);
-}
-
-GObj *gmCameraScreenFlashMakeCamera(void)
-{
-    return ndsMakeBattleCompatCamera(1u << 3);
-}
-
-GObj *gmCameraMakeInterfaceCamera(void)
-{
-    return ndsMakeBattleCompatCamera(1u << 4);
-}
-
-GObj *gmCameraMakeEffectCamera(void)
-{
-    return ndsMakeBattleCompatCamera(1u << 5);
-}
-
-GObj *gmCameraMakeMovieCamera(void (*func_camera)(GObj *))
-{
-    (void)func_camera;
-    return gcMakeCameraGObj(nGCCommonKindSceneCamera,
-                            NULL,
-                            16,
-                            GOBJ_PRIORITY_DEFAULT,
-                            func_80017EC0,
-                            10,
-                            ~0,
-                            ~0,
-                            FALSE,
-                            nGCProcessKindFunc,
-                            NULL,
-                            1,
-                            FALSE);
-}
-#endif
 
 void ndsGRCompatibilityNonPupupuSetup(void)
 {
@@ -14947,13 +13554,6 @@ void mpCollisionSetYakumonoOffID(s32 line_id)
  * spawn-law actor in battleship_item_link_core.c and returns the actor GObj,
  * as the source does. Without it, grCommonSetupInitAll still calls the name
  * (grcommonsetup.c:33), so the witness stub stays for exactly that case. */
-#if !NDS_P2_ITEM_CORE
-GObj *itManagerMakeAppearActor(void)
-{
-    gNdsPupupuGroundDeferredMask |= 1u << 6;
-    return NULL;
-}
-#endif
 
 /* efGroundMakeAppearActor is the real one since 2026-09-05:
  * src/import/battleship_efground.c carries ef/efground.c whole. The witness

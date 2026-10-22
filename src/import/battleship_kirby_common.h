@@ -127,21 +127,12 @@ GObj *efManagerQuakeMakeEffect(s32 magnitude);
  * NULL. The macro form is kept only so the two source call sites
  * (ftcommoncapturekirby.c:270, ftkirbyspecialn.c:949) stay byte-identical to
  * the decomp. */
-#if NDS_P2_ITEM_CORE
 GObj *ndsEFManagerCaptureKirbyStarMakeEffectChecked(GObj *fighter_gobj);
 void ndsEFManagerLoseKirbyStarMakeEffectChecked(GObj *fighter_gobj);
 #define efManagerCaptureKirbyStarMakeEffect(fighter_gobj) \
     ndsEFManagerCaptureKirbyStarMakeEffectChecked(fighter_gobj)
 #define efManagerLoseKirbyStarMakeEffect(fighter_gobj) \
     ndsEFManagerLoseKirbyStarMakeEffectChecked(fighter_gobj)
-#else
-/* Configurations built without the item core never load ITCommonData, so the
- * star has no asset to construct from and the source call sites keep their
- * NULL-tolerant behaviour. This is the explicit build dependency the handoff
- * asks for, not a conditional stub standing in for the effect. */
-#define efManagerCaptureKirbyStarMakeEffect(fighter_gobj) ((GObj *)NULL)
-#define efManagerLoseKirbyStarMakeEffect(fighter_gobj) ((void)0)
-#endif
 void ftParamProcPauseEffect(GObj *effect_gobj);
 void ftParamProcResumeEffect(GObj *fighter_gobj);
 void scManagerRunPrintGObjStatus(void);

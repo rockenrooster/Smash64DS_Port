@@ -26,14 +26,11 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_WARIO
 
 #include <ef/effect.h>
 #include <ft/ftcomputer.h>
 #include <sys/audio.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
@@ -85,7 +82,6 @@ f32 __sinf(f32);
  * Wario's is at 0x5BC (damage_colls[0]). */
 static s32 ndsP4WarioNSPStatus(const FTStruct *fp, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
         switch (status_id)
@@ -100,9 +96,6 @@ static s32 ndsP4WarioNSPStatus(const FTStruct *fp, s32 status_id)
             return NDS_P4_KIRBY_STATUS_WARIO_NSP_RECOIL_AIR;
         }
     }
-#else
-    (void)fp;
-#endif
     return status_id;
 }
 
@@ -756,4 +749,3 @@ const NDSP4Overrides gNdsP4WarioOverrides = {
     .shouldered_interrupt = ndsP4WarioShoulderedInterrupt,
 };
 
-#endif /* NDS_P4_WARIO */

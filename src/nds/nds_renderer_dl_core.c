@@ -1,40 +1,6 @@
 
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-volatile NDSRendererScreenSpaceCensusRow
-    gNdsRendererScreenSpaceCensus[NDS_RENDERER_PROFILE_OWNER_COUNT]
-                                   [NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT];
-volatile u64 gNdsRendererScreenSpaceStageOwnerTicks[
-    NDS_RENDERER_SCREEN_SPACE_CENSUS_STAGE_OWNER_COUNT];
-volatile u32 gNdsRendererScreenSpaceCensusArmed;
-volatile u32 gNdsRendererScreenSpaceCensusResetRequested;
-volatile u32 gNdsRendererScreenSpaceCensusFrameCount;
-volatile u32 gNdsRendererScreenSpaceCensusOverflowCount;
-#endif
 
-#if NDS_RENDER_ECONOMY
-volatile u32 gNdsRendererEconomyConfiguredOwnerMask =
-    (u32)NDS_RENDER_ECONOMY_OWNER_MASK;
-volatile u32 gNdsRendererEconomyActiveOwnerMask;
-volatile u32 gNdsRendererEconomyAppliedOwnerMask;
-volatile u32 gNdsRendererEconomySkippedRunCount;
-volatile u32 gNdsRendererEconomySkippedTriangleCount;
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-typedef struct NDSRendererHardwarePendingPosTest
-{
-    NDSRendererMatrix20p12 matrix;
-    NDSRendererInputVertex input;
-    NDSRendererClipVertex20p12 clip;
-    u32 generation;
-    u32 matrix_word;
-} NDSRendererHardwarePendingPosTest;
-
-static NDSRendererHardwarePendingPosTest
-    sNdsRendererHardwarePendingPosTests[NDS_RENDERER_HW_POS_TEST_MAX];
-static u32 sNdsRendererHardwarePendingPosTestCount;
-static u32 sNdsRendererHardwarePendingPosTestLastGeneration;
-#endif
 
 static void ndsRendererHardwarePrepareLitDirection(
     const NDSRendererStats *stats,
@@ -44,7 +10,6 @@ static u32 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
     const NDSRendererHardwareLightDirection *direction);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 *ndsRendererHardwareFindLightShadeLut(
     u32 diffuse, u32 ambient);
 /* 2026-08-16 ITCM reclaim: this is the LUT BUILDER, reached only on a cache
@@ -57,7 +22,6 @@ static const u32 *ndsRendererHardwareFindLightShadeLut(
 static const u32 *
 ndsRendererHardwareGetLightShadeLut(
     u32 diffuse, u32 ambient);
-#endif
 static u32 ndsRendererHardwareLitShadeColor(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -345,10 +309,6 @@ ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                   NDSRendererMatrix20p12 *out)
 {
     NDSRendererMatrix20p12 temp;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    NDSRendererMatrix20p12 oracle;
-    u32 mismatch = FALSE;
-#endif
     u32 row;
     u32 col;
 
@@ -393,36 +353,6 @@ ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                      NDS_RENDERER_DS_MTX_FRAC_BITS));
     }
     temp.m[3][3] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererMtxMul20p12(lhs, rhs, &oracle);
-    NDS_DIAG(gNdsRendererProfileAffineMatrixSamples++);
-    for (row = 0u; row < 4u; row++)
-    {
-        for (col = 0u; col < 4u; col++)
-        {
-            s64 delta = (s64)temp.m[row][col] - oracle.m[row][col];
-            u32 magnitude;
-
-            if (delta < 0)
-            {
-                delta = -delta;
-            }
-            magnitude = (delta > (s64)UINT_MAX) ? UINT_MAX : (u32)delta;
-            if (magnitude != 0u)
-            {
-                mismatch = TRUE;
-                if (magnitude > gNdsRendererProfileAffineMatrixMaxDelta)
-                {
-                    gNdsRendererProfileAffineMatrixMaxDelta = magnitude;
-                }
-            }
-        }
-    }
-    if (mismatch != FALSE)
-    {
-        NDS_DIAG(gNdsRendererProfileAffineMatrixMismatches++);
-    }
-#endif
     *out = temp;
 }
 
@@ -447,9 +377,6 @@ static u32 ndsRendererNextMatrixGeneration(void)
         sNdsRendererHardwareMatrixLoaded = FALSE;
         sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
         sNdsRendererHardwareMatrixGeneration = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererHardwareMatrixSignature = 0u;
-#endif
     }
     return sNdsRendererMatrixGenerationSerial;
 }
@@ -619,11 +546,6 @@ static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
 }
 
 static void ndsRendererSyncTextureTile(NDSRendererStats *stats);
-#if NDS_TASK107_RENDER_STATE_CENSUS
-static void ndsRendererTask107RecordTextureSync(
-    NDSRendererStats *stats,
-    u32 site);
-#endif
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
  * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
@@ -656,9 +578,6 @@ ndsRendererRecordTextureState(NDSRendererStats *stats, u32 w0, u32 w1)
     {
         stats->texture_state_flags |= NDS_RENDERER_TEXTURE_STATE_SCALE_T;
     }
-#if NDS_TASK107_RENDER_STATE_CENSUS
-    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_TEXTURE);
-#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -685,91 +604,6 @@ static u32 ndsRendererActiveTextureTile(const NDSRendererStats *stats)
     return NDS_RENDERER_RENDER_TILE;
 }
 
-#if NDS_TASK107_RENDER_STATE_CENSUS
-static NDSRendererTask107SyncTrack *ndsRendererTask107FindSyncTrack(
-    const NDSRendererStats *stats,
-    s32 create)
-{
-    NDSRendererTask107SyncTrack *free_track = NULL;
-    u32 i;
-
-    for (i = 0u; i < NDS_TASK107_SYNC_TRACK_COUNT; i++)
-    {
-        NDSRendererTask107SyncTrack *track = &sNdsTask107SyncTrack[i];
-
-        if (track->stats == stats)
-        {
-            return track;
-        }
-        if ((free_track == NULL) && (track->stats == NULL))
-        {
-            free_track = track;
-        }
-    }
-    if ((create != FALSE) && (free_track != NULL))
-    {
-        free_track->stats = stats;
-        free_track->valid_mask = 0u;
-        return free_track;
-    }
-    if (create != FALSE)
-    {
-        NDS_DIAG(gNdsTask107SyncTrackerOverflow++);
-    }
-    return NULL;
-}
-
-static void ndsRendererTask107ForgetSyncTrack(const NDSRendererStats *stats)
-{
-    NDSRendererTask107SyncTrack *track;
-
-    if (stats == NULL)
-    {
-        return;
-    }
-    track = ndsRendererTask107FindSyncTrack(stats, FALSE);
-    if (track != NULL)
-    {
-        track->stats = NULL;
-        track->valid_mask = 0u;
-    }
-}
-
-static void ndsRendererTask107RecordTextureSync(
-    NDSRendererStats *stats,
-    u32 site)
-{
-    NDSRendererTask107SyncTrack *track;
-    const NDSRendererTileState *tile;
-    u32 tile_index;
-    u32 bit;
-    u32 load_seen;
-
-    if ((stats == NULL) || (site >= NDS_TASK107_SYNC_SITE_COUNT))
-    {
-        return;
-    }
-    NDS_DIAG(gNdsTask107SyncCalls[site]++);
-    tile_index = ndsRendererActiveTextureTile(stats);
-    tile = &stats->texture_tiles[tile_index];
-    load_seen = stats->texture_tiles[NDS_RENDERER_LOAD_TILE].set_seen;
-    bit = 1u << tile_index;
-    track = ndsRendererTask107FindSyncTrack(stats, TRUE);
-    if (track == NULL)
-    {
-        return;
-    }
-    if (((track->valid_mask & bit) != 0u) &&
-        (track->load_seen[tile_index] == load_seen) &&
-        (memcmp(&track->tile[tile_index], tile, sizeof(*tile)) == 0))
-    {
-        NDS_DIAG(gNdsTask107SyncUnchanged[site]++);
-    }
-    track->tile[tile_index] = *tile;
-    track->load_seen[tile_index] = load_seen;
-    track->valid_mask |= bit;
-}
-#endif
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
  * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
@@ -904,9 +738,6 @@ ndsRendererRecordSetTile(NDSRendererStats *stats, u32 w0, u32 w1)
         stats->texture_load_tile = tile;
     }
 
-#if NDS_TASK107_RENDER_STATE_CENSUS
-    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_SETTILE);
-#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -1052,9 +883,6 @@ ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
     {
         stats->texture_tile_write_serial++;
     }
-#if NDS_TASK107_RENDER_STATE_CENSUS
-    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_SETTILESIZE);
-#endif
     ndsRendererSyncTextureTile(stats);
 }
 
@@ -1090,46 +918,6 @@ ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
     }
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
-{
-    NDS_DIAG(gNdsRendererProfileCombineModeCount++);
-    if (((gNdsRendererProfileCombineMode0W0 == w0) &&
-         (gNdsRendererProfileCombineMode0W1 == w1)) ||
-        ((gNdsRendererProfileCombineMode1W0 == w0) &&
-         (gNdsRendererProfileCombineMode1W1 == w1)) ||
-        ((gNdsRendererProfileCombineMode2W0 == w0) &&
-         (gNdsRendererProfileCombineMode2W1 == w1)) ||
-        ((gNdsRendererProfileCombineMode3W0 == w0) &&
-         (gNdsRendererProfileCombineMode3W1 == w1)))
-    {
-        return;
-    }
-
-    switch (gNdsRendererProfileCombineModeDistinctCount)
-    {
-    case 0:
-        gNdsRendererProfileCombineMode0W0 = w0;
-        gNdsRendererProfileCombineMode0W1 = w1;
-        break;
-    case 1:
-        gNdsRendererProfileCombineMode1W0 = w0;
-        gNdsRendererProfileCombineMode1W1 = w1;
-        break;
-    case 2:
-        gNdsRendererProfileCombineMode2W0 = w0;
-        gNdsRendererProfileCombineMode2W1 = w1;
-        break;
-    case 3:
-        gNdsRendererProfileCombineMode3W0 = w0;
-        gNdsRendererProfileCombineMode3W1 = w1;
-        break;
-    default:
-        break;
-    }
-    gNdsRendererProfileCombineModeDistinctCount++;
-}
-#endif
 
 static void NDS_R2_DELTA_PATH_CODE
 ndsRendererRecordSetCombine(NDSRendererStats *stats, u32 w0, u32 w1)
@@ -1143,9 +931,6 @@ ndsRendererRecordSetCombine(NDSRendererStats *stats, u32 w0, u32 w1)
     stats->texture_combine_count++;
     stats->texture_combine_w0 = w0;
     stats->texture_combine_w1 = w1;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererProfileCombineMode(w0, w1);
-#endif
 }
 
 static u32 ndsRendererMatrixSnapshotSignature(
@@ -1396,22 +1181,6 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->color_modulate = (config != NULL) ? config->color_modulate : 0u;
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    state->texture_prepare_key_hash = 0u;
-    state->texture_prepare_params = 0u;
-    state->semantic_branch_path =
-        sNdsRendererSemanticSourceProvenance.root_branch_path;
-    if (state->semantic_branch_path == 0u)
-    {
-        state->semantic_branch_path = ndsRendererSemanticBranchPath(
-            (u32)sNdsRendererProfileOwner,
-            sNdsRendererSemanticSourceProvenance.owner_occurrence,
-            sNdsRendererSemanticSourceProvenance.list_ordinal,
-            FALSE);
-    }
-    state->semantic_command_index = 0u;
-    state->semantic_tri2_half = 0u;
-#endif
     state->prepared_vertex_color_valid_mask = 0u;
     state->prepared_texcoord_valid_mask = 0u;
     state->prepared_projected_xy_valid_mask = 0u;
@@ -1634,18 +1403,12 @@ static void ndsRendererRecordLightColor(NDSRendererStats *stats,
         stats->light_color_1 = color;
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK;
         stats->light_color_command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileLightColorCommands++);
-#endif
     }
     else if (light == 2u)
     {
         stats->light_color_2 = color;
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
         stats->light_color_command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileLightColorCommands++);
-#endif
     }
 }
 
@@ -1720,9 +1483,6 @@ static void ndsRendererRecordLightMoveMem(
         stats->light_dir_z = src->l.dir[2];
         stats->light_dir_mask |= NDS_RENDERER_LIGHT_DIR_1_MASK;
         stats->light_direction_command_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileLightDirectionCommands++);
-#endif
     }
 }
 

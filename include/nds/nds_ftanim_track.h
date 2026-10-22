@@ -39,15 +39,6 @@
 
 #include <sys/objtypes.h>
 
-#ifndef NDS_R2_FTANIM_TRACK
-#define NDS_R2_FTANIM_TRACK 0
-#endif
-#ifndef NDS_R2_FTANIM_TRACK_DISPATCH
-#define NDS_R2_FTANIM_TRACK_DISPATCH 1
-#endif
-#ifndef NDS_R2_FTANIM_TRACK_ORACLE
-#define NDS_R2_FTANIM_TRACK_ORACLE 0
-#endif
 
 /* One clip: `entry_count` figatree entries starting at `entry_first` in the
  * entry word array. Emitted ascending by `asset_id` so the lookup is a binary

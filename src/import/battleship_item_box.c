@@ -17,7 +17,6 @@
  * tuning, itMainUpdateAttackEvent) are referenced verbatim and listed in the
  * task report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ef/effect.h>
@@ -595,4 +594,3 @@ void itBoxExplodeMakeEffectGotoSetStatus(GObj *item_gobj)
     itBoxExplodeSetStatus(item_gobj);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

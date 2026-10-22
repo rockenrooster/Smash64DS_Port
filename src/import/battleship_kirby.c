@@ -23,7 +23,6 @@
 #include "battleship_kirby_common.h"
 
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
 /* P4: a content's inhale runs this file on its own statuses (Remix's
  * DededeNSP hooks patch each status change here for Dedede's id): every
@@ -33,7 +32,6 @@
 #define ftMainSetStatus(g_, s_, f_, a_, fl_) \
     ftMainSetStatus((g_), ndsP4KirbyInhaleStatus((g_), (s_)), (f_), (a_), (fl_))
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
-#if NDS_P2_KIRBY
 /* S8: a content's power travels with copy_id (FTStruct.nds_p4_kirby_copy).
  * The catch records it where it has just chosen the copy_id (its eat
  * sound), the copy takes it (ndsP4KirbyCopyInitCopyVars, below, around the
@@ -54,13 +52,9 @@ void battleship_ftKirbySpecialNCopyInitCopyVars(GObj *fighter_gobj);
     func_800269C0_275C0(nSYAudioFGMKirbySpecialNCopyUnk)
 #define NDS_P4_KIRBY_FGM_nSYAudioFGMKirbySpecialNCopyThrow \
     func_800269C0_275C0(nSYAudioFGMKirbySpecialNCopyThrow)
-#endif
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialn.c"
-#if NDS_P4
 #undef ftMainSetStatus
 #undef gFTDataKirbyMainMotion
-#if NDS_P2_KIRBY
 #undef ftKirbySpecialNCopyInitCopyVars
 #undef func_800269C0_275C0
 
@@ -75,7 +69,7 @@ static void ndsP4KirbyCopyInitCopyVarsPower(GObj *fighter_gobj);
 
 void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
 {
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
     /* A Kirby taking a copy also takes or drops Metal Mario's metal
      * (nds_p4.c ndsKirbyMetalTake), whether or not the copy_id moves. */
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -126,8 +120,6 @@ static void ndsP4KirbyCopyInitCopyVarsPower(GObj *fighter_gobj)
         ftParamResetModelPartAll(fighter_gobj);
     }
 }
-#endif
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialhi.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspeciallw.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbythrowf.c"

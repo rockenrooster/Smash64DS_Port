@@ -277,7 +277,6 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
 #endif
 
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* EFCommon script 0x62, decoded from the pinned bank:
  *
  *   MASKT; size 0->150/3; 150->165/1; 165->150/2;
@@ -380,7 +379,6 @@ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
     gNdsFoxBlasterGlowAOTSpawnCount++;
     return TRUE;
 }
-#endif
 
 /* The pool the NEXT efParticleInitAll should use, or 0 for the battle sizing
  * above. Only the Results scene sets it, because only that scene both needs a
@@ -395,23 +393,15 @@ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
 volatile u32 gNdsParticlePoolStructsWanted;
 volatile u32 gNdsParticlePoolGeneratorsWanted;
 volatile u32 gNdsParticlePoolTransformsWanted;
-#if NDS_P2_NESS
 extern volatile u32 gNdsParticleBankNessID;
 extern volatile u32 gNdsParticleNessScriptsPacked;
-#endif
-#if NDS_P2_YOSHI
 extern volatile u32 gNdsParticleBankYoshiID;
 extern volatile u32 gNdsParticleYoshiScriptsPacked;
-#endif
-#if NDS_P2_KIRBY
 extern volatile u32 gNdsParticleBankKirbyID;
 extern volatile u32 gNdsParticleKirbyScriptsPacked;
-#endif
 
-#if NDS_R2_WHISPY_NATIVE_AOT
 static void ndsWhispyAOTStructFuncRun(GObj *gobj);
 static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj);
-#endif
 
 void efParticleInitAll(void)
 {
@@ -424,7 +414,6 @@ void efParticleInitAll(void)
 
     gEFParticleStructsGObj = lbParticleAllocStructs((s32)structs);
     gEFParticleGeneratorsGObj = lbParticleAllocGenerators((s32)generators);
-#if NDS_R2_WHISPY_NATIVE_AOT
     /* Swap only the two once-per-frame runners. The GObjs, source free lists,
      * source allocation records, constructors, transforms and ejectors remain
      * BattleShip's. Both wrappers fail back to the original function whenever
@@ -437,39 +426,28 @@ void efParticleInitAll(void)
     {
         gEFParticleGeneratorsGObj->func_run = ndsWhispyAOTGeneratorFuncRun;
     }
-#endif
 
     lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
-#if NDS_P2_NESS
     gNdsParticleBankNessID = 0xffu;
     gNdsParticleNessScriptsPacked = 0u;
-#endif
-#if NDS_P2_YOSHI
     gNdsParticleBankYoshiID = 0xffu;
     gNdsParticleYoshiScriptsPacked = 0u;
-#endif
-#if NDS_P2_KIRBY
     gNdsParticleBankKirbyID = 0xffu;
     gNdsParticleKirbyScriptsPacked = 0u;
-#endif
 #if NDS_P2_STAGE_HYRULE
     gNdsParticleBankHyruleID = 0xffu;
     gNdsHyruleScriptsPacked = 0u;
 #endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     ndsParticleResetFoxBlasterGlowAOT();
-#endif
     /* Every call here restarts bank numbering, so two loads on either side of
      * one reset share a slot. That is how efcommon and Dream Land both reported
      * bank 0 on 2026-08-01. Counted rather than assumed. */
     gNdsParticleInitAllCount++;
-#if NDS_R2_FIREGRIND_NATIVE
     /* The DS-native FireGrind pool is scene/match-lifetime like the particle
      * pools above; drop every live spark on the same reset so a restart does not
      * inherit sparks from the previous match. */
     ndsFireGrindReset();
-#endif
 }
 
 /* efdisplay.c passes the address of this marker as the efcommon script bank.
@@ -480,20 +458,14 @@ extern uintptr_t lEFCommonParticleScriptBankLo;
 /* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
  * src/port/diagnostics.c as intptr_t; only its address is ever used. */
 extern intptr_t lGRPupupuParticleScriptBankLo;
-#if NDS_P2_NESS
 /* Ness's FTData row names the particles_unk1 source bank by the segment-symbol
  * address (ftdata.c:6929-6933).  Unlike stage/item banks there is no reloc_data
  * alias for this bank, so preserve that exact identity here. */
 extern s32 particles_unk1_scb_ROM_START;
-#endif
 /* Yoshi's and Kirby's FTData rows name their banks the same way
  * (ftdata.c:4076, ftdata.c:5272). */
-#if NDS_P2_YOSHI
 extern s32 particles_unk2_scb_ROM_START;
-#endif
-#if NDS_P2_KIRBY
 extern s32 particles_unk0_scb_ROM_START;
-#endif
 #if NDS_P2_STAGE_HYRULE
 extern intptr_t lGRHyruleParticleScriptBankLo;
 #endif
@@ -515,7 +487,6 @@ extern const u32 gNdsYosterScriptBankBytes;
 extern const u32 gNdsYosterScriptOffsets[1];
 extern const u8 gNdsYosterTextureDims[3];
 #endif
-#if NDS_P2_ITEM_CORE
 /* The item bank marker. Declared in include/reloc_data.h
  * (decomp it/itmanager.h:8-11) and defined in
  * src/import/battleship_item_link_core.c; only its address is ever used, and
@@ -531,9 +502,7 @@ extern u8 gNdsItemScriptBank[];
 extern const u32 gNdsItemScriptBankBytes;
 extern const u32 gNdsItemScriptOffsets[3];
 extern const u8 gNdsItemTextureDims[6];
-#endif
 
-#if NDS_R2_WHISPY_NATIVE_AOT
 #if defined(__arm__)
 #define NDS_WHISPY_AOT_FAST_CODE \
     __attribute__((hot, optimize("O3"), target("arm")))
@@ -599,15 +568,9 @@ volatile u32 gNdsWhispyAOTGeneratorFallbackRuns;
 volatile u32 gNdsWhispyAOTGeneratorVisits;
 volatile u32 gNdsWhispyAOTGeneratorEmits;
 volatile u32 gNdsWhispyAOTTableTrigPairs;
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-volatile u32 gNdsWhispyAOTGeneratorTicks;
-#endif
 volatile u32 gNdsWhispyAOTStructVisits;
 volatile u32 gNdsWhispyAOTStructFastUpdates;
 volatile u32 gNdsWhispyAOTStructSourceUpdates;
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-volatile u32 gNdsWhispyAOTStructTicks;
-#endif
 volatile u32 gNdsWhispyAOTDividesAvoided;
 volatile u32 gNdsWhispyAOTTier2GeneratorMatches;
 volatile u32 gNdsWhispyAOTTier2DirectUpdates;
@@ -732,16 +695,10 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
 {
     LBGenerator *gn;
     LBGenerator *next_gn;
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-    u32 tick_start = cpuGetTiming();
-#endif
 
     if (sLBParticleGeneratorsQueued == NULL)
     {
         lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-        gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
-#endif
         return;
     }
     for (gn = sLBParticleGeneratorsQueued; gn != NULL; gn = gn->next)
@@ -754,9 +711,6 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
         {
             gNdsWhispyAOTGeneratorFallbackRuns++;
             lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-            gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
-#endif
             return;
         }
     }
@@ -887,9 +841,6 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
         sLBParticleGeneratorsLastProcessed = gn;
         gn = gn->next;
     }
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-    gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
-#endif
 }
 
 /* Exact floor(65536 / n), generated once into ARM immediates/rodata. Script 2
@@ -1294,16 +1245,9 @@ ndsWhispyAOTStructFuncRunLean(GObj *gobj)
 
 static void ndsWhispyAOTStructFuncRun(GObj *gobj)
 {
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-    u32 tick_start = cpuGetTiming();
-#endif
 
     ndsWhispyAOTStructFuncRunLean(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-    gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
-#endif
 }
-#endif /* NDS_R2_WHISPY_NATIVE_AOT */
 
 /* efcommon's texture ids run 0..46 (PARTICLE_BANK_DISCOVERIES.md). */
 #define NDS_PARTICLE_TEXTURE_IDS 47
@@ -1329,23 +1273,17 @@ volatile u32 gNdsParticleBankPupupuID = 0xffu;
 /* How many of Dream Land's five scripts survived normalization. 0 means the
  * bank registered empty and Whispy is back to silent leaves. */
 volatile u32 gNdsParticlePupupuScriptsPacked;
-#if NDS_P2_NESS
 /* PK Fire's pillar is script 0 of Ness's particles_unk1 bank.  Keep a distinct
  * sentinel/count so a live proof can distinguish "Ness loaded" from the
  * generic other-bank slot, whose id is intentionally reusable after reset. */
 volatile u32 gNdsParticleBankNessID = 0xffu;
 volatile u32 gNdsParticleNessScriptsPacked;
-#endif
-#if NDS_P2_YOSHI
 /* Yoshi's egg-explosion bank (particles_unk2); same sentinel contract. */
 volatile u32 gNdsParticleBankYoshiID = 0xffu;
 volatile u32 gNdsParticleYoshiScriptsPacked;
-#endif
-#if NDS_P2_KIRBY
 /* Kirby's inhale-wind bank (particles_unk0); same sentinel contract. */
 volatile u32 gNdsParticleBankKirbyID = 0xffu;
 volatile u32 gNdsParticleKirbyScriptsPacked;
-#endif
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster. 0 means the vapor bank registered empty and the cloud
  * evaporate effect is silent; the gameplay (timers, collision, sink) is the
@@ -1353,7 +1291,6 @@ volatile u32 gNdsParticleKirbyScriptsPacked;
 volatile u32 gNdsParticleBankYosterID = 0xffu;
 volatile u32 gNdsParticleYosterScriptsPacked;
 #endif
-#if NDS_P2_ITEM_CORE
 /* 0xff until the item bank registers, for the same reason as the Pupupu and
  * Yoster sentinels above: bank id 0 is legal, so zero-init would match
  * another bank's particles to the item atlas stride. 0 packed means the item
@@ -1361,7 +1298,6 @@ volatile u32 gNdsParticleYosterScriptsPacked;
  * and timing never consult this. */
 volatile u32 gNdsParticleBankItemID = 0xffu;
 volatile u32 gNdsItemScriptsPacked;
-#endif
 
 volatile u32 gNdsParticleScriptStartCount;
 volatile u32 gNdsParticleGeneratorStartCount;
@@ -2056,7 +1992,6 @@ static sb32 ndsParticleLoadPupupuBank(s32 bank_id)
     return (packed != 0u) ? TRUE : FALSE;
 }
 
-#if NDS_P2_NESS
 /* Ness's fighter bank: four source scripts / two source textures.  PK Fire's
  * pillar starts script 0, and the source bytecode closes over scripts 1..3.
  * scripts/generate_nds_particle_banks.py independently pins that closure and
@@ -2142,9 +2077,7 @@ static sb32 ndsParticleLoadNessBank(s32 bank_id)
     gNdsParticleNessScriptsPacked = packed;
     return (packed == NDS_NESS_SCRIPT_COUNT) ? TRUE : FALSE;
 }
-#endif
 
-#if NDS_P2_YOSHI || NDS_P2_KIRBY
 /* Yoshi's and Kirby's fighter banks: Ness's loader above, over whichever
  * baked tables the caller names. The generator (build_fighter_bank) pins each
  * bank's hashes and proves its source makers reach every script, so all of
@@ -2229,7 +2162,6 @@ static sb32 ndsParticleLoadFighterBank(s32 bank_id, u8 *bank, u32 bank_bytes,
     sLBParticleTextureBanks[bank_id] = textures;
     return TRUE;
 }
-#endif
 
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster Island's cloud-vapor bank. Same shape as ndsParticleLoadPupupuBank
@@ -2310,7 +2242,6 @@ static sb32 ndsParticleLoadYosterBank(s32 bank_id)
 }
 #endif
 
-#if NDS_P2_ITEM_CORE
 /* The item bank: 3 scripts (0 flame -> texture 0, 1 generator, 2 smoke ->
  * texture 1), 2 textures (32x32x1, 32x32x4). Same shape as
  * ndsParticleLoadPupupuBank and deliberately a separate function for the
@@ -2416,7 +2347,6 @@ static sb32 ndsParticleLoadItemBank(s32 bank_id)
     gNdsItemScriptsPacked = packed;
     return (packed != 0u) ? TRUE : FALSE;
 }
-#endif
 
 #if NDS_P2_STAGE_HYRULE
 volatile u32 gNdsParticleBankHyruleID = 0xffu;
@@ -2549,7 +2479,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         gNdsPupupuGroundSetupMask |= 1u << 9;
         gNdsPupupuGroundParticleBankID = (u32)bank_id;
     }
-#if NDS_P2_NESS
     else if (scripts_lo == (uintptr_t)&particles_unk1_scb_ROM_START)
     {
         /* Ness's FTData row points directly at the source ROM segment marker.
@@ -2566,8 +2495,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#endif
-#if NDS_P2_YOSHI
     else if (scripts_lo == (uintptr_t)&particles_unk2_scb_ROM_START)
     {
         if (ndsParticleLoadFighterBank(
@@ -2586,8 +2513,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#endif
-#if NDS_P2_KIRBY
     else if (scripts_lo == (uintptr_t)&particles_unk0_scb_ROM_START)
     {
         if (ndsParticleLoadFighterBank(
@@ -2606,7 +2531,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#endif
 #if NDS_P2_STAGE_YOSTER
     else if (scripts_lo == (uintptr_t)&lGRYosterParticleScriptBankLo)
     {
@@ -2625,7 +2549,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         gNdsParticleBankOtherID = (u32)bank_id;
     }
 #endif
-#if NDS_P2_ITEM_CORE
     else if (scripts_lo == (uintptr_t)&lITManagerParticleScriptBankLo)
     {
         /* The item bank (decomp it/itmanager.c:150). Registered by symbol
@@ -2642,7 +2565,6 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#endif
 #if NDS_P2_STAGE_HYRULE
     else if (scripts_lo == (uintptr_t)&lGRHyruleParticleScriptBankLo)
     {
@@ -2952,7 +2874,6 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
     return earlier;
 }
 
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* Draw the closed script-0x62 pool in the same link-0 position the source
  * LBParticles occupied. The fast submit receives Q12/Q8 directly. Its full
  * 0..16 T coordinates intentionally exceed the physical 8-row texture: the
@@ -3041,9 +2962,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
     }
     sNdsFoxBlasterGlowAOTCount = live;
 }
-#endif
 
-#if NDS_R2_PARTICLE_DRAW
 /* Every input ndsParticleSetCurrentCamera reads on its xobjs_num != 0 path.
  * `persp_near`/`persp_far` rather than near/far because those two are macros on
  * some toolchains and this struct is not worth the surprise. */
@@ -3878,63 +3797,7 @@ static sb32 ndsParticleTransformForDraw(LBParticle *pc,
     return FALSE;
 }
 
-#if NDS_R2_POSITION_PROBE
-/* Far-end of the fire-burn position contract. The maker-side probe stores the
- * exact LBParticle pointers returned by the three source Flame makers. Record
- * the first world-space quad centre produced for each pointer after the normal
- * source LBTransform has been applied but before any DS camera/fixed-point
- * conversion. That separates "source maker intentionally offset/moved it" from
- * "the DS renderer moved it" without inferring either from pixels. */
-extern uintptr_t gNdsFlameMakerProbeParticle[8];
-__attribute__((used)) u32 gNdsFlameDrawProbeSeenMask;
-__attribute__((used)) f32 gNdsFlameDrawProbeWorldX[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeWorldY[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeWorldZ[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeLocalX[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeLocalY[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeLocalZ[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeXfX[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeXfY[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeXfZ[8];
-__attribute__((used)) f32 gNdsFlameDrawProbeSize[8];
-__attribute__((used)) u32 gNdsFlameDrawProbeTexture[8];
-__attribute__((used)) u32 gNdsFlameDrawProbeFrame[8];
 
-static void ndsParticleProbeFlameFirstDraw(LBParticle *pc,
-                                           const Vec3f *world_pos)
-{
-    u32 slot;
-
-    for (slot = 0u; slot < 8u; slot++)
-    {
-        u32 bit = 1u << slot;
-
-        if ((gNdsFlameMakerProbeParticle[slot] == (uintptr_t)pc) &&
-            ((gNdsFlameDrawProbeSeenMask & bit) == 0u))
-        {
-            gNdsFlameDrawProbeSeenMask |= bit;
-            gNdsFlameDrawProbeWorldX[slot] = world_pos->x;
-            gNdsFlameDrawProbeWorldY[slot] = world_pos->y;
-            gNdsFlameDrawProbeWorldZ[slot] = world_pos->z;
-            gNdsFlameDrawProbeLocalX[slot] = pc->pos.x;
-            gNdsFlameDrawProbeLocalY[slot] = pc->pos.y;
-            gNdsFlameDrawProbeLocalZ[slot] = pc->pos.z;
-            if (pc->xf != NULL)
-            {
-                gNdsFlameDrawProbeXfX[slot] = pc->xf->translate.x;
-                gNdsFlameDrawProbeXfY[slot] = pc->xf->translate.y;
-                gNdsFlameDrawProbeXfZ[slot] = pc->xf->translate.z;
-            }
-            gNdsFlameDrawProbeSize[slot] = pc->size;
-            gNdsFlameDrawProbeTexture[slot] = (u32)pc->texture_id;
-            gNdsFlameDrawProbeFrame[slot] = (u32)pc->frame_id;
-            return;
-        }
-    }
-}
-#endif
-
-#if NDS_R2_WHISPY_NATIVE_AOT
 #define NDS_WHISPY_AOT_XF_CACHE_COUNT 4u
 static LBTransform *sNdsWhispyAOTXfCache[NDS_WHISPY_AOT_XF_CACHE_COUNT];
 static u8 sNdsWhispyAOTXfMirror[NDS_WHISPY_AOT_XF_CACHE_COUNT];
@@ -4020,8 +3883,6 @@ static sb32 ndsWhispyAOTTier2TransformForDraw(LBParticle *pc,
     return TRUE;
 }
 
-#endif
-#endif
 
 volatile u32 gNdsSourceAssetQuadAttempts;
 volatile u32 gNdsSourceAssetQuadDrawn;
@@ -4118,7 +3979,6 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
         gNdsSourceAssetQuadMissMask |= 1u << 0;
         return FALSE;
     }
-#if NDS_R2_PARTICLE_DRAW
     if (ndsParticleSetCurrentCamera(&right, &up) == FALSE)
     {
         gNdsSourceAssetQuadMissMask |= 1u << 3;
@@ -4187,13 +4047,6 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
     ndsRendererEndParticleQuads();
     NDS_DIAG(gNdsSourceAssetQuadDrawn++);
     return TRUE;
-#else
-    (void)texture_name; (void)texture_w; (void)texture_h; (void)color;
-    (void)right; (void)up; (void)draw_pos; (void)depth_bias; (void)roll;
-    (void)mirror_x;
-    gNdsSourceAssetQuadMissMask |= 1u << 5;
-    return FALSE;
-#endif
 }
 
 sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
@@ -4202,7 +4055,6 @@ sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
                                             const Vec3f *up_leg, u32 color,
                                             u8 alpha)
 {
-#if NDS_R2_PARTICLE_DRAW
     Vec3f camera_right;
     Vec3f camera_up;
     Vec3f right;
@@ -4251,11 +4103,6 @@ sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
     ndsRendererEndParticleQuads();
     ndsRendererHardwareNoteQuadFrame();
     return TRUE;
-#else
-    (void)texture_name; (void)texture_w; (void)texture_h; (void)centre;
-    (void)right_leg; (void)up_leg; (void)color; (void)alpha;
-    return FALSE;
-#endif
 }
 
 sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
@@ -4273,7 +4120,6 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
         gNdsSourceAssetQuadMissMask |= 1u << 0;
         return FALSE;
     }
-#if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
     if (atlas_name == 0u)
     {
@@ -4307,15 +4153,8 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
     ndsRendererEndParticleQuads();
     NDS_DIAG(gNdsSourceAssetQuadDrawn++);
     return TRUE;
-#else
-    (void)texture_id; (void)color; (void)row; (void)right; (void)up;
-    (void)atlas_name; (void)depth_bias; (void)draw_pos;
-    gNdsSourceAssetQuadMissMask |= 1u << 5;
-    return FALSE;
-#endif
 }
 
-#if NDS_R2_FIREGRIND_NATIVE
 /* THE NATIVE FIREGRIND DRAW, folded into this pass's open GX batch.
  *
  * Texture 5 is admitted to the DS atlas at exactly one row -- frame 0 (frames
@@ -4340,7 +4179,6 @@ static const NDSParticleQuadFrame *sNdsFireGrindFrameRow;
  * gNdsFrameCounter so multi-camera-link calls within one frame advance the pool
  * exactly once. A paused/skipped frame never reaches here, so sparks freeze. */
 static u32 sNdsFireGrindLastUpdateFrame;
-#endif
 
 #include <nds/nds_battle_hud.h>
 #include <port/coroutine.h>
@@ -4409,10 +4247,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     u32 atlas_name;
     u32 link;
     sb32 view_space = FALSE;
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     u32 fox_blaster_glow_name = 0u;
-#endif
-#if NDS_R2_WHISPY_NATIVE_AOT
     u32 whispy_native_names[3] = { 0u, 0u, 0u };
     u32 whispy_lean_source_frames = 0u;
     u32 whispy_lean_use_mask = 0u;
@@ -4425,7 +4260,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     u32 whispy_lean_submit_ok = 0u;
     u32 whispy_lean_submit_fail = 0u;
     u8 whispy_lean_frame_max[3] = { 0u, 0u, 0u };
-#endif
 #if NDS_TICK_HUD
     /* R2-07 MISC split: the whole lbParticle quad pass, ticks not quads. The
      * emit COUNT already exists (gNdsParticleQuadEmitCount) and is exactly the
@@ -4439,7 +4273,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #endif
 
     NDS_DIAG(gNdsParticleDrawSeamCount++);
-#if NDS_R2_FIREGRIND_NATIVE
     /* SIMULATE FIREGRIND ONCE PER FRAME, from the GENLINK(0) pass. Source
      * FireGrind lives on link 0; this pass runs on multiple particle-camera
      * links per frame, so the GENLINK(0) gate plus the frame-stamp together
@@ -4457,7 +4290,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             ndsFireGrindUpdate();
         }
     }
-#endif
     /* P2-2p8 (2026-10-04): efDisplayInitAll makes four particle passes a
      * frame (links {0, 2}, {1}, {3}, {4}), and each paid the atlas, camera
      * and Whispy setup below (~5K cycles) before finding its links empty.
@@ -4485,9 +4317,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         }
     }
     ndsParticleHeavyLodDecide();
-#if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
-#if NDS_R2_WHISPY_NATIVE_AOT
     if ((atlas_name != 0u) &&
         (ndsRendererAdapterBeginParticleViewPass(gGCCurrentCamera) != FALSE))
     {
@@ -4499,13 +4329,11 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         view_space = TRUE;
     }
     else
-#endif
     if ((atlas_name != 0u) &&
         (ndsParticleSetCurrentCamera(&right, &up) == FALSE))
     {
         atlas_name = 0u;
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     if (atlas_name != 0u)
     {
         u32 texture;
@@ -4518,32 +4346,16 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 ndsRendererHardwareWhispyNativeName(texture);
         }
     }
-#endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     if (atlas_name != 0u)
     {
         fox_blaster_glow_name =
             ndsRendererHardwareFoxBlasterGlowName();
-#if !NDS_R2_WHISPY_NATIVE_AOT
-        ndsRendererSetWhispyNativeBasis(&right, &up);
-#endif
     }
-#endif
-#else
-    /* The census half only. The emit wedged the geometry engine on its first
-     * build and is behind NDS_R2_PARTICLE_DRAW until that is understood; the
-     * interpreter's measured NO-FREEZE full match must not depend on it. */
-    (void)right;
-    (void)up;
-    atlas_name = 0u;
-#endif
-#if NDS_R2_PARTICLE_DRAW
     /* efdisplay.c's CLD and plain-XLU particle displays compare no Z; see
      * ndsRendererSetParticleNoDepth. */
     ndsRendererSetParticleNoDepth(
         ((gobj->proc_display == efDisplayZPerspCLDProcDisplay) ||
          (gobj->proc_display == efDisplayZPerspXLUProcDisplay)) ? 1u : 0u);
-#endif
 
     dLBParticleCurrentTransformID++;
     sNdsParticleDrawPass++;
@@ -4556,17 +4368,14 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         {
             continue;
         }
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
         if ((link == 0u) && (fox_blaster_glow_name != 0u))
         {
             ndsParticleDrawFoxBlasterGlowAOT(
                 fox_blaster_glow_name, &right, &up, &visible, &emitted);
         }
-#endif
         for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
         {
             const NDSParticleQuadFrame *row = NULL;
-#if NDS_R2_PARTICLE_DRAW
             Vec3f world_pos;
             Vec3f quad_right;
             Vec3f quad_up;
@@ -4578,11 +4387,8 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             u32 texture_y;
             u32 texture_width;
             u32 texture_height;
-#endif
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
             sb32 whispy_native = FALSE;
-#endif
-#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+#if NDS_P2_STAGE_HYRULE
             sb32 hyrule_native = FALSE;
 #endif
             u32 id;
@@ -4615,18 +4421,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             {
                 continue;
             }
-#if !NDS_R2_WHISPY_NATIVE_AOT
-            {
-                gNdsParticleTextureUseMask[id >> 5] |= 1u << (id & 31u);
-                /* frame_id + 1, so "never drawn" and "drew frame 0" differ. */
-                if ((u32)pc->frame_id + 1u >
-                    gNdsParticleTextureFrameMax[id])
-                {
-                    gNdsParticleTextureFrameMax[id] =
-                        (u8)(pc->frame_id + 1u);
-                }
-            }
-#endif
             if (atlas_name == 0u)
             {
                 continue;
@@ -4653,18 +4447,9 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     (sEFParticleScriptBanks[slot] ==
                      (uintptr_t)&lGRPupupuParticleScriptBankLo))
                 {
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
                     whispy_native = TRUE;
-#else
-#error "Dream Land particles draw only through the Whispy native textures; the quad atlas has no Pupupu cells since 2026-10-04"
-#endif
-#if NDS_R2_WHISPY_NATIVE_AOT
                     whispy_lean_stride_count++;
-#else
-                    gNdsParticleQuadStrideCount++;
-#endif
                 }
-#if NDS_P2_NESS
                 /* Ness source textures 0/1 are their own bank, not EFCommon
                  * textures 0/1.  The generator reserves 160/161 for them; use
                  * the same immutable source-bank identity test as Pupupu. */
@@ -4675,8 +4460,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     id += NDS_PARTICLE_QUAD_NESS_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
-#endif
-#if NDS_P2_YOSHI
                 if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
                     (sEFParticleScriptBanks[slot] ==
                      (uintptr_t)&particles_unk2_scb_ROM_START))
@@ -4684,8 +4467,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     id += NDS_PARTICLE_QUAD_YOSHI_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
-#endif
-#if NDS_P2_KIRBY
                 if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
                     (sEFParticleScriptBanks[slot] ==
                      (uintptr_t)&particles_unk0_scb_ROM_START))
@@ -4693,7 +4474,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     id += NDS_PARTICLE_QUAD_KIRBY_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
-#endif
 #if NDS_P2_STAGE_YOSTER
                 /* The cloud vapor's texture 0 is Yoster's own (row 192), not
                  * common texture 0, which it drew until 2026-10-04. */
@@ -4705,7 +4485,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     gNdsParticleQuadStrideCount++;
                 }
 #endif
-#if NDS_P2_ITEM_CORE
                 /* Item textures 0/1 are not common textures 0/1: without the
                  * stride they hit the common rows and the aliasing this bank
                  * registration removes reappears one layer down. Same slot-
@@ -4717,12 +4496,9 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     id += NDS_PARTICLE_QUAD_ITEM_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
-#endif
             }
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
             if (whispy_native != FALSE)
             {
-#if NDS_R2_WHISPY_NATIVE_AOT
                 if ((u32)pc->texture_id < 3u)
                 {
                     u32 frame_max = (u32)pc->frame_id + 1u;
@@ -4734,24 +4510,14 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         whispy_lean_frame_max[pc->texture_id] = (u8)frame_max;
                     }
                 }
-#endif
                 if ((u32)pc->frame_id < 32u)
                 {
-#if NDS_R2_WHISPY_NATIVE_AOT
                     whispy_lean_source_frames |= 1u << pc->frame_id;
-#else
-                    gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;
-#endif
                 }
-#if NDS_R2_WHISPY_NATIVE_AOT
                 texture_name = ((u32)pc->texture_id <
                                 ARRAY_COUNT(whispy_native_names)) ?
                     whispy_native_names[pc->texture_id] :
                     ndsRendererHardwareWhispyNativeName(pc->texture_id);
-#else
-                texture_name =
-                    ndsRendererHardwareWhispyNativeName(pc->texture_id);
-#endif
                 if (texture_name == 0u)
                 {
                     gNdsWhispyNativeTextureMissCount++;
@@ -4781,9 +4547,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 }
             }
             else
-#endif
             {
-#if NDS_R2_WHISPY_NATIVE_AOT && NDS_R2_WHISPY_NATIVE_TEXTURES
                 /* `id` has been STRIDED by now. The bound was checked at the
                  * top of this loop against the raw texture id, before the
                  * Pupupu and item strides were added, so a strided id lands
@@ -4803,8 +4567,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                             (u8)(pc->frame_id + 1u);
                     }
                 }
-#endif
-#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+#if NDS_P2_STAGE_HYRULE
                 if (((u32)(pc->bank_id & 7) < (u32)sEFParticleBanksNum) &&
                     (sEFParticleScriptBanks[pc->bank_id & 7] ==
                      (uintptr_t)&lGRHyruleParticleScriptBankLo))
@@ -4826,10 +4589,8 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 row = ndsParticleQuadFrameFor(id, pc->frame_id);
             }
             if ((row == NULL)
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
                 && (whispy_native == FALSE)
-#endif
-#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+#if NDS_P2_STAGE_HYRULE
                 && (hyrule_native == FALSE)
 #endif
                 )
@@ -4852,7 +4613,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 }
                 continue;
             }
-#if NDS_R2_PARTICLE_DRAW
             if (row != NULL)
             {
                 texture_name =
@@ -4889,7 +4649,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
              * atlas, and always submits full-texture UVs. */
             {
                 s32 submit_result = -1;
-#if NDS_R2_WHISPY_NATIVE_AOT
                 if (whispy_native != FALSE)
                 {
                     u32 mirror_mask;
@@ -4919,7 +4678,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         whispy_lean_fixed_fallbacks++;
                     }
                 }
-#endif
                 if (submit_result < 0)
                 {
                     u32 source_mirror_mask =
@@ -4929,18 +4687,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     const sb32 center_fixed = ndsParticleTransformForDraw(
                         pc, &right, &up, &world_pos, center_q8,
                         &quad_right, &quad_up, view_space);
-#if NDS_R2_POSITION_PROBE
-                    if (center_fixed != FALSE)
-                    {
-                        world_pos.x = ndsR2CollisionFixedToF32(
-                            center_q8[0], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-                        world_pos.y = ndsR2CollisionFixedToF32(
-                            center_q8[1], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-                        world_pos.z = ndsR2CollisionFixedToF32(
-                            center_q8[2], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-                    }
-                    ndsParticleProbeFlameFirstDraw(pc, &world_pos);
-#endif
                     if ((pc->xf != NULL) &&
                         (pc->xf->proc_dead == ndsParticleTransformTowardEye))
                     {
@@ -5004,18 +4750,11 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         ((pc->texture_id < 2) ? pc->texture_id : 2 + pc->frame_id);
                 }
 #endif
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
                 if (whispy_native != FALSE)
                 {
-#if NDS_R2_WHISPY_NATIVE_AOT
                     whispy_lean_draws++;
                     whispy_lean_texture_mask |= 1u << pc->texture_id;
-#else
-                    gNdsWhispyNativeTextureDrawCount++;
-                    gNdsWhispyNativeTextureMask |= 1u << pc->texture_id;
-#endif
                 }
-#endif
                 /* KO particles draw on link 2, so the Whispy counters below
                  * -- which are link 1 by construction, and are read by name in
                  * probe-vfx-contracts.ps1 -- could never see them. Count every
@@ -5025,11 +4764,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 NDS_DIAG(gNdsParticleSubmitOkCount++);
                 if (link == 1u)
                 {
-#if NDS_R2_WHISPY_NATIVE_AOT
                     whispy_lean_submit_ok++;
-#else
-                    gNdsWhispySubmitOk++;
-#endif
                 }
             }
             /* Same split as the ok counter above. */
@@ -5038,20 +4773,14 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 gNdsParticleSubmitFailCount++;
                 if (link == 1u)
                 {
-#if NDS_R2_WHISPY_NATIVE_AOT
                     whispy_lean_submit_fail++;
-#else
-                    gNdsWhispySubmitFail++;
-#endif
                 }
             }
             }
-#endif
         }
     }
     if (atlas_name != 0u)
     {
-#if NDS_R2_FIREGRIND_NATIVE
         /* Draw the native FireGrind pool into the SAME open batch. Source
          * FireGrind is created on particle GENLINK(0), so only submit from the
          * camera pass that owns link 0 -- otherwise a second particle-camera
@@ -5097,43 +4826,10 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     }
                 }
             }
-#if NDS_R2_FIREBALL_MAP_COLL_DEBUG
-            /* Draw the captured fireball collision diamond as a world-space
-             * outline inside this open batch, for tuning
-             * NDS_R2_FIREBALL_MAP_COLL_SCALE. The globals are captured every
-             * frame by the fireball's update proc
-             * (src/import/battleship_mario_fireball.c). */
-            {
-                extern u32 gNdsFireballDebugCollActive;
-                extern f32 gNdsFireballDebugCollX;
-                extern f32 gNdsFireballDebugCollY;
-                extern f32 gNdsFireballDebugCollZ;
-                extern f32 gNdsFireballDebugCollTop;
-                extern f32 gNdsFireballDebugCollCenter;
-                extern f32 gNdsFireballDebugCollBottom;
-                extern f32 gNdsFireballDebugCollWidth;
-
-                if (gNdsFireballDebugCollActive != 0u)
-                {
-                    ndsRendererSubmitDebugDiamond(
-                        gNdsFireballDebugCollX,
-                        gNdsFireballDebugCollY,
-                        gNdsFireballDebugCollZ,
-                        gNdsFireballDebugCollTop,
-                        gNdsFireballDebugCollCenter,
-                        gNdsFireballDebugCollBottom,
-                        gNdsFireballDebugCollWidth);
-                }
-            }
-#endif
         }
-#endif
         ndsRendererEndParticleQuads();
     }
-#if NDS_R2_PARTICLE_DRAW
     ndsRendererSetParticleNoDepth(0u);
-#endif
-#if NDS_R2_WHISPY_NATIVE_AOT
     {
         u32 texture;
 
@@ -5173,7 +4869,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             gNdsWhispySubmitFail += whispy_lean_submit_fail;
         }
     }
-#endif
     gNdsParticleDrawVisibleCount += visible;
     if (visible > gNdsParticleDrawVisibleMax)
     {

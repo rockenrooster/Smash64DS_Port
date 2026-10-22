@@ -139,9 +139,6 @@ NDS_SCENE_STUB(mnVSOptionsStartScene)
 #if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnVSRecordStartScene)
 #endif
-#if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
-NDS_SCENE_STUB(mnVSResultsStartScene)
-#endif
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mvEndingStartScene)
 #endif

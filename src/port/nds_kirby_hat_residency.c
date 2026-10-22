@@ -19,7 +19,6 @@ void __attribute__((noinline, used)) ndsKirbyHatResidencyHalt(u32 reason)
     for (;;) { __asm__ volatile("" ::: "memory"); }
 }
 
-#if NDS_P2_KIRBY
 /* The hat bit a Kirby shows once it holds `kind`'s power: catch selects the
  * donor's copy_id, CopyInitCopyVars then uses that row's modelpart (this also
  * handles source aliases). 0 = no hat. */
@@ -59,7 +58,6 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy, u32 *p4_mask)
     {
         if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
             continue;
-#if NDS_P4
         /* P4 S8: a content player's power shows its own hats: the source
          * hats here, its Remix hats from their own images
          * (ndsKirbyHatPrepareMatch); never its parent's copy hat. */
@@ -73,7 +71,6 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy, u32 *p4_mask)
         {
             continue;
         }
-#endif
         mask |= ndsKirbyHatBitForKind(copy,
             gSCManagerBattleState->players[player].fkind);
     }
@@ -113,7 +110,6 @@ static u32 ndsKirbyHatHighReachable(void)
     }
     return FALSE;
 }
-#endif
 
 static void ndsKirbyHatAdmit(u32 high, u32 low)
 {
@@ -127,7 +123,6 @@ void ndsKirbyHatPrepareMatch(void)
 {
     u32 high = 0u;
     u32 low = 0u;
-#if NDS_P2_KIRBY
     if (ndsKirbyHatCountKirbys() != 0u)
     {
         /* Every VS battle draws its fighters' low detail (owner 2026-10-01,
@@ -148,7 +143,6 @@ void ndsKirbyHatPrepareMatch(void)
         if (with_low != 0u) { low = high | p4; }
         else { high |= p4; }
         if (ndsKirbyHatHighReachable() == FALSE) { high = 0u; }
-#if NDS_P4
         /* A power's Remix hats load in the detail the match draws: a Kirby
          * holding one stays low in the close-ups of a battle of three or four
          * (ftParamSetModelPartDetailAll), as a content does (owner
@@ -170,9 +164,7 @@ void ndsKirbyHatPrepareMatch(void)
             ndsRendererNativeKirbyHatSetP4Hats(
                 hats, ndsP4KirbyMatchHats(hats, sizeof(hats)), with_low);
         }
-#endif
     }
-#endif
     ndsKirbyHatAdmit(high, low);
 }
 
@@ -182,7 +174,6 @@ void ndsKirbyHatPrepare1PMatch(const u8 *team_copy_kinds, u32 team_count,
 {
     u32 high = 0u;
     u32 low = 0u;
-#if NDS_P2_KIRBY
     if (ndsKirbyHatCountKirbys() != 0u)
     {
         const FTKirbyCopy *copy = ndsKirbyHatCopyTable();
@@ -209,11 +200,6 @@ void ndsKirbyHatPrepare1PMatch(const u8 *team_copy_kinds, u32 team_count,
         if ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count)
                 >= 3) { low = mask; }
     }
-#else
-    (void)team_copy_kinds;
-    (void)team_count;
-    (void)team_final_copy;
-#endif
     ndsKirbyHatAdmit(high, low);
 }
 #endif

@@ -25,9 +25,7 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_p4.h>
 #include <nds/nds_p4_native.h>
-#if NDS_P4
 #include "nds_p4_css_screen.generated.h"
-#endif
 #include <sc/scene.h>
 #include <sys/controller.h>
 #include <sys/obj.h>
@@ -57,9 +55,7 @@ extern s32 ndsRelocExternTreeSliceStep(void *cursor, u32 byte_budget,
                                        u32 node_budget, void **out_root,
                                        u32 *out_payload_bytes);
 extern void ndsRelocExternTreeSliceCancel(void *cursor);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
-#endif
 
 extern void mnPlayersVSFuncLights(Gfx **dls);
 void mnPlayersVSFuncStart(void);
@@ -94,7 +90,6 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax);
 void ndsBaseMNPlayersVSFuncStart(void);
 void ndsBaseMNPlayersVSStartScene(void);
 
-#if NDS_P4
 /* Remix's selection_action_table (CharacterSelect.asm): each selection's own
  * Selected pose -- a content's from its add_to_css row (Mad Piano Win4 where
  * his parent Mario plays Win3; Ganondorf, Wario, Marth, Roy, Crash and Lanky
@@ -155,7 +150,6 @@ s32 ndsCssGetFreeCostumeRoyal(s32 fkind, s32 player);
 s32 ndsCssGetFreeCostume(s32 fkind, s32 player);
 s32 ndsCssGetShade(s32 player);
 s32 ndsCssGetFighterKindCount(const s32 *p_fkind);
-#endif
 
 /* The last camera the source made: right after mnPlayersVSMakeFighterCamera
  * it is the fighter camera (ndsMNPlayersVSFitFighterCamera). */
@@ -210,20 +204,15 @@ static sb32 sNdsPlayersVSPreviewRulesReady;
  * takes a preview kind; these map one back. Originals map to themselves. */
 static u32 ndsCssPreviewKindContent(s32 kind)
 {
-#if NDS_P4
     return (ndsP4Fighter(ndsP4SelContent((u32)kind)) != NULL) ?
         ndsP4SelContent((u32)kind) : 0u;
-#else
-    (void)kind;
-    return 0u;
-#endif
 }
 
 /* Selectable Metal Mario (p4_css.py KINDS) previews as his own source kind
  * from his select pack (reloc_preview_pack.c). */
 static sb32 ndsCssPreviewKindIsMMario(s32 kind)
 {
-#if NDS_P4 && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
     return (kind == nFTKindMMario) ? TRUE : FALSE;
 #else
     (void)kind;
@@ -241,47 +230,39 @@ static sb32 ndsCssPreviewKindValid(s32 kind)
 
 /* One bit per preview kind for the failure/ready masks: the twelve, then
  * the contents, then Metal Mario (33 with P6's twenty contents). */
-#if NDS_P4
 _Static_assert((nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT) < 64,
                "preview kind bits must fit a u64");
-#endif
 static u64 ndsCssPreviewKindBit(s32 kind)
 {
     u32 content = ndsCssPreviewKindContent(kind);
 
-#if NDS_P4
     if (ndsCssPreviewKindIsMMario(kind) != FALSE)
     {
         return (u64)1u << (nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT);
     }
-#endif
     return (content != 0u) ? ((u64)1u << (nFTKindPlayableEnd + content)) :
                              ((u64)1u << kind);
 }
 
 static s32 ndsCssPreviewKindParent(s32 kind)
 {
-#if NDS_P4
     const NDSP4Fighter *f = ndsP4Fighter(ndsCssPreviewKindContent(kind));
 
     if (f != NULL)
     {
         return f->parent_kind;
     }
-#endif
     return kind;
 }
 
 static FTData *ndsCssPreviewKindData(s32 kind)
 {
-#if NDS_P4
     const NDSP4Fighter *f = ndsP4Fighter(ndsCssPreviewKindContent(kind));
 
     if (f != NULL)
     {
         return f->data;
     }
-#endif
     return dFTManagerDataFiles[kind];
 }
 
@@ -294,13 +275,10 @@ static void ndsCssPreviewSetShown(u32 slot, s32 kind)
     sNdsPlayersVSPreviewShownKind[slot] = kind;
     sMNPlayersVSSlots[slot].fkind =
         (kind == nFTKindNull) ? nFTKindNull : ndsCssPreviewKindParent(kind);
-#if NDS_P4
     ndsP4SetPreviewContent(slot, (kind == nFTKindNull) ? 0u :
                                  ndsCssPreviewKindContent(kind));
-#endif
 }
 
-#if NDS_P4
 /* The same-fighter, costume and shade rules for contents (the macros before
  * the source include). A slot is the same fighter as another when its kind
  * and its content both match. */
@@ -490,7 +468,6 @@ s32 ndsCssGetFighterKindCount(const s32 *p_fkind)
     }
     return (count != 0) ? count - 1 : count;
 }
-#endif
 
 /* The owner-image detail a preview kind draws: a P4 content its low detail
  * (ndsP4LowDetailSelect, ftmanager's ndsFTManagerSelectLowDetail), the
@@ -506,11 +483,7 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * high-water. Link is the largest current combination at < 70 KiB on disk;
  * 80 KiB leaves bounded loader/alignment headroom. Source/oracle profiles still
  * consume full Gfx/Vtx closures and keep the measured 156 KiB raw-tree slot. */
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 1
-#else
-#define NDS_PLAYERS_VS_COMPACT_PREVIEW 0
-#endif
 /* The shared closure is the fixed tree list in sNdsPlayersVSSharedResidentAssetIDs,
  * so its arena is sized to what those trees measure, not to a round number. The
  * compact-preview list (seven trees) pins 15,232 B, identically on the VS-only
@@ -870,28 +843,15 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 #if NDS_P2_CAPTAIN
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindCaptain, NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
 #endif
-#if NDS_P2_SAMUS
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindSamus, NDS_NATIVE_IMAGE_SLOT_SAMUS)
-#endif
 #if NDS_P2_LINK
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLink, NDS_NATIVE_IMAGE_SLOT_LINK)
 #endif
-#if NDS_P2_PIKACHU
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindPikachu, NDS_NATIVE_IMAGE_SLOT_PIKACHU)
-#endif
-#if NDS_P2_YOSHI
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindYoshi, NDS_NATIVE_IMAGE_SLOT_YOSHI)
-#endif
-#if NDS_P2_NESS
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindNess, NDS_NATIVE_IMAGE_SLOT_NESS)
-#endif
-#if NDS_P2_PURIN
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindPurin, NDS_NATIVE_IMAGE_SLOT_PURIN)
-#endif
-#if NDS_P2_KIRBY
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindKirby, NDS_NATIVE_IMAGE_SLOT_KIRBY)
-#endif
-#if NDS_P4
 #define NDS_CSS_P4_OWNER_IMAGE_SLOT(id_, T_, N_, n_, parent_, model_, main_)   \
     NDS_CSS_OWNER_IMAGE_SLOT((s32)(NDS_P4_SEL_BASE + (id_)),                    \
                              NDS_NATIVE_IMAGE_SLOT_##N_)
@@ -899,7 +859,6 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 #undef NDS_CSS_P4_OWNER_IMAGE_SLOT
 #if NDS_P2_MMARIO
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindMMario, NDS_NATIVE_IMAGE_SLOT_MMARIO)
-#endif
 #endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
     (void)out_slot;
@@ -994,7 +953,6 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
         gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
         return TRUE;
     }
-#if NDS_P4
     /* A content's menu clips are not in the select's reserved cache: its
      * preview reads them when it plays them, into its slot heap, which
      * ndsMNPlayersVSPreviewEnsureSlotHeap sizes for them (S15). */
@@ -1002,7 +960,6 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     {
         return TRUE;
     }
-#endif
 
     /* ftManagerMakeFighter gives demo fighters nFTDemoStatusNull before the CSS
      * applies its Selected status. BattleShip maps that to Opening2/submotion 0.
@@ -1116,13 +1073,11 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeCaptainHighImage);
     }
 #endif
-#if NDS_P2_SAMUS
     if (fkind == nFTKindSamus)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeSamusLowImage) :
                                         (u32)sizeof(NDSNativeSamusHighImage);
     }
-#endif
 #if NDS_P2_LINK
     if (fkind == nFTKindLink)
     {
@@ -1130,42 +1085,31 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeLinkHighImage);
     }
 #endif
-#if NDS_P2_PIKACHU
     if (fkind == nFTKindPikachu)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativePikachuLowImage) :
                                         (u32)sizeof(NDSNativePikachuHighImage);
     }
-#endif
-#if NDS_P2_YOSHI
     if (fkind == nFTKindYoshi)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeYoshiLowImage) :
                                         (u32)sizeof(NDSNativeYoshiHighImage);
     }
-#endif
-#if NDS_P2_NESS
     if (fkind == nFTKindNess)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeNessLowImage) :
                                         (u32)sizeof(NDSNativeNessHighImage);
     }
-#endif
-#if NDS_P2_PURIN
     if (fkind == nFTKindPurin)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativePurinLowImage) :
                                         (u32)sizeof(NDSNativePurinHighImage);
     }
-#endif
-#if NDS_P2_KIRBY
     if (fkind == nFTKindKirby)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeKirbyLowImage) :
                                         (u32)sizeof(NDSNativeKirbyHighImage);
     }
-#endif
-#if NDS_P4
 #define NDS_CSS_P4_OWNER_IMAGE_BYTES(id_, T_, N_, n_, parent_, model_, main_)  \
     if (fkind == (s32)(NDS_P4_SEL_BASE + (id_)))                                \
     {                                                                           \
@@ -1181,7 +1125,6 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeMMarioLowImage) :
                                         (u32)sizeof(NDSNativeMMarioHighImage);
     }
-#endif
 #endif
     (void)fkind;
     (void)use_low_detail;
@@ -1227,11 +1170,7 @@ static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
  * that), the owner image it draws, a content's motion file (its menu
  * scripts, ndsFTManagerSetupPreviewFilesP4) and the slack the source setup
  * adds. The block is trimmed to what the load used once it is ready. */
-#if NDS_P4
 #define NDS_PLAYERS_VS_KIND_MEMO (12u + NDS_P4_CONTENT_LIMIT)
-#else
-#define NDS_PLAYERS_VS_KIND_MEMO 12u
-#endif
 /* Per preview kind for this select: a file size is a NitroFS open. */
 static u32 sNdsPlayersVSBlockBytesMemo[NDS_PLAYERS_VS_KIND_MEMO];
 
@@ -1251,7 +1190,6 @@ static u32 ndsMNPlayersVSPreviewBlockBytes(s32 fkind)
     bytes = ndsRelocPreviewFighterPackBytes(fkind) + 64u;
     bytes += ndsMNPlayersVSPreviewOwnerImageBytes(
         fkind, ndsCssPreviewKindDetail(fkind)) + 64u;
-#if NDS_P4
     if (ndsCssPreviewKindContent(fkind) != 0u)
     {
         const FTData *data = ndsCssPreviewKindData(fkind);
@@ -1262,7 +1200,6 @@ static u32 ndsMNPlayersVSPreviewBlockBytes(s32 fkind)
                 (u32)(uintptr_t)data->file_mainmotion_id) + 64u;
         }
     }
-#endif
     bytes = (bytes + NDS_PLAYERS_VS_BLOCK_SLACK + 31u) & ~31u;
     if (memo < NDS_PLAYERS_VS_KIND_MEMO)
     {
@@ -1551,7 +1488,6 @@ static void ndsMNPlayersVSPreviewDropSlotHeap(u32 slot)
     sMNPlayersVSSlots[slot].figatree_heap = NULL;
 }
 
-#if NDS_P4
 /* A demo clip's bytes in the slot heap: the larger of the whole image the
  * figatree's force load writes (ndsRelocFullLoadSize) and a resident copy's
  * span. lbRelocGetFileSize answers sizeof(Sprite) for a resident file, so
@@ -1577,7 +1513,6 @@ static u32 ndsMNPlayersVSPreviewClipBytes(const void *file_id)
     }
     return (u32)bytes;
 }
-#endif
 
 static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
 {
@@ -1597,7 +1532,6 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
     data = ndsCssPreviewKindData(kind);
     need = ((data != NULL) && (data->file_anim_size != 0u)) ?
         (u32)data->file_anim_size : (u32)gFTManagerFigatreeHeapSize;
-#if NDS_P4
     /* A content's slot plays two of its demo clips: DemoNull (row 0) and its
      * parent's Selected status (mnPlayersVSGetStatusSelected, rows 1..4;
      * the source slot's fkind is the parent). Its largest demo clip is often
@@ -1627,7 +1561,6 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
             need = (idle > pose) ? idle : pose;
         }
     }
-#endif
     need = (need + 31u) & ~31u;
     old_base = sNdsPlayersVSSlotHeapBase[slot];
     old_bytes = sNdsPlayersVSSlotHeapBytes[slot];
@@ -2430,14 +2363,12 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
              * by the source's own guarded path, and the block is proven to
              * still have room for both native owner images. */
             data = ndsCssPreviewKindData(fkind);
-#if NDS_P4
             if ((data != NULL) && (ndsCssPreviewKindContent(fkind) != 0u))
             {
                 (void)ndsFTManagerSetupPreviewFilesP4(
                     ndsCssPreviewKindContent(fkind));
             }
             else
-#endif
             if (data != NULL)
             {
                 ftManagerSetupFilesAllKind(fkind);
@@ -2863,7 +2794,6 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
     {
         return;
     }
-#if NDS_P4
     if ((sNdsPlayersVSPreviewOnePlayer != 0u) && (slot == 0u))
     {
         /* P7 C1: the 1P select's card is unscaled, so its fighter stands
@@ -2895,7 +2825,6 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
         root->scale.vec.f.z = scale;
         return;
     }
-#endif
 
     x = ((f32)slot * 840.0F) - 1250.0F;
     if (slot == 0u)
@@ -2907,7 +2836,6 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
         x -= NDS_CSS_OUTER_PREVIEW_INSET;
     }
     root->translate.vec.f.x = x;
-#if NDS_P4
     /* The P4 screen scales the cards by CARD_KN/CARD_KD at CARD_PITCH from
      * CARD_X, their top at CARD_Y (p4_css.py SCREEN). The camera (eye z 5000
      * on the origin, the viewport above) maps 840 world units to the source's
@@ -2957,7 +2885,6 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
         root->scale.vec.f.y = scale;
         root->scale.vec.f.z = scale;
     }
-#endif
 }
 
 /* P2-1N Stage D: the native shell owns the 2D CSS, but its fighter previews
@@ -3050,9 +2977,7 @@ void ndsMNPlayersVSPreviewInit(void)
         sNdsPlayersVSReleasedRotationY[i] = 0.0F;
         sNdsPlayersVSPreviewPending[i].fkind = nFTKindNull;
         sNdsPlayersVSPreviewShownKind[i] = nFTKindNull;
-#if NDS_P4
         ndsP4SetPreviewContent((u32)i, 0u);
-#endif
         sNdsPlayersVSPreviewPending[i].stable_tics = 0u;
         sNdsPlayersVSPreviewPending[i].seen_request = FALSE;
         sNdsPlayersVSPreviewPending[i].acquire_pending = FALSE;
@@ -3274,9 +3199,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #if NDS_P2_CAPTAIN
         && (fkind != nFTKindCaptain)
 #endif
-#if NDS_P2_SAMUS
         && (fkind != nFTKindSamus)
-#endif
 /* Link was the one landed fighter this filter never listed, so his slot fell
  * to nFTKindNull and the character select drew him no 3D preview -- the whole
  * chain behind it was already there and reachable (setup :510-512, resident
@@ -3285,21 +3208,11 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #if NDS_P2_LINK
         && (fkind != nFTKindLink)
 #endif
-#if NDS_P2_PIKACHU
         && (fkind != nFTKindPikachu)
-#endif
-#if NDS_P2_YOSHI
         && (fkind != nFTKindYoshi)
-#endif
-#if NDS_P2_NESS
         && (fkind != nFTKindNess)
-#endif
-#if NDS_P2_PURIN
         && (fkind != nFTKindPurin)
-#endif
-#if NDS_P2_KIRBY
         && (fkind != nFTKindKirby)
-#endif
         && (ndsCssPreviewKindIsMMario(fkind) == FALSE)
     )
     {
@@ -3310,7 +3223,6 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         fkind = nFTKindNull;
         is_selected = FALSE;
     }
-#if NDS_P4
     /* A Remix selection on its parent's kind previews as its own kind; from
      * here on `fkind` is the preview kind. */
     if ((fkind != nFTKindNull) && (sNdsPlayersVSPreviewContent[slot] != 0u))
@@ -3322,7 +3234,6 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             fkind = (s32)(NDS_P4_SEL_BASE + sNdsPlayersVSPreviewContent[slot]);
         }
     }
-#endif
 
     old_pkind = sMNPlayersVSSlots[slot].pkind;
     old_fkind = sNdsPlayersVSPreviewShownKind[slot];
@@ -3460,9 +3371,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
              * and shade rules. Clear DS registration around that operation so
              * no stale taskman-arena pointer reaches the native renderer. */
             ndsFighterManagerRegisterDisplayFighter(NULL, slot);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
-#endif
             {
                 u32 payload_before = gNdsRelocAssetPayloadReadCount;
                 u32 payload_delta;
@@ -3534,9 +3443,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
      * preview. The replacement acquire starts on a later tic, which guarantees
      * release-before-acquire while preventing both operations from stacking. */
     ndsFighterManagerRegisterDisplayFighter(NULL, slot);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
-#endif
     if (fighter_gobj != NULL)
     {
         DObj *root = DObjGetStruct(fighter_gobj);
@@ -3683,12 +3590,10 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
             sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
             ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                                 sMNPlayersVSSlots[slot].shade);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             /* Same reason the preview rebuild clears them: the converted
              * material rows are keyed by MObj address and this changes what
              * those addresses mean. */
             ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
-#endif
             NDS_DIAG(gNdsPlayersVSPreviewCostumeChangeCount++);
             return costume;
         }
@@ -3734,9 +3639,7 @@ sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
     sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
     ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                         sMNPlayersVSSlots[slot].shade);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
-#endif
     return TRUE;
 }
 

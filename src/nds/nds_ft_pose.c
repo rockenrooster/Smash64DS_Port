@@ -50,7 +50,6 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseWant);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseGot);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseFrame);
 
-#if NDS_FT_POSE
 
 #include <stddef.h>
 #include <string.h>
@@ -94,7 +93,6 @@ u32 ndsR2AObjLiveCount(void);
 
 static NdsFtPose sNdsFtPose[NDS_FT_POSE_FIGHTERS];
 
-#if NDS_P2_ARM9_WRAM
 #include <nds/nds_arm9_wram.h>
 _Static_assert(NDS_FT_POSE_FIGHTERS <= NDS_ARM9_WRAM_POSE_SLOTS,
                "one WRAM pose slot per pose fighter");
@@ -102,7 +100,6 @@ _Static_assert((sizeof(NdsFtPoseJoint) * (u32)nFTPartsJointNumMax) +
                    (sizeof(NdsFtPoseTrack) * NDS_FT_POSE_POOL) <=
                    NDS_ARM9_WRAM_POSE_SLOT_BYTES,
                "a pose slot's joints and tracks fit its WRAM slot");
-#endif
 static NdsFtPose *sNdsFtPoseBinding;
 /* Where an overflowing clip's tracks go: animated, evaluated, never stored
  * anywhere a second track could read, so a malformed or oversized clip degrades
@@ -275,16 +272,7 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
             (count <= pose->capacity))
         {
             pose->gobj = gobj;
-#if NDS_FT_POSE_ORACLE
-            if (pose->clock_gobj == NULL)
-            {
-                pose->gobj = NULL;
-                return NULL;
-            }
-            *pose->clock_gobj = *gobj;
-#else
             pose->clock_gobj = gobj;
-#endif
             pose->entry_count = 0u;
             pose->bound = 0u;
             pose->attach_pending = 0u;
@@ -334,7 +322,6 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     /* Scene-lifetime, from the taskman general heap exactly where the AObj
      * nodes this replaces would have been carved; rewound with the scene. The
      * AObj pool (`NDS_R2_AOBJ_POOL_COUNT`) shrinks by the same measure. */
-#if NDS_P2_ARM9_WRAM
     /* P2-2p8: each pose slot owns a fixed block of ARM9 shared WRAM
      * (include/nds/nds_arm9_wram.h): the player's joints and tracks are
      * read every evaluated tick, and a WRAM line fill is about half a
@@ -350,7 +337,6 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
             (slot + (sizeof(NdsFtPoseJoint) * capacity));
     }
     else
-#endif
     {
         pose->joints = syTaskmanMalloc(sizeof(NdsFtPoseJoint) * capacity,
                                        0x4u);
@@ -376,28 +362,6 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     pose->joint_mask_hi = 0u;
     pose->run_mask_lo = 0u;
     pose->run_mask_hi = 0u;
-#if NDS_FT_POSE_ORACLE
-    {
-        /* The oracle's shadows: one DObj per entry plus the GObj whose
-         * anim_frame the parser writes. Lab memory, arena-carved like the
-         * state itself. */
-        DObj *shadows = syTaskmanMalloc(sizeof(DObj) * capacity, 0x4u);
-        GObj *shadow_gobj = syTaskmanMalloc(sizeof(GObj), 0x4u);
-
-        if ((shadows == NULL) || (shadow_gobj == NULL))
-        {
-            pose->gobj = NULL;
-            return NULL;
-        }
-        memset(shadows, 0, sizeof(DObj) * capacity);
-        for (i = 0u; i < capacity; i++)
-        {
-            pose->joints[i].dobj = &shadows[i];
-        }
-        *shadow_gobj = *gobj;
-        pose->clock_gobj = shadow_gobj;
-    }
-#endif
     gNdsFtPoseSlotClaims++;
     ndsFtPosePublishSlotOwnership();
     return pose;
@@ -424,13 +388,6 @@ sb32 ndsFtPoseBindBegin(DObj *walk_root, u32 count)
     pose->run_mask_lo = 0u;
     pose->run_mask_hi = 0u;
     pose->tick = 0u;
-#if NDS_FT_POSE_ORACLE
-    /* lbCommonAddFighterPartsFigatree has just written frame_begin into the
-     * live GObj; the shadow clock starts from the same value, or the attach
-     * tick -- whose CHANGED branch does not write the GObj -- reads a stale
-     * frame on the shadow and the oracle flags its own bookkeeping. */
-    pose->clock_gobj->anim_frame = gobj->anim_frame;
-#endif
     gNdsFtPoseBinds++;
     return TRUE;
 }
@@ -451,9 +408,7 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     joint = &pose->joints[entry];
     parts = ftGetParts(dobj);
     joint->real = dobj;
-#if !NDS_FT_POSE_ORACLE
     joint->dobj = dobj;
-#endif
     joint->eval_mask = 0u;
     joint->last_eval = 0u;
     joint->interpolate = NULL;
@@ -479,10 +434,6 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     {
         /* lbcommon.c:757's NULL entry: the joint simply does not animate. */
         dobj->anim_wait = AOBJ_ANIM_NULL;
-#if NDS_FT_POSE_ORACLE
-        *joint->dobj = *dobj;
-        joint->dobj->parent_gobj = pose->clock_gobj;
-#endif
         return;
     }
     /* gcAddDObjAnimJoint (sys/objanim.c:137), minus the port wrapper's
@@ -506,10 +457,6 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     {
         pose->run_mask_hi |= 1u << (entry - 32u);
     }
-#if NDS_FT_POSE_ORACLE
-    *joint->dobj = *dobj;
-    joint->dobj->parent_gobj = pose->clock_gobj;
-#endif
 }
 
 void ndsFtPoseBindEnd(u32 entry_count)
@@ -538,9 +485,7 @@ void ndsFtPoseUnbind(GObj *gobj)
     }
 }
 
-#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_R2_FTANIM_STREAM
 void ndsR2AnimPinsDropGObj(GObj *gobj);
-#endif
 
 /* A zero-copy clip moved (reloc_backend_assets.c, ndsR2AnimPinRescue): every
  * script cursor and TraI descriptor this fighter's joints hold inside
@@ -583,9 +528,7 @@ void ndsFtPoseRelease(GObj *gobj)
 {
     NdsFtPose *pose = ndsFtPoseFind(gobj);
 
-#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_R2_FTANIM_STREAM
     ndsR2AnimPinsDropGObj(gobj);
-#endif
     if (pose == NULL)
     {
         return;
@@ -1274,145 +1217,6 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
 
 /* ---- the oracle ---------------------------------------------------------- */
 
-#if NDS_FT_POSE_ORACLE
-static void ndsFtPoseOracleNote(u32 entry, u32 field, u32 want, u32 got,
-                                const GObj *gobj)
-{
-    gNdsFtPoseOracleMismatches++;
-    if (gNdsFtPoseOracleMismatches == 1u)
-    {
-        gNdsFtPoseOracleFirstJoint = entry;
-        gNdsFtPoseOracleFirstField = field;
-        gNdsFtPoseOracleFirstWant = want;
-        gNdsFtPoseOracleFirstGot = got;
-        __builtin_memcpy((void *)&gNdsFtPoseOracleFirstFrame,
-                         &gobj->anim_frame, sizeof(u32));
-    }
-    if (field <= 8u)
-    {
-        gNdsFtPoseOraclePoseMismatches++;
-        if (gNdsFtPoseOraclePoseMismatches == 1u)
-        {
-            gNdsFtPoseOracleFirstPoseJoint = entry;
-            gNdsFtPoseOracleFirstPoseField = field;
-            gNdsFtPoseOracleFirstPoseWant = want;
-            gNdsFtPoseOracleFirstPoseGot = got;
-            __builtin_memcpy((void *)&gNdsFtPoseOracleFirstPoseFrame,
-                             &gobj->anim_frame, sizeof(u32));
-        }
-    }
-}
-
-static inline u32 ndsFtPoseBits(f32 v)
-{
-    u32 b;
-
-    __builtin_memcpy(&b, &v, sizeof(b));
-    return b;
-}
-
-/* Compare the shadow the engine wrote against the live joint the generic
- * path wrote, field by field, bit for bit. Fields: 0-2 rotate xyz, 3-5
- * translate xyz, 6-8 scale xyz, 9 anim_wait, 10 anim_frame, 11 flags, 12
- * the GObj anim_frame. */
-static void ndsFtPoseOracleCompare(NdsFtPose *pose, u32 evaluate_body)
-{
-    u32 e;
-
-    for (e = 0u; e < pose->entry_count; e++)
-    {
-        NdsFtPoseJoint *joint = &pose->joints[e];
-        const DObj *shadow = joint->dobj;
-        const DObj *real = joint->real;
-        const f32 *sv;
-        const f32 *rv;
-        u32 f;
-
-        if ((real == NULL) || (shadow == real))
-        {
-            continue;
-        }
-        gNdsFtPoseOracleCompares++;
-        if ((joint->body == 0u) || (evaluate_body != 0u))
-        {
-            sv = &shadow->rotate.vec.f.x;
-            rv = &real->rotate.vec.f.x;
-            for (f = 0u; f < 3u; f++)
-            {
-                if (ndsFtPoseBits(sv[f]) != ndsFtPoseBits(rv[f]))
-                {
-                    ndsFtPoseOracleNote(e, f, ndsFtPoseBits(rv[f]),
-                                        ndsFtPoseBits(sv[f]), pose->gobj);
-                }
-            }
-            sv = &shadow->translate.vec.f.x;
-            rv = &real->translate.vec.f.x;
-            for (f = 0u; f < 3u; f++)
-            {
-                if (ndsFtPoseBits(sv[f]) != ndsFtPoseBits(rv[f]))
-                {
-                    ndsFtPoseOracleNote(e, 3u + f, ndsFtPoseBits(rv[f]),
-                                        ndsFtPoseBits(sv[f]), pose->gobj);
-                }
-            }
-            sv = &shadow->scale.vec.f.x;
-            rv = &real->scale.vec.f.x;
-            for (f = 0u; f < 3u; f++)
-            {
-                if (ndsFtPoseBits(sv[f]) != ndsFtPoseBits(rv[f]))
-                {
-                    ndsFtPoseOracleNote(e, 6u + f, ndsFtPoseBits(rv[f]),
-                                        ndsFtPoseBits(sv[f]), pose->gobj);
-                }
-            }
-        }
-        {
-            /* The clock: the engine's Q12 wait/frame against the live f32
-             * fields, as the f32 the Q value converts to. A sentinel on the
-             * shadow (NULL/END/CHANGED) is compared as itself. A HELD End: the
-             * source's player turned END into NULL on the End tick; the lazy
-             * hold keeps END until the joint's deferred final evaluation --
-             * same clock, one tick of representation, and named here. */
-            f32 wait_f = NDS_FCMP_EQ_C(shadow->anim_wait, NDS_FT_POSE_RUNNING) ?
-                ndsR2AQStore((s32)joint->wait_bits) : shadow->anim_wait;
-            u32 deferred_end =
-                ((joint->body != 0u) && (evaluate_body == 0u) &&
-                 NDS_FCMP_EQ_C(shadow->anim_wait, AOBJ_ANIM_END) &&
-                 NDS_FCMP_EQ_C(real->anim_wait, AOBJ_ANIM_NULL)) ? 1u : 0u;
-
-            if ((deferred_end == 0u) &&
-                (ndsFtPoseBits(wait_f) != ndsFtPoseBits(real->anim_wait)))
-            {
-                ndsFtPoseOracleNote(e, 9u, ndsFtPoseBits(real->anim_wait),
-                                    ndsFtPoseBits(wait_f), pose->gobj);
-            }
-            if (!NDS_FCMP_EQ_C(real->anim_wait, AOBJ_ANIM_NULL) ||
-                !NDS_FCMP_EQ_C(shadow->anim_wait, AOBJ_ANIM_NULL))
-            {
-                f32 frame_f = ndsR2AQStore((s32)joint->frame_bits);
-
-                if (ndsFtPoseBits(frame_f) != ndsFtPoseBits(real->anim_frame))
-                {
-                    ndsFtPoseOracleNote(e, 10u, ndsFtPoseBits(real->anim_frame),
-                                        ndsFtPoseBits(frame_f), pose->gobj);
-                }
-            }
-        }
-        if (shadow->flags != real->flags)
-        {
-            ndsFtPoseOracleNote(e, 11u, real->flags, shadow->flags,
-                                pose->gobj);
-        }
-    }
-    if (ndsFtPoseBits(pose->clock_gobj->anim_frame) !=
-        ndsFtPoseBits(pose->gobj->anim_frame))
-    {
-        ndsFtPoseOracleNote(0xffu, 12u, ndsFtPoseBits(pose->gobj->anim_frame),
-                            ndsFtPoseBits(pose->clock_gobj->anim_frame),
-                            pose->gobj);
-    }
-}
-#endif
 
 /* ---- the per-fighter update --------------------------------------------- */
 
@@ -1519,14 +1323,6 @@ ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
         {
             continue;
         }
-#if NDS_FT_POSE_ORACLE
-        dobj->anim_speed = joint->real->anim_speed;
-        if (NDS_FCMP_EQ_C(joint->real->anim_wait, AOBJ_ANIM_NULL))
-        {
-            dobj->anim_wait = AOBJ_ANIM_NULL;
-        }
-        pose->clock_gobj->flags = pose->gobj->flags;
-#endif
         if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
         {
             ndsFtPoseClearRunEntry(pose, e);
@@ -1647,16 +1443,6 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
             }
             NDS_DIAG(gNdsLabPoseJointCapEvaluated++);
         }
-#if NDS_FT_POSE_ORACLE
-        /* The shadow's clock inputs are the live joint's: gcSetAnimSpeed and
-         * the guard code write the real DObj between ticks. */
-        dobj->anim_speed = joint->real->anim_speed;
-        if (NDS_FCMP_EQ_C(joint->real->anim_wait, AOBJ_ANIM_NULL))
-        {
-            dobj->anim_wait = AOBJ_ANIM_NULL;
-        }
-        pose->clock_gobj->flags = pose->gobj->flags;
-#endif
         /* The caller-side idle skip of ftParamUpdateAnimKeys: every arm of the
          * parser and the player is guarded by `anim_wait != NULL`. */
         if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
@@ -1698,15 +1484,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
  * ITCM is full, so an attribution build (a lab split flag at 1 adds ITCM-
  * resident instrument code: 504 B over with SRC + MISC splits) keeps this in
  * main RAM instead of failing to link. */
-#if (defined(NDS_TICK_HUD_SRC_SPLIT) && NDS_TICK_HUD_SRC_SPLIT) || \
-    (defined(NDS_P2_MISC_SPLIT) && NDS_P2_MISC_SPLIT) || \
-    (defined(NDS_FTR_LEAN_PHASE_TICKS) && NDS_FTR_LEAN_PHASE_TICKS) || \
-    (defined(NDS_FTR_PRE_WALK_CENSUS) && NDS_FTR_PRE_WALK_CENSUS) || \
-    (defined(NDS_FTR_LEAN_KTIME) && NDS_FTR_LEAN_KTIME)
-#define NDS_FT_POSE_UPDATE_SECTION
-#else
 #define NDS_FT_POSE_UPDATE_SECTION __attribute__((section(".itcm")))
-#endif
 sb32 NDS_FT_POSE_UPDATE_SECTION
 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
                      u32 *owned_mask_lo, u32 *owned_mask_hi)
@@ -1735,12 +1513,8 @@ ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
     {
         *owned_mask_hi = pose->joint_mask_hi;
     }
-#if NDS_FT_POSE_HOLD
     evaluate_body = ((gNdsFtPoseEvalTick != 0u) ||
                      (pose->attach_pending != 0u)) ? 1u : 0u;
-#else
-    evaluate_body = 1u;
-#endif
     pose->attach_pending = 0u;
     pose->body_evaluated = evaluate_body;
     pose->tick++;
@@ -1774,13 +1548,7 @@ ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
         }
     }
     ndsFtPoseRun(pose, translate_scales, evaluate_body, 1u);
-#if NDS_FT_POSE_ORACLE
-    /* The generic path has NOT run yet: the caller runs it next, then calls
-     * ndsFtPoseOracleAfter. Report "not handled" so it does. */
-    return FALSE;
-#else
     return TRUE;
-#endif
 }
 
 sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id)
@@ -1835,25 +1603,9 @@ sb32 ndsFtPoseReapply(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
                           1u : 0u);
         dobj->anim_wait = wait_bak;
     }
-#if NDS_FT_POSE_ORACLE
-    return FALSE;
-#else
     return TRUE;
-#endif
 }
 
-#if NDS_FT_POSE_ORACLE
-void ndsFtPoseOracleAfter(GObj *gobj)
-{
-    NdsFtPose *pose = ndsFtPoseFind(gobj);
-
-    if ((pose == NULL) || (pose->bound == 0u))
-    {
-        return;
-    }
-    ndsFtPoseOracleCompare(pose, pose->body_evaluated);
-}
-#endif
 
 sb32 ndsFtPoseBodyChangedThisTick(GObj *gobj)
 {
@@ -1866,75 +1618,3 @@ sb32 ndsFtPoseBodyChangedThisTick(GObj *gobj)
     return (pose->body_evaluated != 0u) ? TRUE : FALSE;
 }
 
-#else /* !NDS_FT_POSE */
-
-sb32 ndsFtPoseBindBegin(DObj *walk_root, u32 count)
-{
-    (void)walk_root;
-    (void)count;
-    return FALSE;
-}
-
-void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
-                        f32 anim_frame)
-{
-    (void)entry;
-    (void)dobj;
-    (void)script;
-    (void)anim_frame;
-}
-
-void ndsFtPoseBindEnd(u32 entry_count)
-{
-    (void)entry_count;
-}
-
-void ndsFtPoseUnbind(GObj *gobj)
-{
-    (void)gobj;
-}
-
-void ndsFtPoseRelease(GObj *gobj)
-{
-    (void)gobj;
-}
-
-sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
-                     u32 *owned_mask_lo, u32 *owned_mask_hi)
-{
-    (void)gobj;
-    (void)fp;
-    (void)translate_scales;
-    if (owned_mask_lo != NULL)
-    {
-        *owned_mask_lo = 0u;
-    }
-    if (owned_mask_hi != NULL)
-    {
-        *owned_mask_hi = 0u;
-    }
-    return FALSE;
-}
-
-sb32 ndsFtPoseOwnsJoint(GObj *gobj, u32 joint_id)
-{
-    (void)gobj;
-    (void)joint_id;
-    return FALSE;
-}
-
-sb32 ndsFtPoseReapply(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
-{
-    (void)gobj;
-    (void)fp;
-    (void)translate_scales;
-    return FALSE;
-}
-
-sb32 ndsFtPoseBodyChangedThisTick(GObj *gobj)
-{
-    (void)gobj;
-    return TRUE;
-}
-
-#endif /* NDS_FT_POSE */

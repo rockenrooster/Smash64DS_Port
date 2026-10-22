@@ -251,7 +251,7 @@ extern void mnPlayersVSStartScene(void);
 
 void mnPlayers1PBonusStartScene(void)
 {
-#if NDS_P2_MENU_SHELL && NDS_P4
+#if NDS_P2_MENU_SHELL
     /* P7 C2 (2026-10-19): with Remix contents the bonus practice selects are
      * the native VS screen in its one-card mode (nds_menu_shell_css.c
      * sCssOneP 2), started as the 1P select is (battleship_mnplayers1pgame.c). */

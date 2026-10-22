@@ -16,7 +16,6 @@
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ft/fighter.h>
@@ -676,11 +675,9 @@ void itBombHeiWalkInitVars(GObj *item_gobj)
     }
     itMainClearOwnerStats(item_gobj);
 
-#if NDS_P4
     /* Remix's remove_bob_bomb_walk_fgm_ (items/WaddleDee.asm): the fuse is
      * the Bob-omb's alone; Dedede's minions walk through here too. */
     if (ip->kind == nITKindBombHei)
-#endif
     func_800269C0_275C0(nSYAudioFGMBombHeiFuse);
 }
 
@@ -896,4 +893,3 @@ GObj* itBombHeiMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
     return item_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

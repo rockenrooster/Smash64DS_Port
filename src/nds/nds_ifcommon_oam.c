@@ -106,9 +106,7 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME 6u
 #define NDS_TASK39_HIT_SPARK_SCREEN_SCALE 1.6F
 
-#if NDS_TASK39_FX_SPRITES
 #include "generated/task39_hit_sparks.generated.inc"
-#endif
 
 extern Mtx44f gGMCameraMatrix;
 extern GObj *gGMCameraGObj;
@@ -487,7 +485,6 @@ static NDSTask39HitSpark sNdsTask39HitSparks[
     NDS_TASK39_HIT_SPARK_CAPACITY];
 static u16 *sNdsTask39HitSparkGfx;
 
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
 /* P2-2p8 Phase 3 (A7): the file this state points at is the compact image
  * (src/port/reloc_backend_assets.c) -- the GO and end letters' pixels are not
  * in it, so the end messages come from these pre-baked streams instead. Each
@@ -500,7 +497,6 @@ static u32 sNdsIFCommonEndBakedWords[2];
 volatile u32 gNdsIFCommonEndBakedBytes;
 volatile u32 gNdsIFCommonEndBakedFailCount;
 volatile u32 gNdsIFCommonEndBakedDecodeCount;
-#endif
 
 #define NDS_IFCOMMON_TAG_COUNT 6u
 #define NDS_IFCOMMON_TAG_CELL 32u
@@ -539,10 +535,6 @@ static NDSIFCommonPlayerTag sNdsIFCommonPlayerTags[
 static u32 sNdsIFCommonPlayerTagCursor;
 static u32 sNdsIFCommonPlayerTagCursorValid;
 static NDSIFCommonItemArrow sNdsIFCommonItemArrow;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-static u32 sNdsTask39FxSpawnTickAccum;
-static u32 sNdsTask39FxUpdateTickAccum;
-#endif
 
 volatile u32 gNdsIFCommonNativeOamPrepareCount;
 volatile u32 gNdsIFCommonNativeOamPrepareSuccessCount;
@@ -595,11 +587,9 @@ volatile u32 gNdsTask39FxObjVramBytes;
 volatile u32 gNdsTask39FxObjVramRemaining;
 
 static void ndsTask39HitSparksDraw(void);
-#if NDS_TASK39_FX_SPRITES
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
 static f32 ndsIFCommonBattleScreenX(f32 projected_x);
 static f32 ndsIFCommonBattleScreenY(f32 projected_y);
-#endif
 static void ndsIFCommonResetPlayerTags(void);
 static void ndsIFCommonResetItemArrow(void);
 static void ndsIFCommonResetCommonLetters(void);
@@ -1802,18 +1792,7 @@ void ndsTask39EffectsEngage(u32 mask)
 
 void ndsTask39EffectsAddDrawTicks(u32 ticks)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsTask39FxDrawTicks += ticks;
-    gNdsTask39FxFrameTicks = gNdsTask39FxSpawnTicks +
-                             gNdsTask39FxUpdateTicks +
-                             gNdsTask39FxDrawTicks;
-    if (gNdsTask39FxFrameTicks > gNdsTask39FxMaxFrameTicks)
-    {
-        gNdsTask39FxMaxFrameTicks = gNdsTask39FxFrameTicks;
-    }
-#else
     (void)ticks;
-#endif
 }
 
 static s32 ndsTask39EffectsArenaValid(void)
@@ -1868,10 +1847,6 @@ volatile u32 gNdsTask39FxHitSparkScaleClampCount;
 void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy)
 {
-#if NDS_TASK39_FX_SPRITES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 start = cpuGetTiming();
-#endif
     u32 index;
     NDSTask39HitSpark *spark = NULL;
 
@@ -1879,9 +1854,6 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
         (ndsTask39EffectsArenaValid() == FALSE))
     {
         NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
-#endif
         return;
     }
     for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
@@ -1895,9 +1867,6 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
     if (spark == NULL)
     {
         NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
-#endif
         return;
     }
 
@@ -1947,31 +1916,14 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
     }
     gNdsTask39FxHitSparkSpawnCount++;
     ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
-#endif
-#else
-    (void)pos;
-    (void)player;
-    (void)size;
-    (void)is_static;
-    (void)is_heavy;
-#endif
 }
 
 void ndsTask39EffectsUpdate(void)
 {
-#if NDS_TASK39_FX_SPRITES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 start = cpuGetTiming();
-#endif
     u32 index;
 
     if (ndsTask39EffectsArenaValid() == FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        sNdsTask39FxUpdateTickAccum += cpuGetTiming() - start;
-#endif
         return;
     }
     for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
@@ -2010,10 +1962,6 @@ void ndsTask39EffectsUpdate(void)
             }
         }
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsTask39FxUpdateTickAccum += cpuGetTiming() - start;
-#endif
-#endif
 }
 
 /* Stream the hit-spark sheet from NitroFS straight into OBJ VRAM.
@@ -2036,7 +1984,6 @@ void ndsFsUnlock(void);
 
 static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
 {
-#if NDS_TASK39_FX_SPRITES
     u32 bytes = NDS_TASK39_HIT_SPARK_ASSET_BYTES;
     u32 cell[NDS_TASK39_HIT_SPARK_CELL_BYTES / sizeof(u32)];
     FILE *file;
@@ -2084,9 +2031,6 @@ static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
     gNdsTask39FxObjVramBytes = bytes;
     gNdsTask39FxObjVramRemaining =
         NDS_IFCOMMON_OBJ_VRAM_BYTES - *vram_cursor;
-#else
-    (void)vram_cursor;
-#endif
     return TRUE;
 }
 
@@ -2215,10 +2159,6 @@ void ndsIFCommonNativeOamInit(void)
     sNdsTask39HitSparkGfx = NULL;
     ndsIFCommonResetPlayerTags();
     ndsIFCommonResetCommonLetters();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsTask39FxSpawnTickAccum = 0u;
-    sNdsTask39FxUpdateTickAccum = 0u;
-#endif
     gNdsTask39FxSpawnTicks = 0u;
     gNdsTask39FxUpdateTicks = 0u;
     gNdsTask39FxDrawTicks = 0u;
@@ -2302,7 +2242,6 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     sNdsIFCommonPreparedFileSize = 0u;
     sNdsIFCommonAnnounceActive = FALSE;
     sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
     /* A new load is the full file again; the previous scene's compact image
      * and baked streams died with its heap. */
     sNdsIFCommonCompact = FALSE;
@@ -2310,7 +2249,6 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     sNdsIFCommonEndBaked[1] = NULL;
     sNdsIFCommonEndBakedWords[0] = 0u;
     sNdsIFCommonEndBakedWords[1] = 0u;
-#endif
 
     if (ndsIFCommonBindGameStatusMetadata(file_data, file_size) == FALSE)
     {
@@ -2372,12 +2310,8 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
     }
     if ((sNdsIFCommonPrepared == FALSE) ||
         (sNdsIFCommonPreparedFile == NULL) ||
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
         ((sNdsIFCommonCompact == FALSE) &&
          (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE)))
-#else
-        (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
-#endif
     {
         gNdsIFCommonNativeOamPrepareFailCount++;
         gNdsIFCommonNativeOamLastFallbackReason =
@@ -2394,7 +2328,6 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
     ndsIFCommonResetCommonLetters();
     slots = (game_set != FALSE) ? sNdsIFCommonGameSetSlots :
                                   sNdsIFCommonTimeUpSlots;
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
     if (sNdsIFCommonCompact != FALSE)
     {
         /* The letters' pixels are not resident: lay the tiles out exactly as
@@ -2478,7 +2411,6 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
         gNdsIFCommonNativeOamPrepareSuccessCount++;
         return TRUE;
     }
-#endif
     for (slot = 0u; slot < 6u; slot++)
     {
         u32 asset_index = slots[slot].asset_index;
@@ -2530,12 +2462,8 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
 
     if ((sNdsIFCommonPrepared == FALSE) ||
         (sNdsIFCommonPreparedFile == NULL) ||
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
         ((sNdsIFCommonCompact == FALSE) &&
          (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE)))
-#else
-        (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
-#endif
     {
         gNdsIFCommonNativeOamPrepareCloudFailureStage = 1u;
         gNdsIFCommonNativeOamPrepareFailCount++;
@@ -2575,7 +2503,6 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
     return TRUE;
 }
 
-#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
 extern void *syTaskmanMalloc(size_t size, u32 align);
 
 static u32 ndsIFCommonPayloadBytes(const Sprite *sprite, const Bitmap *bitmap)
@@ -2894,7 +2821,6 @@ s32 ndsIFCommonNativeOamRebaseGameStatus(
 _Static_assert(NDS_IFCOMMON_END_BANK_IMAGE_BYTES ==
                    NDS_IFCOMMON_END_BANK_BYTES,
                "the loader's end-bank scratch must match the bank");
-#endif
 
 #if NDS_P2_1P_GAME
 static void ndsIFCommonTrainingFrameBegin(void);
@@ -2904,15 +2830,6 @@ void ndsIFCommonNativeOamBeginFrame(void)
 {
 #if NDS_P2_1P_GAME
     ndsIFCommonTrainingFrameBegin();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsTask39FxSpawnTicks = sNdsTask39FxSpawnTickAccum;
-    gNdsTask39FxUpdateTicks = sNdsTask39FxUpdateTickAccum;
-    gNdsTask39FxDrawTicks = 0u;
-    gNdsTask39FxFrameTicks = gNdsTask39FxSpawnTicks +
-                             gNdsTask39FxUpdateTicks;
-    sNdsTask39FxSpawnTickAccum = 0u;
-    sNdsTask39FxUpdateTickAccum = 0u;
 #endif
 #if NDS_SHIP_TELEMETRY
     gNdsIFCommonNativeOamFrameBeginTicks = 0u;
@@ -3017,19 +2934,12 @@ static s32 ndsIFCommonMatrixForScale(u16 inverse)
 
 static void ndsTask39HitSparksDraw(void)
 {
-#if NDS_TASK39_FX_SPRITES
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 start = cpuGetTiming();
-#endif
     u32 index;
 
     if ((sNdsTask39HitSparkGfx == NULL) || (gGMCameraGObj == NULL) ||
         (CObjGetStruct(gGMCameraGObj) == NULL) ||
         (ndsTask39EffectsArenaValid() == FALSE))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
-#endif
         return;
     }
     for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
@@ -3110,10 +3020,6 @@ static void ndsTask39HitSparksDraw(void)
         gNdsIFCommonNativeOamFrameObjectCount++;
         NDS_DIAG(gNdsTask39FxHitSparkDrawCount++);
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
-#endif
-#endif
 }
 
 #if NDS_SHIP_TELEMETRY
@@ -3151,13 +3057,11 @@ static u32 ndsIFCommonBitmapAlpha(u8 source_alpha)
     return (((u32)source_alpha * 15u) + 127u) / 255u;
 }
 
-#if NDS_TASK39_FX_SPRITES
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value)
 {
     return (value >= 0.0F) ? (s32)(value + 0.5F) :
                              (s32)(value - 0.5F);
 }
-#endif
 
 static s32 ndsIFCommonRoundQ16HalfUp(s32 value)
 {
@@ -3244,7 +3148,6 @@ static s32 ndsIFCommonInBoundsQ22(int64_t x_q22, int64_t y_q22)
  * right only for screen-fixed HUD. Anchoring a fighter's tag, an item arrow
  * or a hit spark at 0.8 pulled it toward the centre by up to ~8 px at the
  * screen's edges (owner 10-01: tags "offset around edges of screen"). */
-#if NDS_TASK39_FX_SPRITES
 static f32 ndsIFCommonBattleScreenX(f32 projected_x)
 {
     f32 half = (f32)gGMCameraStruct.viewport_width * 0.5F;
@@ -3260,7 +3163,6 @@ static f32 ndsIFCommonBattleScreenY(f32 projected_y)
     return (half > 0.0F) ? (96.0F - (projected_y * (96.0F / half))) :
                            (96.0F - (projected_y * 0.8F));
 }
-#endif
 
 static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
 {

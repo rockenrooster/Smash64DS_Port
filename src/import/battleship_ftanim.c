@@ -96,15 +96,7 @@ void gcPlayMObjMatAnim(MObj *mobj);
  * Route bit 3 selects it on the same binary. Compiled out (the default, and
  * every published ROM) `NDS_R2_ANIM_CUT_ON` folds to a constant 1, GCC
  * dead-codes the float arms, and there is no per-event test left. */
-#ifndef NDS_R2_ANIM_CUT_ROUTE
-#define NDS_R2_ANIM_CUT_ROUTE 0
-#endif
-#if NDS_R2_ANIM_CUT_ROUTE
-extern volatile u32 gNdsR2AnimCutRoute;
-#define NDS_R2_ANIM_CUT_ON(bit) ((gNdsR2AnimCutRoute & (bit)) != 0u)
-#else
 #define NDS_R2_ANIM_CUT_ON(bit) (1)
-#endif
 
 /* 1/n for n in [1,255], built by the compiler. Entry 0 is a placeholder: every
  * reader is guarded by a payload-not-zero test, and `1.0f/0.0f` in a constant
@@ -563,11 +555,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
      * switch has no case for a Q kind -- so writing one here would silently
      * stop every joint animating, in exactly the configuration (bare `make`,
      * the P2 ROM) that nobody measures. */
-#if NDS_R2_CUBIC_FIXED
     const u32 q = NDS_R2_ANIM_CUT_ON(8u) ? 1u : 0u;
-#else
-    const u32 q = 0u;
-#endif
     const u8 kind_step = (u8)(q ? NDS_R2_AQ_KIND_STEP : nGCAnimKindStep);
     const u8 kind_linear = (u8)(q ? NDS_R2_AQ_KIND_LINEAR : nGCAnimKindLinear);
     const u8 kind_cubic = (u8)(q ? NDS_R2_AQ_KIND_CUBIC : nGCAnimKindCubic);

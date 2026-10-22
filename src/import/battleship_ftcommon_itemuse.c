@@ -21,7 +21,6 @@
  * strong definition here wins the link; the two SetStatus shims are not, and
  * are fenced by the same condition in reloc_backend_compat_shims.c.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
@@ -102,4 +101,3 @@ void ftCommonFireFlowerShootSwitchStatusAir(GObj *fighter_gobj);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonitemshoot.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonitemswing.c"
 
-#endif /* NDS_P2_ITEM_CORE */

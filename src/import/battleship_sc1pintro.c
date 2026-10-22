@@ -120,9 +120,7 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 #include <string.h>
 /* LAB: a profile ROM built with NDS_TASK37_PROFILE_START=65000 (a battle
  * frame no run reaches) profiles the 1P intro's first draw instead. */
@@ -187,9 +185,7 @@ SObj *ndsSC1PIntroMakeSObj(GObj *gobj, Sprite *sprite);
  * Remix content rides its parent's kind (nds_p4.c gNdsP4OnePlayerContent),
  * Metal Mario rides Mario's (battleship_ftmanager.c gNdsP7OnePlayerMetal). */
 extern u8 gNdsP7OnePlayerMetal;
-#if NDS_P4
 extern u8 gNdsP4OnePlayerContent;
-#endif
 
 void *ndsSC1PIntroPlayFGM(u16 id)
 {
@@ -208,7 +204,6 @@ void *ndsSC1PIntroPlayFGM(u16 id)
     if ((sSC1PIntroIsAnnouncedFighterName == FALSE) &&
         (fkind >= 0) && (fkind < 12) && (id == kNames[fkind]))
     {
-#if NDS_P4
         const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
 
         if ((f != NULL) && (f->parent_kind == fkind) &&
@@ -217,7 +212,6 @@ void *ndsSC1PIntroPlayFGM(u16 id)
             id = (u16)f->present->announce_fgm;
         }
         else
-#endif
         if ((gNdsP7OnePlayerMetal != 0u) && (fkind == nFTKindMario))
         {
             id = nSYAudioVoiceAnnounceMMario;
@@ -226,9 +220,7 @@ void *ndsSC1PIntroPlayFGM(u16 id)
     return func_800269C0_275C0(id);
 }
 
-#if NDS_P4
 #include "nds_p4_onep_art.generated.h"
-#endif
 
 /* The player's own name sprite, NULL for the source's: a content's is
  * Remix's 1P name texture (SinglePlayer.asm add_to_single_player), a file of
@@ -237,7 +229,6 @@ void *ndsSC1PIntroPlayFGM(u16 id)
 static Sprite *ndsSC1PIntroOwnName(void)
 {
     const s32 fkind = sSC1PIntroPlayerFighterDemoDesc.fkind;
-#if NDS_P4
     const u32 content = (u32)gNdsP4OnePlayerContent;
     const NDSP4Fighter *f = ndsP4Fighter(content);
 
@@ -256,7 +247,6 @@ static Sprite *ndsSC1PIntroOwnName(void)
 #undef NDS_SC1P_INTRO_NAME_ROW
         return NULL;
     }
-#endif
     if ((gNdsP7OnePlayerMetal != 0u) && (fkind == nFTKindMario))
     {
         return lbRelocGetFileData(Sprite *, sSC1PIntroFiles[0],
@@ -460,7 +450,6 @@ static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
     {
         sb32 own = FALSE;
 
-#if NDS_P4
         const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
 
         if ((f != NULL) && (f->parent_kind == desc->fkind))
@@ -475,7 +464,6 @@ static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
             own = TRUE;
         }
         else
-#endif
         if ((gNdsP7OnePlayerMetal != 0u) && (desc->fkind == nFTKindMario))
         {
             ndsSC1PIntroStillPath(path, kind, card, 1u, nFTKindMMario, 0);
@@ -1280,9 +1268,7 @@ static void ndsSC1PIntroDraw(void)
 
 void sc1PIntroStartScene(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterIntroTransientReset();
-#endif
 #if NDS_1P_INTRO_STATIC
     dSC1PIntroTaskmanSetup.func_start = ndsSC1PIntroFuncStartStatic;
 #endif

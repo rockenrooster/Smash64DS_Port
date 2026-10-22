@@ -18,7 +18,6 @@
  * Gated on NDS_P2_ITEM_CORE like battleship_item_gbumper.c; no fighter flag
  * involved.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <mp/map.h>
@@ -260,4 +259,3 @@ GObj *itMainMakeMonster(GObj *item_gobj)
     return monster_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

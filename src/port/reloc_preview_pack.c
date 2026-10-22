@@ -6,7 +6,7 @@
 
 u32 ndsRelocUseBattleCoreFighterData(void)
 {
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
     return (gNdsSceneManagerCurrIsBattle != 0u) ||
            (gSCManagerSceneData.scene_curr == nSCKindVSResults)
 #if NDS_P2_1P_GAME
@@ -23,7 +23,7 @@ u32 ndsRelocUseBattleCoreFighterData(void)
 #endif
 }
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
 typedef struct NDSBattleForeignImageRow {
     u16 asset_id;
     u16 reserved;
@@ -66,7 +66,7 @@ typedef struct NDSPreviewResident {
     u32 sorted_sections;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
     NDSBattleForeignImageRow *foreign_images;
     u32 foreign_count;
 #endif
@@ -76,17 +76,12 @@ typedef struct NDSPreviewResident {
  * content's NDS_P4_SEL_BASE + content (scripts/p4/p4_preview_pack.py): the
  * VS character select's preview of that content. Its resident row follows
  * the twelve, and its FTData is the content's own. */
-#if NDS_P4
 #define NDS_PREVIEW_P4_KINDS (NDS_P4_CONTENT_LIMIT - 1u)
 /* Selectable Metal Mario, the source MMario kind (p4_css.py KINDS): his VS
  * select preview's pack (p4_preview_pack.py on his source files), after the
  * contents' rows. Only the VS select loads it (ndsRelocPreviewFighterLoadBegin):
  * his matches and the campaign's stage keep the source loader. */
 #define NDS_PREVIEW_MMARIO_ROWS 1u
-#else
-#define NDS_PREVIEW_P4_KINDS 0u
-#define NDS_PREVIEW_MMARIO_ROWS 0u
-#endif
 static NDSPreviewResident sNdsPreviewResidents[12u + NDS_PREVIEW_P4_KINDS +
                                                NDS_PREVIEW_MMARIO_ROWS];
 
@@ -96,7 +91,6 @@ static s32 ndsPreviewKindIndex(s32 kind)
     {
         return kind;
     }
-#if NDS_P4
     if (kind == nFTKindMMario)
     {
         return 12 + (s32)NDS_PREVIEW_P4_KINDS;
@@ -105,27 +99,24 @@ static s32 ndsPreviewKindIndex(s32 kind)
     {
         return 12 + (s32)ndsP4SelContent((u32)kind) - 1;
     }
-#endif
     return -1;
 }
 
 static FTData *ndsPreviewKindData(s32 kind)
 {
-#if NDS_P4
     if (ndsP4SelContent((u32)kind) != 0u)
     {
         const NDSP4Fighter *f = ndsP4Fighter(ndsP4SelContent((u32)kind));
 
         return (f != NULL) ? f->data : NULL;
     }
-#endif
     return dFTManagerDataFiles[kind];
 }
 volatile u32 gNdsPreviewPackLoadCount;
 volatile u32 gNdsPreviewPackDataBytes;
 volatile u32 gNdsPreviewPackFailure;
 volatile u32 gNdsPreviewPackFailureKind;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
 volatile u32 gNdsBattleCoreExternPatchCount;
 volatile u32 gNdsBattleCoreExternLoadCount;
 volatile u32 gNdsBattleCoreExternFailure;
@@ -471,7 +462,7 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     NDSRelocLoadedFile *loaded;
     u32 mapped;
     if ((ndsRelocSceneShowsPreviewFighter() == FALSE)
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
         && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
        )
@@ -498,7 +489,7 @@ const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
         (owner->owner_scene != (u32)gSCManagerSceneData.scene_curr)) { return NULL; }
     if (owner->reserved[0] != 0u)
     {
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
         const NDSPreviewResident *resident;
         u32 i;
         if (ndsPreviewSection(owner, &resident) == NULL) { return NULL; }
@@ -517,9 +508,7 @@ const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
         /* Never let a missing private span borrow a different fighter's bank.
          * P4 S8: a power's Remix hat textures are their own file, loaded for
          * the match (ndsP4KirbyMatchData), not any fighter's bank. */
-#if NDS_P4 && NDS_P2_KIRBY
         if (ndsP4KirbyHatTextureAsset(asset_id) == FALSE)
-#endif
         {
             return NULL;
         }
@@ -749,7 +738,6 @@ static void ndsPreviewPackLoadFree(NDSPreviewPackLoad *load)
     load->fkind = -1;
 }
 
-#if NDS_P4
 /* A content's low-detail pack (battle/<kind>.fpc): in a battle of three or
  * four fighters and on its Results podium, and on the VS select, which draws
  * a content's low detail (ndsP4LowDetailSelect). */
@@ -760,7 +748,6 @@ static sb32 ndsRelocPreviewP4LowPack(s32 fkind)
              (ndsP4LowDetailResults() != FALSE) ||
              (ndsP4LowDetailSelect() != FALSE))) ? TRUE : FALSE;
 }
-#endif
 
 /* The bytes of the pack the VS select loads for a kind's preview, which its
  * block is sized by (the load takes at most the file's size); 0 when the file
@@ -778,15 +765,11 @@ u32 ndsRelocPreviewFighterPackBytes(s32 fkind)
     {
         return 0u;
     }
-#if NDS_P4
     if (ndsRelocPreviewP4LowPack(fkind) != FALSE)
     {
         p = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
     }
-#else
-    (void)battle_path;
-#endif
     p[digit_at] = '0' + (u32)fkind / 10u;
     p[digit_at + 1u] = '0' + (u32)fkind % 10u;
     ndsFsLock();
@@ -811,7 +794,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     FTData *fighter;
     FILE *file;
     char preview_path[] = "nitro:/fighters/preview/00.fpc";
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
     char battle_path[] = "nitro:/fighters/battle/00.fpc";
 #endif
     char *path = preview_path;
@@ -821,17 +804,12 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     u64 expected_size;
     u32 i;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
-    return NULL;
-#endif
     if (((ndsRelocSceneShowsPreviewFighter() == FALSE)
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
          && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
         ) ||
         (ndsPreviewKindIndex(fkind) < 0)) { return NULL; }
-#if NDS_P4
     if ((fkind == nFTKindMMario) &&
         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
@@ -845,7 +823,6 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     {
         return NULL;
     }
-#endif
 #if NDS_P2_1P_GAME
     /* Giant DK's stage. GDonkeyMain's extern tree names DonkeyModel, and the
      * relocator resolves those externs by SOURCE offset. A compact DK pack
@@ -902,14 +879,13 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
     if ((ndsRelocUseBattleCoreFighterData() != FALSE) && (fkind < 12))
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
         is_battle_pack = TRUE;
     }
-#if NDS_P4
     /* S15: a content in a battle of three or four fighters draws only its
      * low detail, close-ups included, so it loads the pack without the data
      * only the high detail reads (p4_preview_pack.py --battle-out). Its Main
@@ -919,7 +895,6 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
     }
-#endif
 #endif
     path[digit_at] = '0' + (u32)fkind / 10u;
     path[digit_at + 1u] = '0' + (u32)fkind % 10u;
@@ -1159,7 +1134,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * behind at all. */
         resident = &sNdsPreviewResidents[ndsPreviewKindIndex(fkind)];
         resident->model_source_bytes = load->model_source_bytes;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
         resident->foreign_images = NULL;
         resident->foreign_count = 0u;
 #endif
@@ -1234,7 +1209,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * generated source slots only after all generic normalization is
          * complete so no later byte-lane pass can reinterpret a native
          * pointer. */
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((load->is_battle_pack != 0u) &&
             (ndsShieldPosePatchCompactMain(
                 fkind, records[0]->data, records[0]->data_size) < 0))
@@ -1325,7 +1300,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     return ndsPreviewPackLoadPublish(load);
 }
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS
 static s32 ndsBattleForeignImagesValid(const NDSBattleForeignImageRow *rows,
                                        u32 count, u32 bytes)
 {
@@ -1363,7 +1338,6 @@ static __attribute__((noinline, noreturn)) void ndsBattleCoreExternHalt(s32 fkin
     ndsPreviewPackLoadHalt(14u, (u32)fkind);
 }
 
-#if NDS_P4
 /* A content's deferred entry row (nds_p4.h ndsP4DefersEntryDependency), kept
  * for the match whose heap generation wrote it. */
 typedef struct NDSRelocDeferredEntry
@@ -1417,7 +1391,6 @@ void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
     d->generation = 0u;
     return dep->data;
 }
-#endif
 
 s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 {
@@ -1435,11 +1408,9 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     char battle_path[] = "nitro:/fighters/battle/00.ext";
     char *path = battle_path;
     u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
-#if NDS_P4
     /* A P4 content's match loads its select-screen pack, whose manifest sits
      * beside it (scripts/p4/p4_preview_pack.py). */
     char preview_path[] = "nitro:/fighters/preview/00.ext";
-#endif
     u32 i;
 
     if ((ndsPreviewKindIndex(fkind) < 0) ||
@@ -1447,13 +1418,11 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     {
         return FALSE;
     }
-#if NDS_P4
     if (fkind >= 12)
     {
         path = preview_path;
         digit_at = sizeof("nitro:/fighters/preview/") - 1u;
     }
-#endif
     fighter = ndsPreviewKindData(fkind);
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (*fighter->p_file_main == NULL))
@@ -1536,7 +1505,6 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         {
             ndsBattleCoreExternHalt(fkind);
         }
-#if NDS_P4
         /* A lab build's stand-in replaces the donor file: the source loader
          * would not load it either (ndsRelocNativeEntryOwnsDependency). */
         if ((fkind >= 12) &&
@@ -1577,7 +1545,6 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
             d->generation = gNdsTaskmanHeapGeneration + 1u;
             continue;
         }
-#endif
         dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
         was_loaded = (dep != NULL) ? TRUE : FALSE;
         dep = ndsRelocEnsureLoadedAsset(rows[i].dep_asset);
@@ -1614,19 +1581,17 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
                                    (u8 *)dep->data + dep_offset);
         gNdsBattleCoreExternPatchCount++;
     }
-#if NDS_P4
     if ((fkind >= 12) && (ndsP4GuardPosesNeeded() != FALSE) &&
         (ndsShieldPosePatchCompactMain(fkind, main_loaded->data,
                                        main_loaded->data_size) < 0))
     {
         ndsBattleCoreExternHalt(fkind);
     }
-#endif
     return TRUE;
 }
 #endif
 
-#if NDS_P4 && !(NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS)
+#if !NDS_P2_COMPACT_BATTLE_FIGHTERS
 void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
 {
     (void)content;

@@ -13,7 +13,6 @@
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatalink.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataluigi.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatamario.c"
-#if NDS_P4
 /* P4 makes Metal Mario selectable (docs/P4/New_Characters.md) with Smash
  * Remix's menu motions (src/MetalMario/MetalMario.asm): 1-13 are Mario's
  * (copy_menu_actions(MARIO, METAL, 1, 13)), his three victories play a
@@ -23,9 +22,7 @@
  * kept under another name; ftdata.c's dFTMMarioData names this one. */
 #define dFTMMarioSubMotionDescs dNdsSourceMMarioSubMotionDescs
 #define dFTMMarioSubMotionDescsCount dNdsSourceMMarioSubMotionDescsCount
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatammario.c"
-#if NDS_P4
 #undef dFTMMarioSubMotionDescs
 #undef dFTMMarioSubMotionDescsCount
 
@@ -73,7 +70,6 @@ FTMotionDesc dFTMMarioSubMotionDescs[] =
 	&llFTMMarioAnimPose1PFileID, 0x80000000, 0x00000000
 };
 s32 dFTMMarioSubMotionDescsCount = sizeof(dFTMMarioSubMotionDescs)/sizeof(FTMotionDesc);
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatancaptain.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatandonkey.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataness.c"
@@ -162,13 +158,11 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * stream the encoders above normalize for Mario/Fox/Luigi/Donkey. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/429_FTCaptainAnimSelected.c"
 #endif
-#if NDS_P2_SAMUS
 /* PlayersVS maps Samus to Demo Win4, and both Samus Win3/Win4 submotion slots
  * name file 395 (Selected).  Like Donkey/Link the decomp preserves the pointer
  * table as AObjEvent32* for historical type reasons while every referenced
  * joint payload is the same u16 AObjEvent16 stream normalized above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/395_FTSamusAnimSelected.c"
-#endif
 #if NDS_P2_LINK
 /* PlayersVS maps Link to Demo Win1 -> submotion 1 -> file 404 Selected.  Keep
  * the source clip on the same resident path as every other landed CSS fighter;
@@ -176,31 +170,21 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * port, so the direct table is what makes this demo-only clip authoritative. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/404_FTLinkAnimSelected.c"
 #endif
-#if NDS_P2_PIKACHU
 /* scsubsysdatapikachu.c:67 maps Pikachu's Selected demo to file 476 with the
  * same demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/476_FTPikachuAnimSelected.c"
-#endif
-#if NDS_P2_YOSHI
 /* scsubsysdatayoshi.c:101 maps Yoshi's Selected demo to file 444 with the
  * same demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/444_FTYoshiAnimSelected.c"
-#endif
-#if NDS_P2_NESS
 /* scsubsysdataness.c maps Ness's Selected demo to file 437 with the same
  * demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/437_FTNessAnimSelected.c"
-#endif
-#if NDS_P2_PURIN
 /* scsubsysdatapurin.c maps Purin's Selected demo to file 470 with the same
  * demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/470_FTPurinAnimSelected.c"
-#endif
-#if NDS_P2_KIRBY
 /* scsubsysdatakirby.c maps Kirby's Selected demo to file 418 with the same
  * demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/418_FTKirbyAnimSelected.c"
-#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -233,7 +217,6 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #include <string.h>
 #include <nds/nds_frontend_overlay.h>
 
-#if NDS_P4
 /* A P4 content's demo rows name files by number (generate_p4_fighter.py), and
  * a row may be one of the cast's own Selected clips: Ganondorf's Selected is
  * Captain's file 429. The tables below answer the ll...FileID token only, so
@@ -248,43 +231,28 @@ static const void *ndsBattleShipCSSSelectedToken(const void *file_id)
 #if NDS_P2_DONKEY
     case 381u: return &llFTDonkeyAnimSelectedFileID;
 #endif
-#if NDS_P2_SAMUS
     case 395u: return &llFTSamusAnimSelectedFileID;
-#endif
 #if NDS_P2_LINK
     case 404u: return &llFTLinkAnimSelectedFileID;
 #endif
-#if NDS_P2_KIRBY
     case 418u: return &llFTKirbyAnimSelectedFileID;
-#endif
 #if NDS_P2_CAPTAIN
     case 429u: return &llFTCaptainAnimSelectedFileID;
 #endif
-#if NDS_P2_NESS
     case 437u: return &llFTNessAnimSelectedFileID;
-#endif
-#if NDS_P2_YOSHI
     case 444u: return &llFTYoshiAnimSelectedFileID;
-#endif
 #if NDS_P2_LUIGI
     case 462u: return &llFTLuigiAnimSelectedFileID;
 #endif
-#if NDS_P2_PURIN
     case 470u: return &llFTPurinAnimSelectedFileID;
-#endif
-#if NDS_P2_PIKACHU
     case 476u: return &llFTPikachuAnimSelectedFileID;
-#endif
     default: return file_id;
     }
 }
-#endif
 
 size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
 {
-#if NDS_P4
     file_id = ndsBattleShipCSSSelectedToken(file_id);
-#endif
     if (file_id == &llFTMarioAnimSelectedFileID)
     {
         return sizeof(dFTMarioAnimSelected_joints);
@@ -311,48 +279,36 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTCaptainAnimSelected_joints);
     }
 #endif
-#if NDS_P2_SAMUS
     if (file_id == &llFTSamusAnimSelectedFileID)
     {
         return sizeof(dFTSamusAnimSelected_joints);
     }
-#endif
 #if NDS_P2_LINK
     if (file_id == &llFTLinkAnimSelectedFileID)
     {
         return sizeof(dFTLinkAnimSelected_joints);
     }
 #endif
-#if NDS_P2_PIKACHU
     if (file_id == &llFTPikachuAnimSelectedFileID)
     {
         return sizeof(dFTPikachuAnimSelected_joints);
     }
-#endif
-#if NDS_P2_YOSHI
     if (file_id == &llFTYoshiAnimSelectedFileID)
     {
         return sizeof(dFTYoshiAnimSelected_joints);
     }
-#endif
-#if NDS_P2_NESS
     if (file_id == &llFTNessAnimSelectedFileID)
     {
         return sizeof(dFTNessAnimSelected_joints);
     }
-#endif
-#if NDS_P2_PURIN
     if (file_id == &llFTPurinAnimSelectedFileID)
     {
         return sizeof(dFTPurinAnimSelected_joints);
     }
-#endif
-#if NDS_P2_KIRBY
     if (file_id == &llFTKirbyAnimSelectedFileID)
     {
         return sizeof(dFTKirbyAnimSelected_joints);
     }
-#endif
     return 0u;
 }
 
@@ -361,9 +317,7 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     const void *source;
     size_t size;
 
-#if NDS_P4
     file_id = ndsBattleShipCSSSelectedToken(file_id);
-#endif
     if (file_id == &llFTMarioAnimSelectedFileID)
     {
         source = dFTMarioAnimSelected_joints;
@@ -395,13 +349,11 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
         size = sizeof(dFTCaptainAnimSelected_joints);
     }
 #endif
-#if NDS_P2_SAMUS
     else if (file_id == &llFTSamusAnimSelectedFileID)
     {
         source = dFTSamusAnimSelected_joints;
         size = sizeof(dFTSamusAnimSelected_joints);
     }
-#endif
 #if NDS_P2_LINK
     else if (file_id == &llFTLinkAnimSelectedFileID)
     {
@@ -409,41 +361,31 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
         size = sizeof(dFTLinkAnimSelected_joints);
     }
 #endif
-#if NDS_P2_PIKACHU
     else if (file_id == &llFTPikachuAnimSelectedFileID)
     {
         source = dFTPikachuAnimSelected_joints;
         size = sizeof(dFTPikachuAnimSelected_joints);
     }
-#endif
-#if NDS_P2_YOSHI
     else if (file_id == &llFTYoshiAnimSelectedFileID)
     {
         source = dFTYoshiAnimSelected_joints;
         size = sizeof(dFTYoshiAnimSelected_joints);
     }
-#endif
-#if NDS_P2_NESS
     else if (file_id == &llFTNessAnimSelectedFileID)
     {
         source = dFTNessAnimSelected_joints;
         size = sizeof(dFTNessAnimSelected_joints);
     }
-#endif
-#if NDS_P2_PURIN
     else if (file_id == &llFTPurinAnimSelectedFileID)
     {
         source = dFTPurinAnimSelected_joints;
         size = sizeof(dFTPurinAnimSelected_joints);
     }
-#endif
-#if NDS_P2_KIRBY
     else if (file_id == &llFTKirbyAnimSelectedFileID)
     {
         source = dFTKirbyAnimSelected_joints;
         size = sizeof(dFTKirbyAnimSelected_joints);
     }
-#endif
     else
     {
         return NULL;
@@ -508,31 +450,19 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
 #if NDS_P2_CAPTAIN
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTCaptainAnimSelected_joints);
 #endif
-#if NDS_P2_SAMUS
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTSamusAnimSelected_joints);
-#endif
 #if NDS_P2_LINK
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLinkAnimSelected_joints);
 #endif
-#if NDS_P2_PIKACHU
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPikachuAnimSelected_joints);
-#endif
         /* Yoshi/Ness/Purin/Kirby were loadable (the loader below names
          * their tables) but not RECOGNISED here, so the Event32 admission
          * rejected their Selected joints (reason 2) and the CSS preview
          * froze the moment Yoshi was picked (owner, 2026-09-07). */
-#if NDS_P2_YOSHI
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTYoshiAnimSelected_joints);
-#endif
-#if NDS_P2_NESS
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTNessAnimSelected_joints);
-#endif
-#if NDS_P2_PURIN
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPurinAnimSelected_joints);
-#endif
-#if NDS_P2_KIRBY
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTKirbyAnimSelected_joints);
-#endif
 #undef NDS_CSS_SELECTED_ACCUM_BOUNDS
         if (high == 0u)
         {
@@ -587,7 +517,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
         }
     }
 #endif
-#if NDS_P2_SAMUS
     for (i = 0u; i < ARRAY_COUNT(dFTSamusAnimSelected_joints); i++)
     {
         if ((const void *)dFTSamusAnimSelected_joints[i] == ptr)
@@ -595,7 +524,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
 #if NDS_P2_LINK
     for (i = 0u; i < ARRAY_COUNT(dFTLinkAnimSelected_joints); i++)
     {
@@ -605,7 +533,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
         }
     }
 #endif
-#if NDS_P2_PIKACHU
     for (i = 0u; i < ARRAY_COUNT(dFTPikachuAnimSelected_joints); i++)
     {
         if ((const void *)dFTPikachuAnimSelected_joints[i] == ptr)
@@ -613,8 +540,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
-#if NDS_P2_YOSHI
     for (i = 0u; i < ARRAY_COUNT(dFTYoshiAnimSelected_joints); i++)
     {
         if ((const void *)dFTYoshiAnimSelected_joints[i] == ptr)
@@ -622,8 +547,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
-#if NDS_P2_NESS
     for (i = 0u; i < ARRAY_COUNT(dFTNessAnimSelected_joints); i++)
     {
         if ((const void *)dFTNessAnimSelected_joints[i] == ptr)
@@ -631,8 +554,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
-#if NDS_P2_PURIN
     for (i = 0u; i < ARRAY_COUNT(dFTPurinAnimSelected_joints); i++)
     {
         if ((const void *)dFTPurinAnimSelected_joints[i] == ptr)
@@ -640,8 +561,6 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
-#if NDS_P2_KIRBY
     for (i = 0u; i < ARRAY_COUNT(dFTKirbyAnimSelected_joints); i++)
     {
         if ((const void *)dFTKirbyAnimSelected_joints[i] == ptr)
@@ -649,6 +568,5 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#endif
     return FALSE;
 }

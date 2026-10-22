@@ -1,5 +1,5 @@
 #ifndef _FTCAPTAIN_STATUS_H_
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_P2_CAPTAIN
+#if NDS_P2_CAPTAIN
 /* P2-3f5: same narrow wrapper shape every landed fighter uses.  The project
  * fighter header mirrors BattleShip's Captain enum/vars ABI and
  * ftstatus_callbacks.h mirrors the callback declarations; include only the

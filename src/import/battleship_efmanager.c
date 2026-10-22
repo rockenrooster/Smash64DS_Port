@@ -22,9 +22,7 @@
  * be a defect on ARM9. */
 #include <math.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #include "battleship_efmanager_symbols.h"
 
@@ -166,13 +164,10 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerSparkleWhiteDeadMakeEffect ndsBaseEFManagerSparkleWhiteDeadMakeEffect
 #define efManagerRebirthHaloMakeEffect ndsBaseEFManagerRebirthHaloMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
-#if NDS_P2_PIKACHU
 #define efManagerPikachuThunderTrailMakeEffect ndsBaseEFManagerPikachuThunderTrailMakeEffect
 #define efManagerPikachuThunderShockMakeEffect ndsBaseEFManagerPikachuThunderShockMakeEffect
 #define efManagerPikachuThunderJoltMakeEffect ndsBaseEFManagerPikachuThunderJoltMakeEffect
-#endif
 #define efManagerThunderAmpMakeEffect ndsBaseEFManagerThunderAmpMakeEffect
-#if NDS_P2_YOSHI
 #define efManagerYoshiShieldMakeEffect \
     ndsBaseEFManagerYoshiShieldMakeEffect
 #define efManagerYoshiEntryEggMakeEffect \
@@ -181,8 +176,6 @@ uintptr_t lEFCommonParticleTextureBankHi;
     ndsBaseEFManagerYoshiEggLayMakeEffect
 #define efManagerYoshiEggEscapeMakeEffect \
     ndsBaseEFManagerYoshiEggEscapeMakeEffect
-#endif
-#if NDS_P2_NESS
 #define efManagerNessPKThunderTrailMakeEffect \
     ndsBaseEFManagerNessPKThunderTrailMakeEffect
 #define efManagerNessPKReflectTrailMakeEffect \
@@ -193,17 +186,14 @@ uintptr_t lEFCommonParticleTextureBankHi;
     ndsBaseEFManagerNessPKFlashMakeEffect
 #define efManagerNessPsychicMagnetMakeEffect \
     ndsBaseEFManagerNessPsychicMagnetMakeEffect
-#endif
 #if NDS_P2_CAPTAIN
 #define efManagerCaptainFalconPunchMakeEffect \
     ndsBaseEFManagerCaptainFalconPunchMakeEffect
 #define efManagerCaptainFalconKickMakeEffect \
     ndsBaseEFManagerCaptainFalconKickMakeEffect
 #endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 #define efManagerFoxBlasterGlowMakeEffect \
     ndsBaseEFManagerFoxBlasterGlowMakeEffect
-#endif
 
 /* Shrink the effect-instance pool AT ITS ALLOCATION rather than truncating the
  * free list afterwards. efManagerInitEffects does one
@@ -220,7 +210,6 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef EFFECT_ALLOC_NUM
 #define EFFECT_ALLOC_NUM NDS_R2_EFFECT_POOL
 
-#if NDS_P4
 /* P4: the inhale wind's per-frame proc is told apart from its registration
  * by the call's parentheses: the definition becomes the base, and the maker
  * registers the wrapper below, which holds a content's own distance ahead
@@ -229,7 +218,6 @@ uintptr_t lEFCommonParticleTextureBankHi;
 void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj);
 #define efManagerKirbyInhaleWindProcUpdate(g_) ndsBaseEFManagerKirbyInhaleWindProcUpdate(g_)
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
-#endif
 #define efManagerKirbyInhaleWindMakeEffect ndsBaseEFManagerKirbyInhaleWindMakeEffect
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 #undef efManagerKirbyInhaleWindMakeEffect
@@ -271,7 +259,6 @@ LBParticle *efManagerKirbyInhaleWindMakeEffect(GObj *fighter_gobj)
     return pc;
 }
 
-#if NDS_P4
 #undef efManagerKirbyInhaleWindProcUpdate
 #undef gFTDataKirbyMainMotion
 
@@ -288,7 +275,6 @@ void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj)
                        ndsP4KirbyInhaleWindX(ep->fighter_gobj, 800.0F);
     xf->translate.y += 230.0F;
 }
-#endif
 
 #undef efManagerInitEffects
 #undef efManagerDamageNormalLightMakeEffect
@@ -301,32 +287,24 @@ void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj)
 #undef efManagerSparkleWhiteDeadMakeEffect
 #undef efManagerRebirthHaloMakeEffect
 #undef efManagerFoxReflectorMakeEffect
-#if NDS_P2_PIKACHU
 #undef efManagerPikachuThunderTrailMakeEffect
 #undef efManagerPikachuThunderShockMakeEffect
 #undef efManagerPikachuThunderJoltMakeEffect
-#endif
 #undef efManagerThunderAmpMakeEffect
-#if NDS_P2_YOSHI
 #undef efManagerYoshiShieldMakeEffect
 #undef efManagerYoshiEntryEggMakeEffect
 #undef efManagerYoshiEggLayMakeEffect
 #undef efManagerYoshiEggEscapeMakeEffect
-#endif
-#if NDS_P2_NESS
 #undef efManagerNessPKThunderTrailMakeEffect
 #undef efManagerNessPKReflectTrailMakeEffect
 #undef efManagerNessPKThunderWaveMakeEffect
 #undef efManagerNessPKFlashMakeEffect
 #undef efManagerNessPsychicMagnetMakeEffect
-#endif
 #if NDS_P2_CAPTAIN
 #undef efManagerCaptainFalconPunchMakeEffect
 #undef efManagerCaptainFalconKickMakeEffect
 #endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
-#endif
 
 /* Owner BUGS.md: "Pikachu Down B self hit blue spark effect should be moved
  * towards the camera, similar to shield guard." The burst is bank script 0x74
@@ -347,7 +325,6 @@ LBParticle *efManagerThunderAmpMakeEffect(Vec3f *pos)
     return pc;
 }
 
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* EFCommon script 0x62 is a closed ten-tick flash. Its only four source
  * callers are wpfoxblaster.c's spawn/map/hit/hop sites, and all four discard
  * the return value. That makes this the owning seam for replacing the
@@ -369,9 +346,7 @@ LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
     }
     return ndsBaseEFManagerFoxBlasterGlowMakeEffect(pos);
 }
-#endif
 
-#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
 /* EFCommonEffects3:0x2B7C is only a looping RotY track.  A live source trace
  * proves the visible states are exactly 0, k*(2pi/30) for k=1..29, then 0;
  * the script's setup gives the loop 31 update calls, not 30 visible values.
@@ -427,11 +402,9 @@ static void ndsEFManagerRebirthHaloProcUpdateAOT(GObj *effect_gobj)
     ep->effect_vars.common.size = phase;
     NDS_DIAG(gNdsRebirthHaloAotUpdateCount++);
 }
-#endif
 
 GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
 {
-#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
     void (*source_update)(GObj *) = dEFManagerRebirthHaloEffectDesc.proc_update;
     intptr_t source_anim_joint = dEFManagerRebirthHaloEffectDesc.o_anim_joint;
     GObj *effect_gobj;
@@ -455,12 +428,8 @@ GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
         ep->effect_vars.common.size = 0;
     }
     return effect_gobj;
-#else
-    return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
-#endif
 }
 
-#if NDS_R2_IMPACT_WAVE_NATIVE
 volatile u32 gNdsImpactWaveNativeDrawCount;
 volatile u32 gNdsImpactWaveNativeFallbackCount;
 volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
@@ -518,14 +487,11 @@ s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj)
 
     return ndsEFManagerImpactWaveVariant(effect_gobj, &variant);
 }
-#endif
 
-#if NDS_R2_REBIRTH_HALO_NATIVE
 volatile u32 gNdsRebirthHaloNativeDrawCount;
 volatile u32 gNdsRebirthHaloNativeFallbackCount;
 volatile u32 gNdsRebirthHaloNativeTexturePrepareCount;
 volatile u32 gNdsRebirthHaloNativeTextureBindCount;
-#endif
 
 /* Seven, down from fourteen. The shield's five disc templates, the reflector's
  * and the respawn pad's went with the procedural stand-ins on 2026-08-04; what
@@ -1224,7 +1190,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
     }
-#if NDS_P2_ITEM_CORE
     if (file_head == &gITManagerCommonData)
     {
         /* P2-3f53: item common data is linked and loaded by
@@ -1235,7 +1200,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * their link closure. */
         return ndsRelocGetLoadedFileSize(&llITCommonDataFileID);
     }
-#endif
     if (file_head == &gFTManagerCommonFile)
     {
         return ndsRelocGetLoadedFileSize(&llFTManagerCommonFileID);
@@ -1279,7 +1243,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
         return ndsRelocGetLoadedFileSize(&llDonkeySpecial2FileID);
     }
 #endif
-#if NDS_P2_SAMUS
     if (file_head == &gFTDataSamusSpecial2)
     {
         /* BattleShip dEFManagerSamusEntryPointEffectDesc owns SamusSpecial2.
@@ -1290,7 +1253,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * SamusSpecial1, not an EFDesc. */
         return ndsRelocGetLoadedFileSize(&llSamusSpecial2FileID);
     }
-#endif
 #if NDS_P2_LINK
     if (file_head == &gFTDataLinkSpecial2)
     {
@@ -1301,7 +1263,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
         return ndsRelocGetLoadedFileSize(&llLinkSpecial2FileID);
     }
 #endif
-#if NDS_P2_PIKACHU
     if (file_head == &gFTDataPikachuSpecial3)
     {
         /* dEFManagerThunderJoltEffectDesc owns PikachuSpecial3 (the same
@@ -1321,8 +1282,6 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * straight out of PikachuModel (llPikachuModelThunderTrail*). */
         return ndsRelocGetLoadedFileSize(&llPikachuModelFileID);
     }
-#endif
-#if NDS_P2_YOSHI
     if (file_head == &gFTDataYoshiSpecial2)
     {
         /* dEFManagerYoshiEntryEggEffectDesc: the entry egg his Appear cracks
@@ -1341,15 +1300,11 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * out of YoshiModel (efmanager.c:1375). */
         return ndsRelocGetLoadedFileSize(&llYoshiModelFileID);
     }
-#endif
-#if NDS_P2_PURIN
     if (file_head == &gFTDataPurinSpecial2)
     {
         /* dEFManagerPurinSingEffectDesc: Sing's note ring (efmanager.c:824). */
         return ndsRelocGetLoadedFileSize(&llPurinSpecial2FileID);
     }
-#endif
-#if NDS_P2_NESS
     if (file_head == &gFTNessFileModel)
     {
         /* PK Thunder's wave/trail/reflected-trail descriptors all own
@@ -1365,14 +1320,11 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * deferred-residency recovery contract. */
         return ndsRelocGetLoadedFileSize(&llNessSpecial2FileID);
     }
-#endif
-#if NDS_P2_KIRBY
     if (file_head == &gFTDataKirbySpecial2)
     {
         /* Vulcan Jab, the four Final Cutter descs and the entry star (efmanager.c:704,896..986,1226). */
         return ndsRelocGetLoadedFileSize(&llKirbySpecial2FileID);
     }
-#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1391,15 +1343,12 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
     return 0u;
 }
 
-#if NDS_P4
 #include <nds/nds_reloc_assets.h>
-#endif
 
 static size_t ndsEFManagerFileSpan(void **file_head)
 {
     size_t span = ndsEFManagerFileSpanSource(file_head);
 
-#if NDS_P4
     /* A P4 content's special files load into its parent's globals: when the
      * slot holds a file other than the parent's own (Ganondorf's re-skinned
      * Falcon Kick file in Captain's Special2), the span is that file's. */
@@ -1415,7 +1364,6 @@ static size_t ndsEFManagerFileSpan(void **file_head)
             span = ndsRelocGetLoadedFileSize((const void *)(uintptr_t)asset);
         }
     }
-#endif
     return span;
 }
 
@@ -1445,7 +1393,7 @@ static sb32 ndsEFManagerMapFileOffset(void *base, size_t span,
     {
         return FALSE;
     }
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
     {
         const void *mapped = ndsRelocNativeAssetAddress(
             base, (u32)(uintptr_t)source_offset);
@@ -1596,7 +1544,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
 #else
 #define NDS_EF_ROSTER_DESCS_DONKEY(X)
 #endif
-#if NDS_P2_SAMUS
 /* SamusSpecial2 backs her source entry point and grapple beam. Keep both in
  * the same resolve/defer contract as the already-landed Mario/Fox/DK/Falcon
  * fighter-file effects. Charge Shot is a weapon owner, so it does not belong
@@ -1604,9 +1551,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
 #define NDS_EF_ROSTER_DESCS_SAMUS(X) \
     X(dEFManagerSamusEntryPointEffectDesc) \
     X(dEFManagerSamusGrappleBeamEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_SAMUS(X)
-#endif
 #if NDS_P2_CAPTAIN
 /* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
  * in their offset fields, the same as DK's barrel above, so they need the same
@@ -1628,7 +1572,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
 #else
 #define NDS_EF_ROSTER_DESCS_LINK(X)
 #endif
-#if NDS_P2_PIKACHU
 /* Pikachu's three fighter-file descs carry &llPikachu* linker symbols in their
  * offset fields exactly like DK's barrel, so they take the same resolve. The
  * thrown ball itself is shared item-common data and is resolved above.
@@ -1639,9 +1582,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
     X(dEFManagerThunderJoltEffectDesc) \
     X(dEFManagerPikachuThunderTrailEffectDesc) \
     X(dEFManagerPikachuThunderShockEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_PIKACHU(X)
-#endif
 
 /* Shared Master-Ball entry rays. BattleShip's common entry path reaches this
  * descriptor for BOTH Pikachu and Purin. Its four &llEFCommonEffects3... fields
@@ -1651,13 +1591,8 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
  * address to gcSetupCustomDObjs, which then allocated 136-byte DObjs until the
  * scene heap exhausted. Keep one shared row so Pikachu+Purin never double-count
  * the resolver/deferral capacity either. */
-#if NDS_P2_PIKACHU || NDS_P2_PURIN
 #define NDS_EF_ROSTER_DESCS_MBALL_RAYS(X) \
     X(dEFManagerMBallRaysEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_MBALL_RAYS(X)
-#endif
-#if NDS_P2_YOSHI
 /* The source shield wrapper also creates an EFDesc tree. Resolve its model
  * offset alongside Yoshi's entry and Egg Lay effects. */
 #define NDS_EF_ROSTER_DESCS_YOSHI(X) \
@@ -1665,17 +1600,9 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
     X(dEFManagerYoshiEntryEggEffectDesc) \
     X(dEFManagerYoshiEggLayEffectDesc) \
     X(dEFManagerYoshiEggEscapeEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_YOSHI(X)
-#endif
-#if NDS_P2_PURIN
 /* Purin's fighter-file descs carry &llPurin* linker symbols (admit_fighter.py). */
 #define NDS_EF_ROSTER_DESCS_PURIN(X) \
     X(dEFManagerPurinSingEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_PURIN(X)
-#endif
-#if NDS_P2_NESS
 /* Ness's five fighter-file descs carry &llNess* linker symbols, the same shape
  * as Yoshi's and Pikachu's above (decomp efmanager.c:1012-1160). He was the
  * only landed-or-pending kind with no block here at all, so his specials
@@ -1691,10 +1618,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
     X(dEFManagerNessPKReflectTrailEffectDesc) \
     X(dEFManagerNessPKThunderWaveEffectDesc) \
     X(dEFManagerNessPKFlashEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_NESS(X)
-#endif
-#if NDS_P2_KIRBY
 /* Kirby's fighter-file descs carry &llKirby* linker symbols (admit_fighter.py). */
 #define NDS_EF_ROSTER_DESCS_KIRBY(X) \
     X(dEFManagerVulcanJabEffectDesc) \
@@ -1703,10 +1626,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
     X(dEFManagerKirbyCutterDrawEffectDesc) \
     X(dEFManagerKirbyCutterTrailEffectDesc) \
     X(dEFManagerKirbyEntryStarEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_KIRBY(X)
-#endif
-#if NDS_P2_ITEM_CORE
 /* The thrown Poke Ball descriptor's llITCommonData* fields must be turned into
  * offsets before efManagerMBallThrownMakeEffect swaps file_head to its
  * temporary derived base. Its initializer names &gITManagerCommonData, which
@@ -1714,9 +1633,6 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
  * gated exactly like the span compare in ndsEFManagerFileSpan. */
 #define NDS_EF_ROSTER_DESCS_ITEM(X) \
     X(dEFManagerMBallThrownEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_ITEM(X)
-#endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_ITEM(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
@@ -1852,7 +1768,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 
     if (desc->proc_display == NULL) { return; }
 
-#if NDS_P2_ITEM_CORE
     /* The thrown Poke Ball offsets do not belong to the file its initializer
      * names, so they cannot be span-checked against it.
      *
@@ -1873,7 +1788,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     {
         return;
     }
-#if NDS_P2_KIRBY
     /* Kirby's spit-out and lose-copy stars are the same construction: both
      * read the fixed-up pointer at ITCommonData+0x4D4, subtract 0x5458 to
      * recover ITCommonObject's base, and offset into THAT file. Same reason,
@@ -1883,8 +1797,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     {
         return;
     }
-#endif
-#endif
     span = ndsEFManagerFileSpan(desc->file_head);
     if (span == 0u)
     {
@@ -1936,7 +1848,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     }
 }
 
-#if NDS_P2_NESS || NDS_P2_YOSHI || NDS_P2_PIKACHU
 typedef struct NDSMappedEFDescOffsets
 {
     intptr_t dobjsetup;
@@ -2053,9 +1964,7 @@ static void ndsEFManagerEndMappedDesc(EFDesc *desc,
     desc->o_anim_joint = saved->anim_joint;
     desc->o_matanim_joint = saved->matanim_joint;
 }
-#endif
 
-#if NDS_P2_PIKACHU
 GObj *efManagerPikachuThunderTrailMakeEffect(Vec3f *pos, s32 lifetime, s32 texture_index)
 {
     NDSMappedEFDescOffsets saved;
@@ -2091,9 +2000,7 @@ GObj *efManagerPikachuThunderJoltMakeEffect(Vec3f *pos, f32 rotate)
     ndsEFManagerEndMappedDesc(&dEFManagerThunderJoltEffectDesc, &saved);
     return effect;
 }
-#endif
 
-#if NDS_P2_NESS
 GObj *efManagerNessPKThunderTrailMakeEffect(GObj *fighter_gobj)
 {
     NDSMappedEFDescOffsets saved;
@@ -2166,10 +2073,8 @@ GObj *efManagerNessPsychicMagnetMakeEffect(GObj *fighter_gobj)
     ndsEffectTowardEyeRegister(effect_gobj);
     return effect_gobj;
 }
-#endif
 
 #if NDS_P2_CAPTAIN
-#if NDS_P4
 /* Makers refused because their desc was deferred for a missing file (the
  * source maker would write the bare GObj's absent DObj). */
 __attribute__((used)) volatile u32 gNdsEFDescBareMakeRefusals;
@@ -2182,17 +2087,14 @@ static const NDSP4Overrides *ndsEFManagerCaptainOverrides(GObj *fighter_gobj)
     const FTStruct *fp = ftGetStruct(fighter_gobj);
     const NDSP4Overrides *p4 = ndsP4Overrides(fp);
 
-#if NDS_P2_KIRBY
     if ((p4 == NULL) && (fp->nds_p4_kirby_copy != 0u))
     {
         const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
 
         p4 = (f != NULL) ? f->overrides : NULL;
     }
-#endif
     return p4;
 }
-#endif
 
 /* Owner 2026-10-12: "move VFX towards camera for 'Falcon punch' and 'Falcon
  * Kick' so it doesn't clip fighter". The punch and the kick follow a fighter
@@ -2202,7 +2104,6 @@ static const NDSP4Overrides *ndsEFManagerCaptainOverrides(GObj *fighter_gobj)
 GObj *efManagerCaptainFalconPunchMakeEffect(GObj *fighter_gobj)
 {
     GObj *effect_gobj;
-#if NDS_P4
     const NDSP4Overrides *p4 = ndsEFManagerCaptainOverrides(fighter_gobj);
 
     if ((p4 != NULL) && (p4->captain_falcon_punch != NULL))
@@ -2224,9 +2125,6 @@ GObj *efManagerCaptainFalconPunchMakeEffect(GObj *fighter_gobj)
     {
         effect_gobj = ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
     }
-#else
-    effect_gobj = ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
-#endif
     ndsEffectTowardEyeRegister(effect_gobj);
     return effect_gobj;
 }
@@ -2234,7 +2132,6 @@ GObj *efManagerCaptainFalconPunchMakeEffect(GObj *fighter_gobj)
 GObj *efManagerCaptainFalconKickMakeEffect(GObj *fighter_gobj)
 {
     GObj *effect_gobj;
-#if NDS_P4
     const NDSP4Overrides *p4 = ndsP4Overrides(ftGetStruct(fighter_gobj));
 
     if ((p4 != NULL) && (p4->captain_falcon_kick != NULL))
@@ -2251,9 +2148,6 @@ GObj *efManagerCaptainFalconKickMakeEffect(GObj *fighter_gobj)
     {
         effect_gobj = ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
     }
-#else
-    effect_gobj = ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
-#endif
     ndsEffectTowardEyeRegister(effect_gobj);
     return effect_gobj;
 }
@@ -2331,7 +2225,6 @@ const void *ndsEffectTreeFirstDL(const DObj *root)
     return NULL;
 }
 
-#if NDS_P2_YOSHI
 GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
 {
     NDSMappedEFDescOffsets saved;
@@ -2391,7 +2284,6 @@ GObj *efManagerYoshiEggEscapeMakeEffect(GObj *fighter_gobj)
     ndsEFManagerEndMappedDesc(&dEFManagerYoshiEggEscapeEffectDesc, &saved);
     return effect_gobj;
 }
-#endif
 
 /* The EFDescs reachable in the P1 milestone -- Mario, Fox and the shared
  * combat effects. Listed rather than swept, because they are separate globals
@@ -2466,7 +2358,6 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * resolution so a late CaptainSpecial3 load remembers/restores it. */
     dEFManagerCaptainFalconPunchEffectDesc.proc_display = gcDrawDObjDLHead1;
 #endif
-#if NDS_P2_YOSHI
     /* Yoshi's Special2 entry egg is a transform-only root plus one drawable
      * child. Its source callback, lbCommonDObjScaleXProcDisplay, is a deliberate
      * no-op in the port because other users own DS-specific seams. Route this
@@ -2474,8 +2365,6 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * animated child reaches the asset-354 owner without changing its source
      * DObj/MObj/AnimJoint state. */
     dEFManagerYoshiEntryEggEffectDesc.proc_display = gcDrawDObjTreeForGObj;
-#endif
-#if NDS_P2_KIRBY
     /* K04. THE SPIT-OUT AND LOSE-COPY STARS WERE NEVER SUBMITTED AT ALL.
      *
      * Both descriptors (efmanager.c:1588, :1618) carry proc_display
@@ -2509,7 +2398,6 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * remembers and restores it, as the two rows above do. */
     dEFManagerCaptureKirbyStarEffectDesc.proc_display = gcDrawDObjDLHead1;
     dEFManagerLoseKirbyStarEffectDesc.proc_display = gcDrawDObjDLHead1;
-#endif
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
@@ -2547,7 +2435,6 @@ static void ndsEFManagerBoundEffectPool(void)
     gNdsEffectPoolDepth = (u32)depth;
 }
 
-#if NDS_R2_SHIELD_QUAD
 /* THE SHIELD AS A CAMERA-FACING QUAD. An experiment, DEFAULT OFF.
  *
  * Owner, 2026-08-06: "the shield is always camera facing too, so it behaves
@@ -2802,7 +2689,6 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
     gNdsShieldQuadFallbackCount++;
     gcDrawDObjTreeForGObj(effect_gobj);
 }
-#endif /* NDS_R2_SHIELD_QUAD */
 
 void efManagerInitEffects(void)
 {
@@ -2818,14 +2704,11 @@ void efManagerInitEffects(void)
     gNdsVisualEffectTemplateBytes = 0u;
     ndsEffectTowardEyeReset();
     ndsBaseEFManagerInitEffects();
-#if NDS_R2_IMPACT_WAVE_NATIVE
     gNdsImpactWaveNativeDrawCount = 0u;
     gNdsImpactWaveNativeFallbackCount = 0u;
     gNdsImpactWaveNativeTexturePrepareCount = 0u;
     gNdsImpactWaveNativeTextureBindCount = 0u;
-#endif
     ndsEFManagerResolveAllDescOffsets();
-#if NDS_R2_SHIELD_QUAD
     /* AFTER the resolver and BEFORE any shield exists. The source maker copies
      * proc_display off the desc when it builds the effect, so overriding the
      * desc here reaches every shield made this match without touching the maker
@@ -2850,8 +2733,6 @@ void efManagerInitEffects(void)
     gNdsShieldQuadDrawCount = 0u;
     gNdsShieldQuadFallbackCount = 0u;
     dEFManagerShieldEffectDesc.proc_display = ndsEFManagerShieldQuadProcDisplay;
-#endif
-#if NDS_R2_FIREBALL_QUAD
     /* The fireball's baked texture has the same match lifetime as the shield's
      * and is released here for the same reason: START at the results screen
      * restarts the match. It lives in the port file that owns the weapon
@@ -2861,7 +2742,6 @@ void efManagerInitEffects(void)
      * reloc_backend_movement.c (12778-13413), so a software build that links
      * this call against nothing would fail exactly the way this one just did. */
     ndsWeaponReleaseBakedTextures();
-#endif
     ndsEFManagerBoundEffectPool();
     ndsEFManagerInitVisualTemplates();
 }
@@ -2880,7 +2760,6 @@ void efManagerInitEffects(void)
  * down-B is what tests it live; keep this call and that counter together. */
 GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 {
-#if NDS_P4
     /* A content with its own reflector file (Wolf) builds its own effect,
      * as Remix's hook on the character id does. */
     const NDSP4Overrides *p4 = ndsP4Overrides(ftGetStruct(fighter_gobj));
@@ -2889,7 +2768,6 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
     {
         return p4->fox_reflector(fighter_gobj);
     }
-#endif
     ndsEFManagerRetryDeferredDescs();
     return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
 }
@@ -3155,7 +3033,6 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
  * sent gcSetupCustomDObjs walking garbage and allocating a DObj per bogus node
  * -- see ndsEFManagerResolveDescOffsets above. The "gSYTaskmanGeneralHeap down
  * to 200 bytes" reading was that walk, not eleven particles. */
-#if NDS_R2_SOURCE_EFFECTS_PARTICLE
 /* DAMAGE-SPARK SIZE IS A DS DIVERGENCE, AND IT LIVES HERE RATHER THAN IN THE
  * SOURCE MAKER ON PURPOSE. `decomp/` is the behavioral specification: a reader
  * who opens efmanager.c to learn what SSB64 does must find SSB64, not a port
@@ -3237,16 +3114,12 @@ LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
 }
 LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
 {
-#if NDS_R2_FIREGRIND_NATIVE
     /* DS-native FireGrind: three fixed-pool quads at the rebound point instead
      * of the source root particle + three generators + six sparks. The Mario
      * fireball caller ignores the returned LBParticle*, so NULL is safe. See
      * include/nds/nds_firegrind.h. */
     ndsFireGrindSpawn(pos);
     return NULL;
-#else
-    return ndsBaseEFManagerFireGrindMakeEffect(pos);
-#endif
 }
 /* BattleShip ftparam.c:2059-2066 owns this tiny specialization at the fighter
  * layer, but LBParticle is deliberately opaque outside the effect owner on DS.
@@ -3262,7 +3135,6 @@ LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos)
     }
     return pc;
 }
-#endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
 
 GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 {
@@ -3288,7 +3160,6 @@ GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
     return effect_gobj;
 }
 
-#if NDS_P2_ITEM_CORE
 volatile u32 gNdsEntryMBallThrownCalls;
 volatile u32 gNdsEntryMBallThrownUnresolved;
 /* Which clause refused, and what the resolver was looking at when it did.
@@ -3409,7 +3280,6 @@ GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr)
     return efManagerMBallThrownMakeEffect(pos, lr);
 }
 
-#if NDS_P2_KIRBY
 /* KIRBY'S SPIT-OUT AND LOSE-COPY STARS, AS A BOUNDED FAMILY.
  *
  * battleship_kirby_common.h macro-replaced both source calls with NULL:
@@ -3477,6 +3347,4 @@ void ndsEFManagerLoseKirbyStarMakeEffectChecked(GObj *fighter_gobj)
     NDS_DIAG(gNdsKirbyStarLoseCalls++);
     (void)efManagerLoseKirbyStarMakeEffect(fighter_gobj);
 }
-#endif
-#endif
 

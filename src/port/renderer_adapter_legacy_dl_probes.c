@@ -327,7 +327,6 @@ static void ndsFighterDLDrawCopyPersistentRendererState(
 #undef NDS_RENDERER_COPY_STATE
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsFighterDLDrawResetTransientRendererStats(
     NDSRendererStats *stats)
 {
@@ -400,7 +399,6 @@ static void ndsFighterDLDrawResetRuntimeRendererStats(
     stats->hardware_texture_ready_count = 0u;
     stats->hardware_texture_reject_count = 0u;
 }
-#endif
 
 static sb32 ndsFighterDLDrawAppendTriangle(NDSFighterDLDrawState *state,
                                            u32 packed)

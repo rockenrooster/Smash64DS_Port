@@ -7,9 +7,7 @@
 #if NDS_P2_1P_GAME
 #include <ft/ftchar/ftboss/ftboss.h>
 #endif
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -78,19 +76,11 @@ GObj *efManagerMarioEntryDokanMakeEffect(Vec3f *pos, s32 fkind);
 extern EFDesc dEFManagerMarioEntryDokanEffectDesc;
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
-#if NDS_P2_SAMUS
 GObj *efManagerSamusEntryPointMakeEffect(Vec3f *pos);
-#endif
 #if NDS_P2_LINK
 GObj *efManagerLinkEntryWaveMakeEffect(Vec3f *pos);
 GObj *efManagerLinkEntryBeamMakeEffect(Vec3f *pos);
-#if NDS_P2_LINK_SPECIAL_TOUR
-GObj *gNdsLinkSpecialTourEntryCreatedGObj[2];
-volatile u32 gNdsLinkSpecialTourEntryCreateCount;
-volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
 #endif
-#endif
-#if NDS_P2_PIKACHU || NDS_P2_PURIN
 /* Both halves of the source's one fkind test (ftcommonentry.c:97) need this,
  * and the update below already calls it under `#if NDS_P2_PURIN`. The
  * declaration was Pikachu-only, so a Purin-without-Pikachu roster -- a legal
@@ -100,8 +90,6 @@ volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
  * below: the ball is made once at SetStatus, the rays when the Appear script
  * raises flag1 at update 40. Neither proves the other. */
 GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
-#endif
-#if NDS_P2_PIKACHU || NDS_P2_PURIN
 /* The thrown Poke Ball, through the efmanager seam's checked wrapper.
  *
  * Not efManagerMBallThrownMakeEffect directly: its first act dereferences
@@ -129,9 +117,6 @@ GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
  * `#if !NDS_P2_ITEM_CORE` rather than `_Static_assert`, because an UNDEFINED
  * macro must fail too: in `#if` it evaluates to 0 and trips this; in a
  * `_Static_assert` it would be an unknown identifier and a confusing error. */
-#if !NDS_P2_ITEM_CORE
-#error "Pikachu/Purin entry requires ITCommonObject: set NDS_P2_ITEM_CORE (Makefile:888 derives it from these two kinds), or add ITCommonData/ITCommonObject and this one constructor to the configuration. Do not delete the effect."
-#endif
 GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr);
 
 /* WHAT THE BALL CHARGES THE REST OF THE ENTRY.
@@ -155,13 +140,8 @@ static void ndsFTCommonEntryMakeMBallThrown(FTStruct *fp)
     after = ndsFTCommonEntryArenaFree();
     gNdsEntryMBallThrownArenaCost = (before >= after) ? (before - after) : 0u;
 }
-#endif
-#if NDS_P2_YOSHI
 GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
-#endif
-#if NDS_P2_KIRBY
 GObj *efManagerKirbyEntryStarMakeEffect(Vec3f *pos, s32 lr);
-#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -276,7 +256,6 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
 
     if (fp->motion_vars.flags.flag1 != 0)
     {
-#if NDS_P2_PIKACHU
         /* The source's one fkind test (ftcommonentry.c:97): Pikachu's Appear
          * script raises flag1 when the Master Ball opens, and the rays are an
          * EFCommonEffects3 desc this build resolves for him. */
@@ -288,8 +267,6 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
                 NDS_DIAG(gNdsEntryMBallRaysNullCount++);
             }
         }
-#endif
-#if NDS_P2_PURIN
         /* ftcommonentry.c:97's other half: Purin's Appear script raises the
          * same flag when her Master Ball opens. */
         if (fp->fkind == nFTKindPurin)
@@ -300,7 +277,6 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
                 NDS_DIAG(gNdsEntryMBallRaysNullCount++);
             }
         }
-#endif
         /* Source ftCommonAppearUpdateEffects (ftcommonentry.c:91) with its one
          * fkind test resolved: only Pikachu/Purin and their polygon variants
          * spawn Master-Ball rays for flag1, so every landed kind -- Mario, Fox,
@@ -433,9 +409,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 status_id;
     s32 entry_id;
-#if NDS_P4
     const NDSP4Entry *p4_entry = ndsP4Entry(fp);
-#endif
 
     /* Effects are initialized before fighter-special files in VSBattle. The DS
      * effect resolver defers those descriptors, so retry at the same seam
@@ -449,7 +423,6 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->lr = 0;
     fp->status_vars.common.entry.floor_line_id = fp->coll_data.floor_line_id;
 
-#if NDS_P4
     /* A P4 content takes Remix's entry rows (nds_p4.h NDSP4Entry): no
      * effect, or its parent's case below, which then runs on the parent's own
      * special files; the appear status is the content's either way. */
@@ -471,7 +444,6 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         }
     }
     else
-#endif
     if ((fp->fkind == nFTKindMario)
 #if NDS_P2_LUIGI
         /* BattleShip ftcommonentry.c:20 and :192-196. Luigi's row of
@@ -501,22 +473,18 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     }
     else if (fp->fkind == nFTKindFox)
     {
-#if NDS_P4
         /* Remix's wolfen_entry hooks: a content with its own entry files
          * flies in on its own craft. */
         const NDSP4Overrides *p4_overrides = ndsP4Overrides(fp);
-#endif
 
         status_id = (entry_id == 0) ? nFTFoxStatusAppearR :
                                       nFTFoxStatusAppearL;
-#if NDS_P4
         if ((p4_overrides != NULL) && (p4_overrides->fox_entry_arwing != NULL))
         {
             p4_overrides->fox_entry_arwing(
                 fp, &fp->entry_pos, fp->status_vars.common.entry.lr);
         }
         else
-#endif
         efManagerFoxEntryArwingMakeEffect(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
     }
@@ -531,7 +499,6 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
     }
 #endif
-#if NDS_P2_SAMUS
     else if (fp->fkind == nFTKindSamus)
     {
         /* BattleShip ftcommonentry.c:16,209-211. Samus owns her own
@@ -542,7 +509,6 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
                                       nFTSamusStatusAppearL;
         efManagerSamusEntryPointMakeEffect(&fp->entry_pos);
     }
-#endif
 #if NDS_P2_LINK
     else if (fp->fkind == nFTKindLink)
     {
@@ -550,38 +516,10 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * spawns both the entry wave and entry beam from LinkSpecial2. */
         status_id = (entry_id == 0) ? nFTLinkStatusAppearR :
                                       nFTLinkStatusAppearL;
-#if !NDS_P2_LINK_BOMB_TOUR
-#if NDS_P2_LINK_SPECIAL_TOUR
-        gNdsLinkSpecialTourEntryCreatedGObj[0] =
-            efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
-        gNdsLinkSpecialTourEntryCreatedGObj[1] =
-            efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
-        gNdsLinkSpecialTourEntryCreateCount =
-            ((gNdsLinkSpecialTourEntryCreatedGObj[0] != NULL) ? 1u : 0u) +
-            ((gNdsLinkSpecialTourEntryCreatedGObj[1] != NULL) ? 1u : 0u);
-        if (gNdsLinkSpecialTourEntryCreatedGObj[0] != NULL)
-        {
-            gNdsLinkSpecialTourEntryCreateAnim[0] =
-                (u32)gNdsLinkSpecialTourEntryCreatedGObj[0]->anim_frame;
-        }
-        if (gNdsLinkSpecialTourEntryCreatedGObj[1] != NULL)
-        {
-            gNdsLinkSpecialTourEntryCreateAnim[1] =
-                (u32)gNdsLinkSpecialTourEntryCreatedGObj[1]->anim_frame;
-        }
-#else
         efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
         efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
-#endif
-#else
-        /* The isolated Bomb proof starts from source Wait and owns no entry
-         * claim. The integrated Link special tour deliberately does NOT enter
-         * this arm: it proves the real Wave + Beam lifecycle before controller
-         * Neutral-B / Up-B input. */
-#endif
     }
 #endif
-#if NDS_P2_PIKACHU
     else if (fp->fkind == nFTKindPikachu)
     {
         /* BattleShip ftcommonentry.c:22,226-229. Pikachu owns his Appear pair
@@ -610,8 +548,6 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
                                       nFTPikachuStatusAppearL;
         ndsFTCommonEntryMakeMBallThrown(fp);
     }
-#endif
-#if NDS_P2_YOSHI
     else if (fp->fkind == nFTKindYoshi)
     {
         /* BattleShip ftcommonentry.c:19,218-220. Yoshi owns his Appear pair
@@ -620,15 +556,11 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
                                       nFTYoshiStatusAppearL;
         efManagerYoshiEntryEggMakeEffect(&fp->entry_pos);
     }
-#endif
-#if NDS_P2_NESS
     else if (fp->fkind == nFTKindNess)
     {
         /* BattleShip ftcommonentry.c:24. Ness is the second two-status entry ladder (AppearRStart/AppearLStart -> Wait -> End). */
         status_id = (entry_id == 0) ? nFTNessStatusAppearRStart : nFTNessStatusAppearLStart;
     }
-#endif
-#if NDS_P2_PURIN
     else if (fp->fkind == nFTKindPurin)
     {
         /* BattleShip ftcommonentry.c:23,226-229. Jigglypuff shares Pikachu's
@@ -637,15 +569,12 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTPurinStatusAppearR : nFTPurinStatusAppearL;
         ndsFTCommonEntryMakeMBallThrown(fp);
     }
-#endif
-#if NDS_P2_KIRBY
     else if (fp->fkind == nFTKindKirby)
     {
         /* BattleShip ftcommonentry.c:21,222-224. Kirby rides in on the warp star from KirbySpecial2. */
         status_id = (entry_id == 0) ? nFTKirbyStatusAppearR : nFTKirbyStatusAppearL;
         efManagerKirbyEntryStarMakeEffect(&fp->entry_pos, fp->status_vars.common.entry.lr);
     }
-#endif
 #if NDS_P2_GDONKEY
     else if (fp->fkind == nFTKindGDonkey)
     {
@@ -718,12 +647,10 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = nFTCommonStatusEntryNull;
     }
 
-#if NDS_P4
     if (p4_entry != NULL)
     {
         status_id = p4_entry->appear_status[entry_id];
     }
-#endif
     mpCommonSetFighterAir(fp);
     ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
                     FTSTATUS_PRESERVE_NONE);
@@ -736,10 +663,8 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
 #if NDS_P2_CAPTAIN
     if ((fp->fkind == nFTKindCaptain) &&
         (fp->status_vars.common.entry.lr == -1)
-#if NDS_P4
         /* Remix tests the character id here: never a content's. */
         && (p4_entry == NULL)
-#endif
         )
     {
         ftParamMoveDLLink(fighter_gobj, 1);

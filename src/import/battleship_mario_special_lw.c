@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
 
 #include <ft/fighter.h>
 
@@ -26,4 +25,3 @@ void ftMarioSpecialAirLwSwitchStatusGround(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospeciallw.c"
 
-#endif

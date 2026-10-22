@@ -45,11 +45,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_SONIC
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 #include <ef/effect.h>
 #include <it/item.h>
 #include <macros.h>
@@ -59,9 +56,6 @@
 #include <sys/objdef.h>
 #include <wp/weapon.h>
 
-#if !NDS_P2_SAMUS
-#error "P4 Sonic's spring lands through Samus's bomb map routine (NDS_P2_SAMUS)"
-#endif
 
 s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp);
 f32 ftKirbySpecialLwGetGroundAxisYaw(FTStruct *fp);
@@ -182,15 +176,11 @@ static void ndsP4SonicClearFastFall(FTStruct *fp)
  * Sonic's order, for his homing attack (Remix's Kirby branches). */
 static s32 ndsP4SonicNSPStatus(GObj *fighter_gobj, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if ((ftGetStruct(fighter_gobj)->fkind == nFTKindKirby) &&
         (status_id >= SONIC_STATUS_NSP_BEGIN) && (status_id <= SONIC_STATUS_NSP_BOUNCE))
     {
         return NDS_P4_KIRBY_STATUS_SONIC_NSP_BEGIN + (status_id - SONIC_STATUS_NSP_BEGIN);
     }
-#else
-    (void)fighter_gobj;
-#endif
     return status_id;
 }
 
@@ -666,21 +656,9 @@ void ndsP4SonicOnEjectGObj(GObj *gobj)
 #define SONIC_SPRING_MARTH_DSPGA 0xF1
 #define SONIC_SPRING_MARTH_DSPGA_ATTACK 0xF2
 
-#if NDS_P4_FALCO
 #define SONIC_SPRING_IS_FALCO(content_) ((content_) == NDS_P4_ID_FALCO)
-#else
-#define SONIC_SPRING_IS_FALCO(content_) FALSE
-#endif
-#if NDS_P4_BOWSER
 #define SONIC_SPRING_IS_BOWSER(content_) ((content_) == NDS_P4_ID_BOWSER)
-#else
-#define SONIC_SPRING_IS_BOWSER(content_) FALSE
-#endif
-#if NDS_P4_MARTH
 #define SONIC_SPRING_IS_MARTH(content_) ((content_) == NDS_P4_ID_MARTH)
-#else
-#define SONIC_SPRING_IS_MARTH(content_) FALSE
-#endif
 
 typedef struct NDSP4SonicSpringVars
 {
@@ -1617,4 +1595,3 @@ const NDSP4Overrides gNdsP4SonicOverrides = {
     .air_special_block = ndsP4SonicAirSpecialBlock,
 };
 
-#endif /* NDS_P4_SONIC */

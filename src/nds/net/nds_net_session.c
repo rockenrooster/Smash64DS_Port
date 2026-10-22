@@ -53,9 +53,6 @@
 #include <nds/nds_net_session.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_platform.h>
-#if NDS_NET_LAB_HANG
-#include <calico/system/mailbox.h>
-#endif
 #include <nds/nds_net_ui.h>
 
 #include "nds_net_internal.h"
@@ -122,13 +119,6 @@ static u32 sNetBatch;
 static u32 sNetProducedBatch;
 /* VBlank count + 1 since a guest started holding START, 0 when released. */
 static u32 sNetLeaveHeldSince;
-#if NDS_NET_LAB_SOAK
-extern u32 ndsNetLabAutopilotSoakLeave(void);
-#endif
-#if NDS_NET_LAB_LEAVE
-static u32 sNetLabLeaveDone;
-static u32 sNetLabBattles;     /* battle scenes this console has entered */
-#endif
 
 static u32 ndsNetHeader(u8 *buf, u32 kind)
 {
@@ -332,7 +322,7 @@ static void ndsNetPump(void)
     }
 }
 
-#if (NDS_NET_LAB_MATCH || NDS_NET_LAB_LOBBY) && NDS_NET_LAB_INPUT
+#if NDS_NET_LAB_LOBBY && NDS_NET_LAB_INPUT
 /* Lab: a scripted pad per port, so an unattended two-console match exchanges
  * real, different input. A new action every six batches. */
 static u32 ndsNetLocalKeys(u32 batch)
@@ -356,12 +346,6 @@ static u32 ndsNetLocalKeys(u32 batch)
     h *= 0x2C1B3C6Du;
     h ^= h >> 12;
     keys = kActions[h & 31u];
-#if NDS_NET_LAB_TEAMS
-    /* Guests press START every two seconds: it reaches the game only as a
-     * team Stock steal (ndsNetStartIsStockSteal), never as a pause. */
-    if ((gNdsNetLocalPort != 0u) && ((batch % 60u) < 2u))
-        keys |= KEY_START;
-#endif
     return keys;
 }
 #else
@@ -413,26 +397,12 @@ void ndsNetLockstepConfigure(uint32_t session, uint32_t local_port,
 
 /* --- Battle loop seams ---------------------------------------------------- */
 
-#if NDS_NET_LAB_GATE_RADIO
-/* Lab (plan section 12, P3-0C): the four-fighter gate with the radio running.
- * Set to 1 at boot (the sampler's -BootSetGlobals), the battle opens a room
- * and runs the lockstep with this console as its only human, so every batch
- * pumps the radio, sends its INPUT packet and folds the net digest as a net
- * match does; left 0, the same ROM measures without the radio. */
-volatile u32 gNdsNetLabGateRadio;
-#endif
 
 void ndsNetBattleBegin(void)
 {
     u32 p;
     u32 t;
 
-#if NDS_NET_LAB_GATE_RADIO
-    if ((gNdsNetLabGateRadio != 0u) &&
-        (gNdsNetSessionState != NDS_NET_SESSION_RUNNING) &&
-        (ndsNetHostOpen() == 0))
-        ndsNetLockstepConfigure(1u, 0u, 0u, 1u);
-#endif
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return;
     memset(sNetRecords, 0, sizeof(sNetRecords));
@@ -440,9 +410,6 @@ void ndsNetBattleBegin(void)
     memset(sNetPeerDigestValid, 0, sizeof(sNetPeerDigestValid));
     memset(sNetCompared, 0, sizeof(sNetCompared));
     sNetLeaveHeldSince = 0u;
-#if NDS_NET_LAB_LEAVE
-    sNetLabBattles++;
-#endif
     sNetLastDigestBatch = 0xFFFFFFFFu;
     sNetBatch = 0u;
     sNetProducedBatch = 0u;
@@ -518,17 +485,6 @@ static u32 ndsNetLeaveKeys(void)
 {
     u32 keys = ndsPlatformHeldKeys();
 
-#if NDS_NET_LAB_LEAVE
-    /* Lab: the guest holds START from batch 600 of its Nth battle. */
-    if (sNetLabLeaveDone == 0u && sNetLabBattles >= (u32)NDS_NET_LAB_LEAVE &&
-        sNetBatch >= 600u)
-        keys |= KEY_START;
-#endif
-#if NDS_NET_LAB_SOAK
-    /* Lab soak: the guest of every fourth room leaves its first match. */
-    if (ndsNetLabAutopilotSoakLeave() != 0u && sNetBatch >= 600u)
-        keys |= KEY_START;
-#endif
     return keys;
 }
 
@@ -570,9 +526,6 @@ static u32 ndsNetHoldsLeave(u32 stalled)
 static void ndsNetLeaveMatch(void)
 {
     sNetLeaveHeldSince = 0u;
-#if NDS_NET_LAB_LEAVE
-    sNetLabLeaveDone = 1u;
-#endif
     ndsNetUiLine(22, "");
     ndsNetUiLine(21, " You left the match.");
     ndsNetLockstepAbort();
@@ -621,22 +574,6 @@ void ndsNetBattleGate(void)
             return;
         }
     }
-#if NDS_NET_LAB_HANG
-    /* Lab: the guest freezes mid-match (NDS_NET_LAB_HANG). */
-    if (gNdsNetLocalPort != sNetHostPort && sNetBatch == 600u)
-    {
-        if (NDS_NET_LAB_HANG == 2)
-        {
-            static Mailbox sHang;
-            static u32 sHangSlot;
-
-            mailboxPrepare(&sHang, &sHangSlot, 1u);
-            (void)mailboxRecv(&sHang);
-        }
-        for (;;)
-            __asm__ volatile("" ::: "memory");
-    }
-#endif
     ndsNetPump();
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return; /* a player left */
@@ -974,16 +911,7 @@ static u32 ndsNetDigestWeapons(u32 hash)
  * stocks, place, KOs, falls, self-destructs, damage tallies, combo counts and
  * stale-move queue (stale moves scale damage). Net matches only: the replay
  * digest itself, and every gate that compares it, is unchanged. */
-#if NDS_NET_LAB_SOAK
-/* Lab: each batch's net digest after each of its parts in turn -- the replay
- * digest, then the battle state, the stage, the items, the weapons -- so a
- * mismatch names the first part that differs (gdb reads both consoles). */
-volatile u32 gNdsNetLabParts[NDS_NET_DIGEST_RING][5];
-#define NDS_NET_LAB_PART(k, h) \
-    (gNdsNetLabParts[sNetBatch & (NDS_NET_DIGEST_RING - 1u)][k] = (h))
-#else
 #define NDS_NET_LAB_PART(k, h) ((void)0)
-#endif
 
 static u32 ndsNetDigest(void)
 {
@@ -1120,128 +1048,3 @@ void ndsNetBattleEnd(void)
 
 /* --- Lab: two consoles, fixed match ------------------------------------- */
 
-#if NDS_NET_LAB_MATCH
-
-volatile u32 gNdsNetLabRole;          /* 1 host, 2 guest */
-volatile u32 gNdsNetLabHandshakeVBlanks;
-volatile u32 gNdsNetLabSeed;
-
-static void ndsNetLabDescriptor(NdsMatchConfig *cfg)
-{
-    ndsMatchConfigLoadMarioFoxDreamLand(cfg);
-    cfg->fighters[0].fkind = nFTKindMario;
-    cfg->fighters[0].pkind = nFTPlayerKindMan;
-    cfg->fighters[1].fkind = nFTKindFox;
-    cfg->fighters[1].pkind = nFTPlayerKindMan;
-    cfg->fighters[2].fkind = nFTKindNull;
-    cfg->fighters[2].pkind = nFTPlayerKindNot;
-    cfg->fighters[3].fkind = nFTKindNull;
-    cfg->fighters[3].pkind = nFTPlayerKindNot;
-    cfg->game_rules = SCBATTLE_GAMERULE_TIME;
-    cfg->time_limit = 2;
-    cfg->item_toggles = 0u;
-}
-
-int ndsNetLabMatchHandshake(void)
-{
-    u8 mac[6];
-    u8 peer[6];
-    u8 buf[NDS_NET_MAX_PAYLOAD + 2u];
-    u8 src[6];
-    u32 have_peer = 0u;
-    u32 is_host = 0u;
-    u32 seed = 0u;
-    u32 started = 0u;
-    u32 acked = 0u;
-    u32 vblanks;
-    NdsMatchConfig cfg;
-
-    if (ndsNetLinkStart(NDS_NET_DEFAULT_CHANNEL) != NDS_NET_OK)
-        return -1;
-    ndsNetLinkGetMac(mac);
-    sNetSession = 0u;
-    for (vblanks = 0u; vblanks < 60u * 60u; vblanks++)
-    {
-        u32 len;
-        u32 n;
-
-        /* Discovery: everyone says hello until the roles are settled. */
-        if (!started)
-        {
-            n = ndsNetHeader(buf, NDS_NET_KIND_HELLO);
-            memcpy(buf + n, mac, 6);
-            n += 6u;
-            buf[n++] = 0u;
-            buf[n++] = 0u;
-            ndsNetLinkSendPacket(buf, n);
-        }
-        if (have_peer && is_host)
-        {
-            /* START until the guest acknowledges, then a few more. */
-            sNetSession = seed | 1u;
-            n = ndsNetHeader(buf, NDS_NET_KIND_START);
-            ndsNetPut32(buf + n, seed);
-            n += 4u;
-            buf[n++] = (u8)NDS_NET_DELAY_BATCHES;
-            buf[n++] = 1u; /* the guest's port */
-            buf[n++] = 0u;
-            buf[n++] = 0u;
-            ndsNetLinkSendPacket(buf, n);
-            started = 1u;
-            if (acked && acked++ > 30u)
-                break;
-        }
-        while ((len = ndsNetLinkRecvPacket(src, buf, sizeof(buf))) != 0u)
-        {
-            u32 kind;
-            u32 session;
-
-            if (ndsNetHeaderRead(buf, len, &kind, &session) == 0u)
-                continue;
-            if (kind == NDS_NET_KIND_HELLO && !have_peer && len >= 14u)
-            {
-                memcpy(peer, buf + 8, 6);
-                have_peer = 1u;
-                is_host = (memcmp(mac, peer, 6) < 0) ? 1u : 0u;
-                if (is_host)
-                {
-                    seed = (u32)cpuGetTiming() ^ ((u32)mac[5] << 24) ^ 0x5EEDu;
-                }
-            }
-            else if (kind == NDS_NET_KIND_START && !is_host && len >= 16u)
-            {
-                seed = ndsNetGet32(buf + 8);
-                sNetSession = session;
-                started = 1u;
-            }
-            else if (kind == NDS_NET_KIND_START_ACK && is_host && session == sNetSession)
-            {
-                if (!acked)
-                    acked = 1u;
-            }
-        }
-        if (started && !is_host)
-        {
-            n = ndsNetHeader(buf, NDS_NET_KIND_START_ACK);
-            buf[n++] = 1u;
-            buf[n++] = 0u;
-            ndsNetLinkSendPacket(buf, n);
-            if (++acked > 45u)
-                break;
-        }
-        swiWaitForVBlank();
-    }
-    gNdsNetLabHandshakeVBlanks = vblanks;
-    if (!started)
-        return -2;
-    gNdsNetLabRole = is_host ? 1u : 2u;
-    gNdsNetLabSeed = seed;
-    ndsNetLabDescriptor(&cfg);
-    gNdsMatchConfig = cfg;
-    ndsMatchConfigApply(&gNdsMatchConfig);
-    ndsNetLockstepConfigure(sNetSession, is_host ? 0u : 1u, 0u, 0x3u);
-    ndsNetLockstepSetSeed(seed);
-    return 0;
-}
-
-#endif

@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
 
 #include <PR/gbi.h>
 #include <PR/gu.h>
@@ -281,15 +280,12 @@ void mpCommonRunWeaponCollisionDefault(
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmain.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmap.c"
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
 /* P4: the hit-collision proc a weapon registers (below) is the dispatcher
  * after the include; the definition, told apart by its parentheses, is the
  * source body. */
 #define wpProcessProcHitCollisions(g_) ndsBaseWpProcessProcHitCollisions(g_)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpprocess.c"
-#if NDS_P4
 #undef wpProcessProcHitCollisions
 
 GObj *efManagerQuakeMakeEffect(s32 magnitude);
@@ -302,7 +298,6 @@ void wpPikachuThunderHeadSetDestroy(GObj *weapon_gobj, sb32 is_destroy);
  * (Dedede's builds have Kirby); without them no thunder exists. */
 static void ndsP4WpAbsorbThunderTrail(GObj *weapon_gobj)
 {
-#if NDS_P2_PIKACHU || NDS_P2_KIRBY
     WPStruct *wp = wpGetStruct(weapon_gobj);
     GObj *other_gobj;
 
@@ -330,9 +325,6 @@ static void ndsP4WpAbsorbThunderTrail(GObj *weapon_gobj)
         wpMainDestroyWeapon(other_gobj);
         break;
     }
-#else
-    (void)weapon_gobj;
-#endif
 }
 
 /* wpProcessProcHitCollisions (decomp wpprocess.c:463) for a weapon a custom
@@ -452,7 +444,6 @@ void wpProcessProcHitCollisions(GObj *weapon_gobj)
     }
     ndsBaseWpProcessProcHitCollisions(weapon_gobj);
 }
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpdisplay.c"
 
 __attribute__((used)) volatile u32 gNdsWeaponPoolRefusalCount;
@@ -460,13 +451,6 @@ __attribute__((used)) volatile u32 gNdsWeaponPoolRefusalCount;
 __attribute__((used)) volatile u32 gNdsWeaponFileMissingCount;
 __attribute__((used)) volatile u32 gNdsWeaponPoolLiveHighWater;
 static u32 sNdsWeaponPoolLiveCount;
-#if NDS_P2_YOSHI_BUG_PROOF
-volatile u32 gNdsYoshiEggCtorCount;
-volatile u32 gNdsYoshiEggCtorRawData;
-volatile u32 gNdsYoshiEggCtorMappedData;
-volatile u32 gNdsYoshiEggCtorModelBase;
-volatile u32 gNdsYoshiEggCtorLiveDL;
-#endif
 
 static void ndsWpManagerRecordLiveAlloc(void)
 {
@@ -551,7 +535,6 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
                               wp_desc->o_attributes);
     ndsRelocEnsureWeaponAttributesNormalized(attr);
     weapon_data = attr->data;
-#if NDS_P2_YOSHI
     /* YoshiMain's EggThrow WPAttributes has one cross-file data edge:
      * YoshiModel source root 0xA860. FPC2 compact packs preserve that source
      * root as a relocated identity cell, so the raw external pointer stored in
@@ -568,17 +551,11 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
         const void *mapped_egg_root = ndsRelocNativeRootAddress(
             gFTDataYoshiModel, NDS_NATIVE_YOSHI_EGG_ROOT);
 
-#if NDS_P2_YOSHI_BUG_PROOF
-        gNdsYoshiEggCtorRawData = (u32)(uintptr_t)attr->data;
-        gNdsYoshiEggCtorMappedData = (u32)(uintptr_t)mapped_egg_root;
-        gNdsYoshiEggCtorModelBase = (u32)(uintptr_t)gFTDataYoshiModel;
-#endif
         if (mapped_egg_root != NULL)
         {
             weapon_data = (void *)mapped_egg_root;
         }
     }
-#endif
     weapon_gobj->user_data.p = wp;
     wp->weapon_gobj = weapon_gobj;
     wp->kind = wp_desc->kind;
@@ -723,14 +700,6 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
             wpDisplayDObjDLLinks : wpDisplayDLHead1;
     }
     gcAddGObjDisplay(weapon_gobj, proc_display, 14, GOBJ_PRIORITY_DEFAULT, ~0);
-#if NDS_P2_YOSHI_BUG_PROOF
-    if (wp_desc->kind == nWPKindEggThrow)
-    {
-        gNdsYoshiEggCtorLiveDL =
-            (u32)(uintptr_t)DObjGetStruct(weapon_gobj)->dl;
-        gNdsYoshiEggCtorCount++;
-    }
-#endif
 
     if (attr->p_mobjsubs != NULL)
     {
@@ -834,4 +803,3 @@ void wpManagerAllocWeapons(void)
     sNdsWeaponPoolLiveCount = 0;
 }
 
-#endif

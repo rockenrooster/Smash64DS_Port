@@ -26,13 +26,10 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_WOLF
 
 #include <ef/effect.h>
 #include <wp/weapon.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftFoxSpecialHiHoldInitStatusVars(GObj *fighter_gobj);
@@ -747,12 +744,10 @@ static void ndsP4WolfNSPAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 status_id = 0xE1;
 
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
         status_id = NDS_P4_KIRBY_STATUS_WOLF_NSP_GROUND;
     }
-#endif
     mpCommonSetFighterGround(fp);
     ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, 1);
 }
@@ -763,4 +758,3 @@ void ndsP4WolfNSPAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4WolfNSPAirToGround);
 }
 
-#endif /* NDS_P4_WOLF */

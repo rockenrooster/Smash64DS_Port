@@ -247,7 +247,6 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     NDSRendererStats *stats,
     u32 *out_hardware_started)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u8 *asset_base = asset_base_ptr;
     NDSNativeHierarchyTables tables;
     NDSRendererTraversalState *state =
@@ -256,20 +255,6 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     u32 native_triangle_count = 0u;
     u32 matrix_generation = 1u;
     u32 joint_index;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    volatile NDSRendererOwnerProfile *m2_owner =
-        ndsRendererProfileM2Owner();
-    u32 m2_total_start = cpuGetTiming();
-    u32 m2_lighting_before = (m2_owner != NULL) ?
-        m2_owner->m2_lighting_shading_ticks : 0u;
-    u32 m2_root_gx_before = (m2_owner != NULL) ?
-        m2_owner->m2_root_gx_ticks : 0u;
-    u32 m2_run_prepare_before = (m2_owner != NULL) ?
-        m2_owner->m2_run_prepare_ticks : 0u;
-    u32 m2_emit_before = (m2_owner != NULL) ?
-        m2_owner->m2_corner_emit_account_ticks : 0u;
-#endif
 
     (void)callback_user;
     if (out_hardware_started == NULL)
@@ -287,27 +272,12 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     if (ndsRendererNativePreflightFighterHierarchy(
             slot, asset_base, hierarchy, callback, stats, &tables) == FALSE)
     {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        ndsRendererProfileM2FinishProduction(
-            m2_owner, m2_total_start, m2_lighting_before,
-            m2_root_gx_before, m2_run_prepare_before,
-            m2_emit_before, FALSE);
-#endif
         return FALSE;
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_run_prepare_count += (slot == 0u) ? 30u : 37u;
-        m2_owner->m2_lighting_epoch_count += (slot == 0u) ? 18u : 31u;
-    }
-#endif
 
     ndsRendererInitTraversalState(
         state, NULL, stats, NULL, NULL, 0u);
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     {
         m4x4 camera_hardware;
 
@@ -337,12 +307,8 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     {
         u32 packed = tables.schedule[joint_index];
         u32 binding = (packed >> 5) & 31u;
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
         m4x4 local_hardware;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        u32 m2_gx_start = cpuGetTiming();
-#endif
 
         ndsRendererHardwareEndBatch();
         ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
@@ -359,13 +325,6 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
             NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY;
         sNdsRendererHardwareMatrixGeneration = matrix_generation;
         sNdsRendererHardwareMatrixLoaded = TRUE;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        if (m2_owner != NULL)
-        {
-            m2_owner->m2_root_gx_ticks += cpuGetTiming() - m2_gx_start;
-        }
-#endif
 #else
         matrix_generation++;
 #endif
@@ -373,24 +332,11 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
         {
             u32 palette_slot = tables.cross_slots[binding];
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            u32 m2_gx_start = cpuGetTiming();
-#endif
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
             if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
             {
                 glStoreMatrix((int)palette_slot);
             }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (m2_owner != NULL)
-            {
-                m2_owner->m2_root_gx_ticks +=
-                    cpuGetTiming() - m2_gx_start;
-                m2_owner->m2_root_gx_count++;
-            }
-#endif
 #endif
             ndsRendererNativeCommitHierarchyRoot(
                 asset_base, &tables.roots[binding],
@@ -411,23 +357,11 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
 
                 if ((cursor_packed & 0x8000u) != 0u)
                 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                    u32 m2_gx_start = cpuGetTiming();
-#endif
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
                     ndsRendererHardwareEndBatch();
                     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
                     glPopMatrix(1);
                     stats->matrix_pop_count++;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                    if (m2_owner != NULL)
-                    {
-                        m2_owner->m2_root_gx_ticks +=
-                            cpuGetTiming() - m2_gx_start;
-                    }
-#endif
 #endif
                 }
                 cursor = parent;
@@ -443,33 +377,8 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
         sNdsRendererFastOwnerTriangleCount[
             (u32)sNdsRendererRuntimeOwner] += native_triangle_count;
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_corner_emit_run_count += native_run_count;
-    }
-    ndsRendererProfileM2FinishProduction(
-        m2_owner, m2_total_start, m2_lighting_before,
-        m2_root_gx_before, m2_run_prepare_before,
-        m2_emit_before, TRUE);
-#endif
     return TRUE;
-#else
-    (void)slot;
-    (void)asset_base_ptr;
-    (void)hierarchy;
-    (void)callback;
-    (void)callback_user;
-    (void)stats;
-    if (out_hardware_started != NULL)
-    {
-        *out_hardware_started = FALSE;
-    }
-    return FALSE;
-#endif
 }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererNativeStageValidateStateSpanTopology(
     const NDSNativeStageStateSpan *span)
 {
@@ -529,7 +438,6 @@ static s32 ndsRendererNativeStageValidateStateSpanTopology(
     return TRUE;
 }
 
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 static u32 ndsRendererNativeStageGeneratedHashU32(u32 hash, u32 value)
 {
     u32 shift;
@@ -695,15 +603,8 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
     {
         return FALSE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    if (inject_fault == 0u)
-    {
-        NDS_DIAG(gNdsRendererM3GeneratedSegment0CertificateValidationCount++);
-    }
-#endif
     return TRUE;
 }
-#endif
 
 /* A run whose source corners carry a per-VERTEX alpha gradient on an
  * untextured material; it samples the alpha ramp that
@@ -1090,7 +991,6 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     }
     sNdsNativeStageWs.dense_offsets[
         NDS_NATIVE_STAGE_RUN_COUNT] = (u16)prepared_dense_count;
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
     if ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT !=
          NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) ||
         /* A packet may carry dense vertices no run references: the generator's
@@ -1138,23 +1038,6 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
      * another stage's tables. */
     return (NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 != 0u) ?
         ndsRendererNativeStageValidateGeneratedSegment0(FALSE) : TRUE;
-#else
-    return ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT ==
-             NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) &&
-            (prepared_dense_count == NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) &&
-            (summary->raw_triangles == NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) &&
-            (summary->projected_no_z_triangles ==
-             NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES) &&
-            (summary->projected_range_triangles ==
-             NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES) &&
-            (summary->cross_runs ==
-             NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) &&
-            (summary->cross_triangles ==
-             NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) &&
-            (summary->cross_foreign_corners ==
-             NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT)) ?
-        TRUE : FALSE;
-#endif
 }
 
 static s32 ndsRendererNativeStageValidateTopology(
@@ -1163,32 +1046,16 @@ static s32 ndsRendererNativeStageValidateTopology(
 {
     s32 injected_fault = FALSE;
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    if ((sNdsNativeStageValidationCache.valid != FALSE) &&
-        (sNdsNativeStageTopologyFaultInjected == FALSE))
-    {
-        sNdsNativeStageValidationCache.stamp ^= 1u;
-        sNdsNativeStageTopologyFaultInjected = TRUE;
-        NDS_DIAG(gNdsRendererM3TopologyFaultInjectionCount++);
-        injected_fault = TRUE;
-    }
-#endif
     if ((sNdsNativeStageValidationCache.valid != FALSE) &&
         (sNdsNativeStageValidationCache.generation ==
          frame->topology_generation) &&
         (sNdsNativeStageValidationCache.stamp == frame->topology_stamp))
     {
         *summary = sNdsNativeStageValidationCache.summary;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        NDS_DIAG(gNdsRendererM3TopologyCacheHitCount++);
-#endif
         return TRUE;
     }
     if (sNdsNativeStageValidationCache.valid != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        NDS_DIAG(gNdsRendererM3TopologyStampMismatchCount++);
-#endif
     }
     sNdsNativeStageValidationCache.valid = FALSE;
     if (ndsRendererNativeStageValidateTopologyFull(frame, summary) == FALSE)
@@ -1199,17 +1066,7 @@ static s32 ndsRendererNativeStageValidateTopology(
     sNdsNativeStageValidationCache.generation = frame->topology_generation;
     sNdsNativeStageValidationCache.stamp = frame->topology_stamp;
     sNdsNativeStageValidationCache.valid = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3TopologyFullValidationCount++);
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    if (injected_fault != FALSE)
-    {
-        NDS_DIAG(gNdsRendererM3TopologyFaultRevalidationCount++);
-    }
-#else
     (void)injected_fault;
-#endif
     return TRUE;
 }
 
@@ -1313,46 +1170,6 @@ static void ndsRendererNativeStageInputVertex(
     input->a = (u8)dense->rgba;
 }
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-/* Task 103 E6. Splits ndsRendererNativeStagePrepareRun into its head (policy
- * match, the two memsets, texture resolve) and its per-dense-vertex loop, and
- * counts both the dense vertices touched and the subset that take the
- * camera-dependent near-plane transform.
- *
- * The point of the split: the loop's colour and texcoord terms read only
- * compile-time vertex data plus per-run material state, while only near_inside
- * reads frame->binding_composed, which the moving camera changes every frame.
- * The gap between DenseCount and NearCount is therefore the size of the memo,
- * and this measures it before anyone proposes one. */
-volatile u32 gNdsTask103RunHeadTicks;
-volatile u32 gNdsTask103RunDenseTicks;
-volatile u32 gNdsTask103RunDenseCount;
-volatile u32 gNdsTask103RunNearCount;
-/* R2-02 F1/F3. The four actor segments (1/2/3/6 -- Whispy's eyes and mouth,
- * both flower beds) cost 43,998 ticks/frame for 21 triangles, nearly double
- * segment 4's 22,843 for 76, so the split is by *branch*: which matrix path
- * BeginRun takes, which of EmitNoZTriangle's three paths a triangle lands on,
- * and where BeginRun's non-matrix half goes.
- *
- * F0's adjacent-run redundancy comparison lived here too and has been removed.
- * It answered its question once -- 1.0 of 21 runs repeats the previous run's
- * state, 18 rebind a texture -- and it read six prepared_run fields inside
- * ndsRendererCommitNativeStageSegment, whose consumed-field closure the stage
- * falsifier polices. Classifying them would have asserted an immutability F0
- * itself disproved. */
-volatile u32 gNdsTask103BeginMtxTicks[4];
-volatile u32 gNdsTask103BeginMtxCount[4];
-volatile u32 gNdsTask103NoZPath[4];
-volatile u32 gNdsTask103NoZWorldTicks;
-volatile u32 gNdsTask103NoZProjTicks;
-/* F3. The matrix branch is 12,341 of BeginRun's 28,880; the other 16,539 over
- * 21 runs is this tail. Split it, because the texture bind is the one part a
- * specialized actor path could not avoid -- the DS still has to rebind on 18 of
- * 21 runs -- and that sets the floor any rewrite has to beat. */
-volatile u32 gNdsTask103BeginEndBatchTicks;
-volatile u32 gNdsTask103BeginTexTicks;
-volatile u32 gNdsTask103BeginTailTicks;
-#endif
 
 /* Which decline of ndsRendererNativeStagePrepareRun ran last (1-based, source
  * order) and its run index; the owner reports only its own step 4-6. */
@@ -1541,10 +1358,6 @@ ndsRendererNativeStageAlphaRampResolve(
             sNdsRendererHardwareTextureKeyGeneration++;
         }
         entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        entry->profile_width = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH;
-        entry->profile_height = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT;
-#endif
         entry->ready = TRUE;
         sNdsNativeStageAlphaRampVramReset =
             gNdsRendererSceneTextureVramResetCount;
@@ -1589,18 +1402,8 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 dense_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
-#if NDS_TASK103_STAGE_RUN_PHASE
-    u32 task103_run_entry;
-    u32 task103_run_mark;
-#endif
 #if NDS_TASK36_REJECT_TRACE
     gNdsRendererTask36PrepareRunRejectReason = 0u;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 vertex_prepare_start;
-    u32 residual_vertex_ticks_start;
-    u32 residual_near_ticks_start;
-    u32 residual_near_count_start;
 #endif
 
     /* R2-07 leg A. THE write seam for runs[]: this function is its only writer,
@@ -1617,9 +1420,6 @@ static s32 ndsRendererNativeStagePrepareRun(
      * every shipping and gate target, so this line changes no measured
      * behaviour -- it stops the guard depending on a probe flag being off. */
     ndsRendererNativeStagePreparedTextureProofDrop();
-#if NDS_TASK103_STAGE_RUN_PHASE
-    task103_run_entry = cpuGetTiming();
-#endif
     epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
     if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
@@ -1675,9 +1475,6 @@ static s32 ndsRendererNativeStagePrepareRun(
             NDS_DIAG(gNdsNativeStageFilterPhase16RunCount++);
         }
     }
-#if NDS_R2_STAGE_ROUTE_PROBE
-    gNdsR2StageTextureProbeRun = run_index;
-#endif
     /* Held only across this run's texture resolve below (and cleared on
      * every exit from it): the request keys the I tile's texture with its
      * intensity as coverage, for this run alone. */
@@ -1692,9 +1489,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         if ((use_texture != FALSE) ||
             (ndsRendererNativeStageAlphaRampResolve(&resolved) == FALSE))
         {
-#if NDS_R2_STAGE_ROUTE_PROBE
-            gNdsR2StageTextureProbeRun = 0xffffffffu;
-#endif
             gNdsNativeStagePrepareRunFailStep = 7u;
             gNdsNativeStagePrepareRunFailRun = run_index;
             sNdsRendererHardwareIntensityCoverage = 0u;
@@ -1731,9 +1525,6 @@ static s32 ndsRendererNativeStagePrepareRun(
          (ndsRendererHardwareResolveStageSourceFrameTexture(
               stats, frame->config, state, &resolved) == FALSE)))
     {
-#if NDS_R2_STAGE_ROUTE_PROBE
-        gNdsR2StageTextureProbeRun = 0xffffffffu;
-#endif
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 2u;
         NDS_R2_STAGE_REJECT_COUNT(2);
@@ -1758,9 +1549,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         return FALSE;
     }
     sNdsRendererHardwareIntensityCoverage = 0u;
-#if NDS_R2_STAGE_ROUTE_PROBE
-    gNdsR2StageTextureProbeRun = 0xffffffffu;
-#endif
     if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
     {
         if ((stats->texture_state_flags &
@@ -1826,22 +1614,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         gNdsNativeStagePrepareRunFailRun = run_index;
         return FALSE;
     }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    residual_vertex_ticks_start = gNdsRendererM3Phase0VertexPrepareTicks;
-    residual_near_ticks_start = gNdsRendererM3Phase0NearTransformTicks;
-    residual_near_count_start = gNdsRendererM3Phase0NearTransformCount;
-    vertex_prepare_start = ndsRendererM3Phase0Tick();
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-    /* E6. Everything up to here is per-run head work, of which the texture
-     * resolve is the known-expensive part (Task 98: ~1,621/bind). The loop
-     * below is per dense vertex, and its colour and texcoord terms depend only
-     * on compile-time vertex data plus per-run material state -- only
-     * near_inside reads the camera-composed matrix. Splitting head from loop
-     * sizes the memo before anyone proposes it. */
-    NDS_DIAG(gNdsTask103RunHeadTicks += cpuGetTiming() - task103_run_entry);
-    task103_run_mark = cpuGetTiming();
-#endif
     for (dense_offset = first_visit_offset;
          dense_offset < first_visit_end;
          dense_offset++)
@@ -1864,12 +1636,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         }
         dense = &sNdsNativeStageVertices[dense_index];
         prepared_dense = &sNdsNativeStagePreparedDense[dense_index];
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_DIAG(gNdsRendererM3Phase0PreparedDenseCount++);
-#endif
-#if NDS_R2_FLASH_PROBE
-        gNdsR2FlashRawPending = 0u;
-#endif
         prepared_dense->packed_color =
             ndsRendererHardwarePackedValidVertexColor(
                 material_color, use_material_color,
@@ -1895,10 +1661,8 @@ static s32 ndsRendererNativeStagePrepareRun(
          * ZeroW and Outside are subsets of it. */
         if ((gNdsNativeStageNearCensusEnabled != 0u) &&
             (run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-#if NDS_TASK36_HW_COMPOSE
             && ((frame->rigid_binding_mask &
                  ((u64)1u << dense->matrix_binding)) == 0u)
-#endif
            )
         {
             NDSRendererInputVertex census_input;
@@ -1922,7 +1686,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         if (run->submit_class ==
                   NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
-#if NDS_TASK36_HW_COMPOSE
             if ((frame->rigid_binding_mask &
                  ((u64)1u << dense->matrix_binding)) != 0u)
             {
@@ -1931,25 +1694,15 @@ static s32 ndsRendererNativeStagePrepareRun(
                 prepared_dense->near_inside = TRUE;
             }
             else
-#endif
             {
             NDSRendererInputVertex input;
             NDSRendererClipVertex20p12 clip;
 
             ndsRendererNativeStageInputVertex(dense, &input);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            u32 near_transform_start = ndsRendererM3Phase0Tick();
-#endif
 
             ndsRendererTransformVertex20p12(
                 &frame->binding_composed[dense->matrix_binding],
                 &input, &clip);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            ndsRendererM3Phase0FinishSpan(
-                &gNdsRendererM3Phase0NearTransformTicks,
-                near_transform_start);
-            gNdsRendererM3Phase0NearTransformCount++;
-#endif
             if (clip.w == 0)
             {
 #if NDS_TASK36_REJECT_TRACE
@@ -1969,36 +1722,9 @@ static s32 ndsRendererNativeStagePrepareRun(
             {
                 prepared_dense->near_inside = FALSE;
             }
-#if NDS_TASK103_STAGE_RUN_PHASE
-            NDS_DIAG(gNdsTask103RunNearCount++);
-#endif
             }
         }
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103RunDenseCount++);
-#endif
     }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103RunDenseTicks += cpuGetTiming() - task103_run_mark);
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0FinishSpan(
-        &gNdsRendererM3Phase0VertexPrepareTicks, vertex_prepare_start);
-    if (run_index >= NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT)
-    {
-        gNdsRendererM3ResidualVertexTicks +=
-            gNdsRendererM3Phase0VertexPrepareTicks -
-            residual_vertex_ticks_start;
-        gNdsRendererM3ResidualNearTicks +=
-            gNdsRendererM3Phase0NearTransformTicks -
-            residual_near_ticks_start;
-        gNdsRendererM3ResidualDenseCount +=
-            first_visit_end - first_visit_offset;
-        gNdsRendererM3ResidualNearCount +=
-            gNdsRendererM3Phase0NearTransformCount -
-            residual_near_count_start;
-    }
-#endif
     if (alpha == UINT_MAX)
     {
 #if NDS_TASK36_REJECT_TRACE
@@ -2015,7 +1741,6 @@ static s32 ndsRendererNativeStagePrepareRun(
     return TRUE;
 }
 
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats,
@@ -2025,9 +1750,6 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
     const NDSNativeStageGeneratedCertificate *certificate =
         &sNdsNativeStageSegment0ColdCertificate;
 
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3GeneratedSegment0AttemptCount++);
-#endif
     if ((frame == NULL) || (stats == NULL) || (state == NULL) ||
         (epoch_mask == NULL) ||
         (sNdsNativeStageValidationCache.valid == FALSE))
@@ -2097,20 +1819,6 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
         stats->blend_color = (u32)(w1); \
         stats->color_command_count++; \
     } while (0)
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-#define NDS_TASK26_RUN(run_index) \
-    do { \
-        u32 task26_prepare_start = ndsRendererM3Phase0Tick(); \
-        s32 task26_prepare_result = ndsRendererNativeStagePrepareRun( \
-            (u32)(run_index), frame, stats, state, epoch_mask); \
-        ndsRendererM3Phase0FinishSpan( \
-            &gNdsRendererM3Phase0PrepareRunTicks, task26_prepare_start); \
-        if (task26_prepare_result == FALSE) \
-        { \
-            goto fail; \
-        } \
-    } while (0)
-#else
 #define NDS_TASK26_RUN(run_index) \
     do { \
         if (ndsRendererNativeStagePrepareRun( \
@@ -2119,7 +1827,6 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
             goto fail; \
         } \
     } while (0)
-#endif
     NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM;
 #undef NDS_TASK26_RUN
 #undef NDS_TASK26_BLEND
@@ -2133,128 +1840,12 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
 #undef NDS_TASK26_COMBINE
 #undef NDS_TASK26_OTHERMODE
 #undef NDS_TASK26_SYNC
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3GeneratedSegment0SuccessCount++);
-    NDS_DIAG(gNdsRendererM3GeneratedSegment0RunCount += certificate->run_count);
-    gNdsRendererM3GeneratedSegment0TriangleCount +=
-        certificate->triangle_count;
-    gNdsRendererM3GeneratedSegment0EpochCount +=
-        certificate->texture_epoch_count;
-    gNdsRendererM3GeneratedSegment0MaterialCount +=
-        certificate->material_count;
-#endif
     return TRUE;
 
 fail:
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3GeneratedSegment0PreGxFallbackCount++);
-#endif
     return FALSE;
 }
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
-    const NDSRendererStats *stats,
-    const NDSRendererTraversalState *state,
-    u64 epoch_mask,
-    u32 *out_hash_a,
-    u32 *out_hash_b,
-    u32 *out_field_count)
-{
-    u32 hash_a = 2166136261u;
-    u32 hash_b = 0x9e3779b9u;
-    u32 field_count = 0u;
-    u32 i;
-
-#define NDS_TASK26_HASH_FIELD(value) \
-    do { \
-        u32 task26_value = (u32)(value); \
-        hash_a = (hash_a ^ task26_value) * 16777619u; \
-        hash_b ^= task26_value + 0x9e3779b9u + \
-            (hash_b << 6) + (hash_b >> 2); \
-        hash_b = ((hash_b << 7) | (hash_b >> 25)) * 0x85ebca6bu; \
-        field_count++; \
-    } while (0)
-
-    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT; i++)
-    {
-        u32 run_index = sNdsNativeStageSegment0HotRuns[i].run_index;
-        const NDSNativeStagePreparedRun *prepared =
-            &sNdsNativeStageWs.runs[run_index];
-
-        NDS_TASK26_HASH_FIELD((uintptr_t)prepared->texture_entry);
-        NDS_TASK26_HASH_FIELD(prepared->texture_name);
-        NDS_TASK26_HASH_FIELD(prepared->texture_params);
-        NDS_TASK26_HASH_FIELD(prepared->texture_generation);
-        NDS_TASK26_HASH_FIELD(prepared->poly_fmt);
-        NDS_TASK26_HASH_FIELD(prepared->texture_width);
-        NDS_TASK26_HASH_FIELD(prepared->texture_height);
-        NDS_TASK26_HASH_FIELD(prepared->texture_format);
-        NDS_TASK26_HASH_FIELD(prepared->textured);
-        NDS_TASK26_HASH_FIELD(prepared->alpha_test);
-        NDS_TASK26_HASH_FIELD(prepared->alpha_ref);
-    }
-    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT; i++)
-    {
-        u32 dense_index =
-            sNdsNativeStageWs.dense_indices[i];
-        const NDSNativeStagePreparedDense *prepared =
-            &sNdsNativeStagePreparedDense[dense_index];
-
-        NDS_TASK26_HASH_FIELD(prepared->packed_color);
-        NDS_TASK26_HASH_FIELD((u16)prepared->s);
-        NDS_TASK26_HASH_FIELD((u16)prepared->t);
-        NDS_TASK26_HASH_FIELD((u16)prepared->near_inside);
-    }
-    NDS_TASK26_HASH_FIELD(stats->sync_command_count);
-    NDS_TASK26_HASH_FIELD(stats->state_command_count);
-    NDS_TASK26_HASH_FIELD(stats->othermode_command_count);
-    NDS_TASK26_HASH_FIELD(stats->ignored_state_command_count);
-    NDS_TASK26_HASH_FIELD(stats->first_othermode_opcode);
-    NDS_TASK26_HASH_FIELD(stats->first_othermode_w0);
-    NDS_TASK26_HASH_FIELD(stats->first_othermode_w1);
-    NDS_TASK26_HASH_FIELD(stats->othermode_h);
-    NDS_TASK26_HASH_FIELD(stats->othermode_l);
-    NDS_TASK26_HASH_FIELD(stats->geometry_mode);
-    NDS_TASK26_HASH_FIELD(stats->geometry_clear_mask);
-    NDS_TASK26_HASH_FIELD(stats->geometry_set_mask);
-    NDS_TASK26_HASH_FIELD(stats->geometry_command_count);
-    NDS_TASK26_HASH_FIELD(stats->texture_mask);
-    NDS_TASK26_HASH_FIELD(stats->texture_command_count);
-    NDS_TASK26_HASH_FIELD(stats->texture_state_flags);
-    NDS_TASK26_HASH_FIELD(stats->texture_image);
-    NDS_TASK26_HASH_FIELD(stats->texture_combine_w0);
-    NDS_TASK26_HASH_FIELD(stats->texture_combine_w1);
-    NDS_TASK26_HASH_FIELD(stats->texture_combine_count);
-    NDS_TASK26_HASH_FIELD(stats->color_command_count);
-    NDS_TASK26_HASH_FIELD(stats->blend_color);
-    NDS_TASK26_HASH_FIELD(stats->texture_source_hash1);
-    NDS_TASK26_HASH_FIELD(stats->texture_source_hash2);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_valid);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_enabled);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_name);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_material_color);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_scale_s);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_scale_t);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_origin_s);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_origin_t);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_offset);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_vertex_flags);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_source_zbuffered);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_decal_depth);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_prim_depth);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_alpha_constant);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_poly_alpha);
-    NDS_TASK26_HASH_FIELD(state->texture_prepare_poly_fmt);
-    NDS_TASK26_HASH_FIELD((u32)epoch_mask);
-#undef NDS_TASK26_HASH_FIELD
-
-    *out_hash_a = hash_a;
-    *out_hash_b = hash_b;
-    *out_field_count = field_count;
-}
-#endif
-#endif
 
 /* The stage run witness (per-run RoofSnap publication and the emit-shortfall
  * snapshot/accounting) is lab visibility read by
@@ -2374,7 +1965,7 @@ static inline void ndsRendererNativeStageWriteVertex16(u32 xy, u32 z)
     ndsRendererHardwareWriteVertex16Words(xy, z);
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 static u32 ndsRendererBenchmarkSegment0NormalizeAssetAddress(
     u32 address, u32 *valid)
 {
@@ -2541,7 +2132,6 @@ static void ndsRendererBenchmarkSegment0CheckpointRun(u32 run_offset)
 }
 #endif
 
-#if NDS_TASK36_HW_COMPOSE
 static s32 ndsRendererNativeStageTask36BindingIsRigid(u32 binding_index)
 {
     return ((binding_index < NDS_NATIVE_STAGE_BINDING_COUNT) &&
@@ -2677,9 +2267,6 @@ static s32 ndsRendererNativeStageTask36BeginSegment(void)
     sNdsNativeStageOwnerExecution.task36_coordinate_shift = UINT_MAX;
     sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
     sNdsNativeStageOwnerExecution.task36_segment_active = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererTask36CameraLoadCount++);
-#endif
     return TRUE;
 }
 
@@ -2726,96 +2313,9 @@ static s32 ndsRendererNativeStageTask36EnsureWorld(
         NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
     sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
     sNdsRendererHardwareMatrixLoaded = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    {
-        u64 binding_bit = (u64)1u << binding_index;
-
-        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
-             binding_bit) == 0u)
-        {
-            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
-                binding_bit;
-            gNdsRendererTask36HardwareComposedDObjCount++;
-        }
-    }
-    NDS_DIAG(gNdsRendererTask36WorldMultCount++);
-#endif
     return TRUE;
 }
 
-#if NDS_TASK51_STAGE_NATIVE
-/* Task 51: emit the baked constant world matrix for a non-rigid stage binding
- * via MTX_MULT4x3 under the once-loaded camera view, instead of the per-frame
- * CPU projection x view x model compose in ndsRendererNativeStageLoadNoZMatrix.
- *
- * The baked matrices come from the host generator
- * (sNdsNativeStageBakedWorldMatrices, NDSRendererMatrix20p12 s20.12 row-major
- * m[row][col] with translation in m[3][0..2]). The DS MTX_MULT4x3 command
- * consumes a column-major 4x3 (4 columns of 3 elements: the decomp's
- * Matrix4x3_FromTranslation puts the identity diagonal at indices 0,4,8 and
- * translation at 9,10,11), so the conversion transposes the rotation and
- * places translation in column 3. The Task 49 differ Tier-2 (<= 1.0 screen-px)
- * gates that this matches the CPU-composed oracle. Mirrors Task 36's
- * EnsureWorld (PUSH + mult) but uses the 12-word 4x3 and the generator-baked
- * constant instead of a runtime recomputed scaled world. */
-static s32 ndsRendererNativeStageTask51EnsureWorld(u32 binding_index)
-{
-    const s32 *baked;
-    m4x3 world_hardware;
-
-    if ((binding_index >= NDS_NATIVE_STAGE_BAKED_WORLD_COUNT) ||
-        (sNdsNativeStageOwnerExecution.task36_segment_active == FALSE))
-    {
-        return FALSE;
-    }
-    /* Reuse Task 36's segment bracket: projection + view were loaded once at
-     * BeginSegment, so we only need to push the per-binding world onto the
-     * modelview stack. */
-    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
-    {
-        glPopMatrix(1);
-    }
-    baked = sNdsNativeStageBakedWorldMatrices[binding_index];
-    /* Column-major 4x3: col c, row r -> m[c*3 + r]. baked[row*4+col] is
-     * row-major m[row][col]. Translation m[3][0..2] -> column 3. */
-    world_hardware.m[0] = baked[0];  /* col0,row0 = m[0][0] */
-    world_hardware.m[1] = baked[4];  /* col0,row1 = m[1][0] */
-    world_hardware.m[2] = baked[8];  /* col0,row2 = m[2][0] */
-    world_hardware.m[3] = baked[1];  /* col1,row0 = m[0][1] */
-    world_hardware.m[4] = baked[5];  /* col1,row1 = m[1][1] */
-    world_hardware.m[5] = baked[9];  /* col1,row2 = m[2][1] */
-    world_hardware.m[6] = baked[2];  /* col2,row0 = m[0][2] */
-    world_hardware.m[7] = baked[6];  /* col2,row1 = m[1][2] */
-    world_hardware.m[8] = baked[10]; /* col2,row2 = m[2][2] */
-    world_hardware.m[9] = baked[12]; /* col3,row0 = m[3][0] (translate x) */
-    world_hardware.m[10] = baked[13];/* col3,row1 = m[3][1] (translate y) */
-    world_hardware.m[11] = baked[14];/* col3,row2 = m[3][2] (translate z) */
-    glPushMatrix();
-    glMultMatrix4x3(&world_hardware);
-    sNdsNativeStageOwnerExecution.task36_binding = binding_index;
-    sNdsNativeStageOwnerExecution.task36_coordinate_shift = 0u;
-    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
-    sNdsRendererHardwareMatrixMode =
-        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
-    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
-    sNdsRendererHardwareMatrixLoaded = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    {
-        u64 binding_bit = (u64)1u << binding_index;
-
-        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
-             binding_bit) == 0u)
-        {
-            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
-                binding_bit;
-            gNdsRendererTask36HardwareComposedDObjCount++;
-        }
-    }
-    NDS_DIAG(gNdsRendererTask36WorldMultCount++);
-#endif
-    return TRUE;
-}
-#endif
 
 static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
 {
@@ -2834,9 +2334,6 @@ static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
     glLoadMatrix4x4(&projection_hardware);
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     ndsRendererProfileRecordMatrixLoad();
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_DIAG(gNdsRendererM3Phase0NoZMatrixCount++);
-#endif
 }
 
 static void ndsRendererNativeStageTask36EndSegment(void)
@@ -2855,7 +2352,6 @@ static void ndsRendererNativeStageTask36EndSegment(void)
     sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
-#endif
 
 /* always_inline (2026-10-04): its one call site is the commit loop, where GCC
  * inlined it until the segment fast path grew that function past the
@@ -2895,18 +2391,7 @@ ndsRendererNativeStageBeginRun(
         poly_fmt &= ~((u32)POLY_CULL_NONE);
         poly_fmt |= POLY_CULL_BACK;
     }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    u32 t103_phase = cpuGetTiming();
-#endif
     ndsRendererHardwareEndBatch();
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103BeginEndBatchTicks += cpuGetTiming() - t103_phase);
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-    u32 t103_mtx_start = cpuGetTiming();
-    u32 t103_mtx_class = 3u;
-#endif
-#if NDS_TASK36_HW_COMPOSE
     if (ndsRendererNativeStageTask36BindingIsRigid(
             native_run->binding_index) != FALSE)
     {
@@ -2919,25 +2404,15 @@ ndsRendererNativeStageBeginRun(
         if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) &&
             (ndsRendererNativeStageTask36BeginSegment() == FALSE))
         {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
             return FALSE;
         }
         if (ndsRendererNativeStageTask36EnsureWorld(
                 native_run->binding_index, coordinate_shift) == FALSE)
         {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
             return FALSE;
         }
-#if NDS_TASK103_STAGE_RUN_PHASE
-        t103_mtx_class = 0u;
-#endif
     }
     else
-#endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
         /* Each run owns its matrix. A shared literal generation would let
@@ -2945,9 +2420,6 @@ ndsRendererNativeStageBeginRun(
         ndsRendererLoadHardwareRawComposedMatrix(
             &sNdsNativeStageOwnerExecution.binding_composed[
                 native_run->binding_index], ndsRendererNextMatrixGeneration());
-#if NDS_TASK103_STAGE_RUN_PHASE
-        t103_mtx_class = 1u;
-#endif
     }
     else if (submit_class ==
              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
@@ -2974,9 +2446,6 @@ ndsRendererNativeStageBeginRun(
         ndsRendererLoadHardwareMatrixPair(
             &projection, &modelview, NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED,
             ndsRendererNextMatrixGeneration(), TRUE);
-#if NDS_TASK103_STAGE_RUN_PHASE
-        t103_mtx_class = 2u;
-#endif
     }
     else
     {
@@ -2986,14 +2455,7 @@ ndsRendererNativeStageBeginRun(
          * at all. */
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103BeginMtxTicks[t103_mtx_class] += cpuGetTiming() - t103_mtx_start);
-    NDS_DIAG(gNdsTask103BeginMtxCount[t103_mtx_class]++);
-#endif
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-    t103_phase = cpuGetTiming();
-#endif
     glEnable(GL_TEXTURE_2D);
     if (run->textured != 0u)
     {
@@ -3017,10 +2479,6 @@ ndsRendererNativeStageBeginRun(
     {
         ndsRendererHardwareBindNoTexture(NULL);
     }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103BeginTexTicks += cpuGetTiming() - t103_phase);
-    t103_phase = cpuGetTiming();
-#endif
     if (run->alpha_test != 0u)
     {
         glEnable(GL_ALPHA_TEST);
@@ -3032,9 +2490,6 @@ ndsRendererNativeStageBeginRun(
     }
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103BeginTailTicks += cpuGetTiming() - t103_phase);
-#endif
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
@@ -3044,22 +2499,18 @@ ndsRendererNativeStageBeginRun(
     sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
-#if NDS_TASK36_HW_COMPOSE
         (ndsRendererNativeStageTask36BindingIsRigid(
              native_run->binding_index) != FALSE) ?
             NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
-#endif
         ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
          (submit_class ==
           NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
             NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
-#if NDS_TASK36_HW_COMPOSE
         (ndsRendererNativeStageTask36BindingIsRigid(
              native_run->binding_index) != FALSE) ?
             sNdsRendererHardwareMatrixGeneration :
-#endif
         (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
             1u :
         (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
@@ -3068,24 +2519,6 @@ ndsRendererNativeStageBeginRun(
     return TRUE;
 }
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-volatile u32 gNdsTask103GenericTicks;
-volatile u32 gNdsTask103GenericRunCount;
-volatile u32 gNdsTask103GenericTriangles;
-volatile u32 gNdsTask103IterTicks;
-volatile u32 gNdsTask103IterCount;
-volatile u32 gNdsTask103GenericBeginTicks;
-volatile u32 gNdsTask103OwnValidateTicks;
-volatile u32 gNdsTask103OwnInitTicks;
-volatile u32 gNdsTask103OwnInitCount;
-volatile u32 gNdsTask103OwnStateSpanTicks;
-volatile u32 gNdsTask103OwnStateSpanCount;
-volatile u32 gNdsTask103OwnPrepareRunTicks;
-volatile u32 gNdsTask103OwnPrepareRunCount;
-volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-#endif
 
 static inline void ndsRendererNativeStageEmitVertex(
     const NDSNativeStageDenseVertex *dense,
@@ -3175,9 +2608,6 @@ static void __attribute__((noinline)) ndsRendererNativeStageLoadNoZMatrix(
 {
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 matrix_start = ndsRendererM3Phase0Tick();
-#endif
 
     if (coordinate_shift == 0u)
     {
@@ -3199,11 +2629,6 @@ static void __attribute__((noinline)) ndsRendererNativeStageLoadNoZMatrix(
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixLoaded = FALSE;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0FinishSpan(
-        &gNdsRendererM3Phase0NoZMatrixTicks, matrix_start);
-    NDS_DIAG(gNdsRendererM3Phase0NoZMatrixCount++);
-#endif
 }
 
 /* 2026-09-27: out of ITCM (old path only; the four-CPU census never
@@ -3236,9 +2661,6 @@ static void ndsRendererNativeStageEmitClippedVertex(
 {
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 matrix_start = ndsRendererM3Phase0Tick();
-#endif
 
     memset(&matrix, 0, sizeof(matrix));
     matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
@@ -3256,11 +2678,6 @@ static void ndsRendererNativeStageEmitClippedVertex(
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixLoaded = FALSE;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0FinishSpan(
-        &gNdsRendererM3Phase0NoZMatrixTicks, matrix_start);
-    NDS_DIAG(gNdsRendererM3Phase0NoZMatrixCount++);
-#endif
 
     ndsRendererNativeStageWriteColor(vertex->packed_color);
     if (run->textured != 0u)
@@ -3453,7 +2870,6 @@ ndsRendererNativeStageEmitNearClippedTriangle(
     }
 }
 
-#if NDS_TASK36_HW_COMPOSE
 /* Exact GX witness for the Castle roof's rigid PROJECTED_NO_Z path.  Run 9 is
  * deliberately not part of the identity: the source DL root offset survives
  * generated-table reordering, while the runtime run index is recorded below.
@@ -3583,7 +2999,6 @@ ndsRendererNativeStageCaptureCastleRoofClip(
         gNdsNativeStageCastleRoofClipValid = gNdsNativeStageRoofSnapSerial;
     }
 }
-#endif
 
 static u32 __attribute__((noinline))
 ndsRendererNativeStageEmitNoZTriangle(
@@ -3600,7 +3015,6 @@ ndsRendererNativeStageEmitNoZTriangle(
     u32 coordinate_shift = 0u;
     s32 one_binding = TRUE;
 
-#if NDS_TASK36_HW_COMPOSE
     if (ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) != FALSE)
     {
         coordinate_shift = ndsRendererNativeStageTask36TriangleShift(
@@ -3613,9 +3027,6 @@ ndsRendererNativeStageEmitNoZTriangle(
             if (sNdsNativeStageVertices[dense_index].matrix_binding !=
                 run->binding_index)
             {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-                gNdsRendererM3PostArmFailureCount++;
-#endif
                 gNdsNativeStageNoZForeignBindingCount++;
                 return 0u;
             }
@@ -3623,9 +3034,6 @@ ndsRendererNativeStageEmitNoZTriangle(
         if (ndsRendererNativeStageTask36EnsureWorld(
                 run->binding_index, coordinate_shift) == FALSE)
         {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
             gNdsNativeStageNoZEnsureWorldCount++;
             return 0u;
         }
@@ -3645,78 +3053,8 @@ ndsRendererNativeStageEmitNoZTriangle(
                 &sNdsNativeStagePreparedDense[dense_index],
                 prepared_run, coordinate_shift);
         }
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103NoZPath[0]++);
-#endif
         return 1u;
     }
-#endif
-#if NDS_TASK51_STAGE_NATIVE
-    /* Task 51: non-rigid bindings use the baked constant world matrix via
-     * MTX_MULT4x3 instead of the per-frame CPU compose in LoadNoZMatrix.
-     * Reuses Task 36's NoZ projection loader and segment bracket; only the
-     * per-binding world-matrix emit changes (12-word 4x3 vs 16-word load). */
-    if ((ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) == FALSE) &&
-        ((sNdsNativeStagePacketActive->camera_binding_mask &
-          ((u64)1u << run->binding_index)) == 0u))
-    {
-        u32 t51_shift;
-
-        for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
-        {
-            u32 dense_index =
-                sNdsNativeStageCorners[first_corner + corner_offset];
-
-            if (sNdsNativeStageVertices[dense_index].matrix_binding !=
-                run->binding_index)
-            {
-                break;
-            }
-        }
-        if (corner_offset == 3u)
-        {
-            s32 t51_ok;
-#if NDS_TASK103_STAGE_RUN_PHASE
-            u32 t103_span = cpuGetTiming();
-#endif
-
-            t51_shift = ndsRendererNativeStageTask36TriangleShift(
-                run, triangle_offset);
-            t51_ok = ndsRendererNativeStageTask51EnsureWorld(
-                run->binding_index);
-#if NDS_TASK103_STAGE_RUN_PHASE
-            NDS_DIAG(gNdsTask103NoZWorldTicks += cpuGetTiming() - t103_span);
-#endif
-            if (t51_ok != FALSE)
-            {
-#if NDS_TASK103_STAGE_RUN_PHASE
-                t103_span = cpuGetTiming();
-#endif
-                ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
-#if NDS_TASK103_STAGE_RUN_PHASE
-                NDS_DIAG(gNdsTask103NoZProjTicks += cpuGetTiming() - t103_span);
-#endif
-                for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
-                {
-                    u32 dense_index =
-                        sNdsNativeStageCorners[first_corner + corner_offset];
-
-                    ndsRendererNativeStageEmitNoZVertex(
-                        &sNdsNativeStageVertices[dense_index],
-                        &sNdsNativeStagePreparedDense[dense_index],
-                        prepared_run, t51_shift);
-                }
-#if NDS_TASK103_STAGE_RUN_PHASE
-                NDS_DIAG(gNdsTask103NoZPath[1]++);
-#endif
-                return 1u;
-            }
-        }
-    }
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-    NDS_DIAG(gNdsTask103NoZPath[2]++);
-#endif
 
     for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
     {
@@ -3786,280 +3124,8 @@ ndsRendererNativeStageEmitNoZTriangle(
     return 1u;
 }
 
-#if NDS_DREAMLAND_CARD_CULL
-/* Task 63 §5 — backdrop-card cull visualization.
- *
- * E0 measured that Dream Land's static stage has no geometry to reduce at full
- * material fidelity (9.1% ceiling, below the 15% gate). The only remaining
- * lever is deleting whole projected-no-Z backdrop cards, which is a visible
- * scenery loss and therefore the owner's decision, not the compiler's. This
- * instrument exists so that decision can be made by looking rather than by
- * reading a coverage table.
- *
- * One bit per entry in sNdsNativeStageRuns[] (54 runs, so two words). The
- * mask is baked at build time from NDS_DREAMLAND_CARD_CULL_MASK0/1 so that the
- * Task 36 replay stream is captured with the cull already applied -- poking it
- * over GDB after capture would be replayed away. It stays volatile so a GDB
- * poke plus a capture invalidation can still drive it interactively. At the
- * default 0 nothing is suppressed and the frame is identical to a flag=0
- * build, which is what makes the A/B trustworthy. Never shipped:
- * NDS_DREAMLAND_CARD_CULL defaults to 0 and the published ROM never sets it. */
-volatile u32 gNdsDreamLandCardCullMask[2] = {
-    NDS_DREAMLAND_CARD_CULL_MASK0,
-    NDS_DREAMLAND_CARD_CULL_MASK1,
-};
-volatile u32 gNdsDreamLandCardCullSkippedRuns;
-volatile u32 gNdsDreamLandCardCullSkippedTris;
-#endif /* NDS_DREAMLAND_CARD_CULL */
 
-#if NDS_DREAMLAND_DS_MESH
-/* Task 62: generated Dream Land DS-native static 3D mesh. Draws the exact
- * source-world geometry with source material attributes from the baked blob
- * (scripts/stages/dreamland/generate_dreamland_ds_mesh.py), replacing the four static segments.
- * Default-off keeps the shipping path byte-identical. */
 
-/* Task 62 engagement counters (shared HUD row). Gated only by the feature
- * flag, not by PROFILE_LEVEL, so the counter survives in the published
- * profile-0 hwtri ROM that must report engagement. */
-volatile u32 gNdsDreamLandDSSubmittedVertices;
-volatile u32 gNdsDreamLandDSGroups;
-volatile u32 gNdsDreamLandDSWords;
-
-/* Draws one generated Dream Land DS-native static segment. The generated
- * source-run and dense indices retain exact topology and material attributes;
- * the live binding matrices retain the platform transforms that are not
- * represented by the host world-space IR. */
-static u32 ndsRendererDreamLandDrawStatic3D(
-    NDSRendererStats *stats,
-    u32 source_segment)
-{
-    u32 group_index;
-    u32 segment_triangles = 0u;
-    u32 segment_groups = 0u;
-    u32 submitted_vertices = 0u;
-    u32 gx_words = 0u;
-
-    for (group_index = 0u; group_index < NDS_DREAMLAND_DS_GROUP_COUNT;
-         group_index++)
-    {
-        if (sNdsDreamLandDSGroupSourceSegment[group_index] !=
-            source_segment)
-        {
-            continue;
-        }
-        u32 first = sNdsDreamLandDSGroupFirstVertex[group_index];
-        u32 count = sNdsDreamLandDSGroupVertexCount[group_index];
-        u32 submit_class =
-            sNdsDreamLandDSGroupSubmitClass[group_index];
-        u32 source_run = sNdsDreamLandDSGroupSourceRun[group_index];
-        const NDSNativeStageRun *native_run;
-        const NDSNativeStagePreparedRun *prepared_run;
-        u32 triangle_count = count / 3u;
-        u32 triangle_offset;
-        u32 emitted_triangles = 0u;
-
-        if ((sNdsDreamLandDSGroupPrim[group_index] !=
-             NDS_DREAMLAND_DS_PRIM_TRIANGLES) ||
-            (source_run >= NDS_NATIVE_STAGE_RUN_COUNT) ||
-            (count == 0u) ||
-            ((count % 3u) != 0u) ||
-            (first + count > NDS_DREAMLAND_DS_VERTEX_COUNT) ||
-            ((submit_class !=
-              NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) &&
-             (submit_class !=
-              NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
-             (submit_class !=
-              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)))
-        {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
-            continue;
-        }
-        native_run = &sNdsNativeStageRuns[source_run];
-        prepared_run = &sNdsNativeStageWs.runs[source_run];
-        if ((native_run->submit_class != submit_class) ||
-            (native_run->triangle_count != triangle_count))
-        {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
-            continue;
-        }
-        if (ndsRendererNativeStageBeginRun(
-                native_run, prepared_run, submit_class,
-                sNdsNativeStageSegments[source_segment].owner, stats,
-                FALSE) == FALSE)
-        {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
-            continue;
-        }
-        gx_words += 1u;
-        for (triangle_offset = 0u;
-             triangle_offset < triangle_count;
-             triangle_offset++)
-        {
-            if ((native_run->flags &
-                 NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
-            {
-                u32 emitted = ndsRendererNativeStageEmitCrossMatrixTriangle(
-                    native_run, prepared_run, triangle_offset);
-
-                emitted_triangles += emitted;
-                submitted_vertices += emitted * 3u;
-                gx_words += emitted * ((prepared_run->textured != 0u) ?
-                    4u : 3u);
-                ndsRendererHardwareEnterProjectedForeground();
-            }
-            else if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-            {
-                u32 emitted = ndsRendererNativeStageEmitNoZTriangle(
-                    native_run, prepared_run, triangle_offset,
-                    ndsRendererHardwareNextProjectedDepth());
-
-                emitted_triangles += emitted;
-                submitted_vertices += emitted * 3u;
-                gx_words += emitted * ((prepared_run->textured != 0u) ?
-                    4u : 3u);
-                continue;
-            }
-            {
-                u32 corner_offset;
-
-                for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
-                {
-                    u32 idx = first + triangle_offset * 3u + corner_offset;
-                    u32 dense_index = sNdsDreamLandDSSourceDense[idx];
-
-                    if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
-                    {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-                        gNdsRendererM3PostArmFailureCount++;
-#endif
-                        continue;
-                    }
-                    ndsRendererNativeStageEmitVertex(
-                        &sNdsNativeStageVertices[dense_index],
-                        &sNdsNativeStagePreparedDense[dense_index],
-                        prepared_run, submit_class);
-                    submitted_vertices++;
-                    gx_words += (prepared_run->textured != 0u) ? 4u : 3u;
-                }
-                emitted_triangles++;
-                ndsRendererHardwareEnterProjectedForeground();
-            }
-        }
-        ndsRendererHardwareEndBatch();
-        ndsRendererNativeStageAccountRun(
-            stats,
-            (submit_class ==
-             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
-                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX :
-                submit_class,
-            emitted_triangles);
-        segment_triangles += triangle_count;
-        segment_groups++;
-    }
-
-#if NDS_TASK36_HW_COMPOSE
-    ndsRendererNativeStageTask36EndSegment();
-#endif
-    if (stats != NULL)
-    {
-        stats->triangle_count += segment_triangles;
-    }
-    sNdsRendererHardwareSubmitted = TRUE;
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
-    sNdsRendererHardwareMatrixGeneration = 0u;
-    NDS_DIAG(gNdsDreamLandDSSubmittedVertices += submitted_vertices);
-    gNdsDreamLandDSGroups += segment_groups;
-    NDS_DIAG(gNdsDreamLandDSWords += gx_words);
-    return segment_triangles;
-}
-#endif /* NDS_DREAMLAND_DS_MESH */
-
-#if NDS_R2_STAGE_ACTORS_PROOF
-/* R2-02 E3 falsifier. Admitting whispy_eyes, whispy_mouth, flowers_back and
- * flowers_front to the Task 36 replay bakes their command stream once and
- * replays it for the rest of the match, so the cut is correct only if nothing
- * those fifteen runs emit changes between frames. Three of the four inputs are
- * already settled: Task 51 replaced their per-frame compose with a MULT4x3 of
- * the constant sNdsNativeStageBakedWorldMatrices, and layer0/2/3 have been
- * replaying their own per-triangle no-Z projection loads correctly for many
- * tasks, which is a standing proof that frame->projection and the
- * projected-depth sequence do not move either.
- *
- * The fourth input is the prepared dense vertex data -- the packed colours and
- * texture coordinates the material state produces -- and Whispy has a material
- * animation, so "it looked right in one screenshot" is not an answer. This
- * hashes exactly the prepared run and prepared dense data those fifteen runs
- * consume, once a frame, and counts the frames on which the hash differs from
- * the previous one.
- *
- * It answered its question -- 0 changes in 1,828 frames -- and R2-02 E3 and E4
- * still failed, because the prepared data was never the part that moves. The
- * actor segments' *matrices* are. Read this proof as covering vertex data only,
- * and never as a licence to widen a replay or rigid mask. */
-volatile u32 gNdsR2ActorPreparedHash;
-volatile u32 gNdsR2ActorPreparedChangeCount;
-volatile u32 gNdsR2ActorPreparedFrameCount;
-
-static void ndsRendererR2ActorPreparedProof(void)
-{
-    static const u8 actor_segments[4] = {1u, 2u, 3u, 6u};
-    u32 hash = 2166136261u;
-    u32 slot;
-
-    for (slot = 0u; slot < 4u; slot++)
-    {
-        const NDSNativeStageSegment *segment =
-            &sNdsNativeStageSegments[actor_segments[slot]];
-        u32 run_offset;
-
-        for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
-        {
-            u32 run_index = (u32)segment->first_run + run_offset;
-            const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
-            const u32 *run_words =
-                (const u32 *)&sNdsNativeStageWs.runs[run_index];
-            u32 corner_count = (u32)run->triangle_count * 3u;
-            u32 corner;
-            u32 word;
-
-            for (word = 0u;
-                 word < sizeof(NDSNativeStagePreparedRun) / sizeof(u32);
-                 word++)
-            {
-                hash = (hash ^ run_words[word]) * 16777619u;
-            }
-            for (corner = 0u; corner < corner_count; corner++)
-            {
-                u32 dense_index =
-                    sNdsNativeStageCorners[(u32)run->first_corner + corner];
-                const u32 *dense_words =
-                    (const u32 *)&sNdsNativeStagePreparedDense[dense_index];
-
-                for (word = 0u;
-                     word < sizeof(NDSNativeStagePreparedDense) / sizeof(u32);
-                     word++)
-                {
-                    hash = (hash ^ dense_words[word]) * 16777619u;
-                }
-            }
-        }
-    }
-    if ((gNdsR2ActorPreparedFrameCount != 0u) &&
-        (hash != gNdsR2ActorPreparedHash))
-    {
-        NDS_DIAG(gNdsR2ActorPreparedChangeCount++);
-    }
-    gNdsR2ActorPreparedHash = hash;
-    gNdsR2ActorPreparedFrameCount++;
-}
-#endif
 
 /* Which decline site of ndsRendererPrepareNativeStageOwner ran last (1-based,
  * source order of its goto done sites; 0 = accepted or never run) and the
@@ -4131,7 +3197,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         sNdsNativeStageOwnerExecution.active = FALSE;
         return FALSE;
     }
-#if NDS_R2_STAGE_DIRECT
     /* R2-02 E1a. Reuse the prepared run table when it was built for this exact
      * config and asset set. epoch_mask must be restored with it: PrepareRun
      * accumulates it and the Task 36 replay capture and segment-0 hash consume
@@ -4162,102 +3227,16 @@ s32 ndsRendererPrepareNativeStageOwner(
          * the proof must be dropped here or a fresh run would inherit its
          * predecessor's certificate. The next consult re-sweeps and re-stamps. */
         ndsRendererNativeStagePreparedTextureProofDrop();
-#if NDS_R2_STAGE_ROUTE_PROBE
-        /* WHICH of the five key components missed. BuildCount alone cannot
-         * separate "the previous frame's owner rejected and zeroed valid" from
-         * "the topology moved" from "an asset base changed", and the two
-         * existing reject-reason words are LATCHES reset at the top of every
-         * prepare -- read at end of run they say only what the last frame did,
-         * which was a Results frame reporting 0/0 while the battle had rebuilt
-         * 197 times. These count. */
-        if (sNdsNativeStageOwnerExecution.r2_prepared_valid == 0u)
-        {
-            NDS_DIAG(gNdsR2StageKeyMissInvalid++);
-        }
-        else if (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation !=
-                 frame->topology_generation)
-        {
-            NDS_DIAG(gNdsR2StageKeyMissGeneration++);
-        }
-        else if (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp !=
-                 frame->topology_stamp)
-        {
-            NDS_DIAG(gNdsR2StageKeyMissStamp++);
-        }
-        else if (sNdsNativeStageOwnerExecution.r2_prepared_config !=
-                 frame->config)
-        {
-            NDS_DIAG(gNdsR2StageKeyMissConfig++);
-        }
-        else
-        {
-            NDS_DIAG(gNdsR2StageKeyMissAssets++);
-        }
-#endif
     }
-#endif
 #if NDS_TASK36_REJECT_TRACE
     u32 task36_reject_reason = 1u;
 
     gNdsRendererTask36RendererRejectReason = 0u;
 #endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 phase0_preflight_start;
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-    u32 task103_own_entry = cpuGetTiming();
-    u32 task103_own_mark;
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3PreflightAttemptCount++);
-    gNdsRendererM3SegmentCount = 0u;
-    gNdsRendererM3SegmentMask = 0u;
-    gNdsRendererM3DObjCount = 0u;
-    gNdsRendererM3BindingCount = 0u;
-    gNdsRendererM3RunCount = 0u;
-    gNdsRendererM3TriangleCount = 0u;
-    gNdsRendererM3ResidentEpochCount = 0u;
-    gNdsRendererM3MaterialShadowCount = 0u;
-    gNdsRendererM3MaterialCommitCount = 0u;
-    gNdsRendererM3CrossRunCount = 0u;
-    gNdsRendererM3CrossTriangleCount = 0u;
-    gNdsRendererM3CrossForeignCornerCount = 0u;
-#if NDS_TASK36_HW_COMPOSE
-    gNdsRendererTask36HardwareComposedDObjCount = 0u;
-    gNdsRendererTask36CameraLoadCount = 0u;
-    gNdsRendererTask36WorldMultCount = 0u;
-#endif
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
-    gNdsRendererM3GeneratedSegment0AttemptCount = 0u;
-    gNdsRendererM3GeneratedSegment0SuccessCount = 0u;
-    gNdsRendererM3GeneratedSegment0PreGxFallbackCount = 0u;
-    gNdsRendererM3GeneratedSegment0RunCount = 0u;
-    gNdsRendererM3GeneratedSegment0TriangleCount = 0u;
-    gNdsRendererM3GeneratedSegment0EpochCount = 0u;
-    gNdsRendererM3GeneratedSegment0MaterialCount = 0u;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    gNdsRendererM3GeneratedSegment0ShadowDenseCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowStateEntryCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowSyncCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowMismatchCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount = 0u;
-    gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount = 0u;
-#endif
-#endif
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0Reset();
-    phase0_preflight_start = ndsRendererM3Phase0Tick();
-#endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
     sNdsNativeStageOwnerExecution.hidden_binding_mask = 0u;
-#if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = NULL;
     sNdsNativeStageOwnerExecution.camera_modelview = NULL;
     sNdsNativeStageOwnerExecution.binding_world = NULL;
@@ -4265,8 +3244,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.task36_seen_binding_mask = 0u;
     sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
     sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
-#endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     memset(sNdsRendererBenchmarkSegment0AssetBases, 0,
            sizeof(sNdsRendererBenchmarkSegment0AssetBases));
 #endif
@@ -4276,10 +3254,8 @@ s32 ndsRendererPrepareNativeStageOwner(
         (frame->dobjs == NULL) ||
         (frame->binding_display_lists == NULL) ||
         (frame->projection == NULL) ||
-#if NDS_TASK36_HW_COMPOSE
         (frame->camera_modelview == NULL) ||
         (frame->binding_world == NULL) ||
-#endif
         (frame->binding_composed == NULL) ||
         (frame->materials == NULL) || (frame->config == NULL) ||
         (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u) ||
@@ -4297,10 +3273,8 @@ s32 ndsRendererPrepareNativeStageOwner(
             guard |= (frame->dobjs == NULL) ? 8u : 0u;
             guard |= (frame->binding_display_lists == NULL) ? 16u : 0u;
             guard |= (frame->projection == NULL) ? 32u : 0u;
-#if NDS_TASK36_HW_COMPOSE
             guard |= (frame->camera_modelview == NULL) ? 64u : 0u;
             guard |= (frame->binding_world == NULL) ? 128u : 0u;
-#endif
             guard |= (frame->binding_composed == NULL) ? 256u : 0u;
             guard |= (frame->materials == NULL) ? 512u : 0u;
             guard |= (frame->config == NULL) ? 1024u : 0u;
@@ -4313,28 +3287,10 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    task103_own_mark = cpuGetTiming();
-    NDS_DIAG(gNdsTask103OwnValidateTicks += task103_own_mark - task103_own_entry);
-#endif
 #if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 2u;
 #endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3MeasureResidualKey(frame);
-#endif
 
-#if NDS_DREAMLAND_DS_MESH
-    /* The generated static mesh is submitted from segment 0's display commit,
-     * not during preparation. Keep preflighting the native owner so the map
-     * segments that own Whispy and the flowers remain live. */
-    if ((frame->projection == NULL) || (frame->camera_modelview == NULL))
-    {
-        gNdsNativeStageOwnerPrepareFailStep = 2u;
-        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-        goto done;
-    }
-#endif
 
     for (segment_index = 0u;
          segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT;
@@ -4344,11 +3300,6 @@ s32 ndsRendererPrepareNativeStageOwner(
             &sNdsNativeStageSegments[segment_index];
         u32 binding_offset;
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-        task103_own_mark = cpuGetTiming();
-#endif
-#if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2) && \
-    NDS_R2_STAGE_DIRECT
         /* Prepared runs, epoch mask and sync count already have owners;
          * no replay snapshot consumes these state/traversal temporaries. */
         if (r2_reuse != 0u)
@@ -4356,7 +3307,6 @@ s32 ndsRendererPrepareNativeStageOwner(
             NDS_DIAG(gNdsR2StagePreflightElideCount++);
             continue;
         }
-#endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
             ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
@@ -4367,13 +3317,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         head_valid[0] = FALSE;
         head_valid[1] = FALSE;
         current_head = 0u;
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103OwnInitTicks += cpuGetTiming() - task103_own_mark);
-        NDS_DIAG(gNdsTask103OwnInitCount++);
-        task103_own_mark = cpuGetTiming();
-#endif
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
-    !NDS_RENDERER_M3_PHASE0_PROFILE
         if ((segment_index == 0u) &&
             (NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 != 0u))
         {
@@ -4391,7 +3334,6 @@ s32 ndsRendererPrepareNativeStageOwner(
             }
             continue;
         }
-#endif
         for (binding_offset = 0u;
              binding_offset < segment->binding_count;
              binding_offset++)
@@ -4442,9 +3384,6 @@ s32 ndsRendererPrepareNativeStageOwner(
             {
                 u32 run_index = (u32)binding->first_run + run_offset;
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-                task103_own_mark = cpuGetTiming();
-#endif
                 if (ndsRendererNativeStageApplyStateSpan(
                          &sNdsNativeStageStateSpans[run_index], frame,
                          &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -4457,50 +3396,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
                 }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-                {
-                    u32 residual_prepare_ticks_start =
-                        gNdsRendererM3Phase0PrepareRunTicks;
-                    u32 prepare_run_start = ndsRendererM3Phase0Tick();
-                    s32 prepare_run_result =
-#if NDS_R2_STAGE_DIRECT
-                        (r2_reuse != 0u) ? TRUE :
-#endif
-                        ndsRendererNativeStagePrepareRun(
-                        run_index, frame,
-                        &sNdsNativeStageOwnerExecution.preflight_stats,
-                        state, &epoch_mask);
-
-                    ndsRendererM3Phase0FinishSpan(
-                        &gNdsRendererM3Phase0PrepareRunTicks,
-                        prepare_run_start);
-                    if (run_index >=
-                        NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT)
-                    {
-                        gNdsRendererM3ResidualPrepareTicks +=
-                            gNdsRendererM3Phase0PrepareRunTicks -
-                            residual_prepare_ticks_start;
-                        NDS_DIAG(gNdsRendererM3ResidualRunCount++);
-                    }
-                    if (prepare_run_result == FALSE)
-                    {
-#if NDS_TASK36_REJECT_TRACE
-                        task36_reject_reason = 300u + run_index;
-#endif
-                        gNdsNativeStageOwnerPrepareFailStep = 5u;
-                        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                        goto done;
-                    }
-                }
-#else
-#if NDS_TASK103_STAGE_RUN_PHASE
-                NDS_DIAG(gNdsTask103OwnStateSpanTicks += cpuGetTiming() - task103_own_mark);
-                NDS_DIAG(gNdsTask103OwnStateSpanCount++);
-                task103_own_mark = cpuGetTiming();
-#endif
-#if NDS_R2_STAGE_DIRECT
                 if (r2_reuse == 0u)
-#endif
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -4513,11 +3409,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                     gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
                 }
-#if NDS_TASK103_STAGE_RUN_PHASE
-                NDS_DIAG(gNdsTask103OwnPrepareRunTicks += cpuGetTiming() - task103_own_mark);
-                NDS_DIAG(gNdsTask103OwnPrepareRunCount++);
-#endif
-#endif
             }
             if (ndsRendererNativeStageApplyStateSpan(
                     &sNdsNativeStageStateSpans[
@@ -4533,108 +3424,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                 goto done;
             }
         }
-#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
-    NDS_RENDERER_M3_PHASE0_PROFILE
-        if (segment_index == 0u)
-        {
-            u32 current_hash_a;
-            u32 current_hash_b;
-            u32 current_field_count;
-            u32 generated_hash_a;
-            u32 generated_hash_b;
-            u32 generated_field_count;
-            u64 generated_epoch_mask = 0u;
-            NDSRendererNativeStageFrame live_fault_frame;
-            NDSNativeStageTopologySummary live_fault_topology;
-
-            ndsRendererNativeStageHashGeneratedSegment0Outputs(
-                &sNdsNativeStageOwnerExecution.preflight_stats, state,
-                epoch_mask, &current_hash_a, &current_hash_b,
-                &current_field_count);
-            NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount++);
-            if (ndsRendererNativeStageValidateGeneratedSegment0(TRUE) ==
-                FALSE)
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount++);
-            }
-            else
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowMismatchCount++);
-                gNdsNativeStageOwnerPrepareFailStep = 8u;
-                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                goto done;
-            }
-            live_fault_frame = *frame;
-            live_fault_frame.asset_bases[1] =
-                (const void *)((const u8 *)frame->asset_bases[1] + 8u);
-            NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount++);
-            if (ndsRendererNativeStageValidateTopologyFull(
-                    &live_fault_frame, &live_fault_topology) == FALSE)
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount++);
-            }
-            else
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowMismatchCount++);
-                gNdsNativeStageOwnerPrepareFailStep = 9u;
-                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                goto done;
-            }
-            if ((ndsRendererNativeStageValidateTopologyFull(
-                     frame, &live_fault_topology) == FALSE) ||
-                (memcmp(&live_fault_topology, &topology,
-                        sizeof(live_fault_topology)) != 0))
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowMismatchCount++);
-                gNdsNativeStageOwnerPrepareFailStep = 10u;
-                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                goto done;
-            }
-            NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount++);
-
-            ndsRendererInitStats(
-                &sNdsNativeStageOwnerExecution.preflight_stats);
-            sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
-                ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
-            ndsRendererInitTraversalState(
-                state, frame->config,
-                &sNdsNativeStageOwnerExecution.preflight_stats,
-                NULL, NULL, 0u);
-            if (ndsRendererNativeStagePrepareGeneratedSegment0(
-                    frame,
-                    &sNdsNativeStageOwnerExecution.preflight_stats,
-                    state, &generated_epoch_mask) == FALSE)
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowMismatchCount++);
-                gNdsNativeStageOwnerPrepareFailStep = 11u;
-                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                goto done;
-            }
-            ndsRendererNativeStageHashGeneratedSegment0Outputs(
-                &sNdsNativeStageOwnerExecution.preflight_stats, state,
-                generated_epoch_mask, &generated_hash_a,
-                &generated_hash_b, &generated_field_count);
-            gNdsRendererM3GeneratedSegment0ShadowDenseCount =
-                NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT;
-            gNdsRendererM3GeneratedSegment0ShadowStateEntryCount =
-                sNdsNativeStageSegment0ColdCertificate.state_count;
-            gNdsRendererM3GeneratedSegment0ShadowSyncCount =
-                sNdsNativeStageSegment0ColdCertificate.sync_count;
-            gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount =
-                generated_field_count;
-            if ((current_hash_a != generated_hash_a) ||
-                (current_hash_b != generated_hash_b) ||
-                (current_field_count != generated_field_count) ||
-                (generated_epoch_mask != epoch_mask))
-            {
-                NDS_DIAG(gNdsRendererM3GeneratedSegment0ShadowMismatchCount++);
-                gNdsNativeStageOwnerPrepareFailStep = 12u;
-                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
-                goto done;
-            }
-            epoch_mask = generated_epoch_mask;
-        }
-#endif
     }
 #if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 3u;
@@ -4658,20 +3447,15 @@ s32 ndsRendererPrepareNativeStageOwner(
     task36_reject_reason = 4u;
 #endif
 
-#if NDS_R2_STAGE_ACTORS_PROOF
-    ndsRendererR2ActorPreparedProof();
-#endif
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
     sNdsNativeStageOwnerExecution.hidden_binding_mask = frame->hidden_binding_mask;
     sNdsNativeStageMatrixGen++;
-#if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = frame->projection;
     sNdsNativeStageOwnerExecution.camera_modelview = frame->camera_modelview;
     sNdsNativeStageOwnerExecution.binding_world = frame->binding_world;
     sNdsNativeStageOwnerExecution.rigid_binding_mask =
         frame->rigid_binding_mask;
-#endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     memcpy(sNdsRendererBenchmarkSegment0AssetBases, frame->asset_bases,
            sizeof(sNdsRendererBenchmarkSegment0AssetBases));
 #endif
@@ -4680,33 +3464,16 @@ s32 ndsRendererPrepareNativeStageOwner(
     stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
     stats->vertex_command_count = NDS_NATIVE_STAGE_VERTEX_COMMAND_COUNT;
     stats->triangle_command_count = NDS_NATIVE_STAGE_TRIANGLE_COMMAND_COUNT;
-#if NDS_R2_STAGE_DIRECT
     /* R2-02 E8: taken from the memo when the loop body was elided, so the
      * result does not depend on whether the last segment was replay-served. */
     stats->sync_command_count = (r2_reuse != 0u) ?
         sNdsNativeStageOwnerExecution.r2_prepared_sync_count :
         sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
-#else
-    stats->sync_command_count =
-        sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
-#endif
     sNdsNativeStageOwnerExecution.stats = stats;
     sNdsNativeStageOwnerExecution.committed_segments = 0u;
     sNdsNativeStageOwnerExecution.active = TRUE;
-#if NDS_DREAMLAND_DS_MESH
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3PreflightSuccessCount++);
-    gNdsRendererM3ResidentEpochCount =
-        NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT;
-    gNdsRendererM3CrossRunCount = topology.cross_runs;
-    gNdsRendererM3CrossTriangleCount = topology.cross_triangles;
-    gNdsRendererM3CrossForeignCornerCount =
-        topology.cross_foreign_corners;
-#endif
     accepted = TRUE;
     gNdsNativeStageWarmUploads = 0u;
-#if NDS_R2_STAGE_DIRECT
     /* The table is only publishable as reusable once the whole owner prepare
      * has accepted -- a run that rejected mid-loop leaves runs[] torn. */
     sNdsNativeStageOwnerExecution.r2_prepared_config = frame->config;
@@ -4721,13 +3488,8 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.r2_prepared_sync_count =
         stats->sync_command_count;
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 1u;
-#endif
 
 done:
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0FinishSpan(
-        &gNdsRendererM3Phase0PreflightTicks, phase0_preflight_start);
-#endif
     if (accepted == FALSE)
     {
 #if NDS_TASK36_REJECT_TRACE
@@ -4735,22 +3497,15 @@ done:
 #endif
         sNdsNativeStageOwnerExecution.stats = NULL;
         sNdsNativeStageOwnerExecution.binding_composed = NULL;
-#if NDS_TASK36_HW_COMPOSE
         sNdsNativeStageOwnerExecution.projection = NULL;
         sNdsNativeStageOwnerExecution.camera_modelview = NULL;
         sNdsNativeStageOwnerExecution.binding_world = NULL;
         sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
-#endif
         sNdsNativeStageOwnerExecution.committed_segments = 0u;
         sNdsNativeStageOwnerExecution.active = FALSE;
-#if NDS_R2_STAGE_DIRECT
         /* Any fallback invalidates the table: runs[] may be torn, and the
          * reason it rejected may be exactly that the topology moved. */
         sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        NDS_DIAG(gNdsRendererM3PreflightFallbackCount++);
-#endif
     }
     return accepted;
 }
@@ -4759,49 +3514,8 @@ void ndsRendererResetNativeStageValidationCache(void)
 {
     memset(&sNdsNativeStageValidationCache, 0,
            sizeof(sNdsNativeStageValidationCache));
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    sNdsRendererM3ResidualKeyValid = FALSE;
-#endif
 }
 
-#if NDS_RENDER_ECONOMY
-static u32 ndsRendererEconomySkipNativeStageSegment(
-    const NDSNativeStageSegment *segment,
-    NDSRendererStats *stats)
-{
-    u32 segment_triangles = 0u;
-    u32 run_offset;
-
-    ndsRendererHardwareEndBatch();
-    for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
-    {
-        const NDSNativeStageRun *run = &sNdsNativeStageRuns[
-            (u32)segment->first_run + run_offset];
-        u32 triangle_offset;
-
-        for (triangle_offset = 0u;
-             triangle_offset < run->triangle_count;
-             triangle_offset++)
-        {
-            if (run->submit_class ==
-                NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-            {
-                (void)ndsRendererHardwareNextProjectedDepth();
-            }
-            else
-            {
-                ndsRendererHardwareEnterProjectedForeground();
-            }
-        }
-        stats->triangle_count += run->triangle_count;
-        segment_triangles += run->triangle_count;
-    }
-    gNdsRendererEconomyAppliedOwnerMask |= (u32)1u << segment->owner;
-    NDS_DIAG(gNdsRendererEconomySkippedRunCount += segment->run_count);
-    NDS_DIAG(gNdsRendererEconomySkippedTriangleCount += segment_triangles);
-    return segment_triangles;
-}
-#endif
 
 /* The visibility mask changes every frame, while prepared runs stay valid.
  * Keep the 64-bit dynamic bit test out of ITCM: GCC expands a variable u64
@@ -4855,9 +3569,7 @@ ndsRendererNativeStagePublishRunEmission(u32 run_index, u32 emitted_triangles)
     gNdsNativeStageRoofSnapValid[run_index] = gNdsNativeStageRoofSnapSerial;
 }
 
-#if NDS_TASK36_HW_COMPOSE == 2
 #include "nds_stage_gx.exec.inc"
-#endif
 
 /* 2026-09-27: out of ITCM. 4,252 B renting 1,309 cycles a byte in the
  * four-CPU census; the bytes went to the census's section D pack. */
@@ -4884,15 +3596,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     const u8 *binding_heads = NDS_NATIVE_STAGE_BINDING_HEADS;
     const u32 head_pass_count = (binding_heads != NULL) ? 4u : 1u;
     u32 head_pass;
-#if NDS_TASK36_HW_COMPOSE == 2
     u32 stage_gx_segment;
-#endif
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-    u32 census_owner_start = 0u;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 commit_start;
-#endif
 
     if (sNdsNativeStageOwnerExecution.active == FALSE)
     {
@@ -4911,9 +3615,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
            segment_index) & 1u) != 0u) ||
         (stats == NULL))
     {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererM3PostArmFailureCount++;
-#endif
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
@@ -4934,64 +3635,15 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     {
         return FALSE;
     }
-#if NDS_DREAMLAND_DS_MESH
-    /* Generator owner order is layer0,map0,map1,map2,layer1,layer2,map3,layer3.
-     * Replace each static stage_geometry segment in place and leave every
-     * stage_actors map segment live so the original painter order is retained. */
-    if ((segment_index == 0u) || (segment_index == 4u) ||
-        (segment_index == 5u) || (segment_index == 7u))
-    {
-        u32 group_count_before = gNdsDreamLandDSGroups;
-        u32 segment_groups;
-
-        sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
-        segment_triangles = ndsRendererDreamLandDrawStatic3D(
-            stats,
-            segment_index);
-        segment_groups = gNdsDreamLandDSGroups - group_count_before;
-        sNdsRendererFastRunCount += segment_groups;
-        sNdsRendererFastTriangleCount += segment_triangles;
-        sNdsRendererFastOwnerTriangleCount[
-            NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
-        sNdsNativeStageOwnerExecution.committed_segments |=
-            (u32)1u << segment_index;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        NDS_DIAG(gNdsRendererM3SegmentCount++);
-        gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
-        NDS_DIAG(gNdsRendererM3RunCount += segment_groups);
-        NDS_DIAG(gNdsRendererM3TriangleCount += segment_triangles);
-#endif
-        sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
-        return TRUE;
-    }
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
     stage_gx_segment = ndsStageGxEligible(segment_index);
-#endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if (segment_index == 0u)
     {
         ndsRendererBenchmarkSegment0SinkBegin();
     }
 #endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-    ndsRendererScreenSpaceCensusStageSegment(segment);
-    if (gNdsRendererScreenSpaceCensusArmed != 0u)
-    {
-        census_owner_start = cpuGetTiming();
-    }
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    commit_start = ndsRendererM3Phase0Tick();
-#endif
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    ndsRendererTask34StageStreamBeginSegment(segment_index);
-#endif
-#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_STAGE_GX_FAST_LIVE && \
-    !NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_RENDERER_M3_PHASE0_PROFILE && \
-    !NDS_DREAMLAND_CARD_CULL && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_STAGE_GX_FAST_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
     /* The whole segment in one patch pass and one DMA when it qualifies
      * (ndsStageGxCommitFast); the per-run loop below otherwise, which then
      * owns the segment's memos until the fast path re-proves them. */
@@ -5000,10 +3652,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         /* A DLLink segment too: its program's words are laid out in the
          * head passes' order (compile_nds_stage_gx.py format 7). */
         if (
-#if NDS_RENDER_ECONOMY
-            ((gNdsRendererEconomyActiveOwnerMask &
-              ((u32)1u << segment->owner)) == 0u) &&
-#endif
             (ndsStageGxCommitFast(segment_index, segment, stats,
                                   &segment_triangles) != FALSE))
         {
@@ -5011,15 +3659,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         }
         ndsStageGxFastForget(segment_index);
     }
-#endif
-#if NDS_RENDER_ECONOMY
-    if ((gNdsRendererEconomyActiveOwnerMask &
-         ((u32)1u << segment->owner)) != 0u)
-    {
-        segment_triangles = ndsRendererEconomySkipNativeStageSegment(
-            segment, stats);
-    }
-    else
 #endif
     for (head_pass = 0u; head_pass < head_pass_count; head_pass++)
     for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
@@ -5039,54 +3678,14 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         {
             continue;
         }
-#if NDS_TASK103_STAGE_RUN_PHASE
-        u32 task103_iter_start = cpuGetTiming();
-        u32 task103_generic_start = 0u;
-        u32 task103_generic_armed = 0u;
-#endif
-#if NDS_DREAMLAND_CARD_CULL
-        /* Task 63 §5 visualization: suppress whole stage runs named by the
-         * mask so the owner can see what an authorised scenery reduction
-         * costs. The mask is written over GDB by the capture harness; at its
-         * default 0 nothing is culled and this renders exactly like flag=0. */
-        if ((gNdsDreamLandCardCullMask[run_index >> 5u] &
-             ((u32)1u << (run_index & 31u))) != 0u)
-        {
-            NDS_DIAG(gNdsDreamLandCardCullSkippedRuns++);
-            NDS_DIAG(gNdsDreamLandCardCullSkippedTris += run->triangle_count);
-            continue;
-        }
-#endif
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-        u32 task34_dobj_index;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        u32 phase_start = ndsRendererM3Phase0Tick();
-#endif
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         if (segment_index == 0u)
         {
             ndsRendererBenchmarkSegment0ArmRun(
                 run_offset, run, prepared_run);
         }
 #endif
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-        for (task34_dobj_index = 0u;
-             task34_dobj_index < NDS_NATIVE_STAGE_DOBJ_COUNT;
-             task34_dobj_index++)
-        {
-            if (sNdsNativeStageDObjs[task34_dobj_index].binding_index ==
-                run->binding_index)
-            {
-                break;
-            }
-        }
-        ndsRendererTask34StageStreamSetDObj(
-            (task34_dobj_index < NDS_NATIVE_STAGE_DOBJ_COUNT) ?
-                task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
         if ((stage_gx_segment != FALSE) &&
             (ndsStageGxRunOutsideView(run_index) != FALSE))
         {
@@ -5100,30 +3699,12 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         /* A cold clipped run follows all earlier compiled runs in source order. */
         ndsStageGxFlush();
         NDS_FIGHTER_PACKET_DMA_WAIT();
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-        task103_generic_start = cpuGetTiming();
-        task103_generic_armed = 1u;
-#endif
         if (ndsRendererNativeStageBeginRun(
                 run, prepared_run, run->submit_class, segment->owner, stats) == FALSE)
         {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
             sNdsStageGxInSegment = 0u;
-#endif
             return TRUE;
         }
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103GenericBeginTicks += cpuGetTiming() - task103_generic_start);
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        ndsRendererM3Phase0FinishSpan(
-            &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
-        phase_start = ndsRendererM3Phase0Tick();
-#endif
         for (triangle_offset = 0u;
              triangle_offset < run->triangle_count;
              triangle_offset++)
@@ -5172,45 +3753,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 ndsRendererHardwareEnterProjectedForeground();
             }
         }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        if (run->submit_class ==
-            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
-        {
-            ndsRendererM3Phase0FinishSpan(
-                &gNdsRendererM3Phase0RawEmitTicks, phase_start);
-        }
-        else if (run->submit_class ==
-                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
-        {
-            ndsRendererM3Phase0FinishSpan(
-                &gNdsRendererM3Phase0RangeEmitTicks, phase_start);
-        }
-        else
-        {
-            ndsRendererM3Phase0FinishSpan(
-                &gNdsRendererM3Phase0NoZEmitTicks, phase_start);
-        }
-        phase_start = ndsRendererM3Phase0Tick();
-#endif
         ndsRendererHardwareEndBatch();
-#if NDS_TASK103_STAGE_RUN_PHASE
-        if (task103_generic_armed != 0u)
-        {
-            u32 task103_generic_span =
-                cpuGetTiming() - task103_generic_start;
-
-            NDS_DIAG(gNdsTask103GenericTicks += task103_generic_span);
-            NDS_DIAG(gNdsTask103GenericRunCount++);
-            NDS_DIAG(gNdsTask103GenericTriangles += run->triangle_count);
-            NDS_DIAG(gNdsTask103GenericSegTicks[segment_index] += task103_generic_span);
-            NDS_DIAG(gNdsTask103GenericSegRuns[segment_index]++);
-            NDS_DIAG(gNdsTask103GenericSegTris[segment_index] += run->triangle_count);
-        }
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
 stage_account_run:
-#endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         if (segment_index == 0u)
         {
             ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
@@ -5229,22 +3774,10 @@ stage_account_run:
             emitted_triangles);
         stats->triangle_count += run->triangle_count;
         segment_triangles += run->triangle_count;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        ndsRendererM3Phase0FinishSpan(
-            &gNdsRendererM3Phase0AccountingTicks, phase_start);
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103IterTicks += cpuGetTiming() - task103_iter_start);
-        NDS_DIAG(gNdsTask103IterCount++);
-#endif
     }
-#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_STAGE_GX_FAST_LIVE && \
-    !NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_RENDERER_M3_PHASE0_PROFILE && \
-    !NDS_DREAMLAND_CARD_CULL && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_STAGE_GX_FAST_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
 stage_gx_fast_done:
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
     ndsStageGxFlush();
     sNdsStageGxInSegment = 0u;
 #if NDS_LAB_STAGE_GX_HASH
@@ -5257,38 +3790,15 @@ stage_gx_fast_done:
     ndsLabStageGxHashWord(stats->hardware_zbuffer_triangle_count);
     ndsLabStageGxHashWord(stats->hardware_texture_ready_count);
 #endif
-#endif
-#if NDS_TASK36_HW_COMPOSE
     ndsRendererNativeStageTask36EndSegment();
-#endif
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    ndsRendererTask34StageStreamEndSegment();
-#endif
     sNdsRendererFastRunCount += segment->run_count;
     sNdsRendererFastTriangleCount += segment_triangles;
     sNdsRendererFastOwnerTriangleCount[
         NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
     sNdsNativeStageOwnerExecution.committed_segments |=
         (u32)1u << segment_index;
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    NDS_DIAG(gNdsRendererM3SegmentCount++);
-    gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
-    NDS_DIAG(gNdsRendererM3RunCount += segment->run_count);
-    NDS_DIAG(gNdsRendererM3TriangleCount += segment_triangles);
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererM3Phase0FinishSpan(
-        &gNdsRendererM3Phase0CommitTicks, commit_start);
-#endif
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-    if (census_owner_start != 0u)
-    {
-        gNdsRendererScreenSpaceStageOwnerTicks[segment->owner] +=
-            cpuGetTiming() - census_owner_start;
-    }
-#endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if (segment_index == 0u)
     {
         ndsRendererBenchmarkSegment0SinkEnd();
@@ -5303,66 +3813,27 @@ void ndsRendererFinishNativeStageOwner(void)
 {
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
-#if NDS_TASK36_HW_COMPOSE
         ndsRendererNativeStageTask36EndSegment();
-#endif
         ndsRendererHardwareEndBatch();
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
 #endif
         if ((sNdsNativeStageOwnerExecution.committed_segments !=
              (((u32)1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u)) ||
             (sNdsNativeStageOwnerExecution.stats == NULL) ||
             (sNdsNativeStageOwnerExecution.stats->triangle_count !=
-#if NDS_DREAMLAND_DS_MESH
-             (NDS_DREAMLAND_DS_TRIANGLE_COUNT + 27u)))
-#else
              NDS_NATIVE_STAGE_TRIANGLE_COUNT))
-#endif
         {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererM3PostArmFailureCount++;
-#endif
         }
     }
     sNdsNativeStageOwnerExecution.stats = NULL;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
     sNdsNativeStageOwnerExecution.hidden_binding_mask = 0u;
-#if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = NULL;
     sNdsNativeStageOwnerExecution.camera_modelview = NULL;
     sNdsNativeStageOwnerExecution.binding_world = NULL;
     sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
-#endif
     sNdsNativeStageOwnerExecution.committed_segments = 0u;
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
-#if NDS_DREAMLAND_DS_MESH
-#endif
 }
-#else
-s32 ndsRendererPrepareNativeStageOwner(
-    const NDSRendererNativeStageFrame *frame,
-    NDSRendererStats *stats)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)frame;
-    (void)stats;
-    return FALSE;
-}
-
-s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)segment_index;
-    return FALSE;
-}
-
-void ndsRendererFinishNativeStageOwner(void)
-{
-}
-
-void ndsRendererResetNativeStageValidationCache(void)
-{
-}
-#endif

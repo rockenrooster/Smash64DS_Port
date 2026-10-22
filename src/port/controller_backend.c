@@ -6,12 +6,8 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
 
-#if NDS_DEV_LIVE_INPUT_PREVIEW
 #define NDS_CONTROLLER_PLAYBACK_STATE \
     __attribute__((section(".dtcm.bss")))
-#else
-#define NDS_CONTROLLER_PLAYBACK_STATE
-#endif
 
 static OSContStatus sControllerStatus[MAXCONTROLLERS];
 static NDSControllerPlaybackPad sControllerPlaybackPads[MAXCONTROLLERS]
@@ -212,23 +208,15 @@ s32 osContInit(OSMesgQueue *queue, u8 *controller_bits,
     } else {
         memset(sControllerStatus, 0, sizeof(sControllerStatus));
         sControllerStatus[0].type = CONT_TYPE_NORMAL;
-#if NDS_DEV_LIVE_INPUT_PREVIEW
         sControllerStatus[1].type = CONT_TYPE_NORMAL;
         for (i = 2; i < MAXCONTROLLERS; i++) {
-#else
-        for (i = 1; i < MAXCONTROLLERS; i++) {
-#endif
             sControllerStatus[i].errno = CONT_NO_RESPONSE_ERROR;
         }
     }
     if (controller_bits != NULL) {
         *controller_bits = (sControllerPlaybackEnabled != FALSE) ?
             (u8)sControllerPlaybackConnectedMask :
-#if NDS_DEV_LIVE_INPUT_PREVIEW
             3;
-#else
-            1;
-#endif
     }
     if (status != NULL) {
         memcpy(status, sControllerStatus, sizeof(sControllerStatus));
@@ -284,20 +272,12 @@ void osContGetReadData(OSContPad *pad)
     keys = ndsPlatformHeldKeys();
     ndsControllerMapPad(keys, &pad[0]);
     pad[0].errno = 0u;
-#if NDS_DEV_LIVE_INPUT_PREVIEW
     pad[1].errno = 0u;
 
     for (i = 2; i < MAXCONTROLLERS; i++) {
-#else
-    for (i = 1; i < MAXCONTROLLERS; i++) {
-#endif
         pad[i].errno = CONT_NO_RESPONSE_ERROR;
     }
-#if NDS_DEV_LIVE_INPUT_PREVIEW
     gNdsControllerLiveConnectedMask = 3u;
-#else
-    gNdsControllerLiveConnectedMask = 1u;
-#endif
     gNdsControllerLivePad0Button = pad[0].button;
     NDS_DIAG(gNdsControllerLivePad0StickX = pad[0].stick_x);
     gNdsControllerLivePad0StickY = pad[0].stick_y;

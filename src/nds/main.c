@@ -38,14 +38,6 @@ volatile u32 gNdsFrameCounter;
 static void __attribute__((noinline, target("arm")))
 ndsLabDisableDataCacheIfRequested(void)
 {
-#if NDS_LAB_NO_DCACHE
-    u32 cr;
-
-    DC_FlushAll();
-    __asm__ volatile("mrc p15, 0, %0, c1, c0, 0" : "=r"(cr));
-    cr &= ~(1u << 2);
-    __asm__ volatile("mcr p15, 0, %0, c1, c0, 0" : : "r"(cr) : "memory");
-#endif
 }
 
 /* P2-2p8 stall budget, the cheap falsifier for the whole data-locality class.
@@ -76,13 +68,6 @@ ndsLabDisableDataCacheIfRequested(void)
  * and region 1 already covers main RAM; 2 and 3 are unused by crt0. */
 static void ndsLabUncacheSinTableIfRequested(void)
 {
-#if NDS_LAB_UNCACHED_SINTABLE
-    armMpuSetRegion(3, armMpuDefineRegion((uptr)gSYSinTable, CP15_PU_4K));
-    armMpuSetRegionDataPerm(3, CP15_PU_PERM_RW);
-    armMpuSetRegionWrBufEnable(3, true);
-    armMpuSetRegionDCacheEnable(3, false);
-    DC_FlushRange(gSYSinTable, sizeof(gSYSinTable));
-#endif
 }
 
 /* P2-2p8 (NDS_P2_ARM9_WRAM): ARM9 takes all 32 KB of shared WRAM
@@ -92,13 +77,11 @@ static void ndsLabUncacheSinTableIfRequested(void)
  * crosses the 32-bit WRAM bus instead of 16-bit main RAM. */
 static void ndsP2Arm9WramInit(void)
 {
-#if NDS_P2_ARM9_WRAM
     *(volatile u8 *)0x04000247 = 0u;
     armMpuSetRegion(3, armMpuDefineRegion(NDS_ARM9_WRAM_BASE, CP15_PU_32K));
     armMpuSetRegionDataPerm(3, CP15_PU_PERM_RW);
     armMpuSetRegionWrBufEnable(3, true);
     armMpuSetRegionDCacheEnable(3, true);
-#endif
 }
 
 void syMainLoop(void);
@@ -131,9 +114,6 @@ int main(void)
         ? 0x50415353u
         : (0xFA110000u | (u32)os_test);
 
-#if NDS_NET_LAB_PING
-    ndsNetLabPingRun(NDS_NET_LAB_PING_FRAMES);
-#endif
     syMainLoop();
 #if NDS_BOOT_DIAG_TEXT
     iprintf("Original boot: %s\n",
@@ -143,16 +123,12 @@ int main(void)
 
     while (1)
     {
-#if NDS_R2_MAIN_PRESENT_GUARD
         u32 presented_before;
-#endif
 
         ndsPlatformReadInput();
 
         ndsOsPostVBlank();
-#if NDS_R2_MAIN_PRESENT_GUARD
         presented_before = ndsPlatformTicks();
-#endif
         ndsOsRunThreads();
         ndsVideoBootstrapUpdate();
         if (gNdsControllerPollCount != 0 &&
@@ -169,9 +145,7 @@ int main(void)
          * 2.00 presents per source tic against the battle path's 1.00, with GX
          * submits and flushes both at 1.00 -- so exactly half the presents
          * rendered nothing and existed only to burn a VBlank. */
-#if NDS_R2_MAIN_PRESENT_GUARD
         if (ndsPlatformTicks() == presented_before)
-#endif
         {
             ndsPlatformBeginFrame();
             ndsPlatformRenderDebugHud();

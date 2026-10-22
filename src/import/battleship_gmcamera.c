@@ -116,301 +116,30 @@ volatile u32 gNdsR2CameraFixedRescaleCount __attribute__((used));
  * scripts/diagnostics/probe-native-render-scene.ps1, built only with
  * NDS_CAMERA_FRAME_WITNESS=1. It cost ~1.7K ticks a frame (four fighters'
  * soft-float margins) in every build, the gate ROM included. */
-#ifndef NDS_CAMERA_FRAME_WITNESS
-#define NDS_CAMERA_FRAME_WITNESS 0
-#endif
-#if NDS_CAMERA_FRAME_WITNESS
-/* Battle framing witness.  Keep the source f32 values exactly as
- * gmCameraUpdateInterests produced them: converting them in the guest would
- * add work and would make the diagnostic itself another numeric boundary.
- * GDB formats these values on the host. */
-volatile f32 gNdsCameraFrameCenterX __attribute__((used));
-volatile f32 gNdsCameraFrameCenterY __attribute__((used));
-volatile f32 gNdsCameraFrameHalfW __attribute__((used));
-volatile f32 gNdsCameraFrameHalfH __attribute__((used));
-volatile u32 gNdsCameraFrameCount __attribute__((used));
-volatile f32 gNdsCameraFighterX[GMCOMMON_PLAYERS_MAX] __attribute__((used));
-volatile f32 gNdsCameraFighterY[GMCOMMON_PLAYERS_MAX] __attribute__((used));
-volatile u32 gNdsCameraFramePlayers __attribute__((used));
-volatile u32 gNdsCameraFrameLiveMask __attribute__((used));
-volatile u32 gNdsCameraFrameOffMask __attribute__((used));
-volatile u32 gNdsCameraOffCount __attribute__((used));
-volatile u32 gNdsCameraWorstFrame __attribute__((used));
-volatile u32 gNdsCameraWorstPlayer __attribute__((used));
-volatile f32 gNdsCameraWorstMargin __attribute__((used));
-volatile f32 gNdsCameraWorstX __attribute__((used));
-volatile f32 gNdsCameraWorstY __attribute__((used));
-volatile f32 gNdsCameraWorstCenterX __attribute__((used));
-volatile f32 gNdsCameraWorstCenterY __attribute__((used));
-volatile f32 gNdsCameraWorstHalfW __attribute__((used));
-volatile f32 gNdsCameraWorstHalfH __attribute__((used));
-volatile u32 gNdsCameraWorstMask __attribute__((used));
-volatile u32 gNdsCameraWorstLiveMask __attribute__((used));
-volatile f32 gNdsCameraWorstFighterX[GMCOMMON_PLAYERS_MAX] __attribute__((used));
-volatile f32 gNdsCameraWorstFighterY[GMCOMMON_PLAYERS_MAX] __attribute__((used));
-
-static void ndsCameraResetFrameWitness(void)
-{
-    u32 i;
-
-    gNdsCameraFrameCenterX = 0.0F;
-    gNdsCameraFrameCenterY = 0.0F;
-    gNdsCameraFrameHalfW = 0.0F;
-    gNdsCameraFrameHalfH = 0.0F;
-    gNdsCameraFrameCount = 0u;
-    gNdsCameraFramePlayers = 0u;
-    gNdsCameraFrameLiveMask = 0u;
-    gNdsCameraFrameOffMask = 0u;
-    gNdsCameraOffCount = 0u;
-    gNdsCameraWorstFrame = 0u;
-    gNdsCameraWorstPlayer = 0xffffffffu;
-    gNdsCameraWorstMargin = 0.0F;
-    gNdsCameraWorstX = 0.0F;
-    gNdsCameraWorstY = 0.0F;
-    gNdsCameraWorstCenterX = 0.0F;
-    gNdsCameraWorstCenterY = 0.0F;
-    gNdsCameraWorstHalfW = 0.0F;
-    gNdsCameraWorstHalfH = 0.0F;
-    gNdsCameraWorstMask = 0u;
-    gNdsCameraWorstLiveMask = 0u;
-    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
-    {
-        gNdsCameraFighterX[i] = 0.0F;
-        gNdsCameraFighterY[i] = 0.0F;
-        gNdsCameraWorstFighterX[i] = 0.0F;
-        gNdsCameraWorstFighterY[i] = 0.0F;
-    }
-}
-
-static inline u32 ndsCameraF32MagnitudeBits(f32 value)
-{
-    union
-    {
-        f32 f;
-        u32 u;
-    } bits;
-
-    bits.f = value;
-    return bits.u & 0x7fffffffu;
-}
-
-static inline f32 ndsCameraAbsF32(f32 value)
-{
-    union
-    {
-        f32 f;
-        u32 u;
-    } bits;
-
-    bits.f = value;
-    bits.u &= 0x7fffffffu;
-    return bits.f;
-}
-
-static void ndsCameraRecordFrame(const Vec3f *center, f32 half_w, f32 half_h)
-{
-    const u32 half_w_bits = ndsCameraF32MagnitudeBits(half_w);
-    const u32 half_h_bits = ndsCameraF32MagnitudeBits(half_h);
-    u32 players = 0u;
-    u32 live_mask = 0u;
-    u32 off_mask = 0u;
-    u32 worst_player = 0xffffffffu;
-    u32 worst_margin_bits = 0u;
-    f32 worst_margin = 0.0F;
-    f32 worst_x = 0.0F;
-    f32 worst_y = 0.0F;
-    u32 player;
-
-    gNdsCameraFrameCenterX = center->x;
-    gNdsCameraFrameCenterY = center->y;
-    gNdsCameraFrameHalfW = half_w;
-    gNdsCameraFrameHalfH = half_h;
-    gNdsCameraFrameCount++;
-
-    if (gSCManagerBattleState != NULL)
-    {
-        for (player = 0u; player < GMCOMMON_PLAYERS_MAX; player++)
-        {
-            GObj *fighter_gobj =
-                gSCManagerBattleState->players[player].fighter_gobj;
-            FTStruct *fp = (fighter_gobj != NULL) ?
-                (FTStruct *)fighter_gobj->user_data.p : NULL;
-
-            /* Entry is respawn, DeadUp is a KO flight, and Ghost is absent
-             * from battle framing. Explain is not live VS play either. Only
-             * Default can make the off-screen count red. */
-            if ((fp != NULL) && (fp->camera_mode == nFTCameraModeDefault))
-            {
-                const Vec3f *translate =
-                    &DObjGetStruct(fighter_gobj)->translate.vec.f;
-                const f32 x = translate->x;
-                const f32 y = translate->y + fp->attr->cam_offset_y;
-                const f32 abs_dx = ndsCameraAbsF32(x - center->x);
-                const f32 abs_dy = ndsCameraAbsF32(y - center->y);
-                const u32 abs_dx_bits = ndsCameraF32MagnitudeBits(abs_dx);
-                const u32 abs_dy_bits = ndsCameraF32MagnitudeBits(abs_dy);
-                u32 margin_bits = 0u;
-                f32 margin = 0.0F;
-
-                gNdsCameraFighterX[player] = x;
-                gNdsCameraFighterY[player] = y;
-                live_mask |= 1u << player;
-                players++;
-
-                /* Positive finite IEEE-754 words have the same ordering as
-                 * their float values.  These integer comparisons avoid four
-                 * __aeabi_fcmp calls per live fighter. */
-                if (abs_dx_bits > half_w_bits)
-                {
-                    margin = abs_dx - half_w;
-                    margin_bits = ndsCameraF32MagnitudeBits(margin);
-                }
-                if (abs_dy_bits > half_h_bits)
-                {
-                    const f32 y_margin = abs_dy - half_h;
-                    const u32 y_margin_bits =
-                        ndsCameraF32MagnitudeBits(y_margin);
-
-                    if (y_margin_bits > margin_bits)
-                    {
-                        margin = y_margin;
-                        margin_bits = y_margin_bits;
-                    }
-                }
-                if (margin_bits != 0u)
-                {
-                    off_mask |= 1u << player;
-                    if (margin_bits > worst_margin_bits)
-                    {
-                        worst_margin = margin;
-                        worst_margin_bits = margin_bits;
-                        worst_player = player;
-                        worst_x = x;
-                        worst_y = y;
-                    }
-                }
-            }
-        }
-    }
-
-    gNdsCameraFramePlayers = players;
-    gNdsCameraFrameLiveMask = live_mask;
-    gNdsCameraFrameOffMask = off_mask;
-
-    if (off_mask != 0u)
-    {
-        gNdsCameraOffCount++;
-        if ((gNdsCameraWorstFrame == 0u) ||
-            (worst_margin_bits >
-             ndsCameraF32MagnitudeBits(gNdsCameraWorstMargin)))
-        {
-            u32 i;
-
-            gNdsCameraWorstFrame = gNdsCameraFrameCount;
-            gNdsCameraWorstPlayer = worst_player;
-            gNdsCameraWorstMargin = worst_margin;
-            gNdsCameraWorstX = worst_x;
-            gNdsCameraWorstY = worst_y;
-            gNdsCameraWorstCenterX = center->x;
-            gNdsCameraWorstCenterY = center->y;
-            gNdsCameraWorstHalfW = half_w;
-            gNdsCameraWorstHalfH = half_h;
-            gNdsCameraWorstMask = off_mask;
-            gNdsCameraWorstLiveMask = live_mask;
-            for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
-            {
-                gNdsCameraWorstFighterX[i] = gNdsCameraFighterX[i];
-                gNdsCameraWorstFighterY[i] = gNdsCameraFighterY[i];
-            }
-        }
-    }
-}
-#else
 #define ndsCameraResetFrameWitness() ((void)0)
 #define ndsCameraRecordFrame(center, half_w, half_h) \
     ((void)(center), (void)(half_w), (void)(half_h))
-#endif
 
 /* These three functions are the source battle-follow callers with one bounded
  * diagnostic call immediately after gmCameraUpdateInterests.  The original
  * interest calculation runs once; no camera math is repeated. */
 static void ndsCameraDefaultFuncCameraWitness(GObj *camera_gobj)
 {
-#if NDS_CAMERA_FRAME_WITNESS
-    CObj *cobj = CObjGetStruct(camera_gobj);
-    f32 max;
-    Vec3f scale;
-    Vec3f center;
-    f32 half_w;
-    f32 half_h;
-
-    gmCameraUpdateInterests(&center, &half_w, &half_h);
-    ndsCameraRecordFrame(&center, half_w, half_h);
-    gmCameraAdjustFOV(38.0F);
-    gmCameraGetClampDimensionsMax(half_w, half_h, &max);
-    func_ovl2_8010C670(max);
-    gmCameraPan(cobj, &center, func_ovl2_8010C4D0());
-    func_ovl2_8010C3C0(&cobj->vec.at, &scale);
-    func_ovl2_8010C5C0(cobj, &scale);
-    gmCameraApplyVel(cobj);
-    gmCameraApplyFOV(cobj);
-#else
     /* The Q12 camera (battleship_gmcamera_fixed.c), the default status's
      * strong definition; the float chain above stays for the lab witness. */
     gmCameraDefaultFuncCamera(camera_gobj);
-#endif
 }
 
 static void ndsCameraZebesFuncCameraWitness(GObj *camera_gobj)
 {
-#if NDS_CAMERA_FRAME_WITNESS
-    CObj *cobj = CObjGetStruct(camera_gobj);
-    f32 max;
-    Vec3f scale;
-    Vec3f center;
-    f32 half_w;
-    f32 half_h;
-
-    gmCameraUpdateInterests(&center, &half_w, &half_h);
-    ndsCameraRecordFrame(&center, half_w, half_h);
-    gmCameraAdjustFOV(38.0F);
-    gmCameraGetClampDimensionsMax(half_w, half_h, &max);
-    func_ovl2_8010C670(max);
-    gmCameraPan(cobj, &center, func_ovl2_8010C4D0());
-    func_ovl2_8010C3C0(&cobj->vec.at, &scale);
-    gmCameraUpdateAcidZoom(cobj, &scale);
-    gmCameraApplyVel(cobj);
-    gmCameraApplyFOV(cobj);
-#else
     /* The Q12 camera (battleship_gmcamera_fixed.c), as the default's. */
     gmCameraZebesFuncCamera(camera_gobj);
-#endif
 }
 
 static void ndsCameraInishieFuncCameraWitness(GObj *camera_gobj)
 {
-#if NDS_CAMERA_FRAME_WITNESS
-    CObj *cobj = CObjGetStruct(camera_gobj);
-    f32 max;
-    Vec3f scale;
-    Vec3f center;
-    f32 half_w;
-    f32 half_h;
-
-    gmCameraUpdateInterests(&center, &half_w, &half_h);
-    ndsCameraRecordFrame(&center, half_w, half_h);
-    gmCameraAdjustFOV(38.0F);
-    gmCameraGetClampDimensionsMax(half_w, half_h, &max);
-    func_ovl2_8010C670(max);
-    gmCameraPan(cobj, &center, func_ovl2_8010C4D0());
-    gmCameraUpdateInishieFocus(&cobj->vec.at, &scale);
-    func_ovl2_8010C5C0(cobj, &scale);
-    gmCameraApplyVel(cobj);
-    gmCameraApplyFOV(cobj);
-#else
     /* The Q12 camera (battleship_gmcamera_fixed.c), as the default's. */
     gmCameraInishieFuncCamera(camera_gobj);
-#endif
 }
 
 void gmCameraMakeBattleCamera(void)

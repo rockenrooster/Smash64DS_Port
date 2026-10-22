@@ -20,7 +20,6 @@
  * func_800269C0_275C0 ride on it/item.h, gm/gmsound.h, nds/nds_obj_anim.h,
  * and sys/audio.h, so no local externs are written for them.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -570,4 +569,3 @@ void itStarmieAttackMakeSwift(GObj *item_gobj, Vec3f *pos)
     itStarmieWeaponSwiftMakeWeapon(item_gobj, pos);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

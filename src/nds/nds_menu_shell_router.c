@@ -163,7 +163,6 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
                                          sizeof(kNdsMenuVsSurfaces[0])));
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
-#if NDS_P4
         if (sCssOneP != 0u)
         {
             /* P7 C1: the 1P select's own base over the same grid; C2: the
@@ -175,7 +174,6 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
             (void)ndsUiKitBlitSurfaces(&onep, 1u);
             break;
         }
-#endif
         (void)ndsUiKitBlitSurfaces(kNdsMenuCssSurfaces,
                                    (u32)(sizeof(kNdsMenuCssSurfaces) /
                                          sizeof(kNdsMenuCssSurfaces[0])));
@@ -625,10 +623,8 @@ void ndsMenuShellRunStartup(void)
      * makes every downstream FGM request resolve against a real pack instead
      * of an empty one. The resident entries and sample cache live in static
      * .bss, outside the taskman arena, and survive every scene's rewind. */
-#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
     ndsMenuShellPrefetchCues(NDS_MENU_FGM_PREFETCH_BOOT_FRAMES);
-#endif
     gNdsMenuShellStartupCount++;
 
     /* THE SOURCE'S OWN TEARDOWN, for the same reason every screen runs it
@@ -641,15 +637,6 @@ void ndsMenuShellRunStartup(void)
     /* Deliberately NOT written into the transition ring: the ring pairs a
      * SCREEN with the scene it hands off to, and no screen ran here. An empty
      * first ring slot is the evidence that boot reaches the title directly. */
-#if NDS_NET_LAB_MATCH
-    /* P3 lab: two consoles agree a fixed match and go straight into it. */
-    if (ndsNetLabMatchHandshake() == 0)
-    {
-        ndsSceneManagerRequest((u32)nSCKindVSBattle,
-                               (u32)gSCManagerSceneData.scene_curr);
-        return;
-    }
-#endif
     ndsSceneManagerRequest((u32)nSCKindTitle,
                            (u32)gSCManagerSceneData.scene_curr);
 }

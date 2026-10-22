@@ -12,13 +12,8 @@
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #include <nds/nds_p4_contents.h>
 
-#if NDS_P4
 #include <nds_p4_native_image.generated.h>
 #define NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL \
     (NDS_NATIVE_IMAGE_OWNER_SLOTS + NDS_P4_NATIVE_IMAGE_SLOTS)
-#else
-#define NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL NDS_NATIVE_IMAGE_OWNER_SLOTS
-#define NDS_P4_NATIVE_OWNER_IMAGE_ROWS(X)
-#endif
 
 #endif /* NDS_P4_NATIVE_H */

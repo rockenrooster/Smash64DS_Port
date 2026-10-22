@@ -31,11 +31,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_LANKY
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 #include <ef/effect.h>
 #include <macros.h>
 #include <sys/audio.h>
@@ -160,15 +157,11 @@ static sb32 ndsP4LankyStickAgainst(FTStruct *fp)
 /* Kirby's copy (S8): LankyNSP's Kirby branches set his own statuses. */
 static s32 ndsP4LankyNSPStatus(const FTStruct *fp, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
         return (status_id == LANKY_STATUS_NSPG) ? NDS_P4_KIRBY_STATUS_LANKY_NSP_GROUND :
                                                   NDS_P4_KIRBY_STATUS_LANKY_NSP_AIR;
     }
-#else
-    (void)fp;
-#endif
     return status_id;
 }
 
@@ -1109,4 +1102,3 @@ const NDSP4Overrides gNdsP4LankyOverrides = {
     .damage_status = ndsP4LankyDamageStatus,
 };
 
-#endif /* NDS_P4_LANKY */

@@ -32,7 +32,6 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_MRGAW
 
 #include <ef/effect.h>
 #include <gr/ground.h>
@@ -40,9 +39,7 @@
 #include <it/item.h>
 #include <sys/audio.h>
 #include <wp/weapon.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -853,24 +850,19 @@ void ndsP4MrgawDSPAttacksMain(GObj *fighter_gobj)
     }
 }
 
-#if NDS_P2_KIRBY
 static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id);
 static void ndsP4MrgawKirbyColAnimEnd(GObj *fighter_gobj);
 static void ndsP4MrgawKirbyAfterProcMap(GObj *fighter_gobj);
-#endif
 
 const NDSP4Overrides gNdsP4MrgawOverrides = {
     .before_physics_map = ndsP4MrgawBeforePhysicsMap,
     .on_damage = ndsP4MrgawOnDamage,
     .item = ndsP4MrgawItem,
-#if NDS_P2_KIRBY
     .kirby_on_status = ndsP4MrgawKirbyOnStatus,
     .kirby_colanim_end = ndsP4MrgawKirbyColAnimEnd,
     .kirby_after_proc_map = ndsP4MrgawKirbyAfterProcMap,
-#endif
 };
 
-#if NDS_P2_KIRBY
 /* ---- Kirby's copy (owner request 2026-10-12, "Brawl-style") ----
  *
  * EXTRA lets no Kirby copy MRGAW (define_character's bool_inhale_copy is
@@ -1052,6 +1044,4 @@ static void ndsP4MrgawKirbyAfterProcMap(GObj *fighter_gobj)
     colanim->color1.a = 0xFF;
     colanim->color1.ir = colanim->color1.ig = colanim->color1.ib = colanim->color1.ia = 0;
 }
-#endif /* NDS_P2_KIRBY */
 
-#endif /* NDS_P4_MRGAW */

@@ -42,10 +42,8 @@ static const NdsSceneDesc sNdsSceneTable[] = {
      * high-water ring has to hold flat. */
     { (u8)nSCKindVSBattle, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
       NDS_SCENE_TRANSITION_NONE },
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     { (u8)nSCKindVSResults, NDS_SCENE_FLAG_ARENA_RESET,
       NDS_SCENE_TRANSITION_SOURCE },
-#endif
     { (u8)nSCKindTitle, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
 #if NDS_P2_MENU_SHELL
@@ -226,9 +224,6 @@ NDS_SCENE_PUBLISHED volatile u32 gNdsSceneWalkLoopsCompleted;
  * even if a nested start ever appears. */
 static u32 sNdsSceneManagerRingIndex;
 static u32 sNdsSceneManagerDepth;
-#if NDS_R2_SCENE_LOOP_WALK
-static u32 sNdsSceneWalkArmed;
-#endif
 
 const NdsSceneDesc *ndsSceneManagerFind(u32 kind)
 {
@@ -361,21 +356,6 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
         1u : 0u;
     gNdsSceneManagerEnterCount++;
 
-#if NDS_R2_SCENE_LOOP_WALK
-    if ((sNdsSceneWalkArmed == 0u) && (desc != NULL))
-    {
-        /* Armed on the first REGISTERED entry, not on the first entry: the
-         * boot's startup scene is not part of the loop and arming on it would
-         * spend the count before the walk begins.
-         *
-         * TWO hops per loop, not three. The loop has three legs, but the
-         * battle -> results leg is the source's own (scvsbattle.c:560) and
-         * must stay that way, so only results -> menu and menu -> battle are
-         * requested here. */
-        sNdsSceneWalkArmed = 1u;
-        gNdsSceneWalkHopsRemaining = (u32)NDS_R2_SCENE_LOOP_WALK * 2u;
-    }
-#endif
 }
 
 s32 ndsSceneManagerPrepareDrawMemory(void)
@@ -416,38 +396,6 @@ void ndsSceneManagerExit(void)
 
 sb32 ndsSceneWalkAdvance(u32 next_kind)
 {
-#if NDS_R2_SCENE_LOOP_WALK
-    u32 before;
-
-    if (gNdsSceneWalkHopsRemaining == 0u)
-    {
-        return FALSE;
-    }
-    before = gNdsSceneManagerRequestCount;
-    ndsSceneManagerRequest(next_kind, (u32)gSCManagerSceneData.scene_curr);
-    if (gNdsSceneManagerRequestCount == before)
-    {
-        /* Refused. Do not spend the hop -- the caller parks, and the reject
-         * counter says why, instead of the walk silently running short. */
-        return FALSE;
-    }
-    gNdsSceneWalkHopsRemaining--;
-    /* Leaving RESULTS for a menu is what closes a loop, and P2-1f keys it on
-     * that rather than on the destination kind. It used to test
-     * `next_kind == nSCKindVSMode`, which was the same predicate while the
-     * Results leg was the only hop that could name VS Mode; with the shell on,
-     * Results returns to the CHARACTER SELECT (the source's own destination,
-     * mnvsresults.c:3312) and so does the VS menu's own START hop, so a
-     * destination test would either miss every loop or count the first one
-     * twice. `scene_prev` is the scene just left -- ndsSceneManagerRequest
-     * above has already written it -- so this reads "a lap ended" directly. */
-    if ((u32)gSCManagerSceneData.scene_prev == (u32)nSCKindVSResults)
-    {
-        gNdsSceneWalkLoopsCompleted++;
-    }
-    return TRUE;
-#else
     (void)next_kind;
     return FALSE;
-#endif
 }

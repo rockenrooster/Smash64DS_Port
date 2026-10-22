@@ -16,7 +16,6 @@
  * and the coin weapon-vars slot are not) are referenced verbatim and listed
  * in the task report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -374,4 +373,3 @@ void itNyarsAttackMakeCoin(GObj *item_gobj, f32 angle)
     }
 }
 
-#endif /* NDS_P2_ITEM_CORE */

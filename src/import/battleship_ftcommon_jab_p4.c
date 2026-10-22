@@ -21,7 +21,6 @@
 #include <sys/obj.h>
 #include <nds/nds_p4_contents.h>
 
-#if NDS_P4
 #include <nds/nds_p4.h>
 
 /* Past FTKind (it ends at nFTKindGDonkey) and NDS_P4_FOREIGN_FKIND, and
@@ -270,4 +269,3 @@ sb32 ndsP4JabAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
     return FALSE;
 }
 
-#endif /* NDS_P4 */

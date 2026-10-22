@@ -40,7 +40,6 @@
 #define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
 #define NDS_AUDIO_FGM_FLAG_LOOP (1u << 0)
 #define NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME (1u << 1)
-#if NDS_P4
 /* P4: the Remix contents' sounds (scripts/p4/p4_audio.py), a second pack in
  * the vanilla layout under its own magic. Its entries carry this runtime
  * flag, so their bodies are read from that file. */
@@ -49,7 +48,6 @@
 #include <nds_p4_fgm.generated.h>
 #define NDS_AUDIO_FGM_P4_ENTRY_MAX NDS_P4_FGM_ENTRY_COUNT
 #define NDS_AUDIO_FGM_FLAG_P4 (1u << 15)
-#endif
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_FIRST nSYAudioFGMSamusSpecialNCharge0
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_LAST nSYAudioFGMSamusSpecialNCharge6
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID 673u
@@ -59,15 +57,8 @@
 #define NDS_AUDIO_FGM_MASK_LOOP_PLAY (1u << 2)
 #define NDS_AUDIO_FGM_MASK_PHASE_COMPLETE (1u << 3)
 
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-#define NDS_AUDIO_FGM_ACK_RELEASE_PARAMS \
-    , u32 release_reason, u32 service_tick
-#define NDS_AUDIO_FGM_ACK_RELEASE_ARGS(reason, service_tick) \
-    , reason, service_tick
-#else
 #define NDS_AUDIO_FGM_ACK_RELEASE_PARAMS
 #define NDS_AUDIO_FGM_ACK_RELEASE_ARGS(reason, service_tick)
-#endif
 
 typedef struct NDSAudioFgmPackEntry {
     u16 id;
@@ -221,9 +212,6 @@ __attribute__((used)) volatile u32 gNdsAudioFgmReadTicks64;
 __attribute__((used)) volatile u32 gNdsAudioFgmReadBytes;
 __attribute__((used)) volatile u32 gNdsAudioFgmDirectFallbackCount;
 __attribute__((used)) volatile u32 gNdsAudioFgmStdioRangeReadCount;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
-#endif
 
 /* The cue ring arena. Line-aligned, and every span is a whole number of lines,
  * so a fill is one direct ROM read, not a bounced head, body and tail. */
@@ -272,9 +260,6 @@ static u32 sNdsAudioFgmChannelGenerations[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmChannelStartTicks[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmRecentStartMask;
 static u32 sNdsAudioFgmNextGeneration = 1u;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-static u32 sNdsAudioFgmArm7AckSequence;
-#endif
 static u16 sNdsAudioFgmInstanceToken;
 
 /* 16-byte header + N * 32-byte entries. The header and entry SIZES are the
@@ -319,14 +304,6 @@ _Static_assert(NDS_AUDIO_FGM_HANDLE_COUNT >= 3u,
                "FGM pool must support the source KO call burst");
 _Static_assert(NDS_AUDIO_FGM_CHANNEL_COUNT == SOUND_NUM_CHANNELS,
                "FGM channel count must match the Calico mixer");
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-_Static_assert(sizeof(NDSAudioFgmArm7AckEvent) == 32u,
-               "FGM ARM7 ACK event layout changed");
-_Static_assert(offsetof(NDSAudioFgmArm7AckTrace, events) == 48u,
-               "FGM ARM7 ACK event array moved");
-_Static_assert(sizeof(NDSAudioFgmArm7AckTrace) == 112u,
-               "FGM ARM7 ACK trace layout changed");
-#endif
 
 /* The release window in CPU ticks, derived the same way the duration is so the
  * two cannot drift apart. */
@@ -1175,7 +1152,6 @@ static void ndsAudioFgmBuildIdMap(void)
     sNdsAudioFgmIdMapReady = 1u;
 }
 
-#if NDS_P4
 static NDSAudioFgmPackEntry sNdsAudioFgmP4Entries[NDS_AUDIO_FGM_P4_ENTRY_MAX];
 static u32 sNdsAudioFgmP4Count;
 static u16 sNdsAudioFgmP4FileId;
@@ -1206,7 +1182,6 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindP4Entry(u16 id)
     return ((lo < sNdsAudioFgmP4Count) && (sNdsAudioFgmP4Entries[lo].id == id)) ?
         &sNdsAudioFgmP4Entries[lo] : NULL;
 }
-#endif
 
 static NDSAudioFgmPackEntry *ndsAudioFgmFindEntryDirect(u16 id);
 
@@ -1217,7 +1192,7 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 {
     NDSAudioFgmPackEntry *entry = ndsAudioFgmFindEntryDirect(id);
 
-#if NDS_P4 && defined(NDS_P4_FGM_ALIAS_ROWS)
+#if defined(NDS_P4_FGM_ALIAS_ROWS)
     if (entry == NULL)
     {
         switch (id)
@@ -1257,11 +1232,7 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntryDirect(u16 id)
             }
         }
     }
-#if NDS_P4
     return ndsAudioFgmFindP4Entry(id);
-#else
-    return NULL;
-#endif
 }
 
 static void ndsAudioFgmCacheReset(void)
@@ -1338,7 +1309,6 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
 /* An entry's IMA body, from the pack that holds it. */
 static s32 ndsAudioFgmReadEntryBody(const NDSAudioFgmPackEntry *entry, void *dst)
 {
-#if NDS_P4
     if ((entry->flags & NDS_AUDIO_FGM_FLAG_P4) != 0u)
     {
         return ((sNdsAudioFgmRomReady != FALSE) &&
@@ -1346,7 +1316,6 @@ static s32 ndsAudioFgmReadEntryBody(const NDSAudioFgmPackEntry *entry, void *dst
                                   entry->data_offset, dst,
                                   entry->data_bytes) != false)) ? TRUE : FALSE;
     }
-#endif
     return ndsAudioFgmReadRange(entry->data_offset, dst, entry->data_bytes);
 }
 
@@ -1372,13 +1341,11 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
     }
     rom_offset = nitroromGetFileOffset(sNdsAudioFgmRom, sNdsAudioFgmRomFileId) +
                  entry->data_offset;
-#if NDS_P4
     if ((entry->flags & NDS_AUDIO_FGM_FLAG_P4) != 0u)
     {
         rom_offset = nitroromGetFileOffset(sNdsAudioFgmRom, sNdsAudioFgmP4FileId) +
                      entry->data_offset;
     }
-#endif
     while (done < bytes)
     {
         u32 chunk = bytes - done;
@@ -1820,65 +1787,6 @@ static u16 ndsAudioFgmNextInstanceToken(void)
     return sNdsAudioFgmInstanceToken;
 }
 
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-static s32 ndsAudioFgmIsArm7AckTarget(u16 fgm_id)
-{
-    return (fgm_id == nSYAudioVoicePublicExcited) ? TRUE : FALSE;
-}
-
-static void ndsAudioFgmArm7AckTraceBegin(
-    const NDSAudioFgmHandle *handle, const NDSAudioFgmPackEntry *entry)
-{
-    memset((void *)&gNdsAudioFgmArm7AckTrace, 0,
-           sizeof(gNdsAudioFgmArm7AckTrace));
-    if (++sNdsAudioFgmArm7AckSequence == 0u)
-    {
-        sNdsAudioFgmArm7AckSequence = 1u;
-    }
-    gNdsAudioFgmArm7AckTrace.sequence = sNdsAudioFgmArm7AckSequence;
-    gNdsAudioFgmArm7AckTrace.fgm_id = handle->fgm_id;
-    gNdsAudioFgmArm7AckTrace.generation = handle->generation;
-    gNdsAudioFgmArm7AckTrace.channel = (u32)handle->channel;
-    gNdsAudioFgmArm7AckTrace.instance_token = handle->effect.sfx_id;
-    gNdsAudioFgmArm7AckTrace.handle_start_tick = handle->start_tick;
-    gNdsAudioFgmArm7AckTrace.handle_end_tick = handle->end_tick;
-    gNdsAudioFgmArm7AckTrace.duration_ticks = entry->duration_ticks;
-    gNdsAudioFgmArm7AckTrace.envelope_count = entry->envelope_count;
-}
-
-static void ndsAudioFgmArm7AckTraceRecord(
-    const NDSAudioFgmHandle *handle, u32 kind, u32 source_tick, u32 value,
-    u32 service_tick, u32 command_tick, u32 command_return_tick,
-    u32 acknowledge_tick, u32 active_channels)
-{
-    volatile NDSAudioFgmArm7AckEvent *event;
-    u32 event_index = gNdsAudioFgmArm7AckTrace.event_count;
-
-    if ((gNdsAudioFgmArm7AckTrace.fgm_id != handle->fgm_id) ||
-        (gNdsAudioFgmArm7AckTrace.generation != handle->generation) ||
-        (gNdsAudioFgmArm7AckTrace.channel != (u32)handle->channel))
-    {
-        gNdsAudioFgmArm7AckTrace.mismatch_count++;
-        return;
-    }
-    if (event_index >= NDS_AUDIO_FGM_ARM7_ACK_EVENT_CAPACITY)
-    {
-        gNdsAudioFgmArm7AckTrace.overflow_count++;
-        return;
-    }
-
-    event = &gNdsAudioFgmArm7AckTrace.events[event_index];
-    event->kind = kind;
-    event->source_tick = source_tick;
-    event->value = value;
-    event->service_tick = service_tick;
-    event->command_tick = command_tick;
-    event->command_return_tick = command_return_tick;
-    event->acknowledge_tick = acknowledge_tick;
-    event->active_channels = active_channels;
-    gNdsAudioFgmArm7AckTrace.event_count = event_index + 1u;
-}
-#endif
 
 static void ndsAudioFgmReleaseHandle(
     NDSAudioFgmHandle *handle, s32 kill_channel
@@ -1930,32 +1838,7 @@ static void ndsAudioFgmReleaseHandle(
     {
         if (kill_channel != FALSE)
         {
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-            if ((release_reason == NDS_AUDIO_FGM_RELEASE_REASON_DURATION) &&
-                (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE))
-            {
-                u32 command_tick = cpuGetTiming();
-                u32 command_return_tick;
-                u32 active_channels;
-                u32 acknowledge_tick;
-
                 soundKill(channel);
-                command_return_tick = cpuGetTiming();
-                active_channels = (u32)soundGetActiveChannels();
-                acknowledge_tick = cpuGetTiming();
-                ndsAudioFgmArm7AckTraceRecord(
-                    handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_STOP,
-                    gNdsAudioFgmArm7AckTrace.duration_ticks,
-                    release_reason, service_tick, command_tick,
-                    command_return_tick, acknowledge_tick, active_channels);
-            }
-            else
-            {
-#endif
-                soundKill(channel);
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-            }
-#endif
         }
         sNdsAudioFgmChannelOwners[channel] = NULL;
         sNdsAudioFgmChannelGenerations[channel] = 0u;
@@ -2039,9 +1922,7 @@ static void __attribute__((constructor)) ndsAudioFgmStartCalicoSound(void)
 void ndsAudioFgmSoundEnable(void)
 {
     soundEnable();
-#if !NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
     soundSetAutoUpdate(true);
-#endif
 }
 
 static u32 ndsAudioFgmActiveChannels(void)
@@ -2217,31 +2098,15 @@ static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
     s32 channel;
     u32 start;
     u32 duration_cpu_ticks;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    u32 play_command_tick = 0u;
-    u32 play_command_return_tick = 0u;
-#endif
 
     NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(handle->fgm_id);
     ndsAudioFgmSoundEnable();
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
-    {
-        play_command_tick = cpuGetTiming();
-    }
-#endif
     channel = ndsAudioFgmPlaySample(
         sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
         entry->frequency, entry->volume, handle->effect.balance,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
     NDS_FREEZE_DIAGNOSTICS_FGM_RETURN(channel);
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
-    {
-        play_command_return_tick = cpuGetTiming();
-    }
-#endif
     if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
     {
         return FALSE;
@@ -2311,21 +2176,6 @@ static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
     handle->pending = FALSE;
     sNdsAudioFgmChannelOwners[channel] = handle;
     sNdsAudioFgmChannelGenerations[channel] = handle->generation;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
-    {
-        u32 active_channels;
-        u32 acknowledge_tick;
-
-        ndsAudioFgmArm7AckTraceBegin(handle, entry);
-        active_channels = (u32)soundGetActiveChannels();
-        acknowledge_tick = cpuGetTiming();
-        ndsAudioFgmArm7AckTraceRecord(
-            handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY, 0u, entry->volume,
-            handle->start_tick, play_command_tick, play_command_return_tick,
-            acknowledge_tick, active_channels);
-    }
-#endif
     gNdsAudioFgmChannelMask |= 1u << channel;
     gNdsAudioFgmLastChannel = (u32)channel;
     return TRUE;
@@ -2412,11 +2262,6 @@ void ndsAudioFgmDiagnosticsReset(void)
     {
         sNdsAudioFgmNextGeneration = 1u;
     }
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    memset((void *)&gNdsAudioFgmArm7AckTrace, 0,
-           sizeof(gNdsAudioFgmArm7AckTrace));
-    sNdsAudioFgmArm7AckSequence = 0u;
-#endif
 
     gNdsAudioFgmResult = 0u;
     gNdsAudioFgmMask = 0u;
@@ -2478,7 +2323,6 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmStdioRangeReadCount = 0u;
 }
 
-#if NDS_P4
 /* The P4 pack's header and entries (its bodies stay in NitroFS like the
  * vanilla pack's). No P4 file, or a bad one, leaves the donor cues
  * missing (counted as unsupported) and the vanilla cues untouched. */
@@ -2547,7 +2391,6 @@ static void ndsAudioFgmLoadP4Pack(void)
     gNdsAudioFgmP4Count = count;
     gNdsAudioFgmP4Result = 1u;
 }
-#endif
 
 void ndsAudioFgmLoadFenced(void)
 {
@@ -2558,11 +2401,6 @@ void ndsAudioFgmLoadFenced(void)
     u32 sample_end = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
     u32 envelope_cursor;
 
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    /* Keep Calico's low-load manual mode for the two explicit, blocking
-     * ID-626 command acknowledgments in this diagnostic-only build. */
-    soundSetAutoUpdate(false);
-#endif
     if (gNdsAudioFgmLoaded != 0u)
     {
         return;
@@ -2686,9 +2524,7 @@ void ndsAudioFgmLoadFenced(void)
     sNdsAudioFgmFile = file;
     ndsAudioFgmDirectRouteInit();
     ndsAudioFgmBuildIdMap();
-#if NDS_P4
     ndsAudioFgmLoadP4Pack();
-#endif
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
                                 sizeof(sNdsAudioFgmEntries);

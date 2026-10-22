@@ -18,7 +18,6 @@
  * yet (anim/effect managers) are referenced verbatim and listed in the task
  * report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <gm/gmsound.h>
@@ -544,12 +543,8 @@ void itMBallOpenInitVars(GObj *item_gobj)
      * neither fighter keeps exactly today's behaviour. The maker returns NULL
      * on a full effect pool, which is the source's own empty-pool path and is
      * what both consumers already expect. */
-#if NDS_P2_PIKACHU || NDS_P2_PURIN
     ip->item_vars.mball.effect_gobj =
         efManagerMBallRaysMakeEffect(&dobj->translate.vec.f);
-#else
-    ip->item_vars.mball.effect_gobj = NULL;
-#endif
 
     itMBallOpenClearAnim(item_gobj);
 
@@ -662,4 +657,3 @@ GObj* itMBallMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
     return item_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

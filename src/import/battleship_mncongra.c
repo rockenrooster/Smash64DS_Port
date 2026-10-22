@@ -85,7 +85,6 @@ extern void mnCongraFuncLights(Gfx **dls);
 
 #undef mnCongraStartScene
 
-#if NDS_P4
 #include <nds/nds_p4.h>
 #include "nds_p4_onep_art.generated.h"
 
@@ -110,15 +109,12 @@ static sb32 ndsMNCongraContentPicture(s32 fkind, MNCongraPicture *saved)
 #undef NDS_MN_CONGRA_CONTENT_ROW
     return FALSE;
 }
-#endif
 
 void mnCongraStartScene(void)
 {
     SYTaskmanSetup setup;
-#if NDS_P4
     MNCongraPicture saved;
     sb32 borrowed;
-#endif
 
     switch (gSCManagerSceneData.scene_prev)
     {
@@ -144,16 +140,12 @@ void mnCongraStartScene(void)
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();
     setup.func_start = mnCongraFuncStart;
-#if NDS_P4
     borrowed = ndsMNCongraContentPicture(sMNCongraFighterKind, &saved);
-#endif
     syTaskmanStartTask(&setup);
-#if NDS_P4
     if (borrowed != FALSE)
     {
         dMNCongraPictures[sMNCongraFighterKind] = saved;
     }
-#endif
 }
 
 #endif /* NDS_P2_1P_GAME */

@@ -14,7 +14,6 @@
  * one that has items but no Link. A fighter that can pick an item up and not
  * throw it is half a feature, and the pickup half landed in
  * battleship_ftcommon_get.c. */
-#if NDS_P2_LINK || NDS_P2_ITEM_CORE
 
 #include <ft/fighter.h>
 #include <it/item.h>
@@ -32,17 +31,6 @@ void ftCommonHeavyGetProcDamage(GObj *fighter_gobj);
  * imports the whole of ftcommonget.c, which is where this function lives. Kept
  * here for a Link build with items compiled out, where the throw selector still
  * needs the callback and nothing else defines it. */
-#if !NDS_P2_ITEM_CORE
-void ftCommonHeavyGetProcDamage(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp->item_gobj != NULL)
-    {
-        ftSetupDropItem(fp);
-    }
-}
-#endif
 
 /* BattleShip ft/ftcommondata.c:146-323. Keep the complete directional table:
  * once the source common throw selector is live, every reachable throw status
@@ -76,39 +64,3 @@ FTItemThrow dFTCommonDataItemThrowDescs[] =
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonitemthrow.c"
 
-#else
-
-#include <ft/fighter.h>
-#include <it/item.h>
-
-void ftCommonItemThrowProcPhysics(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp->ga == nMPKineticsAir)
-    {
-        ftPhysicsApplyAirVelDrift(fighter_gobj);
-    }
-    else
-    {
-        ftPhysicsApplyGroundVelFriction(fighter_gobj);
-    }
-}
-
-sb32 ftCommonHeavyThrowCheckInterruptCommon(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    /* BattleShip ftcommonitemthrow.c:304. P2's items-off boundary keeps this
-     * false. Do not approximate the true arm until itMainSetFighterThrow and
-     * the common item-throw tables are admitted as source-faithful runtime. */
-    if ((fp->item_gobj != NULL) &&
-        (fp->input.pl.button_tap &
-         (fp->input.button_mask_a | fp->input.button_mask_b)))
-    {
-        return FALSE;
-    }
-    return FALSE;
-}
-
-#endif /* NDS_P2_LINK */

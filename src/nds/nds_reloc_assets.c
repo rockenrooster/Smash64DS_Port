@@ -27,10 +27,8 @@ void ndsFsUnlock(void)
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_reloc_assets.h>
 
-#if NDS_P4
 /* src/port/nds_p4.c; declared here so this loader stays off ft/fighter.h. */
 const char *ndsP4RelocAssetPath(u32 file_id);
-#endif
 
 /* Keep this loader TU independent of the very broad startup header; the
  * published prototype lives there for normal consumers. */
@@ -411,7 +409,6 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * file needs it whether or not Yoshi is in the build. */
     { 0xfb, 0xfb, "nitro:/reloc/reloc_items/ITCommonData" },
     { 0x56, 0x56, "nitro:/reloc/reloc_extern_data/MiscData086" },
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
@@ -430,38 +427,24 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-#if NDS_P2_SAMUS
     NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
 #if NDS_P2_LINK
     NDS_P2_LINK_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-#if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
-#if NDS_P2_YOSHI
     NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
-#if NDS_P2_NESS
     NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
-#if NDS_P2_PURIN
     NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
-#if NDS_P2_KIRBY
     NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
-#endif
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     /* R02/R03/K06 -- THE PATH HALF OF THE RESULTS DEMO POSES, AND IT WAS THE
      * MISSING HALF. `NDS_*_DEMO_ANIM_ASSET_ROWS` carries three fields, and
      * until now only two of them were ever consumed: `sNdsRelocDemoAnimTokens`
@@ -494,33 +477,20 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-#if NDS_P2_SAMUS
     NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
 #if NDS_P2_LINK
     NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-#if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
-#if NDS_P2_YOSHI
     NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
-#if NDS_P2_NESS
     NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
-#if NDS_P2_PURIN
     NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
-#if NDS_P2_KIRBY
     NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#endif
 #if NDS_P2_1P_GAME
     /* The 1P scenes' poses: the same pair of tables, the same lockstep. */
     NDS_1P_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
 #undef NDS_RELOC_DEMO_ANIM_PATH_ENTRY
-#endif
 };
 
 static u16 ndsReadLe16(const u8 *bytes)
@@ -718,7 +688,6 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
     return &entry;
 }
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 /* P2-3 fighter-local animation O2Rs are generated as contiguous numbered files.
  * Do not retain one pointer + one path string per motion in ARM9 RAM merely to
  * rediscover that numbering at runtime.  The production manifest validates the
@@ -751,27 +720,15 @@ static const NDSP2FighterAnimSegment sNdsP2FighterAnimSegments[] = {
 #if NDS_P2_CAPTAIN
     NDS_P2_CAPTAIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
 #endif
-#if NDS_P2_SAMUS
     NDS_P2_SAMUS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
 #if NDS_P2_LINK
     NDS_P2_LINK_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
 #endif
-#if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
-#if NDS_P2_YOSHI
     NDS_P2_YOSHI_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
-#if NDS_P2_NESS
     NDS_P2_NESS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
-#if NDS_P2_PURIN
     NDS_P2_PURIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
-#if NDS_P2_KIRBY
     NDS_P2_KIRBY_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#endif
 };
 
 static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
@@ -812,7 +769,6 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
     entry.path = path;
     return &entry;
 }
-#endif
 
 static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
@@ -832,7 +788,6 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     {
         return ndsRelocAssetFoxAnimEntry(asset_id);
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     {
         const NDSRelocAssetEntry *p2_anim =
             ndsRelocAssetP2FighterAnimEntry(asset_id);
@@ -842,9 +797,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
             return p2_anim;
         }
     }
-#endif
 
-#if NDS_P4
     /* P4 donor files and synthesized motion files (include/nds/nds_p4.h):
      * donor IDs start above the vanilla table (0x854), DS-synthesized ones at
      * 0x1600, both far below the port's 0x10000 synthetic assets. */
@@ -861,7 +814,6 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
             return &p4_entry;
         }
     }
-#endif
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
     {
         if (sNdsRelocAssets[i].asset_id == asset_id)
@@ -1009,7 +961,6 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
     {
         asset_id = NDS_RELOC_FOX_ANIM_FIRST + number;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     else
     {
         for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
@@ -1028,7 +979,6 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
             }
         }
     }
-#endif
     if ((asset_id == 0u) || (asset_id > 0xffffu))
     {
         return 0u;
@@ -1045,9 +995,7 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
     return asset_id;
 }
 
-#if NDS_R2_FTANIM_STREAM
 static s32 ndsRelocAssetOpenFighterStream(void);
-#endif
 
 static void ndsRelocAnimDirBuild(void)
 {
@@ -1159,7 +1107,6 @@ static int ndsRelocAnimDirLookup(u32 asset_id)
     return -1;
 }
 
-#if NDS_P4
 /* nitro:/reloc/p4 file ids, read once from the FNT (2026-10-12). The
  * directory holds every content's loose file (2,161 with eighteen contents),
  * and a resolve walks its subtable to the name, two ROM reads an entry
@@ -1395,7 +1342,6 @@ int __wrap_nitroromResolvePath(NitroRom *nr, u16 base_dir, const char *path)
     }
     return __real_nitroromResolvePath(nr, base_dir, path);
 }
-#endif
 
 /* libfat's disc cache, which nitroFSInit creates for a ROM read through DLDI
  * or the DSi SD: libnds's weak default (dvm_calico.o) is 16 pages of 8
@@ -1412,14 +1358,10 @@ void ndsRelocAssetsInit(void)
     {
         gNdsRelocAssetInitResult = NDS_RELOC_ASSET_INIT_PASS;
         ndsRelocAnimDirBuild();
-#if NDS_P4
         ndsRelocP4DirBuild(nitroromGetSelf());
-#endif
-#if NDS_R2_FTANIM_STREAM
         /* Its resident directory is read in 256 B chunks: do that on the
          * boot stack, not inside the first frame that streams a clip. */
         (void)ndsRelocAssetOpenFighterStream();
-#endif
 #if NDS_BOOT_DIAG_TEXT
         /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
          * the console line is the human copy, and the owner's free-play ROM
@@ -1849,11 +1791,7 @@ s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst, size_t dst_capaci
  * the bytes left in dst are identical to the old memset-then-load order. On
  * every failure path reachable once the header is known, dst is left fully
  * zeroed -- which is what the animation caller's `fail:` memset did. */
-#ifndef NDS_R2_FTANIM_STREAM
-#define NDS_R2_FTANIM_STREAM 0
-#endif
 
-#if NDS_R2_FTANIM_STREAM
 #define NDS_FTANIM_STREAM_MAGIC 0x31535042u /* "BPS1", little endian */
 #define NDS_FTANIM_STREAM_VERSION 1u
 #define NDS_FTANIM_STREAM_PATH "animation/ftanim_stream_pack.bin"
@@ -2039,7 +1977,6 @@ fail:
     return FALSE;
 }
 
-#if NDS_P4
 /* THE P4 CLIP STREAM (2026-10-12). The contents' and Kirby's powers'
  * FIGATREE clips in the cast pack's BPS1 format, ids past the cast's
  * (scripts/p4/p4_anim_stream.py). A content's clip was a loose O2R file in
@@ -2186,8 +2123,6 @@ static s32 ndsRelocAssetLoadP4StreamClip(u32 asset_id, void *dst,
     gNdsRelocAssetFighterStreamReads++;
     return TRUE;
 }
-#endif
-#endif
 
 s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
                                        u32 *out_size)
@@ -2196,7 +2131,6 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
     {
         *out_size = 0u;
     }
-#if NDS_R2_FTANIM_STREAM
     {
         NDSFtAnimStreamEntry entry;
         const NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
@@ -2207,14 +2141,12 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
             gNdsRelocAssetFighterStreamMisses++;
             return FALSE;
         }
-#if NDS_P4
         /* Past the cast's pack: the contents' (their ids follow the cast's). */
         if ((ndsRelocAssetOpenFighterStream() != FALSE) &&
             (asset_id > header->last_id))
         {
             return ndsRelocAssetLoadP4StreamClip(asset_id, dst, out_size);
         }
-#endif
         if ((ndsRelocAssetOpenFighterStream() == FALSE) ||
             (asset_id < header->first_id) || (asset_id > header->last_id))
         {
@@ -2278,8 +2210,7 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
         }
         gNdsRelocAssetFighterStreamReads++;
         NDS_DIAG(gNdsRelocAssetFighterStreamReadBytes += entry.size);
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
-    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) && NDS_TICK_HUD
         /* LAB: motion reads per frame, in the SPHD column (unused without
          * the SRC split). */
         {
@@ -2290,12 +2221,6 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
 #endif
         return TRUE;
     }
-#else
-    (void)asset_id;
-    (void)dst;
-    gNdsRelocAssetFighterStreamMisses++;
-    return FALSE;
-#endif
 }
 
 /* ONE STORAGE COMMAND PER CLIP (P2-2p8, 2026-09-30).
@@ -2316,7 +2241,6 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
  * pack's own; only the number of commands changes. The pack is 512-aligned in
  * the ROM image (every NitroFS file is), so a sector here is a sector of the
  * card image. */
-#if NDS_R2_FTANIM_STREAM
 static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
                                                u32 *out_size)
 {
@@ -2326,7 +2250,6 @@ static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
     u32 offset;
     u32 size;
 
-#if NDS_P4
     /* Past the cast's pack: the contents' clip, from its ROM row. */
     if ((gNdsRelocAssetFighterStreamDispatch != 0u) &&
         (ndsRelocAssetOpenFighterStream() != FALSE) &&
@@ -2344,7 +2267,6 @@ static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
         *out_size = entry.size;
         return TRUE;
     }
-#endif
     if ((gNdsRelocAssetFighterStreamDispatch == 0u) ||
         (ndsRelocAssetOpenFighterStream() == FALSE) ||
         (sNdsFtAnimStreamDirReady == FALSE) ||
@@ -2372,13 +2294,11 @@ static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
     *out_size = size;
     return TRUE;
 }
-#endif
 
 s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
                                        u32 *out_size, u32 *out_span,
                                        u32 *out_sector)
 {
-#if NDS_R2_FTANIM_STREAM
     u32 start;
     u32 size;
 
@@ -2394,19 +2314,10 @@ s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
         *out_sector = start & ~511u;
     }
     return TRUE;
-#else
-    (void)asset_id;
-    (void)out_head;
-    (void)out_size;
-    (void)out_span;
-    (void)out_sector;
-    return FALSE;
-#endif
 }
 
 s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span)
 {
-#if NDS_R2_FTANIM_STREAM
     u32 start;
     u32 size;
     u32 read_start;
@@ -2427,8 +2338,7 @@ s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span)
     NDS_DIAG(gNdsRelocAssetFighterStreamReadTicks64 += (u32)tickGetCount() - read_start);
     gNdsRelocAssetFighterStreamReads++;
     NDS_DIAG(gNdsRelocAssetFighterStreamReadBytes += size);
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
-    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) && NDS_TICK_HUD
     /* LAB: motion reads per frame (SPHD), as the exact-range reader counts. */
     {
         extern volatile u32 gNdsTickHudSrcPhysicsDefaultTicks;
@@ -2437,12 +2347,6 @@ s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span)
     }
 #endif
     return TRUE;
-#else
-    (void)asset_id;
-    (void)dst;
-    (void)span;
-    return FALSE;
-#endif
 }
 
 /* Calico's NitroRom API reads the application's FNT/FAT by file id and then

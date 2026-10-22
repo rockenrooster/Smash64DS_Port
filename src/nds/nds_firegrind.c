@@ -1,6 +1,5 @@
 #include <nds/nds_firegrind.h>
 
-#if NDS_R2_FIREGRIND_NATIVE
 
 /* FireGrind, without the particle interpreter.
  *
@@ -201,32 +200,3 @@ f32 ndsFireGrindSize(u8 variant)
     return sNdsFireGrindSize[variant];
 }
 
-#else /* !NDS_R2_FIREGRIND_NATIVE */
-
-/* The subsystem compiles to nothing when the flag is off, so the default ROM
- * keeps the source-faithful BattleShip FireGrind path and pays no code-size
- * cost for an effect it does not use. */
-void ndsFireGrindReset(void) {}
-void ndsFireGrindSpawn(const Vec3f *pos) { (void)pos; }
-void ndsFireGrindUpdate(void) {}
-const NDSFireGrindParticle *ndsFireGrindPool(u32 *count_out)
-{
-    if (count_out != NULL)
-    {
-        *count_out = 0u;
-    }
-    return NULL;
-}
-u16 ndsFireGrindColor(u8 variant, u8 age)
-{
-    (void)variant;
-    (void)age;
-    return 0u;
-}
-f32 ndsFireGrindSize(u8 variant)
-{
-    (void)variant;
-    return 0.0F;
-}
-
-#endif /* NDS_R2_FIREGRIND_NATIVE */

@@ -220,34 +220,6 @@ static inline uint32_t ndsR2HwMathSqrt64Fast(uint64_t value)
  * present but skipped by a `.data` word, which is how the change is priced
  * against the gate without a cross-build placement term (the expected win is
  * far under the >=14,080 rank-80 cross-build floor). */
-#if defined(NDS_R2_HWMATH_ROUTE) && NDS_R2_HWMATH_ROUTE
-
-#define NDS_R2_HWMATH_ROUTE_SQRTF_ARM 1u
-#define NDS_R2_HWMATH_ROUTE_NO_LEAD   2u
-
-extern volatile uint32_t gNdsR2HwMathRoute;
-
-static inline void ndsR2HwMathDivLeadPoll(void)
-{
-    if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_NO_LEAD) == 0u)
-    {
-        while ((NDS_R2_HWMATH_DIVCNT & NDS_R2_HWMATH_BUSY) != 0u)
-        {
-        }
-    }
-}
-
-static inline void ndsR2HwMathSqrtLeadPoll(void)
-{
-    if ((gNdsR2HwMathRoute & NDS_R2_HWMATH_ROUTE_NO_LEAD) == 0u)
-    {
-        while ((NDS_R2_HWMATH_SQRTCNT & NDS_R2_HWMATH_BUSY) != 0u)
-        {
-        }
-    }
-}
-
-#else
 
 static inline void ndsR2HwMathDivLeadPoll(void)
 {
@@ -257,7 +229,6 @@ static inline void ndsR2HwMathSqrtLeadPoll(void)
 {
 }
 
-#endif
 
 static inline int32_t ndsR2HwMathDiv64(int64_t numerator, int32_t denominator)
 {

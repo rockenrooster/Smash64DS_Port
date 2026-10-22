@@ -113,9 +113,7 @@ void ndsP7ProgressLoad(void)
  * match, so the host's START never took (2026-10-20). */
 u32 ndsP7DevOpen(void)
 {
-#if NDS_P2_MENU_WALK || (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) || \
-    NDS_P2_FOUR_CPU_STRESS || NDS_R2_BOTH_CPU || NDS_HARNESS_FAST_LOGIC || \
-    NDS_NET_LAB_LOBBY
+#if ((NDS_P2_MENU_WALK || (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP)) || NDS_P2_FOUR_CPU_STRESS) || NDS_NET_LAB_LOBBY
     return TRUE;
 #else
     return FALSE;

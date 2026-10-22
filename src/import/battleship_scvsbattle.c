@@ -45,17 +45,10 @@ void scVSBattleFuncLights(Gfx **dls);
 void scVSBattleStartBattle(void);
 void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry);
 GObj *gmCameraMakeWallpaperCamera(void);
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 void gmCameraMakeBattleCamera(void);
 void gmCameraMakePlayerArrowsCamera(void);
 void gmCameraMakePlayerMagnifyCamera(void);
 void gmCameraScreenFlashMakeCamera(void);
-#else
-GObj *gmCameraMakeBattleCamera(void);
-GObj *gmCameraMakePlayerArrowsCamera(void);
-GObj *gmCameraMakePlayerMagnifyCamera(void);
-GObj *gmCameraScreenFlashMakeCamera(void);
-#endif
 GObj *gmCameraMakeInterfaceCamera(void);
 GObj *gmCameraMakeEffectCamera(void);
 void itManagerInitItems(void);
@@ -176,17 +169,6 @@ void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
     scManagerFuncUpdate(&ds_setup);
 }
 
-#if !NDS_DEV_LIVE_INPUT_PREVIEW
-static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
-{
-    SYTaskmanSetup setup = dSCVSBattleTaskmanSetup;
-
-    setup.scene_setup.arena_start = ndsTaskmanArenaStart();
-    setup.scene_setup.arena_size = ndsTaskmanArenaSize();
-    setup.func_start = scVSBattleStartBattle;
-    return setup;
-}
-#endif
 
 /* The DS-side texture preparation every entry into `nSCKindVSBattle` performs,
  * in one place so that entry one, a START rematch, and Sudden Death cannot drift
@@ -207,11 +189,9 @@ void ndsBattlePrepareSceneTextures(void)
     sNdsSCVSBattleEntryStartupTexturesRetired = FALSE;
     sNdsSCVSBattleEntryRootsRetired = FALSE;
     ndsIFCommonNativeOamReleaseCloudTextures();
-#if NDS_R2_PARTICLE_DRAW
     /* Before the reset, for the reason above: glResetTextures invalidates
      * every name, so anything holding one has to let go first. */
     ndsRendererHardwareDiscardParticleAtlas();
-#endif
     ndsRendererHardwareResetSceneTextureVram();
     /* The static corpus is Dream Land's pin set (P1). On any other stage it
      * only spent 83,840 bytes of texture VRAM and armed the Pupupu source-
@@ -222,7 +202,6 @@ void ndsBattlePrepareSceneTextures(void)
         (void)ndsRendererHardwarePrepareBattleStaticTextures();
     }
     (void)ndsIFCommonNativeOamPrepareClouds();
-#if NDS_R2_PARTICLE_DRAW
     /* LAST, and the order is the fix rather than a preference.
      *
      * Measured 2026-08-01 on three tick-HUD ROMs that differ only in these
@@ -246,23 +225,18 @@ void ndsBattlePrepareSceneTextures(void)
      * the quad emit draws nothing. A silent loss of effects beats an abort at
      * the countdown. Still after the static set, so it stays above that span. */
     (void)ndsRendererHardwarePrepareParticleAtlas();
-#endif
-#if NDS_R2_IMPACT_WAVE_NATIVE
     /* Tiny and last on purpose: five 16x32 PAL16 names cannot fragment the
      * allocator ahead of the large interface/particle allocations above. The
      * gameplay draw then performs a name bind only -- no N64 texel/TLUT decode,
      * conversion, cache lookup or texture allocation on an impact frame. */
     (void)ndsRendererHardwarePrepareImpactWaveTextures();
-#endif
     /* M1: the 13 DamageSlash MaterialAnim frames are only 10,752 bytes in
      * PAL16.  Make them resident here so a hit frame performs a name bind and
      * never replaces texture storage from inside gcDrawAll. */
     (void)ndsRendererHardwarePrepareDamageSlashTextures();
-#if NDS_R2_REBIRTH_HALO_NATIVE
     /* Five tiny AOT-native names (four PAL16, one A5I3) after every large
      * scene allocation. Rebirth frames therefore bind only resident DS data. */
     (void)ndsRendererHardwarePrepareRebirthHaloTextures();
-#endif
     /* Mario pipe / Fox Arwing carry 24 small preconverted PAL16/A5I3 images.
      * Allocate them after every larger scene owner so entry frames perform only
      * resident DS texture binds -- no N64 texture/TLUT conversion and no hot
@@ -271,12 +245,10 @@ void ndsBattlePrepareSceneTextures(void)
     /* Allocate the small dust planes after the larger entry owners. Convert
      * once before GO; effect draws only bind these resident native names. */
     (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
-#if NDS_R2_FOX_GUN_OVERLAY
     /* The source can reveal Fox's gun long after GO. Prepare its 256-byte
      * texels and 32-byte palette now, after the large scene allocations;
      * first use must only bind the resident name. */
     (void)ndsRendererHardwarePrepareFoxGunTexture();
-#endif
     /* P2-2p8 Phase 1 slice 2c: LAST. The fighter texture admission (when
      * gNdsFtrLeanAdmit is set) packs around everything the scene placed above;
      * run before the reset, it was discarded by it. */
@@ -333,10 +305,8 @@ static void ndsSCVSBattlePrepareBeforeTimer(void)
 static void ndsSCVSBattleStartPlayBGM(void)
 {
     ndsKirbyHatPrepareMatch();
-#if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
     (void)ndsR2AnimCachePreloadFinish();
-#endif
     mpCollisionSetPlayBGM();
 }
 
@@ -496,20 +466,16 @@ void scVSBattleFuncUpdate(void)
         sNdsSCVSBattleEntryRootsRetired = TRUE;
     }
 
-#if NDS_R2_ANIM_CACHE
     /* Normally exhausted by the pre-BGM barrier. Keep the bounded step here as
      * fail-open recovery if a future larger preload exceeds the barrier bound. */
     ndsR2AnimCachePreloadStep();
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)
     {
         gNdsFighterNaturalMotionBaseVSBattleUpdateCount++;
         ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate();
     }
     else
-#endif
     if (ndsFighterMarioFoxLivePreviewUpdateEnabled() != FALSE)
     {
         NDS_DIAG(gNdsFighterLivePreviewBaseVSBattleUpdateCount++);
@@ -716,16 +682,13 @@ void scVSBattleStartScene(void)
      * content. VSBattle owns the geometry engine again from this boundary on,
      * so reclaim the layer before either taskman entry path can draw. */
     ndsPlatformSet3DLayerEnabled(TRUE);
-#if NDS_DEV_LIVE_INPUT_PREVIEW
     gNdsSCVSBattleOriginalStartResult =
         NDS_SCVSBATTLE_ORIGINAL_START_PASS;
 
     /* Stage the bounded DS-native audio bank at the scene boundary.  The
      * original func_start immediately plays PublicExcited, before the DS
      * task loop begins, so loading from syTaskmanRunTask is too late. */
-#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
-#endif
 
     /* The N64 validation overlay is not staged on DS. */
     gSCManagerBackupData.boot = 0;
@@ -750,28 +713,4 @@ void scVSBattleStartScene(void)
         gNdsSCVSBattleLifecycleResult =
             NDS_SCVSBATTLE_LIFECYCLE_PASS;
     }
-#else
-    SYTaskmanSetup setup;
-
-    gNdsSCVSBattleOriginalStartResult =
-        NDS_SCVSBATTLE_ORIGINAL_START_PASS;
-
-    gSCManagerBattleState = &gSCManagerTransferBattleState;
-    gSCManagerBattleState->game_type = nSCBattleGameTypeRoyal;
-    gSCManagerBattleState->gkind = gSCManagerSceneData.gkind;
-
-    if (gSCManagerBackupData.error_flags & LBBACKUP_ERROR_VSBATTLECASTLE)
-    {
-        gSCManagerBattleState->gkind = nGRKindCastle;
-    }
-
-    /* Keep the bounded setup proof out of the original anti-tamper tail. */
-    gSCManagerBackupData.boot = 0;
-
-    syVideoInit(&dSCVSBattleVideoSetup);
-
-    ndsSCVSBattleRebudgetSceneArena();
-    setup = ndsSCVSBattleMakeTaskmanSetup();
-    scManagerFuncUpdate(&setup);
-#endif
 }

@@ -226,15 +226,12 @@ static s32 ndsP7FightChallenger(u32 index)
 {
     const NDSP7UnlockRow *row = ndsP7UnlockRow(index);
     s32 fkind = (row->id == NDS_P7_SEL_METAL) ? nFTKindMMario : (s32)row->id;
-#if NDS_P4
     const NDSP4Fighter *f = (row->content != 0u) ? ndsP4Fighter(row->content) : NULL;
     u8 saved_content[GMCOMMON_PLAYERS_MAX];
-#endif
     u8 saved_stage = gSCManagerSceneData.spgame_stage;
     s32 player = gSCManagerSceneData.player;
     s32 won;
 
-#if NDS_P4
     if (f != NULL)
     {
         fkind = f->parent_kind;
@@ -244,7 +241,6 @@ static s32 ndsP7FightChallenger(u32 index)
     memcpy(saved_content, gNdsP4PlayerContent, sizeof(saved_content));
     memset(gNdsP4PlayerContent, 0, sizeof(saved_content));
     gNdsP4PlayerContent[0] = row->content;
-#endif
     gNdsP7Challenger.row = (u8)index;
     gNdsP7Challenger.fkind = (u8)fkind;
     gNdsP7Challenger.content = row->content;
@@ -270,9 +266,7 @@ static s32 ndsP7FightChallenger(u32 index)
     sc1PGameStartScene();
 
     gNdsP7Challenger.active = 0u;
-#if NDS_P4
     memcpy(gNdsP4PlayerContent, saved_content, sizeof(saved_content));
-#endif
     gSCManagerSceneData.spgame_stage = saved_stage;
 
     if (gSCManagerSceneData.is_reset != FALSE)
@@ -527,14 +521,12 @@ extern u8 gNdsP7OnePlayerMetal;
 
 static u32 ndsSC1PManagerPlayerSel(void)
 {
-#if NDS_P4
     const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
 
     if ((f != NULL) && (f->parent_kind == (s32)gSCManagerSceneData.fkind))
     {
         return NDS_P7_SEL_CONTENT(gNdsP4OnePlayerContent);
     }
-#endif
     return ((gNdsP7OnePlayerMetal != 0u) &&
             (gSCManagerSceneData.fkind == nFTKindMario)) ?
         NDS_P7_SEL_METAL : NDS_P7_SEL_COUNT;

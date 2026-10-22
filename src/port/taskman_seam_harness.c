@@ -1,48 +1,9 @@
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-static volatile u32 sNdsHarnessFastPresentRequested;
-volatile u32 gNdsHarnessFastPresentRequestCount;
-volatile u32 gNdsHarnessFastPresentConsumeCount;
-#endif
 
 void ndsHarnessFastPresentRequest(void)
 {
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    sNdsHarnessFastPresentRequested = 1u;
-    gNdsHarnessFastPresentRequestCount++;
-#endif
 }
 
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-/* Consume a renderer-coupled proof request at the call site's CURRENT source
- * state.  Most requests are raised by the natural controller tours while they
- * are observing a short-lived source status.  Waiting until the outer fast
- * harness regains control is too late: ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate
- * still has a gcRunAll() to execute, and Yoshi SpecialN Catch can naturally
- * return to Wait during that update.  Drawing here changes no gameplay state;
- * it is the same ordinary hardware-frame submit the outer consumer already
- * owns, merely before the next source update instead of after it. */
-u32 ndsHarnessFastPresentConsumeRequestedNow(void)
-{
-    if (sNdsHarnessFastPresentRequested == 0u)
-    {
-        return FALSE;
-    }
-    sNdsHarnessFastPresentRequested = 0u;
-    gNdsHarnessFastPresentConsumeCount++;
-    /* This is a real renderer presentation even though fast verification does
-     * not advance gameplay here.  Fighter contract submission is intentionally
-     * one-shot per gNdsRendererProfileFrameCount; without a fresh identity the
-     * requested transient-state draw is rejected as a duplicate of the prior
-     * proof frame before BattleShip's display walk is captured at all. */
-    gNdsRendererProfileFrameCount++;
-    ndsSObjPreviewBeginFrame();
-    ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
-    ndsSObjPreviewEndFrame();
-    return TRUE;
-}
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS || NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 /* P2-7 item 9. The generic source-MENU pump, factored out of the imported VS
  * Results loop below so every imported SOURCE menu runs the same contract:
  * controller read, one task_update, audio update, then one scene_draw present
@@ -238,16 +199,10 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
     }
     return FALSE;
 }
-#endif
 
 void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    sNdsHarnessFastPresentRequested = 0u;
-    gNdsHarnessFastPresentRequestCount = 0u;
-    gNdsHarnessFastPresentConsumeCount = 0u;
-#endif
 
 #if NDS_P2_MENU_SHELL
     /* P2-1d. The VS shell's four real screens, ahead of every bounded branch
@@ -304,14 +259,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         /* P7 C4: the training select is the same native screen in its
          * two-slot mode (nds_menu_shell_css.c sCssTraining); the imported
          * mnplayers1ptraining.c scene had no presenter. */
-#if NDS_P4
     case nSCKind1PGamePlayers:
         /* P7 C1: with Remix contents the 1P select is the native screen
          * in its one-card mode (sCssOneP) on Remix's grid. */
     case nSCKind1PBonus1Players:
     case nSCKind1PBonus2Players:
         /* P7 C2: and so are the bonus practice selects (sCssOneP 2). */
-#endif
 #endif
         ndsMenuShellRunCharSelect();
         ndsFinishTaskmanRun();
@@ -421,31 +374,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         {
             return;
         }
-#if NDS_R2_SCENE_LOOP_WALK
-        /* Results leg. Closing the loop back to the menu is what makes the
-         * high-water ring an N-loop reading instead of a two-entry one; the
-         * START rematch above still sends Results straight to its own
-         * destination when a human presses it, and that path is untouched.
-         *
-         * P2-1f MOVED THE TARGET. The source's Results exit goes to
-         * `nSCKindPlayersVS` (mnvsresults.c:3312) and `ndsMNVSResultsSetLoadScene`
-         * now transcribes that whenever the shell owns the menus, so the walk's
-         * substitute leg has to arrive at the same place or the two arms of the
-         * evidence would describe different flows. With the shell off there is
-         * no character-select screen to arrive at, so the leg keeps VS Mode --
-         * which is the scene the P2-1b walk was defined against. */
-        if (ndsSceneWalkAdvance(
-#if NDS_P2_MENU_SHELL
-                (u32)nSCKindPlayersVS
-#else
-                (u32)nSCKindVSMode
-#endif
-            ) != FALSE)
-        {
-            ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
-            return;
-        }
-#endif
         osStopThread(NULL);
         return;
     }
@@ -503,11 +431,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * nSCKind1PGame, the intro to the fight, the tally to the next stage,
      * the challenger to its fight, the ending to the credits, the credits to
      * the title), which the pump's LoadScene return honours. */
-#if !NDS_P4
-    case nSCKind1PGamePlayers:
-    case nSCKind1PBonus1Players:
-    case nSCKind1PBonus2Players:
-#endif
     case nSCKind1PIntro:
     case nSCKind1PChallenger:
     case nSCKind1PStageClear:
@@ -789,16 +712,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         gNdsOriginalBootStage |= NDS_BOOT_SCENE_REACHED;
-#if NDS_R2_SCENE_LOOP_WALK
-        /* P2-1b scene-loop walk, menu leg. This bounded VS Mode branch parks
-         * here in every other configuration; with the walk armed it spends a
-         * hop and hands the loop to the match instead. */
-        if (ndsSceneWalkAdvance((u32)nSCKindVSBattle) != FALSE)
-        {
-            ndsFinishTaskmanRun();
-            return;
-        }
-#endif
         osStopThread(NULL);
         return;
     }
@@ -1269,15 +1182,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 u32 update_in_iteration;
                 u32 stop_after_iteration = 0u;
                 u32 terminal_update = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                u32 profile_input_ticks = 0u;
-                u32 profile_update_ticks = 0u;
-                u32 profile_source_update_by_index[2] = {0u, 0u};
-                u32 profile_source_update_ticks = 0u;
-                u32 profile_audio_update_ticks = 0u;
-
-                sNdsBattlePlayableProfileLoopStartTick = cpuGetTiming();
-#endif
 #if NDS_TICK_HUD
                 sNdsBattlePlayableTickHudLoopStartTick = cpuGetTiming();
                 gNdsTickHudFighterTicks = 0u;
@@ -1322,17 +1226,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                      update_in_iteration < updates_this_iteration;
                      update_in_iteration++)
                 {
-#if NDS_R2_POSITION_PROBE
-                    gNdsPositionProbeUpdateInPresent = update_in_iteration;
-#endif
                     u32 battle_status_before =
                         ((is_battle_playable != 0u) &&
                          (gSCManagerBattleState != NULL)) ?
                             (u32)gSCManagerBattleState->game_status :
                             0xffffffffu;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                    u32 input_start = cpuGetTiming();
-#endif
                     /* Slice 1 phase 7's gate; see ndsR2HostBattleUpdateOnce.
                      * Both loops publish it, because which one runs depends on
                      * the harness mode and a gate that is only armed on one
@@ -1355,50 +1253,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         }
                         ndsBattlePlayableAdvanceRealtimeLogicClock();
                     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                    profile_input_ticks += cpuGetTiming() - input_start;
-#endif
                     /* P2-2p6: the fighter pose engine evaluates body joints on
                      * the LAST source tick of a presented frame -- the pose the
                      * draw below will show -- and holds them on the others. */
                     gNdsFtPoseEvalTick =
                         ((update_in_iteration + 1u) >= updates_this_iteration) ?
                             1u : 0u;
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \
-    (NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && \
-     NDS_HARNESS_FAST_LOGIC)
-                    /* The first prepare attempt for mode-163 happens before
-                     * BattleShip has published either fighter GObj.  Most
-                     * legacy proof arms tolerate that because they do not
-                     * require guest controller playback immediately; Link's
-                     * action proofs and the focused Ness-special tour do.
-                     * Reuse the idempotent prepare on each proof tick until
-                     * the required source-owned input boundary is live. */
-                    ndsFighterMarioFoxNaturalMotionPrepare();
-#endif
                     ndsRunMarioFoxProofUpdate(
                         &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
-#if NDS_R2_POSITION_PROBE
-                    if ((gSCManagerBattleState != NULL) &&
-                        (gSCManagerBattleState->players[0].fighter_gobj != NULL))
-                    {
-                        ndsPositionProbeCaptureMarioHurtboxes(
-                            gSCManagerBattleState->players[0].fighter_gobj);
-                    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                    profile_update_ticks +=
-                        gNdsRendererProfileUpdateTicks;
-                    if (update_in_iteration < 2u)
-                    {
-                        profile_source_update_by_index[update_in_iteration] =
-                            gNdsRendererProfileSourceUpdateTicks;
-                    }
-                    profile_source_update_ticks +=
-                        gNdsRendererProfileSourceUpdateTicks;
-                    profile_audio_update_ticks +=
-                        gNdsRendererProfileAudioUpdateTicks;
-#endif
                     if ((battle_status_before ==
                          nSCBattleGameStatusWait) &&
                         (gSCManagerBattleState != NULL) &&
@@ -1409,7 +1271,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                          * Their compact allocation preserves pre-GO source-
                          * frame headroom; transition deletion only mutates a
                          * live binding after preparation has finished. */
-#if NDS_P2_KIRBY
                         {
                             u32 player;
                             for (player = 0u; player < GMCOMMON_PLAYERS_MAX; player++)
@@ -1420,7 +1281,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                                         gSCManagerSceneData.scene_curr, nFTKindKirby, 0u, 348u, 0u,
                                         NDS_NATIVE_FAILURE_BAD_ASSET);
                         }
-#endif
                         ndsRendererHardwareArmBattleStaticTextures();
                     }
                     /* BattleShip syTaskmanRunTask checks LoadScene immediately
@@ -1431,30 +1291,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         terminal_update = 1u;
                         break;
                     }
-#if NDS_SCENE_MIP_CACHE_LAB
-                    if ((is_battle_playable != 0u) &&
-                        (use_realtime_presentation != 0u) &&
-                        (i == 0u) &&
-                        (ndsSceneMipCacheHoldLogic() != FALSE))
-                    {
-                        u32 seed_guard = 0u;
-
-                        /* Let BattleShip establish the real fighter/camera
-                         * state once, then seed without advancing logic or
-                         * match time. Seed draws obey the same locked cap. */
-                        while ((ndsSceneMipCacheHoldLogic() != FALSE) &&
-                               (seed_guard < 4u))
-                        {
-                            ndsBattlePlayablePresentRealtimeFrame();
-                            seed_guard++;
-                        }
-                        if (ndsSceneMipCacheHoldLogic() != FALSE)
-                        {
-                            ndsPlatformSceneMipCacheAbort();
-                        }
-                        ndsBattlePlayablePacingStart(0u);
-                    }
-#endif
                     if ((is_battle_playable != 0u) &&
                         (use_realtime_presentation == 0u))
                     {
@@ -1496,32 +1332,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 {
                     break;
                 }
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-                if ((is_battle_playable != 0u) &&
-                    (use_realtime_presentation == 0u) &&
-                    (sNdsHarnessFastPresentRequested != 0u))
-                {
-                    /* Same proof-only consumer as the pre-gcRunAll path.  A
-                     * request raised later in the source update still needs a
-                     * distinct renderer frame identity and the same SObj
-                     * preview bracket. */
-                    (void)ndsHarnessFastPresentConsumeRequestedNow();
-                }
-#endif
                 if (use_realtime_presentation != 0u)
                 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                    gNdsRendererProfileInputTicks = profile_input_ticks;
-                    gNdsRendererProfileUpdateTicks = profile_update_ticks;
-                    gNdsRendererProfileSourceUpdate1Ticks =
-                        profile_source_update_by_index[0];
-                    gNdsRendererProfileSourceUpdate2Ticks =
-                        profile_source_update_by_index[1];
-                    gNdsRendererProfileSourceUpdateTicks =
-                        profile_source_update_ticks;
-                    gNdsRendererProfileAudioUpdateTicks =
-                        profile_audio_update_ticks;
-#endif
                     ndsBattlePlayablePresentRealtimeFrame();
                     /* Count only updates committed to a presented frame. The
                      * source-faithful LoadScene terminal update remains
@@ -1553,7 +1365,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSObjPreviewBeginFrame();
                 ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
                 ndsSObjPreviewEndFrame();
-#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY
                 /* This submit is the bounded fast path's whole rendered
                  * frame; the realtime path publishes the same diagnostics
                  * from ndsBattlePlayablePresentFrame, which this path never
@@ -1768,9 +1580,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LANDING_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PROCESS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PROCESS_LOOP)
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER && \
-    ((NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_DASH_RUN) || \
-     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN))
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_DASH_RUN) || (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN)
         {
             u32 i;
 
@@ -1822,32 +1632,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
 
-#if NDS_DEV_LIVE_INPUT_PREVIEW
         if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
         {
             /* The original task loop returns after its cleanup tail. Resume
              * scVSBattleStartScene so it can score and select VS Results. */
             return;
         }
-#endif
-#if NDS_R2_SCENE_LOOP_WALK
-        /* Battle leg -- and it spends NO hop, because the battle scene already
-         * owns this transition and must keep owning it. decomp
-         * sc/sccommon/scvsbattle.c:559 sets `scene_prev = scene_curr;
-         * scene_curr = nSCKindVSResults` after taskman returns, unconditionally
-         * and AFTER the Sudden Death check at :540 has had its chance to run a
-         * second entry into this same scene. A walk hop here would be
-         * overwritten by :560 anyway, and worse, :559 would then copy the hop's
-         * VSResults into scene_prev and break the `prev == VSBattle` test
-         * battleship_scvsbattle.c:486 makes. Returning instead of parking hands
-         * the scene back to its own tail, so the walk gets the source's real
-         * battle teardown -- Sudden Death included, which is the re-entry the
-         * arena ring most needs to hold flat. */
-        return;
-#else
         osStopThread(NULL);
         return;
-#endif
     }
 
     /* The real taskman scene setup populated sSYTaskmanDefaultFunction and the

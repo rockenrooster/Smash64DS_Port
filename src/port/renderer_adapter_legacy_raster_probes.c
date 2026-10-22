@@ -23,63 +23,6 @@ typedef struct NDSFighterDLAllDrawCollection {
     u32 selected_index_mask;
 } NDSFighterDLAllDrawCollection;
 
-#if NDS_TICK_HUD && NDS_FTR_PRE_WALK_CENSUS
-/* CYCLE 98 -- does the DObj walk rebuild the same collection every frame?
- *
- * The board's seam table calls the walk "match-load constant for Mario/Fox --
- * poses move, topology does not", and flags that it needs proof no status or
- * motion alters the DObj set. This is that proof, and it costs one u32 of state
- * per slot: hash the collection's identity and compare it with the previous
- * frame's hash for the same slot.
- *
- * The dl pointer is in the hash deliberately. A collection whose DObj set is
- * unchanged but whose display lists have been re-pointed is NOT a constant for
- * any purpose a baked collection order would serve, and hashing only the DObj
- * pointers would report it as one. */
-static u32 sNdsFtrPreWalkHash[GMCOMMON_PLAYERS_MAX];
-static u32 sNdsFtrPreWalkSeen[GMCOMMON_PLAYERS_MAX];
-
-static void ndsFtrPreWalkCensus(
-    u32 slot, const NDSFighterDLAllDrawCollection *collection)
-{
-    u32 hash = 2166136261u;
-    u32 i;
-
-    if ((slot >= GMCOMMON_PLAYERS_MAX) || (collection == NULL))
-    {
-        return;
-    }
-#define NDS_FTR_PRE_MIX(v) \
-    do { hash ^= (u32)(v); hash *= 16777619u; } while (0)
-    NDS_FTR_PRE_MIX(collection->total_count);
-    NDS_FTR_PRE_MIX(collection->selected_count);
-    NDS_FTR_PRE_MIX(collection->selected_index_mask);
-    for (i = 0u; (i < collection->selected_count) &&
-                 (i < NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED); i++)
-    {
-        const DObj *dobj = collection->dobjs[i];
-
-        NDS_FTR_PRE_MIX(collection->indices[i]);
-        NDS_FTR_PRE_MIX((uintptr_t)dobj);
-        NDS_FTR_PRE_MIX((dobj != NULL) ? (uintptr_t)dobj->dl : 0u);
-    }
-#undef NDS_FTR_PRE_MIX
-    if (sNdsFtrPreWalkSeen[slot] == 0u)
-    {
-        gNdsFtrPreWalkFirst++;
-    }
-    else if (sNdsFtrPreWalkHash[slot] == hash)
-    {
-        gNdsFtrPreWalkSame++;
-    }
-    else
-    {
-        gNdsFtrPreWalkVariant++;
-    }
-    sNdsFtrPreWalkHash[slot] = hash;
-    sNdsFtrPreWalkSeen[slot] = 1u;
-}
-#endif
 
 #define NDS_FIGHTER_DL_ALL_FAIL_BLOCKER 0x1u
 #define NDS_FIGHTER_DL_ALL_FAIL_UNSUPPORTED_OPCODE 0x2u

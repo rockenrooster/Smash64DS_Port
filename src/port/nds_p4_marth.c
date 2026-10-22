@@ -30,9 +30,7 @@
 #if NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY || NDS_P4_CODE_IKE
 
 #include <ef/effect.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
@@ -256,7 +254,6 @@ void ndsP4MarthUSPMap(GObj *fighter_gobj)
  * (Remix adds 101 when Kirby wears Roy's hat; here, Roy's power). */
 static s32 ndsP4MarthNSPKirbyStatus(FTStruct *fp, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
 #if NDS_P4_CODE_ROY
@@ -269,9 +266,6 @@ static s32 ndsP4MarthNSPKirbyStatus(FTStruct *fp, s32 status_id)
         return NDS_P4_KIRBY_STATUS_MARTH_NSPG_1 + (status_id - MARTH_STATUS_NSPG_1);
 #endif
     }
-#else
-    (void)fp;
-#endif
     return status_id;
 }
 

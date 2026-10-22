@@ -34,9 +34,7 @@
 #include <sys/audio.h>
 #include <sys/utils.h>
 #include <wp/weapon.h>
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 /* The source's particle effects (efmanager.c) and Quick Attack's angle
  * test (vector.c). */
@@ -1937,7 +1935,6 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .guard_skip = { 0x80000000u >> (31 - nFTPartsJointCommonStart), 0u },
 };
 
-#if NDS_P2_KIRBY
 /* ---- Kirby's copy (A11; card "Kirby") ----
  *
  * Explosive Flame on Kirby's own PK Fire motions and scripts
@@ -2037,6 +2034,5 @@ void ndsP4PalutenaKirbyNSPAirMap(GObj *fighter_gobj)
 {
     mpCommonProcFighterLanding(fighter_gobj, ndsP4PalutenaKirbyNSPToGround);
 }
-#endif /* NDS_P2_KIRBY */
 
 #endif /* NDS_P4_CODE_PALUTENA */

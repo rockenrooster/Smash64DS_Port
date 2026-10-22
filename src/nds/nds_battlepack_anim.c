@@ -13,7 +13,6 @@ __attribute__((used)) volatile u32 gNdsBattlePackLoadFails;
 __attribute__((used)) volatile u32 gNdsBattlePackResidentBytes;
 __attribute__((used)) volatile u32 gNdsBattlePackDrops;
 
-#if NDS_R2_BATTLEPACK
 
 /* The blob's runtime base, published by ndsBattlePackAdopt once the residency
  * loader has streamed the whole file into the taskman arena. NULL is the honest
@@ -225,39 +224,3 @@ s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
     return TRUE;
 }
 
-#else /* !NDS_R2_BATTLEPACK */
-
-void *ndsBattlePackFindFigatree(u32 asset_id)
-{
-    (void)asset_id;
-    return NULL;
-}
-
-s32 ndsBattlePackAssetIdForSlotTable(const void *slot_table)
-{
-    (void)slot_table;
-    return -1;
-}
-
-s32 ndsBattlePackAdopt(void *base, u32 bytes)
-{
-    (void)base;
-    (void)bytes;
-    return FALSE;
-}
-
-void ndsBattlePackDrop(void)
-{
-}
-
-s32 ndsBattlePackContains(const void *ptr, size_t size, const void **out_base,
-                          size_t *out_size)
-{
-    (void)ptr;
-    (void)size;
-    (void)out_base;
-    (void)out_size;
-    return FALSE;
-}
-
-#endif /* NDS_R2_BATTLEPACK */

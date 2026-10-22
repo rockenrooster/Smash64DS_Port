@@ -22,7 +22,6 @@
  * referenced verbatim through local externs and listed in the task report --
  * no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <gm/gmsound.h>
@@ -412,4 +411,3 @@ void itHitokageCommonMakeFlame(GObj *item_gobj, Vec3f *pos)
     func_800269C0_275C0(nSYAudioFGMLizardonFlame);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

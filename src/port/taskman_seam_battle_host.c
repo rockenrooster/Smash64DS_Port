@@ -14,33 +14,6 @@ extern void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
 extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 extern u32 ndsSceneMipCacheHoldLogic(void);
 
-#if NDS_P2_YOSHI_BUG_PROOF
-/* Proof-only liveness observer.  The Yoshi controller tour lives in the
- * natural-motion driver, while this file owns the R2 source-update cadence.
- * If some outer lifetime gate stops feeding that driver, its per-phase timeout
- * cannot fire.  This observer changes no gameplay state; it snapshots the
- * relevant ownership words after a bounded number of real source updates and
- * enters the same no-op proof-stop anchor used by the tour itself. */
-#define NDS_YOSHI_BUG_HOST_WATCHDOG_UPDATES 60u
-#define NDS_YOSHI_BUG_HOST_WATCHDOG_TOTAL_UPDATES 600u
-#define NDS_YOSHI_BUG_HOST_WATCHDOG_GO_UPDATES 15u
-extern volatile u32 gNdsYoshiBugTourPhase;
-extern volatile u32 gNdsYoshiBugTourFrames;
-extern volatile u32 gNdsYoshiBugTourDone;
-extern volatile u32 gNdsYoshiBugTourStallPhase;
-extern void ndsYoshiBugTourProofStop(void);
-extern void osWritebackDCacheAll(void);
-static u32 sNdsYoshiBugHostWatchdogLastPhase;
-static u32 sNdsYoshiBugHostWatchdogLastFrames;
-volatile u32 gNdsYoshiBugHostWatchdogUpdates;
-volatile u32 gNdsYoshiBugHostWatchdogTotalUpdates;
-volatile u32 gNdsYoshiBugHostWatchdogGoUpdates;
-volatile u32 gNdsYoshiBugHostWatchdogFired;
-volatile u32 gNdsYoshiBugHostWatchdogPhase;
-volatile u32 gNdsYoshiBugHostWatchdogNaturalResult;
-volatile u32 gNdsYoshiBugHostWatchdogPrepared;
-volatile u32 gNdsYoshiBugHostWatchdogUpdateEnabled;
-#endif
 
 #define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u
 #define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
@@ -68,9 +41,6 @@ volatile u32 gNdsYoshiBugHostWatchdogUpdateEnabled;
  * and nothing else. Compensating it -- advancing timers, physics integration
  * and animation by two frames per tick -- is the real work, and is the part
  * that needs the owner's "substantially the same gameplay experience" call. */
-#ifndef NDS_TASK106_UPDATES_PER_PRESENT
-#define NDS_TASK106_UPDATES_PER_PRESENT 2u
-#endif
 #define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT \
     NDS_TASK106_UPDATES_PER_PRESENT
 #define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
@@ -85,20 +55,6 @@ static u32 sNdsBattlePlayablePacingStartTick;
 static u32 sNdsBattlePlayableLastPresentVBlank;
 static u32 sNdsBattlePlayableLastDeadFrames;
 static u32 sNdsBattlePlayableLastRebirthFrames;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-static u32 sNdsBattlePlayableProfileLoopStartTick;
-
-static u32 ndsBattlePlayableProfileResidual(u32 total, u64 known)
-{
-    if (known > (u64)total)
-    {
-        gNdsRendererProfileConservationErrorTicks +=
-            (u32)(known - (u64)total);
-        return 0u;
-    }
-    return total - (u32)known;
-}
-#endif
 #if NDS_TICK_HUD
 static u32 sNdsBattlePlayableTickHudLoopStartTick;
 /* P2-2p8 Phase 0 replay digest of the two logic ticks of this presented
@@ -116,68 +72,9 @@ volatile u32 gNdsTickHudSpans __attribute__((used, section(".data"))) =
 #endif
 #endif
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-static void ndsRendererPhase05Reset(void)
-{
-    u32 calibration_tick;
-    u32 calibration_index;
-
-    gNdsRendererPhase05WallpaperSetupTicks = 0u;
-    gNdsRendererPhase05WallpaperXMapTicks = 0u;
-    gNdsRendererPhase05WallpaperYMapTicks = 0u;
-    gNdsRendererPhase05WallpaperWriteTicks = 0u;
-    gNdsRendererPhase05WallpaperCommitTicks = 0u;
-    gNdsRendererPhase05PresentHardwareTicks = 0u;
-    gNdsRendererPhase05GCDrawAllTicks = 0u;
-    gNdsRendererPhase05StageTransitionTicks = 0u;
-    gNdsRendererPhase05FighterWrapperTicks = 0u;
-    gNdsRendererPhase05FrameResetTicks = 0u;
-    gNdsRendererPhase05PresentTailTicks = 0u;
-    gNdsRendererPhase05ProfileBookkeepingTicks = 0u;
-    gNdsRendererPhase05ProfilePublishTicks = 0u;
-    gNdsRendererPhase05FlushPrepTicks = 0u;
-    gNdsRendererPhase05TimerReadCount = 0u;
-    gNdsRendererPhase05TimerSpanCount = 0u;
-    gNdsRendererPhase05CalibrationTicks = 0u;
-    gNdsRendererPhase05CalibrationIntervals = 16u;
-    gNdsRendererPhase05WallpaperRowCount = 0u;
-    gNdsRendererPhase05WallpaperPixelWriteCount = 0u;
-    gNdsRendererPhase05WallpaperFullRowCount = 0u;
-    gNdsRendererPhase05WallpaperIncrementalRowCount = 0u;
-    gNdsRendererPhase05WallpaperChangedXCount = 0u;
-    gNdsRendererPhase05WallpaperChangedRunCount = 0u;
-    gNdsRendererPhase05WallpaperLongestChangedRun = 0u;
-    gNdsRendererPhase05WallpaperRunGE2Count = 0u;
-    gNdsRendererPhase05WallpaperRunGE2Pixels = 0u;
-    gNdsRendererPhase05WallpaperRunGE4Count = 0u;
-    gNdsRendererPhase05WallpaperRunGE4Pixels = 0u;
-    gNdsRendererPhase05WallpaperRunGE8Count = 0u;
-    gNdsRendererPhase05WallpaperRunGE8Pixels = 0u;
-    gNdsRendererPhase05WallpaperScalarStoreCount = 0u;
-    gNdsRendererPhase05WallpaperPackedStoreCount = 0u;
-    gNdsRendererPhase05WallpaperDmaPixelCount = 0u;
-    gNdsRendererPhase05WallpaperCopyPixelCount = 0u;
-
-    calibration_tick = NDS_RENDERER_PHASE05_TICK();
-    for (calibration_index = 0u;
-         calibration_index < gNdsRendererPhase05CalibrationIntervals;
-         calibration_index++)
-    {
-        u32 next_tick = NDS_RENDERER_PHASE05_TICK();
-
-        gNdsRendererPhase05CalibrationTicks += next_tick - calibration_tick;
-        calibration_tick = next_tick;
-    }
-}
-#endif
 
 static void ndsBattlePlayableAdvanceFastLogicClock(void)
 {
-#if NDS_HARNESS_FAST_LOGIC
-    /* BattleShip scheduler.c:1038-1043 advances one tic per retrace. The
-     * verifier removes the wait, not that one-update/one-tic contract. */
-    sySchedulerSetTicCount(sySchedulerGetTicCount() + 1u);
-#endif
 }
 
 static void ndsBattlePlayableAdvanceRealtimeLogicClock(void)
@@ -260,13 +157,9 @@ static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
 
 static void ndsAudioBackendUpdate(void)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmUpdate();
     syAudioUpdateBGMState();
-#endif
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     ndsAudioFgmUpdate();
-#endif
 }
 
 /* THE SCENE UPDATE THE BATTLE RUNNER TICKS (P2-6, 2026-09-05). The source
@@ -294,31 +187,18 @@ static void ndsSeamSceneUpdate(void)
 
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     u32 start = cpuGetTiming();
 #endif
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     u32 phase_start = start;
 #endif
 
-#if NDS_TASK9_FLOAT_CENSUS
-    ndsTask9FloatCensusBeginUpdate();
-#endif
     ndsTask39EffectsUpdate();
     ndsSeamSceneUpdate();
-#if NDS_TASK9_FLOAT_CENSUS
-    ndsTask9FloatCensusEndUpdate();
-#endif
-#if NDS_TASK9_STATE_HASH
-    ndsTask9StateHashRecordUpdate();
-#endif
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     {
         u32 phase_ticks = cpuGetTiming() - phase_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileSourceUpdateTicks = phase_ticks;
-#endif
 #if NDS_TICK_HUD
         gNdsTickHudSourceTicks += phase_ticks;
 #endif
@@ -326,19 +206,15 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     phase_start = cpuGetTiming();
 #endif
     ndsAudioBackendUpdate();
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     {
         u32 phase_ticks = cpuGetTiming() - phase_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileAudioUpdateTicks = phase_ticks;
-#endif
 #if NDS_TICK_HUD
         gNdsTickHudAudioTicks += phase_ticks;
 #endif
     }
 #endif
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     gNdsRendererProfileUpdateTicks = cpuGetTiming() - start;
 #endif
     dSYTaskmanUpdateCount++;
@@ -366,15 +242,10 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     sNdsBattlePlayablePacingStartTick = cpuGetTiming();
     gNdsBattlePlayablePacingResult = 0;
     gNdsBattlePlayablePacingMode = fast_logic;
-#if NDS_DEV_LIVE_INPUT_PREVIEW != 0
     gNdsBuildModeCanonicalWord =
         (fast_logic == 0u) ? NDS_BUILD_MODE_CANO_WORD : 0u;
     gNdsBuildModeShippedWord =
         (fast_logic == 0u) ? NDS_BUILD_MODE_SHIP_WORD : 0u;
-#else
-    gNdsBuildModeCanonicalWord = 0;
-    gNdsBuildModeShippedWord = 0;
-#endif
     gNdsBuildModeFastWord =
         (fast_logic != 0u) ? NDS_BUILD_MODE_FAST_WORD : 0u;
     gNdsBattlePlayablePacingLogicFrames = 0;
@@ -521,170 +392,19 @@ void __attribute__((noinline, used)) ndsBattlePlayableTickHudSparseMarker(void)
 
 static void ndsBattlePlayablePresentFrame(void)
 {
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     u32 start = cpuGetTiming();
     u32 draw_start;
     u32 hud_start;
 #endif
     u32 logic_tick;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 phase_start;
-    u64 known;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 phase05_start;
-#endif
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsRendererPhase05Reset();
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
     gNdsRendererProfileFrameCount++;
-#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-#if NDS_RENDER_ECONOMY
-    ndsRendererProfileFrameBegin(
-        ((gSCManagerBattleState != NULL) &&
-         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo)) ?
-            1u : 0u);
-#else
+#if NDS_SHIP_TELEMETRY
     ndsRendererProfileFrameBegin();
 #endif
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileBeginFrameTicks = 0u;
-    gNdsRendererProfileWallpaperTicks = 0u;
-    gNdsRendererProfileForegroundTicks = 0u;
-    gNdsRendererProfileStageLayer0Ticks = 0u;
-    gNdsRendererProfileFlushTicks = 0u;
-    gNdsRendererProfileVBlankWaitTicks = 0u;
-    gNdsRendererProfilePostVBlankTicks = 0u;
-    gNdsRendererProfileThreadTicks = 0u;
-    gNdsRendererProfileDrawResidualTicks = 0u;
-    gNdsRendererProfilePresentResidualTicks = 0u;
-    gNdsRendererProfileLoopResidualTicks = 0u;
-    gNdsRendererProfileConservationErrorTicks = 0u;
-    gNdsRendererProfileDrawTicks = 0;
-    gNdsRendererProfileHudTicks = 0;
-    gNdsRendererProfileStageAdapterTicks = 0;
-    gNdsRendererProfileMaterialTicks = 0;
-    gNdsRendererProfileMatrixTicks = 0;
-    gNdsRendererProfileDLTicks = 0;
-    gNdsRendererProfileTextureTicks = 0;
-    gNdsRendererProfileTextureConvertTicks = 0;
-    gNdsRendererProfileTextureUploadTicks = 0;
-    gNdsRendererProfileTextureUploads = 0;
-    gNdsRendererProfileTextureUploadBytes = 0;
-    gNdsRendererProfileTextureBinds = 0;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileTextureSourceTexels = 0;
-    gNdsRendererProfileTextureGreenTexels = 0;
-    gNdsRendererProfileTextureNonWhiteTexels = 0;
-    gNdsRendererProfileTexturedVertexCount = 0;
-    gNdsRendererProfileTextureSampleCount = 0;
-    gNdsRendererProfileTextureSampleGreenCount = 0;
-    gNdsRendererProfileTextureSampleNonWhiteCount = 0;
-    gNdsRendererProfileTextureCacheAliasAvoidCount = 0;
-    gNdsRendererProfileTexel1CompositeCount = 0;
-    gNdsRendererProfileTexel1LoadMatchCount = 0;
-    gNdsRendererProfileTexel1RejectCount = 0;
-    gNdsRendererProfileTexel1RejectReasonMask = 0;
-    gNdsRendererProfileTexel1LastFraction = 0;
-    gNdsRendererProfileTexel1LastImage0 = 0;
-    gNdsRendererProfileTexel1LastImage1 = 0;
-    gNdsRendererProfileTexel1LastTileState = 0;
-    gNdsRendererProfileTexel1LastPrimaryState = 0;
-    /* Refreshes and evictions are scene-lifetime cache health counters. The
-     * canonical frozen-water path expects both to stay zero; static-off labs
-     * retain them to diagnose the animated fallback and earlier evictions. */
-    gNdsRendererProfileTextureCoordMinS = 32767;
-    gNdsRendererProfileTextureCoordMaxS = -32768;
-    gNdsRendererProfileTextureCoordMinT = 32767;
-    gNdsRendererProfileTextureCoordMaxT = -32768;
-    gNdsRendererProfileTextureLaneLayoutMask = 0;
-    gNdsRendererProfileTextureLaneByteAccessCount = 0;
-    gNdsRendererProfileTextureLaneHalfwordAccessCount = 0;
-    gNdsRendererProfileTextureLaneByteFormatMask = 0;
-    gNdsRendererProfileTextureLaneHalfwordFormatMask = 0;
-    gNdsRendererProfileTextureLaneByteMap = 0;
-    gNdsRendererProfileTextureLaneHalfwordMap = 0;
-    gNdsRendererProfileUseTextureRejectNoStatsCount = 0;
-    gNdsRendererProfileUseTextureRejectStateOffCount = 0;
-    gNdsRendererProfileUseTextureRejectNoCombineCount = 0;
-    gNdsRendererProfileUseTextureRejectPrimitiveDecalCount = 0;
-    gNdsRendererProfileUseTextureRejectNoTexel0Count = 0;
-    gNdsRendererProfileUseTextureImplicitOnCount = 0;
-    gNdsRendererProfileUseTextureRejectFirstReason = 0;
-    gNdsRendererProfileUseTextureRejectFirstFlags = 0;
-    gNdsRendererProfileUseTextureRejectFirstW0 = 0;
-    gNdsRendererProfileUseTextureRejectFirstW1 = 0;
-    gNdsRendererProfileUseTextureRejectFirstGeometry = 0;
-    gNdsRendererProfileLightColorCommands = 0;
-    gNdsRendererProfileLightDirectionCommands = 0;
-    gNdsRendererProfileLightFallbackCount = 0;
-    gNdsRendererProfileHardwareVertices = 0;
-    gNdsRendererProfileHardwareTriangles = 0;
-    gNdsRendererProfileHardwareBatchBeginCount = 0;
-    gNdsRendererProfileHardwareBatchReuseCount = 0;
-    gNdsRendererProfileHardwareBatchEndCount = 0;
-    gNdsRendererProfileTexturePrepareCount = 0;
-    gNdsRendererProfileTexturePrepareReuseCount = 0;
-    gNdsRendererProfileImmutableListCount = 0;
-    gNdsRendererProfileTrustedCommandCount = 0;
-    gNdsRendererProfileValidatedCommandCount = 0;
-    gNdsRendererProfileTriangleRunReuseCount = 0;
-    gNdsRendererProfileTriangleSubmitTicks = 0;
-    gNdsRendererProfileVertexSubmitTicks = 0;
-    gNdsRendererProfileCi4LutBuildCount = 0;
-    gNdsRendererProfileCi4LutReuseCount = 0;
-    gNdsRendererProfileCi4IndexCacheBuildCount = 0;
-    gNdsRendererProfileCi4IndexCacheReuseCount = 0;
-    gNdsRendererProfileCi4RepresentativePixelCount = 0;
-    gNdsRendererProfileCi4ReusePixelCount = 0;
-    gNdsRendererProfileHardwareOverLimit = 0;
-    gNdsRendererProfileOracleSamples = 0;
-    gNdsRendererProfileOracleMismatches = 0;
-    gNdsRendererProfileOracleMaxDelta = 0;
-    gNdsRendererProfileMatrixLoadCount = 0;
-    gNdsRendererProfileCameraMatrixCacheHitCount = 0;
-    gNdsRendererProfileCameraMatrixCacheMissCount = 0;
-    gNdsRendererProfileCameraMatrixCacheOverflowCount = 0;
-    gNdsRendererProfileDObjWorldCacheHitCount = 0;
-    gNdsRendererProfileDObjWorldCacheMissCount = 0;
-    gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
-    gNdsRendererProfileStageWorldPersistentHitCount = 0;
-    gNdsRendererProfileStageWorldPersistentMissCount = 0;
-    gNdsRendererProfileStageWorldPersistentRejectCount = 0;
-    gNdsRendererProfileStageWorldPersistentOverflowCount = 0;
-    gNdsRendererProfileStageWorldPersistentOracleSampleCount = 0;
-    gNdsRendererProfileStageWorldPersistentOracleMismatchCount = 0;
-    gNdsRendererProfileAffineMatrixSamples = 0;
-    gNdsRendererProfileAffineMatrixMismatches = 0;
-    gNdsRendererProfileAffineMatrixMaxDelta = 0;
-    gNdsRendererProfileRawVertexMinX = 32767;
-    gNdsRendererProfileRawVertexMaxX = -32768;
-    gNdsRendererProfileRawVertexMinY = 32767;
-    gNdsRendererProfileRawVertexMaxY = -32768;
-    gNdsRendererProfileRawVertexMinZ = 32767;
-    gNdsRendererProfileRawVertexMaxZ = -32768;
-    gNdsRendererProfileHWVertexMinX = 32767;
-    gNdsRendererProfileHWVertexMaxX = -32768;
-    gNdsRendererProfileHWVertexMinY = 32767;
-    gNdsRendererProfileHWVertexMaxY = -32768;
-    gNdsRendererProfileHWVertexMinZ = 32767;
-    gNdsRendererProfileHWVertexMaxZ = -32768;
-    gNdsRendererProfileHWVertexSaturateCount = 0;
-#endif
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05FrameResetTicks, phase05_start);
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    phase_start = cpuGetTiming();
-#endif
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DRAW_START);
     /* REWIND THE SOURCE DISPLAY-LIST HEADS FOR THIS FRAME. This is a freeze fix,
      * not hygiene, and it is the source's own per-frame reset -- taskman.c
@@ -745,14 +465,6 @@ static void ndsBattlePlayablePresentFrame(void)
      * of the present, in the same position and order the other loop uses: the
      * arena's contents are per-frame display data that has already been consumed
      * by the previous frame's flush. */
-#if NDS_R2_COLLISION_L7_ORACLE
-    /* R2-07 L7 step one, sampled HERE and not later: the invert latches the
-     * oracle keys on are set by this frame's hit detection and knocked down by
-     * ndsFTParamsInvalidateFighterParts as the NEXT tick moves joints, so this
-     * is the last point at which "the joints collision inverted this frame" is
-     * still readable. Read-only; off in both shipped blocks. */
-    ndsR2CollisionOracleSampleFrame();
-#endif
     /* P2-3r13: last point at which this frame's graphics-heap peak is readable
      * for everything the fighter draw did not roll back. */
     ndsTaskmanSampleGraphicsHeap();
@@ -760,27 +472,20 @@ static void ndsBattlePlayablePresentFrame(void)
     func_80004AB0();
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileBeginFrameTicks = cpuGetTiming() - phase_start;
-#endif
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     draw_start = cpuGetTiming();
 #endif
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
     ndsSObjPreviewEndFrame();
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     gNdsRendererProfileDrawTicks = cpuGetTiming() - draw_start;
 #endif
     gNdsBattlePlayablePacingDrawCalls++;
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     hud_start = cpuGetTiming();
 #endif
     ndsPlatformRenderDebugHud();
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     gNdsRendererProfileHudTicks = cpuGetTiming() - hud_start;
 #endif
     /* A complete battle frame: it ends a transition hold that nothing ended
@@ -789,26 +494,13 @@ static void ndsBattlePlayablePresentFrame(void)
     ndsVideoSetTransitionBlackout(FALSE);
     ndsAudioReleaseDeferredBGM();
     ndsPlatformEndFrame();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    phase_start = cpuGetTiming();
-#endif
     logic_tick = sySchedulerGetTicCount();
     ndsOsPostVBlank();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfilePostVBlankTicks += cpuGetTiming() - phase_start;
-    phase_start = cpuGetTiming();
-#endif
     ndsOsRunThreads();
     /* sySchedulerVRetrace performs required VI/client work but also increments
      * the original shared tic. Realtime game time already advanced once per
      * source update, so presentation must not add another logic tic. */
     sySchedulerSetTicCount(logic_tick);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileThreadTicks = cpuGetTiming() - phase_start;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
     /* The battle-time low-water of the taskman general heap, which is the
@@ -849,59 +541,11 @@ static void ndsBattlePlayablePresentFrame(void)
     {
         gNdsEffectPoolFreeMin = (u32)sEFManagerStructsFreeNum;
     }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05PresentTailTicks, phase05_start);
-#endif
-#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
-    (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY || NDS_TICK_HUD
     gNdsRendererProfilePresentTicks = cpuGetTiming() - start;
 #endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfilePresentActiveTicks =
-        ndsBattlePlayableProfileResidual(
-            gNdsRendererProfilePresentTicks,
-            gNdsRendererProfileVBlankWaitTicks);
-    known = (u64)gNdsRendererProfileOwners[
-                NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +
-            gNdsRendererProfileOwners[
-                NDS_RENDERER_PROFILE_OWNER_MARIO].exclusive_ticks +
-            gNdsRendererProfileOwners[
-                NDS_RENDERER_PROFILE_OWNER_FOX].exclusive_ticks +
-            gNdsRendererProfileWallpaperTicks +
-            gNdsRendererProfileForegroundTicks;
-    gNdsRendererProfileDrawResidualTicks =
-        ndsBattlePlayableProfileResidual(gNdsRendererProfileDrawTicks,
-                                         known);
-    known = (u64)gNdsRendererProfileBeginFrameTicks +
-            gNdsRendererProfileDrawTicks +
-            gNdsRendererProfileHudTicks +
-            gNdsRendererProfileFlushTicks +
-            gNdsRendererProfilePostVBlankTicks +
-            gNdsRendererProfileThreadTicks;
-    gNdsRendererProfilePresentResidualTicks =
-        ndsBattlePlayableProfileResidual(
-            gNdsRendererProfilePresentActiveTicks, known);
-    /* Publish the GX state only after the VBlank wait, scheduler retrace
-     * notification, post-wait bookkeeping, and runnable thread work have all
-     * completed. This is the bounded frame endpoint, not merely the return
-     * from glFlush(). */
-    ndsPlatformProfileSampleFrameBoundaryGXState();
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05ProfileBookkeepingTicks, phase05_start);
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_SHIP_TELEMETRY
     ndsRendererProfileFramePublish();
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05ProfilePublishTicks, phase05_start);
 #endif
     ndsBattlePlayablePacingUpdate();
 }
@@ -959,9 +603,6 @@ static void ndsBattlePlayableAccountPresent(u32 phase, u32 actual)
     u32 interval;
 
     interval = actual - sNdsBattlePlayableLastPresentVBlank;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfilePresentIntervalVBlanks = interval;
-#endif
     if (interval < NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)
     {
         gNdsBattlePlayablePacingCadenceViolationCount++;
@@ -1004,20 +645,6 @@ static void ndsBattlePlayableAccountPresent(u32 phase, u32 actual)
 
 static void ndsBattlePlayableFinalizePresentedIteration(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u64 known;
-
-    gNdsRendererProfileLogicTick = sySchedulerGetTicCount();
-    gNdsRendererProfileLoopWallTicks =
-        cpuGetTiming() - sNdsBattlePlayableProfileLoopStartTick;
-    known = (u64)gNdsRendererProfileInputTicks +
-            gNdsRendererProfileUpdateTicks +
-            gNdsRendererProfilePresentActiveTicks +
-            gNdsRendererProfileVBlankWaitTicks;
-    gNdsRendererProfileLoopResidualTicks =
-        ndsBattlePlayableProfileResidual(
-            gNdsRendererProfileLoopWallTicks, known);
-#endif
 #if NDS_TICK_HUD
     {
         u32 draw_known = gNdsTickHudFighterTicks + gNdsTickHudStageTicks +
@@ -1249,12 +876,6 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
     }
 #endif
     NDS_TASK37_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
-#if NDS_R2_FLASH_PROBE
-    /* R2-03 E48. Latch and reset here, on the same per-iteration path the tick
-     * HUD samples from, so the branch counts are per presented frame and carry
-     * the same frame numbering the capture harness stops on. */
-    ndsRendererR2FlashProbeFrameEnd(gNdsBattlePlayablePacingPresentedFrames);
-#endif
     /* Publish here and not one line later: the harness breaks on
      * ndsBattlePlayableFrameCompleteMarker, GDB stops at its entry, and GDB
      * cannot see the ARM9 D-cache. This is also the only point in the
@@ -1287,35 +908,12 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
  * The per-iteration profile accumulators were locals in the harness loop. They
  * become file statics here because the loop that owns them now lives in
  * another translation unit; the arithmetic is unchanged. */
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-static u32 sNdsR2ProfileInputTicks;
-static u32 sNdsR2ProfileUpdateTicks;
-static u32 sNdsR2ProfileSourceUpdateByIndex[2];
-static u32 sNdsR2ProfileSourceUpdateTicks;
-static u32 sNdsR2ProfileAudioUpdateTicks;
-#endif
 
 void ndsR2HostBattlePrepare(void)
 {
-#if NDS_P2_YOSHI_BUG_PROOF
-    gNdsYoshiBugHostWatchdogUpdates = 0u;
-    gNdsYoshiBugHostWatchdogTotalUpdates = 0u;
-    gNdsYoshiBugHostWatchdogGoUpdates = 0u;
-    gNdsYoshiBugHostWatchdogFired = 0u;
-    gNdsYoshiBugHostWatchdogPhase = 0xffffffffu;
-    gNdsYoshiBugHostWatchdogNaturalResult = 0u;
-    gNdsYoshiBugHostWatchdogPrepared = 0u;
-    gNdsYoshiBugHostWatchdogUpdateEnabled = 0u;
-    sNdsYoshiBugHostWatchdogLastPhase = 0xffffffffu;
-    sNdsYoshiBugHostWatchdogLastFrames = 0xffffffffu;
-#endif
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsStageCollisionLoopPrepareRuntime();
-#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
-#endif
     ndsFighterMarioFoxNaturalMotionPrepare();
-#endif
     ndsBattlePlayablePacingStart(0u);
     /* Bounded pipelining for this battle's frames (owner 2026-10-19). */
     ndsPlatformPresentLeadEnable(TRUE);
@@ -1324,15 +922,6 @@ void ndsR2HostBattlePrepare(void)
 void ndsR2HostBattleIterationBegin(void)
 {
     gNdsBattleIterationStartTick = cpuGetTiming() | 1u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsR2ProfileInputTicks = 0u;
-    sNdsR2ProfileUpdateTicks = 0u;
-    sNdsR2ProfileSourceUpdateByIndex[0] = 0u;
-    sNdsR2ProfileSourceUpdateByIndex[1] = 0u;
-    sNdsR2ProfileSourceUpdateTicks = 0u;
-    sNdsR2ProfileAudioUpdateTicks = 0u;
-    sNdsBattlePlayableProfileLoopStartTick = cpuGetTiming();
-#endif
 #if NDS_TICK_HUD
     sNdsBattlePlayableTickHudLoopStartTick = cpuGetTiming();
     gNdsTickHudFighterTicks = 0u;
@@ -1834,18 +1423,8 @@ static void ndsBattleCameraMatrixAtUndrawnTick(void)
 
 u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 {
-#if NDS_R2_POSITION_PROBE
-    /* Mirrors the Runtime 1 loop, which publishes the capture index in the
-     * same position -- immediately before its own `battle_status_before` read.
-     * Without this the R2 path leaves the index at 0, so every hurtbox capture
-     * below reads as "tick 0" and the probe silently reports one substep. */
-    gNdsPositionProbeUpdateInPresent = update_index;
-#endif
     u32 battle_status_before = (gSCManagerBattleState != NULL) ?
         (u32)gSCManagerBattleState->game_status : 0xffffffffu;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 input_start = cpuGetTiming();
-#endif
 
     /* Slice 1 phase 7's gate, from a read this function already performs. One
      * logic update of lag at the countdown edge, which can only ADD to the
@@ -1863,9 +1442,6 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
         syControllerUpdateGlobalData();
     }
     ndsBattlePlayableAdvanceRealtimeLogicClock();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsR2ProfileInputTicks += cpuGetTiming() - input_start;
-#endif
     /* P2-2p6: the fighter pose engine evaluates body joints on the LAST source
      * tick of a presented frame -- the pose the present will draw -- and holds
      * them on the others. The Runtime 1 loop publishes the same word. */
@@ -1879,94 +1455,13 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
         gNdsMObjTickMul =
             (gNdsFtPoseEvalTick != 0u) ? (update_index + 1u) : 0u;
     }
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \
-    NDS_P2_NESS_VFX_PROOF || NDS_P2_YOSHI_BUG_PROOF
-    /* Mode 163 enters the Runtime-2 owner before BattleShip has necessarily
-     * published both fighter GObjs. The initial prepare is therefore allowed
-     * to decline. Retry the same idempotent prepare at the R2 update seam until
-     * the real fighters exist; once prepared it is a branch-only no-op. This
-     * mirrors Runtime 1's action-proof path and does not create or force any
-     * special/item state. Ness's dedicated realtime VFX proof additionally
-     * waits for source Wait before prepare can arm. */
-    ndsFighterMarioFoxNaturalMotionPrepare();
-#endif
     ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
-#if NDS_P2_YOSHI_BUG_PROOF
-    gNdsYoshiBugHostWatchdogTotalUpdates++;
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
-    {
-        gNdsYoshiBugHostWatchdogGoUpdates++;
-    }
-    /* Entry/Appear can consume hundreds of R2 source updates before the tour
-     * is allowed to arm at source Wait. Once armed, this is a LIVENESS watch,
-     * not a duration watch: a valid Yoshi phase can naturally last much longer
-     * than 60 source updates (and the tour has its own 720-update behavioral
-     * timeout). Reset whenever either the phase or its frame counter advances;
-     * only an outer ownership failure leaves both words frozen. */
-    if (gNdsFighterNaturalMotionPrepared != 0u)
-    {
-        if ((gNdsYoshiBugTourPhase != sNdsYoshiBugHostWatchdogLastPhase) ||
-            (gNdsYoshiBugTourFrames != sNdsYoshiBugHostWatchdogLastFrames))
-        {
-            sNdsYoshiBugHostWatchdogLastPhase = gNdsYoshiBugTourPhase;
-            sNdsYoshiBugHostWatchdogLastFrames = gNdsYoshiBugTourFrames;
-            gNdsYoshiBugHostWatchdogUpdates = 0u;
-        }
-        else
-        {
-            gNdsYoshiBugHostWatchdogUpdates++;
-        }
-    }
-    if ((((gNdsFighterNaturalMotionPrepared != 0u) &&
-          (gNdsYoshiBugHostWatchdogUpdates >=
-              NDS_YOSHI_BUG_HOST_WATCHDOG_UPDATES)) ||
-         ((gNdsFighterNaturalMotionPrepared == 0u) &&
-          (((gNdsYoshiBugHostWatchdogGoUpdates >=
-                 NDS_YOSHI_BUG_HOST_WATCHDOG_GO_UPDATES)) ||
-            (gNdsYoshiBugHostWatchdogTotalUpdates >=
-                 NDS_YOSHI_BUG_HOST_WATCHDOG_TOTAL_UPDATES)))) &&
-        (gNdsYoshiBugTourDone == 0u) &&
-        (gNdsYoshiBugHostWatchdogFired == 0u))
-    {
-        gNdsYoshiBugHostWatchdogFired = 1u;
-        gNdsYoshiBugHostWatchdogPhase = gNdsYoshiBugTourPhase;
-        gNdsYoshiBugHostWatchdogNaturalResult =
-            gNdsFighterNaturalMotionResult;
-        gNdsYoshiBugHostWatchdogPrepared =
-            gNdsFighterNaturalMotionPrepared;
-        gNdsYoshiBugHostWatchdogUpdateEnabled =
-            (u32)ndsFighterMarioFoxNaturalMotionUpdateEnabled();
-        osWritebackDCacheAll();
-        ndsYoshiBugTourProofStop();
-    }
-#endif
-#if NDS_R2_POSITION_PROBE
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->players[0].fighter_gobj != NULL))
-    {
-        ndsPositionProbeCaptureMarioHurtboxes(
-            gSCManagerBattleState->players[0].fighter_gobj);
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    sNdsR2ProfileUpdateTicks += gNdsRendererProfileUpdateTicks;
-    if (update_index < 2u)
-    {
-        sNdsR2ProfileSourceUpdateByIndex[update_index] =
-            gNdsRendererProfileSourceUpdateTicks;
-    }
-    sNdsR2ProfileSourceUpdateTicks += gNdsRendererProfileSourceUpdateTicks;
-    sNdsR2ProfileAudioUpdateTicks += gNdsRendererProfileAudioUpdateTicks;
-#else
     (void)update_index;
-#endif
     if ((battle_status_before == nSCBattleGameStatusWait) &&
         (gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
     {
         /* Keep all prepare-once countdown atlases resident. */
-#if NDS_P2_KIRBY
         {
             u32 player;
             for (player = 0u; player < GMCOMMON_PLAYERS_MAX; player++)
@@ -1977,7 +1472,6 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
                         gSCManagerSceneData.scene_curr, nFTKindKirby, 0u, 348u, 0u,
                         NDS_NATIVE_FAILURE_BAD_ASSET);
         }
-#endif
         ndsRendererHardwareArmBattleStaticTextures();
     }
 #if NDS_TICK_HUD
@@ -2004,14 +1498,6 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 
 void ndsR2HostBattlePresent(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileInputTicks = sNdsR2ProfileInputTicks;
-    gNdsRendererProfileUpdateTicks = sNdsR2ProfileUpdateTicks;
-    gNdsRendererProfileSourceUpdate1Ticks = sNdsR2ProfileSourceUpdateByIndex[0];
-    gNdsRendererProfileSourceUpdate2Ticks = sNdsR2ProfileSourceUpdateByIndex[1];
-    gNdsRendererProfileSourceUpdateTicks = sNdsR2ProfileSourceUpdateTicks;
-    gNdsRendererProfileAudioUpdateTicks = sNdsR2ProfileAudioUpdateTicks;
-#endif
     ndsBattlePlayablePresentRealtimeFrame();
     /* Count only updates committed to a presented frame; the source-faithful
      * LoadScene terminal update remains undrawn. */

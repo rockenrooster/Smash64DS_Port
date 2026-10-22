@@ -34,9 +34,5 @@ int ndsNetLinkSendPacket(const void *data, uint32_t len);
 uint32_t ndsNetLinkRecvPacket(uint8_t src_mac[6], void *buffer, uint32_t capacity);
 uint32_t ndsNetLinkStat(uint32_t index);
 
-#if NDS_NET_LAB_PING
-/* Lab: exchange packets for `frames` VBlanks at boot (gNdsNetLabPing*). */
-void ndsNetLabPingRun(uint32_t frames);
-#endif
 
 #endif

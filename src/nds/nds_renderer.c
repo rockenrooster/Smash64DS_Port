@@ -7,22 +7,14 @@
 #include "nds_native_textured_quad.exec.inc"
 #include "generated/nds_native_damage_fly_mdust.generated.inc"
 #include "nds_native_damage_fly_mdust.exec.inc"
-#if NDS_P2_PIKACHU
 #include "generated/nds_native_pikachu_thunder.generated.inc"
 #include "nds_native_pikachu_thunder.exec.inc"
-#endif
-#if NDS_P2_NESS
 #include "generated/nds_native_ness_pktail.generated.inc"
 #include "nds_native_ness_pktail.exec.inc"
-#endif
-#if NDS_P2_SAMUS
 #include "generated/nds_native_samus_bomb.generated.inc"
 #include "nds_native_samus_bomb.exec.inc"
-#endif
-#if NDS_P2_KIRBY
 #include "generated/nds_native_kirby_vulcan.generated.inc"
 #include "nds_native_kirby_vulcan.exec.inc"
-#endif
 #include "generated/nds_native_damage_slash.generated.inc"
 #include "nds_native_damage_slash.exec.inc"
 #include "nds_renderer_native_owners.c"
@@ -64,25 +56,18 @@
 #include "nds_native_pikachu_thunderground.exec.inc"
 #include "generated/nds_native_pikachu_thunderjolt_effect.generated.inc"
 #include "nds_native_pikachu_thunderjolt_effect.exec.inc"
-#if NDS_P2_NESS
 #include "generated/nds_native_ness_pkfire.generated.inc"
 #include "nds_native_ness_pkfire.exec.inc"
 #include "generated/nds_native_ness_pkthunder.generated.inc"
 #include "nds_native_ness_pkthunder.exec.inc"
-#endif
-#if NDS_P2_YOSHI
 #include "generated/nds_native_yoshi_entryegg.generated.inc"
 #include "nds_native_yoshi_entryegg.exec.inc"
 #include "generated/nds_native_yoshi_egg.generated.inc"
 #include "nds_native_yoshi_egg.exec.inc"
 #include "generated/nds_native_yoshi_egglay.generated.inc"
 #include "nds_native_yoshi_egglay.exec.inc"
-#endif
-#if NDS_P2_PURIN
 #include "generated/nds_native_purin_sing.generated.inc"
 #include "nds_native_purin_sing.exec.inc"
-#endif
-#if NDS_P2_ITEM_CORE
 #include "generated/nds_native_item_tomato.generated.inc"
 #include "nds_native_item_tomato.exec.inc"
 #include "nds_native_item_wave1_emit.exec.inc"
@@ -129,6 +114,5 @@
 #include "nds_native_item_iwark.exec.inc"
 #include "generated/nds_native_item_capsule.generated.inc"
 #include "nds_native_item_capsule.exec.inc"
-#endif
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"

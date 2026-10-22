@@ -131,7 +131,6 @@ static u32 ndsFtrLeanAdmitCollectBases(void)
         void **files[9];
         u32 f;
 
-#if NDS_P4
         /* A content's records name its own files: its model is a compact
          * battle pack, whose SOURCE offsets only its loaded data maps. */
         if (sNdsFtrAdmitContent[i] != 0u)
@@ -140,7 +139,6 @@ static u32 ndsFtrLeanAdmitCollectBases(void)
 
             data = (p4 != NULL) ? p4->data : NULL;
         }
-#endif
         if (data == NULL)
         {
             continue;
@@ -1008,9 +1006,7 @@ static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
     u32 i;
 
     ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN], &live);
-#if NDS_R2_FOX_GUN_OVERLAY
     ndsFighterCollectStripFoxGunSidecar(fp, &live);
-#endif
     if (live.selected_count != inst->root_count)
     {
         return FALSE;
@@ -1555,7 +1551,6 @@ ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
 #endif
 
 restart:
-#if NDS_P2_KIRBY
     {
         sb32 body = ((owner_slot == 11u) &&
                      (ndsFighterKirbyTrioBodyActive(fp) != FALSE)) ?
@@ -1578,7 +1573,6 @@ restart:
         }
         ndsRendererNativeKirbyTrioSetHeadKey(head_key);
     }
-#endif
 #if NDS_FTR_LEAN_LAB
     if ((reuse_plan != FALSE) && (reuse_check == FALSE))
 #else
@@ -1592,9 +1586,7 @@ restart:
     }
     ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN],
                                     &collection);
-#if NDS_R2_FOX_GUN_OVERLAY
     ndsFighterCollectStripFoxGunSidecar(fp, &collection);
-#endif
     if ((ndsFighterDrawPlanResolve(owner_slot, expected_asset_id,
                                    &collection, ws, &owner_file) !=
          nNDSFighterDrawPlanOk) ||
@@ -1905,7 +1897,7 @@ listed:
 
         gNdsFtrLean.event_ticks += ticks;
         gNdsFtrLean.k_event_ticks[row] += ticks;
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP &&     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) && NDS_TICK_HUD
         /* LAB: this frame's lean event ticks, in two columns the SRC split
          * leaves unused: SCAT for events that materialized, SINT for the
          * rest. */
@@ -2097,12 +2089,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     u32 retried = FALSE;
 #endif
 
-#if NDS_P4
     if (gNdsFtrLeanAlphaPending != 0u)
     {
         ndsFtrLeanPacketAlphaRestore();
     }
-#endif
     kind = ndsFtrLeanEligible(fp, &owner_slot);
     if (kind == NDS_FTR_LEAN_KIND_NONE)
     {
@@ -2127,13 +2117,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         ndsFtrLeanDecline(row, nNDSFtrLeanDeclineSkeleton);
         return FALSE;
     }
-#if !NDS_R2_FIGHTER_SHUFFLE_FOLD
-    if (fp->shuffle_tics != 0u)
-    {
-        ndsFtrLeanDecline(row, nNDSFtrLeanDeclineKind);
-        return FALSE;
-    }
-#endif
     {
         /* The camera matrices are a per-frame, per-camera constant (the
          * adapter's own frame cache); fetch them once per frame. The storage
@@ -2220,13 +2203,11 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
             }
             NDS_FTR_LEAN_GUARD_PART(5u, mark);
         }
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
         /* The old path latches this every draw; so does the lean one, so the
          * statics read after this draw are the same in both routes. */
         ndsRendererAdapterSetShuffleOffset(fp);
         shuffle_x = sNdsR2ShuffleWorldX;
         shuffle_y = sNdsR2ShuffleWorldY;
-#endif
         NDS_FTR_LEAN_GUARD_PART(6u, mark);
 #if NDS_FTR_LEAN_ATTR_LIVE
         if ((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL_QUIET) != 0u)
@@ -2245,18 +2226,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_guard_ticks[row] += t1 - t0);
 #if NDS_FTR_LEAN_LAB
         class_counts = gNdsFtrLean.k_kernel_class[row];
-#if NDS_FTR_LEAN_KTIME
-        if ((slow_mode & NDS_FTR_LEAN_SLOW_KTIME) != 0u)
-        {
-#if NDS_FTR_LEAN_ATTR_LIVE
-            part_ticks = gNdsFtrLeanAttr.kernel_part_ticks[row];
-            gNdsFtrLeanAttr.kernel_part_joints[row] += inst->joint_count;
-#else
-            part_ticks = gNdsFtrLean.kernel_part_ticks;
-#endif
-            gNdsFtrLean.kernel_part_joints += inst->joint_count;
-        }
-#endif
 #endif
         kernel_flags = ((fp->is_use_animlocks != FALSE) ?
                             NDS_FTR_LEAN_KERNEL_LOCKS : 0u) |
@@ -2380,9 +2349,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
          * root program (Link's texgen tables are selected from it) and the
          * Kirby trio head key it publishes for every fighter. */
         ndsRendererNativeFighterSetRootProgram(owner_slot, inst->program);
-#if NDS_P2_KIRBY
         ndsRendererNativeKirbyTrioSetHeadKey(inst->head_key);
-#endif
 #if NDS_FTR_LEAN_ATTR_LIVE
             gNdsFtrLeanAttr.patch_part_ticks[row][5] += r1 - r0;
             gNdsFtrLeanAttr.patch_part_ticks[row][6] += cpuGetTiming() - r1;
@@ -2424,26 +2391,9 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     gNdsFtrDeclineDisplayListClause = 0u;
     gNdsFtrRootProgramsTried = 0u;
 #if NDS_TICK_HUD
-#if NDS_FTR_PRE_WALK_CENSUS
-    {
-        NDSFighterDLAllDrawCollection census;
-        u32 i;
-
-        memset(&census, 0, sizeof(census));
-        census.selected_count = inst->root_count;
-        census.total_count = inst->root_count;
-        for (i = 0u; i < inst->root_count; i++)
-        {
-            census.indices[i] = inst->event_index[i];
-            census.dobjs[i] = inst->matrix_dobjs[i];
-        }
-        ndsFtrPreWalkCensus(slot, &census);
-    }
-#endif
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackEligible);
 #endif
-#if NDS_P4
     {
         /* Remix 0xD9: alpha 0 draws nothing, a partial alpha translucent. */
         u32 env_alpha = ndsP4EnvAlpha(fp);
@@ -2457,7 +2407,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
             ndsFtrLeanPacketSetAlpha(slot, env_alpha);
         }
     }
-#endif
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t0 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += t0 - t1);
@@ -2466,7 +2415,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     t1 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.submit_ticks += t1 - t0);
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_submit_ticks[row] += t1 - t0);
-#if NDS_R2_FOX_GUN_OVERLAY
     /* Slice 6: Fox's blaster (and Kirby's Fox copy) is the sidecar the old
      * path submits after either body path (DrawForSlot's tail): the same
      * builder -- which gates on the kind, the gameplay owner and the live
@@ -2477,13 +2425,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     {
         ndsFighterDrawFoxGunSidecar(fp);
     }
-#if NDS_P4 && NDS_P2_KIRBY
     /* A custom power's hat on joint 6, the same way, and Meta Knight's
      * tornado while he spins. */
     ndsFighterDrawKirbyHatSidecar(fp);
     ndsFighterDrawKirbyTornadoSidecar(fp);
-#endif
-#endif
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
     if (slot == 0u)
     {
@@ -2567,7 +2512,7 @@ static void ndsFtrLeanMatchReset(void)
  * binds it. TRUE when the lean draw submitted. */
 volatile u32 gNdsFtrLeanTransientDraws;
 
-#if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_P2_1P_GAME
 static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 {
     NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp };
@@ -2589,13 +2534,11 @@ static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 
 static void ndsFtrLeanFrameEnd(void)
 {
-#if NDS_P4
     /* The list's memory can change hands at a scene change. */
     if (gNdsFtrLeanAlphaPending != 0u)
     {
         ndsFtrLeanPacketAlphaRestore();
     }
-#endif
     ndsFtrLeanMatchReset();
     ndsFtrLeanAdmitFrame();
 #if NDS_FTR_LEAN_LAB
@@ -2611,7 +2554,7 @@ static void ndsFtrLeanFrameEnd(void)
     }
     ndsFtrLeanCountersPublish();
 #endif
-#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
     ndsVramCensusFrame();   /* slice 2a lab census; no-op unless enabled */
 #endif
 }

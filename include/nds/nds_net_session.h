@@ -44,10 +44,5 @@ void ndsNetBattleInstallTick(uint32_t index); /* index 0/1 within the batch */
 void ndsNetBattleBatchDone(void);
 void ndsNetBattleEnd(void);
 
-#if NDS_NET_LAB_MATCH
-/* Lab: find the other console, agree a fixed two-human match and its seed,
- * and leave the descriptor applied. Returns 0 on success. */
-int ndsNetLabMatchHandshake(void);
-#endif
 
 #endif

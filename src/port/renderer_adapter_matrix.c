@@ -14,9 +14,7 @@
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_fixed_convert.h>
-#if NDS_R2_FOX_GUN_OVERLAY
 #include <nds/nds_fox_gun.h>
-#endif
 #include <nds/nds_ifcommon_oam.h>
 #if NDS_P2_STAGE_JUNGLE
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
@@ -37,11 +35,7 @@
  * uses MTXCOPY on both sides of that switch; with it inside, the canonical
  * software target did not compile at all. Folding the triangle flag into the
  * condition keeps the hardware ROM's expansion exactly as it was. */
-#if NDS_TASK86_MATRIX_COPY
 #define MTXCOPY(d, s) ndsRendererMatrixCopy20p12((d), (s))
-#else
-#define MTXCOPY(d, s) (*(d) = *(s))
-#endif
 
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
@@ -251,7 +245,6 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void)
  * ndsRendererAdapterBuildJointAttachMtx. */
 #define NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND 0x4Fu
 
-#if NDS_R2_IMPACT_WAVE_NATIVE
 /* EFCommonEffects1 file 83, ImpactWave Vtx block @ 0x7B08 and TRI2 commands
  * 20..27 of the display list @ 0x7C28. These are immutable source geometry,
  * compiled AOT instead of decoded from N64 VTX/TRI2 commands every draw. Source
@@ -296,13 +289,8 @@ static u32 sNdsRendererAdapterImpactWaveVariant;
  * drawing and recording a failure. */
 static sb32 sNdsRendererAdapterVisualEffectNativeActive;
 static u32 sNdsRendererAdapterVisualEffectTemplate;
-#endif
-#if NDS_R2_REBIRTH_HALO_NATIVE
 static sb32 sNdsRendererAdapterRebirthHaloNativeActive;
-#if NDS_R2_REBIRTH_HALO_FAST_ADAPTER
 static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
-#endif
-#endif
 /* Kind 0x50 is 0x4F's NEIGHBOUR IN THE TABLE AND A DIFFERENT CALLBACK.
  * sGCMatrixFuncList entries are {proc_diff, proc_same} PAIRS (objdisplay.h:20),
  * so kind - 66 selects pair 14 of dLBCommonFuncMatrixList = func_ovl0_800C99CC
@@ -430,14 +418,6 @@ extern Vec2f dFTDisplayMainShufflePositions[][4];
  * point for the latch epoch (owner ruling D13). */
 int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
 #endif
-#if NDS_LAB_NO_CULL
-extern volatile u32 gNdsLabSeamArm;
-#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
-#define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 4u
-#else
-#define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 3u
-#endif
-#endif
 
 #if defined(__arm__)
 #define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
@@ -451,29 +431,7 @@ static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
     { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
 };
 
-#if NDS_R2_SECOND_ENTRY_DIAG
-/* Native stage owner admission split. Declared up here, ahead of every use:
- * this file is #included into scene_backend.c, so a definition placed next to
- * the function it serves lands AFTER the earlier consumers and does not
- * compile. A second scene entry MUST show the rebuild count advance; a run
- * where only the steady-admit count moves across the entry is one where last
- * match's binding_dobjs[] were re-admitted wholesale. */
-volatile u32 gNdsR2StageSteadyAdmitCount;
-volatile u32 gNdsR2StageTopologyRebuildCount;
-/* First stage-material rejection of the run, latched. RejectIndex stays at
- * 0xFFFFFFFF while nothing has been rejected, so "no rejection" is
- * distinguishable from "rejected binding 0". */
-volatile u32 gNdsR2StageMaterialRejectCount;
-volatile u32 gNdsR2StageMaterialRejectIndex = 0xFFFFFFFFu;
-volatile u32 gNdsR2StageMaterialRejectBinding;
-volatile u32 gNdsR2StageMaterialRejectDObj;
-volatile u32 gNdsR2StageMaterialRejectMObj;
-volatile u32 gNdsR2StageMaterialRejectFlagsWant;
-volatile u32 gNdsR2StageMaterialRejectFlagsGot;
-volatile u32 gNdsR2StageMaterialRejectHeapGen;
-#endif
 
-#if NDS_TASK39_FX_FLASH
 /* ftDisplayMainCalcFogColor: a shaded fighter's colour animation blends the
  * animation's fog colour with the team shade (same integer steps). */
 static u32 ndsRendererAdapterFighterShadeFlash(const FTStruct *fp)
@@ -509,11 +467,9 @@ static u32 ndsRendererAdapterFighterShadeFlash(const FTStruct *fp)
     return ((u32)(u8)red << 24) | ((u32)(u8)green << 16) |
            ((u32)(u8)blue << 8) | (u32)(u8)alpha;
 }
-#endif
 
 static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
 {
-#if NDS_TASK39_FX_FLASH
     if ((fp != NULL) && (fp->colanim.is_use_color1 != FALSE))
     {
         const GMColKeys *color = &fp->colanim.color1;
@@ -538,13 +494,9 @@ static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
         return ((u32)shade->r << 24) | ((u32)shade->g << 16) |
                ((u32)shade->b << 8) | shade->a;
     }
-#else
-    (void)fp;
-#endif
     return 0u;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static NDSRendererNativeMaterial
     sNdsRendererAdapterNativeOwnerMaterials[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
@@ -699,11 +651,6 @@ static NDSRendererMatrix20p12
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerModelviews[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-#else
-static NDSRendererNativeMaterial
-    sNdsRendererAdapterNativeMaterials[
-        NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
-#endif
 
 /* The seam-correct source hierarchy retains more precision than GX Q20.12.
  * Translation uses s64 so stage position cannot consume the integer range. */
@@ -723,7 +670,6 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
 {
     NDSRelocLoadedFile *loaded[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     DObj *matrix_bindings[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     DObj *material_dobjs[
@@ -749,7 +695,6 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
         NDSRendererAdapterSourceWorld source_worlds[
             NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     } hierarchy_storage;
-#if NDS_R2_FIGHTER_GX_COMPOSE
     /* Slice 43. Per-binding descriptors for the GX compose, plus the chains
      * themselves. This does NOT reuse `hierarchy_storage.hierarchy_locals`: that
      * array is sized at
@@ -765,12 +710,10 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
     u8 gx_seed_is_identity;
     u8 gx_valid;
     u8 gx_modelview_mirror_valid;
-#endif
     NDSRendererMatrix20p12 hierarchy_projection;
     NDSRendererMatrix20p12 hierarchy_camera_modelview;
     NDSRendererConfig hierarchy_config;
     NDSRendererNativeFighterHierarchy hierarchy;
-#endif
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 } NDSRendererAdapterNativeOwnerWorkspace;
@@ -791,7 +734,6 @@ typedef struct NDSRendererAdapterStageWorldSourceKey
     u8 reserved;
 } NDSRendererAdapterStageWorldSourceKey;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT 8u
 #define NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT 57u
 #define NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT 42u
@@ -1942,17 +1884,14 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 binding_composed[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
-#if NDS_TASK36_HW_COMPOSE
     NDSRendererAdapterStageWorldSourceKey task36_rigid_source_keys[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     u64 task36_runtime_rigid_mask;
-#if NDS_TASK44_STAGE_STEADY
     /* Static bindings need only the source-key guard; frame matrix preparation
      * consumes the current mask directly. */
     u8 task44_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     u8 task44_rigid_binding_count;
     u8 task44_binding_lists_valid;
-#if NDS_R2_STAGE_VALIDATE_STRIDE
     /* Slice 44. Which residue class of the stride is revalidated this frame.
      * Advanced once per PrepareNativeStageOwner, which is once per frame --
      * the c120 profile pins that at 26 rigid checks per frame against a
@@ -1969,9 +1908,6 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     /* Bindings whose DObj chain holds a yakumono (moving map collision):
      * validated every frame, never strided. Set at topology capture. */
     u64 dyn_pinned_mask;
-#endif
-#endif
-#endif
     NDSRendererNativeMaterial materials[
         NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
     MObj *material_mobjs[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
@@ -1988,32 +1924,26 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 topology_generation;
     u32 topology_stamp;
     u32 topology_valid;
-#if NDS_TASK44_STAGE_STEADY
     /* Task 44 item 3: the stage-asset mutation generation this workspace was
      * last fully validated against. Zero means "never admitted". */
     u32 task44_admission_generation;
     /* Per-segment root DObj recorded at collect time, so steady admission can
      * catch a display graph rebuilt underneath an unchanged segment GObj. */
     DObj *task44_segment_roots[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
-#endif
 } NDSRendererAdapterNativeStageWorkspace;
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
  * the complete-fighter workspace. */
 static NDSRendererAdapterNativeStageWorkspace
     sNdsRendererAdapterNativeStageWorkspace;
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static sb32 ndsRendererAdapterCollectFighterTopology(
     DObj *dobj,
     u32 parent_index,
     DObj **joints,
     u8 *joint_parents,
     u32 *joint_count);
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 typedef struct NDSRendererAdapterNativeOwnerValidationCache
 {
     /* The identity words first: a lookup rejects on them from one line. */
@@ -2046,7 +1976,6 @@ static NDSRendererAdapterNativeOwnerValidationCache
     sNdsRendererAdapterNativeOwnerValidationCache[
         NDS_RENDERER_ADAPTER_OWNER_VALIDATION_POOL];
 static u32 sNdsRendererAdapterNativeOwnerValidationStamp;
-#endif
 
 typedef struct NDSRendererAdapterParticleCamera
 {
@@ -2094,10 +2023,6 @@ static NDSRendererAdapterCameraCacheEntry
     sNdsRendererAdapterCameraCache[NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT];
 static u32 sNdsRendererAdapterCameraCacheFrame;
 static u32 sNdsRendererAdapterCameraCacheCount;
-#if NDS_R2_STAGE_VALIDATE_STRIDE
-#if !NDS_TASK36_HW_COMPOSE || !NDS_TASK44_STAGE_STEADY
-#error "NDS_R2_STAGE_VALIDATE_STRIDE needs NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY: the cursor lives in the Task 44 dense-list workspace and the sweep it strides is the Task 36 rigid guard."
-#endif
 /* Slice 44 engagement, both sides. `StaleReuse` counts world matrices returned
  * from an earlier frame, `RigidChecks` the rigid source keys actually compared,
  * `RigidSkips` the ones the stride deferred. Producer and consumer both, because
@@ -2108,7 +2033,6 @@ static u32 sNdsRendererAdapterCameraCacheCount;
 __attribute__((used)) u32 gNdsR2Slice44StaleReuse;
 __attribute__((used)) u32 gNdsR2Slice44RigidChecks;
 __attribute__((used)) u32 gNdsR2Slice44RigidSkips;
-#endif
 static NDSRendererAdapterDObjWorldCacheEntry
     *sNdsRendererAdapterDObjWorldCache;
 static u32 sNdsRendererAdapterDObjWorldCacheFrame;
@@ -2185,67 +2109,6 @@ static void ndsRendererAdapterMulBefore(NDSRendererMatrix20p12 *target,
     }
 }
 
-#if NDS_TASK68_FALLBACK_CENSUS
-static DObj *sNdsAttachTranslationDObj;
-volatile u32 gNdsAttachTranslationSamples;
-volatile u32 gNdsAttachTranslationLocalMismatch;
-volatile u32 gNdsAttachTranslationWorldMismatch;
-volatile s32 gNdsAttachTranslationExpected[3];
-volatile s32 gNdsAttachTranslationLocal[3];
-volatile s32 gNdsAttachTranslationWorld[3];
-
-static void __attribute__((noinline, cold))
-ndsRendererAdapterRecordAttachTranslation(
-    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
-{
-    u32 axis;
-
-    sNdsAttachTranslationDObj = dobj;
-    NDS_DIAG(gNdsAttachTranslationSamples++);
-    for (axis = 0u; axis < 3u; axis++)
-    {
-        gNdsAttachTranslationExpected[axis] = matrix->m[3][axis];
-    }
-}
-
-static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachLocal(
-    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
-{
-    u32 axis;
-
-    if (dobj != sNdsAttachTranslationDObj)
-    {
-        return;
-    }
-    for (axis = 0u; axis < 3u; axis++)
-    {
-        gNdsAttachTranslationLocal[axis] = matrix->m[3][axis];
-        if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
-        {
-            NDS_DIAG(gNdsAttachTranslationLocalMismatch++);
-        }
-    }
-}
-
-static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachWorld(
-    DObj *dobj, const NDSRendererMatrix20p12 *matrix)
-{
-    u32 axis;
-
-    if (dobj != sNdsAttachTranslationDObj)
-    {
-        return;
-    }
-    for (axis = 0u; axis < 3u; axis++)
-    {
-        gNdsAttachTranslationWorld[axis] = matrix->m[3][axis];
-        if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
-        {
-            NDS_DIAG(gNdsAttachTranslationWorldMismatch++);
-        }
-    }
-}
-#endif
 
 static void ndsRendererAdapterMtxFromN64(
     const Mtx *src, NDSRendererMatrix20p12 *dst)
@@ -2329,7 +2192,6 @@ static inline sb32 ndsRendererAdapterFloatPow2ToS32(
     return TRUE;
 }
 
-#if NDS_R2_FIGHTER_MTX_DIRECT
 /* R2-03 E9. The fighter-parts path converts float -> N64 16.16 -> DS 20.12, and
  * E8 established that 97.5% of local-matrix builds take it. The intermediate is
  * a pure round trip: F2LFixedWExact packs each value into COMBINE_INTEGRAL /
@@ -2342,25 +2204,6 @@ static inline sb32 ndsRendererAdapterFloatPow2ToS32(
  * so unlike E6's fixed-point angle lever this needs no fidelity budget. Level 2
  * runs both and compares anyway, because "by construction" is exactly the kind
  * of claim E8 proved I get wrong by reading. */
-#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-/* E10 counts the TraRotRpy branch separately: the two paths reach 20.12 by
- * different arithmetic and a shared counter would hide one refuting while the
- * other passed.
- *
- * These six live only at the verify level now. At the shipped level 1 they were
- * six `volatile u32` increments -- a forced load-modify-store the compiler may
- * not sink or fold -- on the hottest local-matrix path in the fighter draw.
- * gNdsR2MtxDirectRpyCalls alone measured 481 ticks/frame over 84,308 executions
- * in the c106 profile. Both experiments have long since published: the direct
- * path is bit-exact by construction, and the fallback ran 0 times in 101,569
- * builder calls. Nothing in scripts/ or docs/ reads any of them. */
-volatile u32 gNdsR2MtxDirectCalls;
-volatile u32 gNdsR2MtxDirectFallback;
-volatile u32 gNdsR2MtxDirectVerifyFail;
-volatile u32 gNdsR2MtxDirectRpyCalls;
-volatile u32 gNdsR2MtxDirectRpyFallback;
-volatile u32 gNdsR2MtxDirectRpyVerifyFail;
-#endif
 
 static s32 ndsRendererAdapterRoundShift20p12(s32 value)
 {
@@ -2400,7 +2243,6 @@ static sb32 ndsRendererAdapterF2LDirect20p12(
     dst->m[3][3] = ndsRendererAdapterRoundShift20p12(0x00010000);
     return TRUE;
 }
-#endif
 
 static sb32 ndsRendererAdapterF2LFixedWExact(
     const Mtx44f *src, Mtx *dst)
@@ -2544,7 +2386,6 @@ ndsRendererAdapterBuildFighterTraRotRpyExact(
     return TRUE;
 }
 
-#if NDS_R2_FIGHTER_MTX_DIRECT
 /* R2-03 E10. Same observation as E9, applied to the branch E9 did not touch.
  * This builder already works in fixed point -- the sin/cos table lookup E6
  * proposed exists here already -- and then packs its s16.16 results into the N64
@@ -2628,7 +2469,6 @@ ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
 #undef NDS_R2_RS20P12
     return TRUE;
 }
-#endif
 
 static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
 {
@@ -2876,10 +2716,6 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 {
     FTParts *parts;
     Mtx mtx;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    Mtx oracle;
-    sb32 has_oracle = FALSE;
-#endif
 
     if ((dobj == NULL) || (out == NULL))
     {
@@ -2894,36 +2730,16 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 
     if (parts->transform_update_mode != 0)
     {
-#if NDS_R2_FIGHTER_MTX_DIRECT
         {
             NDSRendererMatrix20p12 direct;
 
             if (ndsRendererAdapterF2LDirect20p12(
                     &parts->unk_dobjtrans_0x10, &direct) != FALSE)
             {
-#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-                NDS_DIAG(gNdsR2MtxDirectCalls++);
-                if (ndsRendererAdapterF2LFixedWExact(
-                        &parts->unk_dobjtrans_0x10, &mtx) == FALSE)
-                {
-                    syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
-                }
-                ndsRendererAdapterMtxFromN64(&mtx, out);
-                if (memcmp(out, &direct, sizeof(direct)) != 0)
-                {
-                    NDS_DIAG(gNdsR2MtxDirectVerifyFail++);
-                }
-                return TRUE;
-#else
                 *out = direct;
                 return TRUE;
-#endif
             }
-#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-            NDS_DIAG(gNdsR2MtxDirectFallback++);
-#endif
         }
-#endif
         /* BattleShip lbCommonFighterPartsFuncMatrix quantizes the complete
          * source float matrix through syMatrixF2LFixedW before the RSP sees
          * it. Preserve that 16.16 boundary, then convert to DS 20.12. */
@@ -2932,10 +2748,6 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
         {
             syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &oracle);
-        has_oracle = TRUE;
-#endif
     }
     else if (ndsFcmpNeC(dobj->scale.vec.f.x, 1.0F) ||
              ndsFcmpNeC(dobj->scale.vec.f.y, 1.0F) ||
@@ -2956,7 +2768,6 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     }
     else
     {
-#if NDS_R2_FIGHTER_MTX_DIRECT
         {
             NDSRendererMatrix20p12 direct;
 
@@ -2969,41 +2780,10 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                     dobj->rotate.vec.f.y,
                     dobj->rotate.vec.f.z) != FALSE)
             {
-#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-                NDS_DIAG(gNdsR2MtxDirectRpyCalls++);
-                if (ndsRendererAdapterBuildFighterTraRotRpyExact(
-                        &mtx,
-                        dobj->translate.vec.f.x,
-                        dobj->translate.vec.f.y,
-                        dobj->translate.vec.f.z,
-                        dobj->rotate.vec.f.x,
-                        dobj->rotate.vec.f.y,
-                        dobj->rotate.vec.f.z) == FALSE)
-                {
-                    syMatrixTraRotRpyR(&mtx,
-                                       dobj->translate.vec.f.x,
-                                       dobj->translate.vec.f.y,
-                                       dobj->translate.vec.f.z,
-                                       dobj->rotate.vec.f.x,
-                                       dobj->rotate.vec.f.y,
-                                       dobj->rotate.vec.f.z);
-                }
-                ndsRendererAdapterMtxFromN64(&mtx, out);
-                if (memcmp(out, &direct, sizeof(direct)) != 0)
-                {
-                    NDS_DIAG(gNdsR2MtxDirectRpyVerifyFail++);
-                }
-                return TRUE;
-#else
                 *out = direct;
                 return TRUE;
-#endif
             }
-#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-            NDS_DIAG(gNdsR2MtxDirectRpyFallback++);
-#endif
         }
-#endif
         if (ndsRendererAdapterBuildFighterTraRotRpyExact(
                 &mtx,
                 dobj->translate.vec.f.x,
@@ -3021,24 +2801,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                                dobj->rotate.vec.f.y,
                                dobj->rotate.vec.f.z);
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        syMatrixTraRotRpyR(&oracle,
-                           dobj->translate.vec.f.x,
-                           dobj->translate.vec.f.y,
-                           dobj->translate.vec.f.z,
-                           dobj->rotate.vec.f.x,
-                           dobj->rotate.vec.f.y,
-                           dobj->rotate.vec.f.z);
-        has_oracle = TRUE;
-#endif
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if ((has_oracle != FALSE) &&
-        (memcmp(&mtx, &oracle, sizeof(mtx)) != 0))
-    {
-        NDS_DIAG(gNdsRendererProfileOracleMismatches++);
-    }
-#endif
     ndsRendererAdapterMtxFromN64(&mtx, out);
     return TRUE;
 }
@@ -3914,72 +3677,6 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     return TRUE;
 }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* E7. Before arguing about whether a fixed-point angle index can reproduce the
- * float one bit-for-bit -- a claim about poses, and an expensive one to get
- * wrong -- ask the cheaper question E5 asked: is this work redundant at all?
- * 46.5 local matrices are built per frame, but a fighter animation does not
- * necessarily move every joint every frame. Any joint whose local matrix comes
- * out identical to last frame's was rebuilt for nothing, and a memo on that
- * needs no numerical equivalence argument whatsoever.
- *
- * Direct-mapped on the DObj pointer, 256 entries. A collision evicts and
- * reports a miss, so the hit rate is a lower bound on the real redundancy. */
-#define NDS_TASK91_LOCAL_MEMO_COUNT 512u
-#define NDS_TASK91_LOCAL_MEMO_MASK (NDS_TASK91_LOCAL_MEMO_COUNT - 1u)
-u32 gNdsTask91LocalMemoHit;
-u32 gNdsTask91LocalMemoMiss;
-u32 gNdsTask91LocalMemoFill;
-u32 gNdsTask91LocalMemoEvict;
-static const DObj *sNdsTask91LocalMemoKey[NDS_TASK91_LOCAL_MEMO_COUNT];
-static u32 sNdsTask91LocalMemoHash[NDS_TASK91_LOCAL_MEMO_COUNT];
-
-static void ndsRendererAdapterTask91LocalMemoProbe(
-    const DObj *dobj, const NDSRendererMatrix20p12 *out)
-{
-    u32 hash = 2166136261u;
-    u32 slot;
-    u32 row;
-    u32 col;
-
-    /* All sixteen, not the affine twelve: a kind that writes the fourth column
-     * differently would otherwise be invisible to this probe. */
-    for (row = 0u; row < 4u; row++)
-    {
-        for (col = 0u; col < 4u; col++)
-        {
-            hash = (hash ^ (u32)out->m[row][col]) * 16777619u;
-        }
-    }
-    /* DObjs come from a pool, so the low address bits are strided and a plain
-     * shift aliases badly -- the first run of this probe evicted on 37% of
-     * calls, which floors the hit rate it can report. Knuth multiplicative,
-     * taking high bits, spreads a strided key. */
-    slot = (u32)((((uintptr_t)dobj) * 2654435761u) >> 13) &
-        NDS_TASK91_LOCAL_MEMO_MASK;
-    if (sNdsTask91LocalMemoKey[slot] == NULL)
-    {
-        sNdsTask91LocalMemoKey[slot] = dobj;
-        sNdsTask91LocalMemoHash[slot] = hash;
-        NDS_DIAG(gNdsTask91LocalMemoFill++);
-    }
-    else if (sNdsTask91LocalMemoKey[slot] != dobj)
-    {
-        sNdsTask91LocalMemoKey[slot] = dobj;
-        sNdsTask91LocalMemoHash[slot] = hash;
-        NDS_DIAG(gNdsTask91LocalMemoEvict++);
-    }
-    else if (sNdsTask91LocalMemoHash[slot] != hash)
-    {
-        sNdsTask91LocalMemoHash[slot] = hash;
-        NDS_DIAG(gNdsTask91LocalMemoMiss++);
-    }
-    else
-    {
-        NDS_DIAG(gNdsTask91LocalMemoHit++);
-    }
-}
-#endif
 
 /* EF-GROUND: kind72 (0x48, func_ovl0_800CAB48, lbcommon.c:1852-1932) row
  * core of the ApplyMvpRecalc kind72 arm, which every efground actor's
@@ -4149,25 +3846,11 @@ ndsRendererAdapterBuildDObjLocalMatrix(
                     dobj, dobj->xobjs[i], out) != FALSE)
             {
                 valid = TRUE;
-#if NDS_TASK68_FALLBACK_CENSUS
-                if (dobj->xobjs[i]->kind ==
-                    NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
-                {
-                    ndsRendererAdapterRecordAttachTranslation(dobj, out);
-                }
-#endif
             }
         }
         else if (ndsRendererAdapterBuildDObjXObjMatrix(
                      dobj, dobj->xobjs[i], &incoming) != FALSE)
         {
-#if NDS_TASK68_FALLBACK_CENSUS
-            if (dobj->xobjs[i]->kind ==
-                NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
-            {
-                ndsRendererAdapterRecordAttachTranslation(dobj, &incoming);
-            }
-#endif
             /* EVERY LATER XOBJ APPLIES BEFORE THE ONES ALREADY COMPOSED.
              * gcPrepDObjMatrix (sys/objdisplay.c:1187-1189) emits one
              * gSPMatrix(G_MTX_MUL | G_MTX_MODELVIEW) per XObj in table order,
@@ -4182,9 +3865,6 @@ ndsRendererAdapterBuildDObjLocalMatrix(
         }
     }
 
-#if NDS_TASK68_FALLBACK_CENSUS
-    ndsRendererAdapterRecordAttachLocal(dobj, out);
-#endif
 
     if (valid == FALSE)
     {
@@ -4205,9 +3885,6 @@ ndsRendererAdapterBuildDObjLocalMatrix(
             ndsRendererAdapterMtxFromN64(&mtx, out);
         }
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    ndsRendererAdapterTask91LocalMemoProbe(dobj, out);
-#endif
     return TRUE;
 }
 
@@ -5005,16 +4682,12 @@ static void ndsRendererAdapterApplyMvpRecalc(
     gNdsRendererAdapterCustom47AppliedCount++;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Cycle 99, charter section 3.12: the baked fighter draw plan holds DObj and
  * loaded-file pointers, so it is re-derived at every scene entry -- including a
  * START-restart out of Results -- and never trusted across one. Defined with
  * the plan itself, next to the draw. */
 static void ndsFighterDrawPlanInvalidate(void);
-#endif
-#if NDS_R2_FIGHTER_GX_COMPOSE
 static void ndsRendererAdapterResetGxSlotTables(void);
-#endif
 
 static void ndsRendererAdapterResetSceneCaches(void)
 {
@@ -5023,12 +4696,8 @@ static void ndsRendererAdapterResetSceneCaches(void)
 #if NDS_P2_STAGE_SECTOR
     gNdsSectorArwingBasisDecline = 0u;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterDrawPlanInvalidate();
-#endif
-#if NDS_R2_FIGHTER_GX_COMPOSE
     ndsRendererAdapterResetGxSlotTables();
-#endif
     sNdsRendererAdapterCameraCacheFrame = 0u;
     sNdsRendererAdapterCameraCacheCount = 0u;
     sNdsRendererAdapterDObjWorldCache = NULL;
@@ -5048,10 +4717,8 @@ static void ndsRendererAdapterResetSceneCaches(void)
     sNdsRendererAdapterStageWorldNextGeneration = 1u;
     memset(sNdsRendererAdapterStageWorldIndex, 0,
            sizeof(sNdsRendererAdapterStageWorldIndex));
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     memset(&sNdsRendererAdapterNativeStageWorkspace, 0,
            sizeof(sNdsRendererAdapterNativeStageWorkspace));
-#endif
 }
 
 static u32 ndsRendererAdapterDObjWorldIndexHash(const DObj *dobj)
@@ -5160,9 +4827,6 @@ ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
     }
     if (ndsRendererAdapterEnsureDObjWorldCache() == FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileDObjWorldCacheMissCount++);
-#endif
         return NULL;
     }
     slot = ndsRendererAdapterDObjWorldIndexHash(dobj);
@@ -5181,16 +4845,10 @@ ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
         if ((cache_index < sNdsRendererAdapterDObjWorldCacheCount) &&
             (sNdsRendererAdapterDObjWorldCache[cache_index].dobj == dobj))
         {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            NDS_DIAG(gNdsRendererProfileDObjWorldCacheHitCount++);
-#endif
             return &sNdsRendererAdapterDObjWorldCache[cache_index].world;
         }
         slot = (slot + 1u) & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    NDS_DIAG(gNdsRendererProfileDObjWorldCacheMissCount++);
-#endif
     return NULL;
 }
 
@@ -5210,9 +4868,6 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
         (sNdsRendererAdapterDObjWorldCacheCount >=
          sNdsRendererAdapterDObjWorldCacheDynamicLimit))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileDObjWorldCacheOverflowCount++);
-#endif
         return;
     }
     cache_index = sNdsRendererAdapterDObjWorldCacheCount++;
@@ -5644,47 +5299,11 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
             FALSE)
         {
             ndsRendererMtxMulAffine20p12(&local, out, out);
-#if NDS_TASK68_FALLBACK_CENSUS
-            ndsRendererAdapterRecordAttachWorld(chain[i - 1u], out);
-#endif
         }
     }
     return TRUE;
 }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E6. MatrixPrep is 91,338 ticks/frame, four times MaterialPrep, and E5
- * spent a whole cycle proving the smaller bucket's obvious lever banks nothing
- * -- so split this one before touching it rather than after. PrepareNativeOwner
- * Matrices is a per-frame camera fetch followed by, per selected binding, a
- * DObj world-matrix build and one affine multiply. Those three have completely
- * different fixes: a hoist, a cache, or nothing. Bindings and Calls normalise
- * them, because a per-binding cost and a per-frame cost look identical inside a
- * total.
- *
- * The first split put 82% in the world build at 2,799 ticks/binding against 184
- * for the multiply it feeds. The DObj world cache is a linear-probed hash reset
- * once a frame, so a lookup is cheap and the cost has to be in the miss path.
- * The second group separates what a miss actually does -- walk the parent
- * chain, build each local matrix, compose and store the prefix -- because only
- * one of those is worth attacking and they are indistinguishable inside 2,799.
- *
- * Declared here because both consumers are defined later in this file, but the
- * other Task 91 counters live near the draw entry point, which is later still.
- */
-u32 gNdsTask91MtxCameraTicks;
-u32 gNdsTask91MtxWorldTicks;
-u32 gNdsTask91MtxMulTicks;
-u32 gNdsTask91MtxBindings;
-u32 gNdsTask91MtxCalls;
-u32 gNdsTask91MtxWorldEntryHit;
-u32 gNdsTask91MtxWorldAncestorHit;
-u32 gNdsTask91MtxWorldColdStart;
-u32 gNdsTask91MtxWorldLocalCalls;
-u32 gNdsTask91MtxWorldLocalTicks;
-u32 gNdsTask91MtxWorldComposeTicks;
-u32 gNdsTask91MtxWorldChainDepth;
-#endif
 
 static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
@@ -5703,13 +5322,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
     if (cached != NULL)
     {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        NDS_DIAG(gNdsTask91MtxWorldEntryHit++);
-#endif
         ndsRendererMatrixCopy20p12(out, cached);
-#if NDS_TASK68_FALLBACK_CENSUS
-        ndsRendererAdapterRecordAttachWorld(dobj, out);
-#endif
         return TRUE;
     }
 
@@ -5719,9 +5332,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         chain[depth++] = cursor;
         cursor = cursor->parent;
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    NDS_DIAG(gNdsTask91MtxWorldChainDepth += depth);
-#endif
     if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
     {
         return FALSE;
@@ -5739,137 +5349,23 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     if (i == depth)
     {
         ndsRendererAdapterMtxIdentity20p12(out);
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        NDS_DIAG(gNdsTask91MtxWorldColdStart++);
-#endif
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    else
-    {
-        NDS_DIAG(gNdsTask91MtxWorldAncestorHit++);
-    }
-#endif
     for (; i != 0u; i--)
     {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        u32 task91_local_mark = cpuGetTiming();
-        u32 task91_local_end;
-
-        NDS_DIAG(gNdsTask91MtxWorldLocalCalls++);
-#endif
         if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
         {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            task91_local_end = cpuGetTiming();
-            gNdsTask91MtxWorldLocalTicks += task91_local_end -
-                task91_local_mark;
-            task91_local_mark = task91_local_end;
-#endif
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
             ndsRendererMtxMulAffine20p12(&local, out, out);
             /* DObj transforms are finalized before the camera's gcDrawAll
              * pass. Cache each prefix for sibling/child draws, and reset at
              * the next presented frame so live fighter poses remain live. */
             ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
-#if NDS_TASK68_FALLBACK_CENSUS
-            ndsRendererAdapterRecordAttachWorld(chain[i - 1u], out);
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MtxWorldComposeTicks += cpuGetTiming() -
-                task91_local_mark;
-#endif
-        }
-    }
-#if NDS_TASK68_FALLBACK_CENSUS
-    ndsRendererAdapterRecordAttachWorld(dobj, out);
-#endif
-    return TRUE;
-}
-
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
-static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
-    DObj *dobj,
-    NDSRendererMatrix20p12 *out,
-    volatile NDSRendererOwnerProfile *owner)
-{
-    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
-    DObj *cursor = dobj;
-    NDSRendererMatrix20p12 local;
-    const NDSRendererMatrix20p12 *cached;
-    u32 depth = 0u;
-    u32 phase_start;
-    u32 i;
-
-    if ((dobj == NULL) || (out == NULL) || (owner == NULL))
-    {
-        return FALSE;
-    }
-    owner->m2_world_matrix_request_count++;
-    phase_start = cpuGetTiming();
-    cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
-    if (cached != NULL)
-    {
-        ndsRendererMatrixCopy20p12(out, cached);
-        owner->m2_world_matrix_cache_hit_count++;
-        owner->m2_hash_parent_lookup_ticks +=
-            cpuGetTiming() - phase_start;
-        return TRUE;
-    }
-    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
-           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
-    {
-        chain[depth++] = cursor;
-        cursor = cursor->parent;
-    }
-    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
-    {
-        owner->m2_hash_parent_lookup_ticks +=
-            cpuGetTiming() - phase_start;
-        return FALSE;
-    }
-    for (i = 1u; i < depth; i++)
-    {
-        cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
-        if (cached != NULL)
-        {
-            MTXCOPY(out, cached);
-            owner->m2_world_matrix_cache_hit_count++;
-            break;
-        }
-    }
-    if (i == depth)
-    {
-        ndsRendererAdapterMtxIdentity20p12(out);
-    }
-    owner->m2_hash_parent_lookup_ticks += cpuGetTiming() - phase_start;
-
-    for (; i != 0u; i--)
-    {
-        sb32 local_valid;
-
-        phase_start = cpuGetTiming();
-        local_valid = ndsRendererAdapterBuildDObjLocalMatrix(
-            chain[i - 1u], &local);
-        owner->m2_local_matrix_ticks += cpuGetTiming() - phase_start;
-        owner->m2_local_matrix_build_count++;
-        if (local_valid != FALSE)
-        {
-            phase_start = cpuGetTiming();
-            ndsRendererMtxMulAffine20p12(&local, out, out);
-            owner->m2_world_affine_ticks +=
-                cpuGetTiming() - phase_start;
-            owner->m2_world_affine_count++;
-
-            phase_start = cpuGetTiming();
-            ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
-            owner->m2_hash_parent_lookup_ticks +=
-                cpuGetTiming() - phase_start;
         }
     }
     return TRUE;
 }
-#endif
+
 
 /* P2-2p8 (2026-10-04): A KEYED NODE'S LOCAL, KEPT ACROSS A PARENT CHANGE.
  * The world cache below reuses a node's world only while its parent's
@@ -5967,14 +5463,8 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
     u32 parent_generation = 0u;
     u32 depth = 0u;
     u32 frame = gNdsRendererProfileFrameCount;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 reused_persistent = FALSE;
-#endif
     u32 i;
 
-#if !NDS_R2_STAGE_VALIDATE_STRIDE
-    (void)allow_stale;
-#endif
     if ((dobj == NULL) || (scratch == NULL))
     {
         return NULL;
@@ -5982,26 +5472,19 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
     entry = ndsRendererAdapterFindStageWorldEntry(dobj);
     if ((entry != NULL) &&
         ((entry->validated_frame == frame)
-#if NDS_R2_STAGE_VALIDATE_STRIDE
          /* generation, not validated_frame, is the "has a world matrix at all"
           * test: ndsRendererAdapterNextStageWorldGeneration never returns 0,
           * and frame 0 is a real frame. */
          || ((allow_stale != FALSE) && (entry->generation != 0u))
-#endif
          ))
     {
         const NDSRendererMatrix20p12 *hit =
             ndsRendererAdapterStageWorldEntryMatrix(entry);
 
-#if NDS_TASK68_FALLBACK_CENSUS
-        ndsRendererAdapterRecordAttachWorld(dobj, hit);
-#endif
-#if NDS_R2_STAGE_VALIDATE_STRIDE
         if (entry->validated_frame != frame)
         {
             NDS_DIAG(gNdsR2Slice44StaleReuse++);
         }
-#endif
         return hit;
     }
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
@@ -6016,9 +5499,6 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
     }
     if (ndsRendererAdapterEnsureStageWorldCache() == FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileStageWorldPersistentOverflowCount++);
-#endif
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         gNdsLabPimAcc[4] += 1u;
 #endif
@@ -6036,9 +5516,6 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
         entry = ndsRendererAdapterFindOrAllocateStageWorldEntry(node);
         if (entry == NULL)
         {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            NDS_DIAG(gNdsRendererProfileStageWorldPersistentOverflowCount++);
-#endif
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
             gNdsLabPimAcc[4] += 0x10000u;
 #endif
@@ -6048,9 +5525,6 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
         if (entry->validated_frame == frame)
         {
             parent_world = ndsRendererAdapterStageWorldEntryMatrix(entry);
-#if NDS_TASK68_FALLBACK_CENSUS
-            ndsRendererAdapterRecordAttachWorld(node, parent_world);
-#endif
             parent_generation = entry->generation;
             continue;
         }
@@ -6063,10 +5537,6 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
                  node, &entry->source_key) != FALSE))
         {
             reuse = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            reused_persistent = TRUE;
-            NDS_DIAG(gNdsRendererProfileStageWorldPersistentHitCount++);
-#endif
         }
         if (reuse == FALSE)
         {
@@ -6089,58 +5559,15 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
             if (source_key_valid != FALSE)
             {
                 entry->source_key = source_key;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                NDS_DIAG(gNdsRendererProfileStageWorldPersistentMissCount++);
-#endif
             }
             else
             {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                NDS_DIAG(gNdsRendererProfileStageWorldPersistentRejectCount++);
-#endif
             }
         }
         entry->validated_frame = frame;
         parent_world = ndsRendererAdapterStageWorldEntryMatrix(entry);
-#if NDS_TASK68_FALLBACK_CENSUS
-        ndsRendererAdapterRecordAttachWorld(node, parent_world);
-#endif
         parent_generation = entry->generation;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (reused_persistent != FALSE)
-    {
-        NDSRendererMatrix20p12 oracle_world;
-
-        if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
-                dobj, &oracle_world) != FALSE)
-        {
-            NDS_DIAG(gNdsRendererProfileStageWorldPersistentOracleSampleCount++);
-            if (memcmp(parent_world, &oracle_world, sizeof(oracle_world)) != 0)
-            {
-                NDSRendererAdapterStageWorldCacheEntry *target =
-                    ndsRendererAdapterFindStageWorldEntry(dobj);
-
-                NDS_DIAG(gNdsRendererProfileStageWorldPersistentOracleMismatchCount++);
-                *scratch = oracle_world;
-                parent_world = scratch;
-                if (target != NULL)
-                {
-                    target->source_key_valid = FALSE;
-                    target->validated_frame = 0u;
-                    /* Slice 44 reads `generation != 0` as "this entry holds a
-                     * world matrix a later frame may reuse", so the oracle's
-                     * rebuild-forcing invalidation has to clear that too or the
-                     * stride would hand back the matrix the oracle just
-                     * rejected. The two are never compiled together today --
-                     * this branch is PROFILE_LEVEL >= 2 -- but a one-word
-                     * omission here is exactly how a lab arm reads clean. */
-                    target->generation = 0u;
-                }
-            }
-        }
-    }
-#endif
     if (parent_world == &identity)
     {
         /* Never hand out the local. */
@@ -6413,7 +5840,6 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     *modelview_valid = TRUE;
 }
 
-#if NDS_TASK36_HW_COMPOSE
 /* P2-2p8 (2026-10-04): the stage prepare's split camera from this frame's
  * camera cache. The 0x4C producer in ndsRendererAdapterBuildCameraMatrices
  * keeps look-at and perspective apart for the particle pass, and they are the
@@ -6486,7 +5912,6 @@ static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
     }
     return FALSE;
 }
-#endif
 
 static void ndsRendererAdapterGetFrameCameraMatrices(
     CObj *cobj,
@@ -6526,9 +5951,6 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 
         if (entry->cobj == cobj)
         {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            NDS_DIAG(gNdsRendererProfileCameraMatrixCacheHitCount++);
-#endif
             MTXCOPY(projection, &entry->projection);
             MTXCOPY(modelview, &entry->modelview);
             *projection_valid = entry->projection_valid;
@@ -6548,9 +5970,6 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
         }
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    NDS_DIAG(gNdsRendererProfileCameraMatrixCacheMissCount++);
-#endif
     if (sNdsRendererAdapterCameraCacheCount <
         NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT)
     {
@@ -6589,9 +6008,6 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     }
     else
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        NDS_DIAG(gNdsRendererProfileCameraMatrixCacheOverflowCount++);
-#endif
     }
     if ((billboard_right_q12 != NULL) &&
         (billboard_up_q12 != NULL) &&
@@ -6828,7 +6244,6 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Slice 6 (P2-2p8 Phase 1): always inline. Its callers are the stage binding
  * matrix prep (every stage binding, every frame), the Fox blaster builder
  * and the fighter draw; a fourth call site (the lean path's blaster sidecar)
@@ -6861,31 +6276,6 @@ ndsRendererAdapterComposeNativeRootMatrix(
     return FALSE;
 }
 
-#if NDS_R2_FOX_GUN_OVERLAY
-#if NDS_R2_POSITION_PROBE
-/* One-shot fixed-point proof for the post-visibility Fox attachment row. The
- * gameplay probe in battleship_fox_blaster.c records the source helper's world
- * point. This records the exact 20.12 joint-17 world matrix the visible gun
- * consumes on the first gun draw after that source spawn, plus that matrix's
- * local {60,0,0} result. If the two world points disagree, the defect is before
- * the camera; if they agree, the remaining Y error is strictly draw-space.
- * Probe build only; GDB is the sole consumer. */
-extern u32 gNdsFoxSpawnProbeCount;
-__attribute__((used)) u32 gNdsFoxGunWorldProbeCount;
-__attribute__((used)) f32 gNdsFoxGunWorldProbeFloatMtx[16];
-__attribute__((used)) s32 gNdsFoxGunWorldProbeMtx[16];
-__attribute__((used)) s32 gNdsFoxGunWorldProbeShotQ12[4];
-#define NDS_FOX_GUN_POSITION_CHAIN_MAX 18u
-__attribute__((used)) u32 gNdsFoxGunChainDepth;
-__attribute__((used)) u32 gNdsFoxGunChainDObj[NDS_FOX_GUN_POSITION_CHAIN_MAX];
-__attribute__((used)) u32 gNdsFoxGunChainMode[NDS_FOX_GUN_POSITION_CHAIN_MAX];
-__attribute__((used)) u32 gNdsFoxGunChainKind0[NDS_FOX_GUN_POSITION_CHAIN_MAX];
-__attribute__((used)) f32 gNdsFoxGunChainSourceLocal[
-    NDS_FOX_GUN_POSITION_CHAIN_MAX * 16u];
-__attribute__((used)) s32 gNdsFoxGunChainRendererLocal[
-    NDS_FOX_GUN_POSITION_CHAIN_MAX * 16u];
-static u32 sNdsFoxGunWorldProbeSpawnCount;
-#endif
 
 /* BUGS.md "Fox's pistol model is missing": joint 17's world matrix, for the
  * blaster overlay.
@@ -6970,73 +6360,6 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
         syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
     }
     ndsRendererAdapterMtxFromN64(&mtx, &world);
-#if NDS_R2_POSITION_PROBE
-    if (gNdsFoxSpawnProbeCount != sNdsFoxGunWorldProbeSpawnCount)
-    {
-        u32 row;
-        u32 col;
-        DObj *cursor = joint;
-        u32 depth = 0u;
-
-        sNdsFoxGunWorldProbeSpawnCount = gNdsFoxSpawnProbeCount;
-        while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
-               (depth < NDS_FOX_GUN_POSITION_CHAIN_MAX))
-        {
-            FTParts *cursor_parts = ftGetParts(cursor);
-            NDSRendererMatrix20p12 renderer_local;
-
-            gNdsFoxGunChainDObj[depth] = (u32)(uintptr_t)cursor;
-            gNdsFoxGunChainKind0[depth] =
-                ((cursor->xobjs_num != 0u) && (cursor->xobjs[0] != NULL)) ?
-                    cursor->xobjs[0]->kind : 0xffffffffu;
-            gNdsFoxGunChainMode[depth] = (cursor_parts != NULL) ?
-                (u32)cursor_parts->transform_update_mode : 0xffffffffu;
-            if (cursor_parts != NULL)
-            {
-                for (row = 0u; row < 4u; row++)
-                {
-                    for (col = 0u; col < 4u; col++)
-                    {
-                        gNdsFoxGunChainSourceLocal[(depth * 16u) +
-                            (row * 4u) + col] =
-                            cursor_parts->unk_dobjtrans_0x10[row][col];
-                    }
-                }
-            }
-            if (ndsRendererAdapterBuildDObjLocalMatrix(
-                    cursor, &renderer_local) != FALSE)
-            {
-                for (row = 0u; row < 4u; row++)
-                {
-                    for (col = 0u; col < 4u; col++)
-                    {
-                        gNdsFoxGunChainRendererLocal[(depth * 16u) +
-                            (row * 4u) + col] = renderer_local.m[row][col];
-                    }
-                }
-            }
-            depth++;
-            cursor = cursor->parent;
-        }
-        gNdsFoxGunChainDepth = depth;
-        for (row = 0u; row < 4u; row++)
-        {
-            for (col = 0u; col < 4u; col++)
-            {
-                gNdsFoxGunWorldProbeFloatMtx[(row * 4u) + col] =
-                    parts->mtx_translate[row][col];
-                gNdsFoxGunWorldProbeMtx[(row * 4u) + col] = world.m[row][col];
-            }
-        }
-        for (col = 0u; col < 4u; col++)
-        {
-            gNdsFoxGunWorldProbeShotQ12[col] =
-                (world.m[0][col] * 60) +
-                world.m[3][col];
-        }
-        NDS_DIAG(gNdsFoxGunWorldProbeCount++);
-    }
-#endif
 
     /* The same two multiplies a fighter root gets, in the same order. The
      * binding pass seeds its forward compose with the camera modelview and then
@@ -7061,7 +6384,6 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
         &world, &camera_projection, out);
 }
 
-#if NDS_P4
 /* A P4 content's held gun (Wolf's), drawn as a generated entry-effect root:
  * the same joint-17 world matrix as above, handed over as the modelview
  * (world x camera) and the camera projection the root's submit lights and
@@ -7112,7 +6434,6 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMatrices(
     return (camera_projection_valid != FALSE) ? TRUE : FALSE;
 }
 
-#if NDS_P2_KIRBY
 /* A custom Kirby power's hat (scripts/p4/p4_kirby_custom_hats.py), a P4
  * sidecar root on joint 6: the matrices above at that joint, gated on a
  * gameplay Kirby whose joint 6 shows his plain head. */
@@ -7160,9 +6481,6 @@ static sb32 ndsRendererAdapterBuildKirbyHatJointMatrices(
     return (camera_projection_valid != FALSE) ? TRUE : FALSE;
 }
 
-#endif
-#endif
-#endif
 
 /* A world-space list's matrix: a translation to `origin` (world units),
  * times the frame camera, times the projection -- the fighter-root compose
@@ -7207,7 +6525,6 @@ static sb32 ndsRendererAdapterBuildWorldOriginMtx(
 }
 
 
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
 /* R2-03 E32. The hitlag shuffle used to switch the whole native fighter owner
  * off (reloc_backend_renderer_dl.c's AnimLock fallback), dropping the fighter
  * to the generic interpreter for every hit -- E31 measured that at 5 fallbacks
@@ -7246,7 +6563,6 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
         NDS_DIAG(gNdsR2ShuffleFoldedFrames++);
     }
 }
-#endif
 
 /* ---------------------------------------------------------------------------
  * The flat baked world compose.
@@ -7295,7 +6611,6 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
  * Reassociating a fixed-point product is not bit-exact; these matrices reach
  * GX and nothing else, so that is a render-side difference by the doctrine in
  * PROJECT_GOAL.md, and the Boundary visual gate is what checks it. */
-#if NDS_R2_FIGHTER_GX_COMPOSE
 /* Slice 43 engagement. `Captures` counts bindings described, `Locals` the
  * MTX_MULT the backend will issue, `Declines` a fall-back to the CPU compose.
  * A cut with no counter is how cycle 110 read FTR -13,587 off a skip it could
@@ -7550,7 +6865,6 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
     NDS_DIAG(gNdsR2GxComposeCaptures += binding_count);
     return TRUE;
 }
-#endif
 
 static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
     u32 slot,
@@ -8360,21 +7674,10 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
     const NDSRendererMatrix20p12 *camera_modelview,
     u32 camera_modelview_valid,
     const NDSRendererMatrix20p12 **modelview_ptrs
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    , volatile NDSRendererOwnerProfile *m2_owner
-#endif
     )
 {
     NDSRendererMatrix20p12 world;
     u32 binding_index;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    u32 m2_phase_start;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    u32 task91_mtx_mark = cpuGetTiming();
-#endif
 
     for (binding_index = 0u;
          binding_index < binding_count;
@@ -8382,65 +7685,28 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
     {
         if (bindings[binding_index] != NULL)
         {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            task91_mtx_mark = cpuGetTiming();
-            NDS_DIAG(gNdsTask91MtxBindings++);
-#endif
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-            if (ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
-                    bindings[binding_index], &world,
-                    m2_owner) == FALSE)
-#else
             if (ndsRendererAdapterBuildDObjWorldMatrix(
                     bindings[binding_index], &world) == FALSE)
-#endif
             {
                 return FALSE;
             }
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
             /* R2-03 E32, and this is the whole cut: lbcommon.c:1627's
              * `f[3][0] += x; f[3][1] += y;` on the world matrix, before the
              * camera multiply below. Zero when the fighter is not in hitlag. */
             world.m[3][0] += sNdsR2ShuffleWorldX;
             world.m[3][1] += sNdsR2ShuffleWorldY;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            {
-                u32 task91_world_end = cpuGetTiming();
-
-                NDS_DIAG(gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark);
-                task91_mtx_mark = task91_world_end;
-            }
-#endif
             if (camera_modelview_valid != FALSE)
             {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                m2_phase_start = cpuGetTiming();
-#endif
                 ndsRendererMtxMulAffine20p12(
                     &world, camera_modelview,
                     &sNdsRendererAdapterNativeOwnerModelviews[
                         binding_index]);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                if (m2_owner != NULL)
-                {
-                    m2_owner->m2_world_camera_ticks +=
-                        cpuGetTiming() - m2_phase_start;
-                    m2_owner->m2_world_camera_count++;
-                }
-#endif
             }
             else
             {
                 sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
                     world;
             }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            NDS_DIAG(gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark);
-#endif
             modelview_ptrs[binding_index] =
                 &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
         }
@@ -8470,10 +7736,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     CObj *cobj,
     const NDSRendererMatrix20p12 **projection_ptr,
     const NDSRendererMatrix20p12 **modelview_ptrs
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    , volatile NDSRendererOwnerProfile *m2_owner
-#endif
     )
 {
     NDSRendererMatrix20p12 camera_projection;
@@ -8484,13 +7746,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     NDSRendererMatrix20p12 compose_seed;
     sb32 seed_is_identity;
     u32 flat_worlds = FALSE;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    u32 m2_phase_start;
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    u32 task91_mtx_mark;
-#endif
 
     if ((bindings == NULL) || (projection_ptr == NULL) ||
         (modelview_ptrs == NULL) ||
@@ -8506,30 +7761,10 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         modelview_ptrs[binding_index] = NULL;
     }
 
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    m2_phase_start = cpuGetTiming();
-#endif
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    task91_mtx_mark = cpuGetTiming();
-#endif
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
         &camera_modelview, &camera_modelview_valid,
         NULL, NULL, NULL);
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    NDS_DIAG(gNdsTask91MtxCameraTicks += cpuGetTiming() - task91_mtx_mark);
-    NDS_DIAG(gNdsTask91MtxCalls++);
-#endif
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_camera_fetch_ticks +=
-            cpuGetTiming() - m2_phase_start;
-        m2_owner->m2_camera_fetch_count++;
-    }
-#endif
     if (camera_projection_valid != FALSE)
     {
         sNdsRendererAdapterNativeOwnerProjection = camera_projection;
@@ -8553,7 +7788,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         ndsRendererAdapterMtxIdentity20p12(&compose_seed);
         seed_is_identity = TRUE;
     }
-#if NDS_R2_FIGHTER_SHUFFLE_FOLD
     /* R2-03 E32's hitlag shuffle used to be added to every binding's world row
      * 3 before the camera multiply. `world * T * camera` reassociates to
      * `world * (T * camera)` and T is the same for every binding, so one 4x4 a
@@ -8569,7 +7803,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         ndsRendererMtxMulAffine20p12(&shuffle, &compose_seed, &compose_seed);
         seed_is_identity = FALSE;
     }
-#endif
     /* Animation locks change the source local matrix and scale accumulator.
      * Compose those source matrices on ARM9, then submit the same native owner
      * geometry. A failed lock conversion must not fall into ordinary TRS. */
@@ -8592,7 +7825,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * modelview array so the worlds need no second home -- and, since the seed
      * carries the camera, no second pass either. On failure nothing has been
      * consumed yet and the per-binding path runs unchanged. */
-#if NDS_R2_FIGHTER_GX_COMPOSE
     /* Slice 43. Same forward pass, no multiplies: describe each binding's chain
      * and let the geometry engine compose it in the root loop. Declining leaves
      * nothing consumed, exactly as the compose does, so the CPU pass below is
@@ -8607,9 +7839,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
          || (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
 #endif
          ) &&
-#if NDS_LAB_NO_CULL
-        (gNdsLabSeamArm == NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM) &&
-#endif
         (ndsRendererAdapterComposeOwnerWorldsSource(
              root, bindings, binding_count,
              sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
@@ -8663,9 +7892,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
              binding_index < binding_count;
              binding_index++)
         {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            NDS_DIAG(gNdsTask91MtxBindings++);
-#endif
             if (sNdsRendererAdapterNativeOwnerWorkspace.
                     gx_modelview_mirror_valid != 0u)
             {
@@ -8690,7 +7916,6 @@ gx_compose_declined:
     {
         NDS_DIAG(gNdsR2GxComposeDeclines++);
     }
-#endif
     if (flat_worlds == FALSE)
     {
         flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
@@ -8710,9 +7935,6 @@ gx_compose_declined:
              binding_index < binding_count;
              binding_index++)
         {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-            NDS_DIAG(gNdsTask91MtxBindings++);
-#endif
             modelview_ptrs[binding_index] =
                 &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
         }
@@ -8722,10 +7944,6 @@ gx_compose_declined:
         if (ndsRendererAdapterPrepareOwnerMatricesPerBinding(
                 bindings, binding_count, &camera_modelview,
                 camera_modelview_valid, modelview_ptrs
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                , m2_owner
-#endif
                 ) == FALSE)
         {
             return FALSE;
@@ -8885,10 +8103,6 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
     u32 binding_count,
     CObj *cobj,
     NDSRendererAdapterNativeOwnerWorkspace *workspace
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    , volatile NDSRendererOwnerProfile *m2_owner
-#endif
     )
 {
     u32 expected_joint_count = (slot == 0u) ? 25u : 27u;
@@ -8896,10 +8110,6 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
     u32 joint_count = 0u;
     u32 joint_index;
     u32 binding_index;
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    u32 phase_start;
-#endif
 
     if ((slot > 1u) || (fp == NULL) || (root == NULL) ||
         (matrix_bindings == NULL) || (workspace == NULL) ||
@@ -8975,10 +8185,6 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
                 return FALSE;
             }
         }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        phase_start = cpuGetTiming();
-#endif
         if ((ndsRendererAdapterBuildDObjLocalMatrix(
                  joint,
                  &workspace->hierarchy_storage.hierarchy_locals[joint_index]) ==
@@ -8989,34 +8195,13 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
         {
             return FALSE;
         }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        if (m2_owner != NULL)
-        {
-            m2_owner->m2_local_matrix_ticks +=
-                cpuGetTiming() - phase_start;
-            m2_owner->m2_local_matrix_build_count++;
-        }
-#endif
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    phase_start = cpuGetTiming();
-#endif
     if (ndsRendererAdapterGetHierarchyCameraMatrices(
             cobj, &workspace->hierarchy_projection,
             &workspace->hierarchy_camera_modelview) == FALSE)
     {
         return FALSE;
     }
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-    if (m2_owner != NULL)
-    {
-        m2_owner->m2_camera_fetch_ticks += cpuGetTiming() - phase_start;
-        m2_owner->m2_camera_fetch_count++;
-    }
-#endif
     workspace->hierarchy.projection = &workspace->hierarchy_projection;
     workspace->hierarchy.camera_modelview =
         &workspace->hierarchy_camera_modelview;
@@ -9573,7 +8758,6 @@ static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
     }
     return geometry_mode;
 }
-#endif
 
 /* Memory syTaskmanMalloc can hand out: the taskman arena, or in a VS battle
  * the frontend overlay's loan, which it takes first (2026-10-18). */

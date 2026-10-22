@@ -10,16 +10,8 @@
 
 #include <nds_build_config.h>
 
-#ifndef NDS_P4
-#define NDS_P4 0
-#endif
 
-#if NDS_P4
 #include <nds_p4_contents.generated.h>
-#else
-#define NDS_P4_CONTENT_ROWS(X)
-#define NDS_P4_CONTENT_MAX_ID 0
-#endif
 
 /* Renderer native-owner slots: content id i owns slot
  * NDS_P4_RENDERER_OWNER_BASE + i, after Master Hand's. */

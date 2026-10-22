@@ -17,16 +17,13 @@
  * Gated on NDS_P2_ITEM_CORE: without items there is nothing to pick up, and
  * the weak stubs remain the right answer.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 #include <it/item.h>
 #include <sc/scene.h>
 #include <sys/objdef.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -155,11 +152,9 @@ void ftCommonLightGetProcDamage(GObj *fighter_gobj)
             switch (ip->kind)
             {
             case nITKindTomato:
-#if NDS_P4
                 /* Remix hooks this heal's call on a character id (Crash's
                  * eat sound). */
                 ndsP4OnEatTomato(fp);
-#endif
                 ftParamSetHealDamage(fp, ITTOMATO_DAMAGE_HEAL);
                 itMainDestroyItem(item_gobj);
 
@@ -186,21 +181,18 @@ void ftCommonLightGetProcDamage(GObj *fighter_gobj)
                 break;
 
             default:
-#if NDS_P4
                 /* Remix's item_pickup_check_: a custom kind runs its
                  * item_pickup_table routine (EXTRA's Dango). */
                 if (ip->kind >= NDS_P4_IT_KIND_FIRST)
                 {
                     ndsP4ItemProc(item_gobj, NDS_P4_ITEM_CONSUME);
                 }
-#endif
                 break;
             }
         }
     }
 }
 
-#if NDS_P4
 /* The Maxim Tomato case above with another heal: a custom consumable's
  * pickup routine sets the heal and jumps to 0x80145C40 (items/Dango.asm
  * pickup_main_), through Remix's eat hook, the item's end and the 1P
@@ -216,7 +208,6 @@ void ndsFTCommonGetEatHeal(FTStruct *fp, GObj *item_gobj, s32 heal)
         gSC1PGameBonusTomatoCount++;
     }
 }
-#endif
 
 // 0x80145D28
 // decomp ftcommonget.c:128-136 verbatim. A heavy item is dropped rather than
@@ -485,4 +476,3 @@ sb32 ftCommonLiftTurnCheckInterruptLiftWait(GObj *fighter_gobj)
     else return FALSE;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

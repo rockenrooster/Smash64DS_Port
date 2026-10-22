@@ -176,7 +176,6 @@ void ndsMNVSResultsSetLoadScene(void);
 #define mnVSResultsEmblemProcUpdate(gobj) \
     ndsBaseMNVSResultsEmblemProcUpdate(gobj)
 
-#if NDS_P4
 /* P4: a Remix winner's own name, "WINS!" position, announcer call and
  * victory music (resultsscreen.asm add_to_results_screen), and no VS record
  * under its parent's kind. These four functions take no arguments and are
@@ -227,7 +226,6 @@ void ndsP4MNVSResultMakeFighterName(void);
 void ndsP4MNVSResultsPlayWinBGM(void);
 void ndsP4MNVSResultsSaveBackup(void);
 void ndsP4MNVSResultsMakeEmblem(void);
-#endif
 
 void ndsBaseMNVSResultsStartScene(void);
 
@@ -319,7 +317,6 @@ static size_t ndsMNVSResultsHeapBytes(s32 player)
     sb32 missing = FALSE;
     size_t need;
     size_t bytes;
-#if NDS_P4
     const NDSP4Fighter *p4 = ndsP4Fighter(gNdsP4PlayerContent[player]);
 
     if ((p4 != NULL) && (p4->parent_kind == fkind) && (p4->data->file_anim_size != 0u))
@@ -327,7 +324,6 @@ static size_t ndsMNVSResultsHeapBytes(s32 player)
         data = p4->data;
     }
     else
-#endif
     {
         /* The original cast's animations load converted, larger than their
          * files (the kind's census size covers that): its largest. */
@@ -359,16 +355,13 @@ __attribute__((used)) volatile u32 gNdsMNVSResultsHeapBytes[GMCOMMON_PLAYERS_MAX
 
 GObj *ndsMNVSResultsMakeFighter(FTDesc *desc, s32 player)
 {
-#if NDS_P4
     desc->player = (u8)player;
-#endif
     gNdsMNVSResultsHeapBytes[player] = (u32)ndsMNVSResultsHeapBytes(player);
     desc->figatree_heap = syTaskmanMalloc(gNdsMNVSResultsHeapBytes[player], 0x10);
     sMNVSResultsFigatreeHeaps[player] = desc->figatree_heap;
     return ftManagerMakeFighter(desc);
 }
 
-#if NDS_P4
 #undef mnVSResultsAnnounceWinner
 #undef mnVSResultMakeFighterName
 #undef mnVSResultsPlayWinBGM
@@ -675,7 +668,6 @@ void ndsP4MNVSResultsSaveBackup(void)
     }
     gNdsVSResultsRecordsTicks = cpuGetTiming() - t1;
 }
-#endif
 
 /* R01-B. The emblem GObj's identity, published for
  * `ndsResultsEmblemRecordCapturedDisplay` (reloc_backend_movement.c).
@@ -937,7 +929,6 @@ static void ndsMNVSResultsFuncStartTimed(void)
                 gSCManagerTransferBattleState.players[i].handicap;
         }
     }
-#if NDS_R2_PARTICLE_DRAW
     /* BattleShip creates the two source confetti generators at Results tic 120
      * (mnvsresults.c:3248-3251), but unlike VSBattle this scene had no DS
      * particle-atlas residency seam.  The particle interpreter therefore ran
@@ -948,7 +939,6 @@ static void ndsMNVSResultsFuncStartTimed(void)
      * position, colour or bytecode is changed; this is only the DS equivalent
      * of making the source texture bank resident before it is drawn. */
     (void)ndsRendererHardwarePrepareParticleAtlas();
-#endif
     gNdsParticlePoolStructsWanted = 0u;
     gNdsParticlePoolGeneratorsWanted = 0u;
     gNdsParticlePoolTransformsWanted = 0u;
@@ -992,14 +982,12 @@ void ndsMNVSResultsSetupFilesKind(s32 fkind)
      * every future one -- loads exactly when it is on the podium. */
     s32 i;
 
-#if NDS_P4
     /* The source's loop covers the playable kinds; selectable Metal Mario
      * is none of them, so its last kind sets him up as well. */
     if (fkind == nFTKindPlayableEnd)
     {
         ndsMNVSResultsSetupFilesKind(nFTKindMMario);
     }
-#endif
     for (i = 0; i < (s32)ARRAY_COUNT(gSCManagerTransferBattleState.players); i++)
     {
         if ((gSCManagerTransferBattleState.players[i].pkind !=

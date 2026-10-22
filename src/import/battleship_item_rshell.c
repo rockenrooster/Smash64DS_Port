@@ -16,7 +16,6 @@
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ft/fighter.h>
@@ -879,4 +878,3 @@ sb32 itRShellCommonProcReflector(GObj *item_gobj)
     return FALSE;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

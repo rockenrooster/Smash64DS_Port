@@ -7,9 +7,6 @@
 #include <gr/ground.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
-#if NDS_R2_COLLISION_L7_ORACLE
-#include <nds/nds_r2_collision_oracle.h>
-#endif
 
 #if NDS_R2_PATH
 #include <nds/nds_r2_battle.h>
@@ -20,28 +17,15 @@
 #if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
 #error "NDS_R2_PATH=1 requires the battle_playable harness (mode 163)"
 #endif
-#if NDS_HARNESS_FAST_LOGIC
-#error "NDS_R2_PATH=1 is the realtime path; NDS_HARNESS_FAST_LOGIC must be 0"
-#endif
 #endif
 
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
 
-#if NDS_R2_POSITION_PROBE
-/* Probe-only: which of the two unchanged 60 Hz source ticks inside the current
- * 30 Hz present is executing. Attachment effects sampled in tick 0 but drawn
- * after tick 1 can otherwise look like a transform bug even when both source
- * computations are individually exact. */
-__attribute__((used)) volatile u32 gNdsPositionProbeUpdateInPresent;
-extern void ndsPositionProbeCaptureMarioHurtboxes(GObj *fighter_gobj);
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
 extern void ndsMNVSResultsRecordFrame(void);
 extern void ndsSObjPreviewBeginFrame(void);
 extern void ndsSObjPreviewEndFrame(void);
-#endif
 
 /* A shipping build (NDS_DIAG_COUNTERS=0) keeps only the non-zero resets
  * below: ndsResetStartupDiagnostics runs once, from the startup scene, and
@@ -736,7 +720,6 @@ void ndsResetStartupDiagnostics(void)
         ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
     }
 #endif
-#if NDS_P2_SAMUS
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsSlot);
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsNPressFrames);
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsNStartFrames);
@@ -749,7 +732,6 @@ void ndsResetStartupDiagnostics(void)
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsLwPressFrames);
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsLwFrames);
     NDS_DIAG_RESET0(gNdsFighterSamusSpecialsLwWaitFrames);
-#endif
     NDS_DIAG_RESET0(gNdsFighterNaturalMovesetMask);
     NDS_DIAG_RESET0(gNdsFighterNaturalMovesetPhase);
     NDS_DIAG_RESET0(gNdsFighterNaturalMovesetPhaseFrames);
@@ -876,18 +858,9 @@ void ndsResetStartupDiagnostics(void)
         };
         ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
     }
-#if (NDS_HARNESS_FAST_LOGIC == 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
     gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
     gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
-#else
-    NDS_DIAG_RESET0(gNdsBuildModeCanonicalWord);
-    NDS_DIAG_RESET0(gNdsBuildModeShippedWord);
-#endif
-#if NDS_HARNESS_FAST_LOGIC != 0
-    gNdsBuildModeFastWord = NDS_BUILD_MODE_FAST_WORD;
-#else
     NDS_DIAG_RESET0(gNdsBuildModeFastWord);
-#endif
     NDS_DIAG_RESET0(gNdsRendererProfileFrameCount);
     NDS_DIAG_RESET0(gNdsRendererProfileUpdateTicks);
     NDS_DIAG_RESET0(gNdsRendererProfilePresentTicks);

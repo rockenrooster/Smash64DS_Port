@@ -35,9 +35,7 @@
  * export keeps Peach's special rows, which name these ports. */
 #if NDS_P4_CODE_PEACH || NDS_P4_CODE_PALUTENA
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 #include <macros.h>
 #include <stddef.h>
 #include <it/item.h>
@@ -339,7 +337,6 @@ void ndsP4PeachOnStatus(GObj *fighter_gobj, s32 status_id)
  * own PEACH_NSP statuses for any other. */
 static s32 ndsP4PeachNSPStatus(const FTStruct *fp, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
         switch (status_id)
@@ -352,9 +349,6 @@ static s32 ndsP4PeachNSPStatus(const FTStruct *fp, s32 status_id)
             return NDS_P4_KIRBY_STATUS_PEACH_NSP_RECOIL;
         }
     }
-#else
-    (void)fp;
-#endif
     return status_id;
 }
 

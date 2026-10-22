@@ -36,9 +36,7 @@
 #include <nds/nds_net_lobby.h>
 #include <nds/nds_net_session.h>
 #include <nds/nds_net_ui.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #include "nds_net_internal.h"
 
@@ -637,25 +635,6 @@ static void ndsNetGuestStart(const u8 *body, u32 len)
     sStartRound = seed;
     sStartAckLeft = 8u;
     ndsNetUiLine(21, " Starting the match...");
-#if NDS_NET_LAB_LOBBY && NDS_NET_LAB_STARTLOSS
-    {
-        /* Lab: this console's radio goes deaf as it accepts the round, so
-         * its ACKs and the host's verdict can be lost (Makefile). */
-        extern volatile u32 gNdsNetLabMuteUntil;
-        extern u32 ndsPlatformVBlankCount(void);
-        static u32 sLabStartLossRounds;
-
-        /* Each round's dropout is half the last: the first outlasts the
-         * host's offer (the start is withdrawn), later ones end inside it
-         * (the late ACKs still start the match). */
-        if (sLabStartLossRounds < (u32)NDS_NET_LAB_STARTLOSS_ROUNDS)
-        {
-            gNdsNetLabMuteUntil = ndsPlatformVBlankCount() +
-                ((u32)NDS_NET_LAB_STARTLOSS >> sLabStartLossRounds);
-            sLabStartLossRounds++;
-        }
-    }
-#endif
     /* No proposals until this console is back in the lobby: the host counts
      * a proposing player as present (ready for the next match). */
     sHaveProposal = 0u;
@@ -1046,61 +1025,6 @@ volatile u32 gNdsNetLabSweepMatches;
  * a harness. */
 volatile u32 gNdsNetLabSweepRepro = NDS_NET_LAB_SWEEP_REPRO;
 
-#if NDS_NET_LAB_TEAMS
-extern s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
-
-/* Lab teams: the sweep's matches cycle through four Team Battle layouts and
- * a free-for-all. Each human with a CPU partner (team attack off); the same
- * in four-stock Stock with team attack on, where the guest's scripted START
- * takes a stock from its CPU partner once its own fighter is out
- * (ftCommonSleepProcUpdate); three teams; both humans against the CPUs.
- * Costume and shade follow the character select's team rules
- * (mnplayersvs.c:1859-1860): the team costume, and the lowest shade no other
- * same-fighter teammate holds, in port order. */
-static void ndsNetLabTeamsDescriptor(NdsMatchConfig *cfg, u32 m)
-{
-    static const u8 kTeams[4][NDS_NET_PORTS] = {
-        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
-          nSCBattleTeamIDRed, nSCBattleTeamIDBlue },
-        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
-          nSCBattleTeamIDBlue, nSCBattleTeamIDRed },
-        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
-          nSCBattleTeamIDGreen, nSCBattleTeamIDGreen },
-        { nSCBattleTeamIDRed, nSCBattleTeamIDRed,
-          nSCBattleTeamIDBlue, nSCBattleTeamIDBlue },
-    };
-    const u32 v = m % 5u;
-    u32 i;
-    u32 j;
-
-    if (v == 4u)
-        return;
-    cfg->is_team_battle = TRUE;
-    cfg->is_team_attack = (v != 0u) ? TRUE : FALSE;
-    if (v == 1u)
-    {
-        cfg->game_rules = SCBATTLE_GAMERULE_STOCK;
-        cfg->stocks = 3u;
-    }
-    for (i = 0u; i < NDS_NET_PORTS; i++)
-    {
-        NdsMatchFighterConfig *f = &cfg->fighters[i];
-        u32 used = 0u;
-
-        f->team = kTeams[v][i];
-        f->costume = (u8)ftParamGetCostumeTeamID((s32)f->fkind, (s32)f->team);
-        for (j = 0u; j < i; j++)
-        {
-            if ((cfg->fighters[j].fkind == f->fkind) &&
-                (cfg->fighters[j].team == f->team))
-                used |= 1u << cfg->fighters[j].shade;
-        }
-        f->shade = 0u;
-        while (((used >> f->shade) & 1u) != 0u)
-            f->shade++;
-    }
-}
-#endif
 
 /* Lab sweep (plan 7.4): the host's descriptor walks the nine VS stages and
  * the roster, adding two level-9 CPUs (Kirby among them, for copies) and
@@ -1124,7 +1048,6 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     const u32 m = gNdsNetLabSweepMatches++;
     u32 i;
 
-#if NDS_P4
     if (gNdsNetLabSweepRepro == 3u)
     {
         /* Owner, 2026-10-11: four-player matches froze on Hyrule and Sector
@@ -1216,7 +1139,6 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
         ndsMatchConfigApply(cfg);
         return;
     }
-#endif
     if (gNdsNetLabSweepRepro != 0u)
     {
         /* Reported two-human setups, no CPUs, every item on. 1: Kirby (host)
@@ -1268,9 +1190,6 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     cfg->time_limit = 1u;
     cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
     cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
-#if NDS_NET_LAB_TEAMS
-    ndsNetLabTeamsDescriptor(cfg, m);
-#endif
     ndsMatchConfigApply(cfg);
 }
 #endif

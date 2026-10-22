@@ -198,14 +198,6 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
                                                        f32 anim_speed,
                                                        u32 flags)
 {
-#if NDS_FIGHTER_ANIM_AUDIT
-    if ((sNdsFighterAnimAuditStarted != FALSE) &&
-        (sNdsFighterAnimAuditInternalSetStatus == FALSE) &&
-        (fighter_gobj == sNdsFighterAnimAuditTarget))
-    {
-        return TRUE;
-    }
-#endif
     return ndsFTMainSetStatusCliffLive(fighter_gobj, status_id, frame_begin,
                                        anim_speed, flags);
 }
@@ -367,16 +359,10 @@ static sb32 ndsFTMainSetStatusStageCompatActive(void)
 
 void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     FTStruct *moveset_fp;
     u32 moveset_i;
-#endif
 
-#if NDS_FIGHTER_ANIM_AUDIT
-    ndsFighterAnimAuditUpdate(fighter_gobj);
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     moveset_fp = ftGetStruct(fighter_gobj);
     if (((gNdsFighterNaturalMovesetPhase == 9u) ||
          (gNdsFighterNaturalMovesetPhase == 10u)) &&
@@ -395,7 +381,6 @@ void ndsDiagnosticsRecordImportedFTMainAnimEvents(GObj *fighter_gobj)
             }
         }
     }
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowCallbackImmediateActive != FALSE))
@@ -599,9 +584,6 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
         return;
     }
 
-#if NDS_FIGHTER_ANIM_AUDIT
-    ndsFighterAnimAuditRecordSetStatus(fp);
-#endif
 
     if ((status_id != nFTCommonStatusWait) &&
         (ndsFTMainSetStatusNaturalCombatCovered(status_id) == FALSE) &&
@@ -891,7 +873,6 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
         handled_status = TRUE;
     }
 
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
     if ((handled_status == FALSE) &&
         (ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageFallSetStatusFromDamageActive != FALSE) &&
@@ -921,7 +902,6 @@ void ndsDiagnosticsRecordImportedFTMainSetStatus(GObj *fighter_gobj,
         sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount++;
         handled_status = TRUE;
     }
-#endif
 
     if (handled_status != FALSE)
     {
@@ -4484,11 +4464,3 @@ static void ndsFTMainSetStatusCompatHarness(GObj *fighter_gobj,
     }
 }
 
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
-void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
-                     f32 frame_begin, f32 anim_speed, u32 flags)
-{
-    ndsFTMainSetStatusCompatHarness(fighter_gobj, status_id, frame_begin,
-                                    anim_speed, flags);
-}
-#endif

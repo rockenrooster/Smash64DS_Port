@@ -1,6 +1,5 @@
 #include <ft/fighter.h>
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 void ftCommonHammerFallSetStatus(GObj *fighter_gobj);
 
 void ftPhysicsApplyGroundVelTransferAir(GObj *fighter_gobj)
@@ -88,14 +87,4 @@ void mpCommonUpdateFighterKinetics(GObj *fighter_gobj)
 
 /* The real one comes with battleship_ftcommon_hammer.c, which imports
  * fthammer.c whole. */
-#if !NDS_P2_ITEM_CORE
-void ftHammerProcMap(GObj *fighter_gobj)
-{
-    if (mpCommonCheckFighterOnFloor(fighter_gobj) == FALSE)
-    {
-        ftCommonHammerFallSetStatus(fighter_gobj);
-    }
-}
-#endif
 
-#endif

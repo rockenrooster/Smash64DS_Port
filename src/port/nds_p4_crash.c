@@ -29,11 +29,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_CRASH
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 #include <ef/effect.h>
 #include <it/item.h>
 #include <macros.h>
@@ -513,14 +510,10 @@ static void ndsP4CrashDigGfxEnd(GObj *fighter_gobj)
  * own CRASH_NSP statuses, in the same order, for any other. */
 static s32 ndsP4CrashNSPStatus(GObj *fighter_gobj, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (ftGetStruct(fighter_gobj)->fkind == nFTKindKirby)
     {
         return NDS_P4_KIRBY_STATUS_CRASH_NSP_GROUND + (status_id - CRASH_STATUS_NSPG);
     }
-#else
-    (void)fighter_gobj;
-#endif
     return status_id;
 }
 
@@ -624,7 +617,6 @@ static void ndsP4CrashNSPShieldHit(GObj *fighter_gobj)
  * position, as the donor reads it). */
 static GObj *ndsP4CrashSpinDetectItem(GObj *fighter_gobj)
 {
-#if NDS_P2_ITEM_CORE
     DObj *topn = DObjGetStruct(fighter_gobj);
     f32 px = topn->translate.vec.f.x;
     f32 py = topn->translate.vec.f.y + CRASH_NSP_FLING_SIZE;
@@ -649,23 +641,17 @@ static GObj *ndsP4CrashSpinDetectItem(GObj *fighter_gobj)
         }
         return item_gobj;
     }
-#else
-    (void)fighter_gobj;
-#endif
     return NULL;
 }
 
-#if NDS_P2_ITEM_CORE
 /* CrashNSP.flung_item_state_table: no routines; it flies on its velocity
  * until it leaves the stage. */
 static ITStatusDesc sNdsP4CrashFlungItemStatus[1];
-#endif
 
 /* CrashNSP's item check (ground_main_, air_main_): an item near the spin
  * flies away at 300 and can never be picked up. */
 static void ndsP4CrashNSPItemCheck(GObj *fighter_gobj)
 {
-#if NDS_P2_ITEM_CORE
     GObj *item_gobj = ndsP4CrashSpinDetectItem(fighter_gobj);
     ITStruct *ip;
 
@@ -682,9 +668,6 @@ static void ndsP4CrashNSPItemCheck(GObj *fighter_gobj)
     itMapSetAir(ip);
     itMainSetStatus(item_gobj, sNdsP4CrashFlungItemStatus, 0);
     func_800269C0_275C0(CRASH_FGM_FLING);
-#else
-    (void)fighter_gobj;
-#endif
 }
 
 static void ndsP4CrashNSPGroundToAir(GObj *fighter_gobj)
@@ -1363,4 +1346,3 @@ const NDSP4Overrides gNdsP4CrashOverrides = {
     .on_eat_tomato = ndsP4CrashOnEatTomato,
 };
 
-#endif /* NDS_P4_CRASH */

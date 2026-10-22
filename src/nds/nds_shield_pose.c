@@ -17,9 +17,7 @@
 #include <sys/obj.h>
 #include <sys/taskman.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 __attribute__((used)) volatile u32 gNdsShieldPoseNativeFixupCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseNativeFixupRejectCount;
@@ -31,8 +29,6 @@ __attribute__((used)) volatile u32 gNdsShieldPoseLoadCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseLoadFailCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseResidentBytes;
 
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_DONKEY || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_KIRBY || \
-    NDS_P2_CAPTAIN || NDS_P2_PIKACHU || NDS_P2_PURIN || NDS_P2_NESS
 
 #include <nds/generated/nds_shield_pose_assets.generated.h>
 
@@ -112,7 +108,6 @@ static const NDSShieldPoseAssetDesc sNdsShieldPoseAssets[] = {
 _Static_assert(ARRAY_COUNT(sNdsShieldPoseAssets) == NDS_SHIELD_POSE_ASSET_COUNT,
                "ShieldPose descriptor count drifted");
 
-#if NDS_P4
 /* P4 S15: a content's own package (scripts/p4/p4_shield_pose.py) is package
  * NDS_SHIELD_POSE_ASSET_COUNT + content - 1, its descriptor built from the
  * content's NDSP4ShieldPose row. Its limits are the content packages' (a
@@ -125,9 +120,6 @@ static AObjEvent32 *sNdsShieldPoseP4Scratch[NDS_P4_CONTENT_LIMIT];
  * the heap beside the blob: the shared scratch below lives in DTCM, sized for
  * the original cast (a content has up to NDS_P4_SHIELD_POSE_MAX_BASE_COUNT). */
 static DObjDesc *sNdsShieldPoseP4Base[NDS_P4_CONTENT_LIMIT];
-#else
-#define NDS_SHIELD_POSE_P4_PACKAGES 0u
-#endif
 #define NDS_SHIELD_POSE_BASE_LIMIT NDS_SHIELD_POSE_MAX_BASE_COUNT
 #define NDS_SHIELD_POSE_PACKAGES (NDS_SHIELD_POSE_ASSET_COUNT + NDS_SHIELD_POSE_P4_PACKAGES)
 /* scripts/p4/p4_shield_pose.py: the value token past a package's dictionary
@@ -142,7 +134,6 @@ static const NDSShieldPoseAssetDesc *ndsShieldPoseDesc(u32 package)
     {
         return &sNdsShieldPoseAssets[package];
     }
-#if NDS_P4
     if (package < NDS_SHIELD_POSE_PACKAGES)
     {
         u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
@@ -175,7 +166,6 @@ static const NDSShieldPoseAssetDesc *ndsShieldPoseDesc(u32 package)
         }
         return d;
     }
-#endif
     return NULL;
 }
 
@@ -245,13 +235,11 @@ static void ndsShieldPoseResetGeneration(void)
     {
         sNdsShieldPoseLoaded[i] = NULL;
     }
-#if NDS_P4
     for (i = 0u; i < (u32)NDS_P4_CONTENT_LIMIT; i++)
     {
         sNdsShieldPoseP4Scratch[i] = NULL;
         sNdsShieldPoseP4Base[i] = NULL;
     }
-#endif
     sNdsShieldPoseLoadedGeneration = gNdsTaskmanHeapGeneration;
     gNdsShieldPoseResidentBytes = 0u;
 }
@@ -271,7 +259,6 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseValidateBlob(
     h = (const NDSShieldPoseBlobHeader *)data;
     view->scratch = NULL;
     view->base = sNdsShieldPoseDObjScratch;
-#if NDS_P4
     if (package >= NDS_SHIELD_POSE_ASSET_COUNT)
     {
         u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
@@ -289,7 +276,6 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseValidateBlob(
         }
     }
     else
-#endif
     if ((h->scratch_words > NDS_SHIELD_POSE_MAX_SCRATCH_WORDS) ||
         (h->base_count > NDS_SHIELD_POSE_MAX_BASE_COUNT))
     {
@@ -371,7 +357,6 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
     {
         return sNdsShieldPoseLoaded[package];
     }
-#if NDS_P4
     if (package >= NDS_SHIELD_POSE_ASSET_COUNT)
     {
         u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
@@ -389,7 +374,6 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
                 ndsP4Fighter(content)->shield_pose->base_count * sizeof(DObjDesc));
         }
     }
-#endif
     data = ndsShieldPoseAlloc(desc->blob_bytes);
     if (data == NULL)
     {
@@ -503,7 +487,6 @@ static s32 ndsShieldPosePolygonMainPackage(u32 owner_asset, u32 dep_asset)
     return -1;
 }
 
-#if NDS_P4
 /* A content's package: its own, or the parent's it aliases; -1 keeps the
  * raw file. */
 static s32 ndsShieldPosePackageForContent(u32 content)
@@ -521,7 +504,6 @@ static s32 ndsShieldPosePackageForContent(u32 content)
     return (f->shield_pose->alias_fkind >= 0) ?
         ndsShieldPosePackageForBaseFKind(f->shield_pose->alias_fkind) : -1;
 }
-#endif
 
 /* The package a fighter guards with (a content's by its content, not its
  * parent's kind). */
@@ -531,12 +513,10 @@ static s32 ndsShieldPosePackageForFighter(const FTStruct *fp)
     {
         return -1;
     }
-#if NDS_P4
     if (fp->nds_p4_content != 0u)
     {
         return ndsShieldPosePackageForContent(fp->nds_p4_content);
     }
-#endif
     return ndsShieldPosePackageForFKind(fp->fkind);
 }
 
@@ -552,7 +532,6 @@ static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
             return (s32)i;
         }
     }
-#if NDS_P4
     for (i = 1u; i < (u32)NDS_P4_CONTENT_LIMIT; i++)
     {
         const NDSP4Fighter *f = ndsP4Fighter(i);
@@ -563,7 +542,6 @@ static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
             return ndsShieldPosePackageForContent(i);
         }
     }
-#endif
     return ndsShieldPosePolygonMainPackage(owner_asset, dep_asset);
 }
 
@@ -597,7 +575,6 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
     u8 *base = main_data;
     u32 i;
 
-#if NDS_P4
     /* A content's pack kind (NDS_P4_SEL_BASE + content): its package, and
      * the guard slots of its own Main (an aliased package's descriptor
      * names the parent's). */
@@ -613,7 +590,6 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
         slots = f->shield_pose->main_fixup_slots;
     }
     else
-#endif
     {
         slots = (package >= 0) ? ndsShieldPoseDesc((u32)package)->main_fixup_slots : NULL;
     }
@@ -877,12 +853,10 @@ static sb32 ndsShieldPoseReturnsAObjs(const DObj *dobj)
 {
     const FTStruct *fp = ftGetStruct(dobj->parent_gobj);
 
-#if NDS_P4
     if (fp->nds_p4_content != 0u)
     {
         return TRUE;
     }
-#endif
     return ((fp->fkind != nFTKindKirby) && (fp->fkind != nFTKindNKirby)) ?
                TRUE : FALSE;
 }
@@ -1192,11 +1166,9 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
     for (i = nFTPartsJointXRotN; i < ARRAY_COUNT(fp->joints); i++)
     {
         if ((fp->joints[i] != NULL)
-#if NDS_P4
             /* EXTRA's static parts are left out of the count
              * (StaticPart.asm fix_ftCommonGuardUpdateJoints_). */
             && (ndsP4GuardSkips(fp, i) == FALSE)
-#endif
             )
         {
             joint_num++;
@@ -1538,7 +1510,6 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
         }
         rows++;
 
-#if NDS_P4
         /* A static part takes no guard row and no animation
          * (lbCommonAddDObjAnimJointAll_extended_), nor does a joint the
          * content's guard tables never had (NDSP4Overrides.guard_skip). */
@@ -1548,7 +1519,6 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
             joint--;
             continue;
         }
-#endif
         if (joint >= view.h->joint_count)
         {
             /* Past the table: its NULL terminator (ndsShieldPoseApplyNone),
@@ -1623,14 +1593,12 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
     {
         u16 handle;
 
-#if NDS_P4
         if (ndsP4GuardSkipsDObj(current) != FALSE)
         {
             current->anim_wait = AOBJ_ANIM_NULL;
             joint--;
             continue;
         }
-#endif
         if (joint >= view.h->joint_count)
         {
             current->anim_wait = AOBJ_ANIM_NULL;
@@ -1651,52 +1619,3 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
     return 1;
 }
 
-#else
-
-s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
-{
-    (void)fkind;
-    return FALSE;
-}
-
-s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset)
-{
-    (void)owner_asset; (void)dep_asset;
-    return FALSE;
-}
-
-s32 ndsShieldPoseNamesDependency(u32 owner_asset, u32 dep_asset)
-{
-    (void)owner_asset; (void)dep_asset;
-    return FALSE;
-}
-
-s32 ndsShieldPosePatchCompactMain(s32 fkind, void *main_data, u32 main_bytes)
-{
-    (void)fkind; (void)main_data; (void)main_bytes;
-    return 0;
-}
-
-s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
-                                      u32 target_offset, void **resolved)
-{
-    (void)owner_asset; (void)dep_asset; (void)target_offset; (void)resolved;
-    return 0;
-}
-
-s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
-{
-    (void)dobj; (void)angle; return 0;
-}
-
-s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
-{
-    (void)root_dobj; (void)angle; return 0;
-}
-
-s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
-{
-    (void)fighter_gobj; return 0;
-}
-
-#endif

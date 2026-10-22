@@ -1,8 +1,6 @@
-#if NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
 
 #include <ft/fighter.h>
 
-#if NDS_P4_FALCO
 /* P4 Falco runs this code with fkind == Fox. Falco.asm patches three Fox
  * constants for him: up_special_delay_ (launch delay 0x16, not 35) and
  * up_special_velocity_1/2/3_ (98.0, not 115.0). Two of the velocity sites read
@@ -18,7 +16,6 @@ f32 ndsP4FoxSpecialHiArcTan2(FTStruct *fp, f32 y, f32 x, sb32 is_ground_launch);
 #define syUtilsArcTan2(y, x)                                                  \
     ndsP4FoxSpecialHiArcTan2(fp, (y), (x),                                    \
         sizeof(__func__) == sizeof("ftFoxSpecialHiDecideSetStatus"))
-#endif
 
 #ifndef FTFOX_FIREFOX_LAUNCH_DELAY
 #define FTFOX_FIREFOX_LAUNCH_DELAY 35
@@ -72,8 +69,5 @@ void ftFoxSpecialAirHiBoundSetStatus(GObj *fighter_gobj);
 void ftFoxSpecialAirHiEndSwitchStatusGround(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxspecialhi.c"
-#if NDS_P4_FALCO
 #undef syUtilsArcTan2
-#endif
 
-#endif

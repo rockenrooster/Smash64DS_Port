@@ -125,13 +125,8 @@ static v16 ndsRendererHardwareClampS64ToV16(s64 value)
     return (v16)value;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static v16 __attribute__((noinline, optimize("Os")))
-ndsRendererHardwareProjectToV16(s64 numerator, s32 denominator)
-#else
 static inline v16 ndsRendererHardwareProjectToV16(
     s64 numerator, s32 denominator)
-#endif
 {
     s64 low_product;
     s64 high_product;
@@ -139,10 +134,6 @@ static inline v16 ndsRendererHardwareProjectToV16(
 
     if (denominator == 0)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererHardwareDivideSummary |=
-            NDS_RENDERER_HW_DIVISION_ZERO_DENOMINATOR;
-#endif
         return 0;
     }
 
@@ -155,19 +146,11 @@ static inline v16 ndsRendererHardwareProjectToV16(
         ((denominator < 0) && (numerator > low_product)))
     {
         result = (v16)-32768;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererHardwareDivideSummary +=
-            NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_ONE;
-#endif
     }
     else if (((denominator > 0) && (numerator > high_product)) ||
              ((denominator < 0) && (numerator < high_product)))
     {
         result = (v16)32767;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererHardwareDivideSummary +=
-            NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_ONE;
-#endif
     }
     else
     {
@@ -180,205 +163,11 @@ static inline v16 ndsRendererHardwareProjectToV16(
         result = ndsRendererHardwareClampS64ToV16(
             numerator / denominator);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererHardwareDivideSummary++;
-#endif
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (result != ndsRendererHardwareClampS64ToV16(
-                      numerator / denominator))
-    {
-        sNdsRendererHardwareDivideSummary |=
-            NDS_RENDERER_HW_DIVISION_MISMATCH;
-    }
-#endif
     return result;
 }
 
-#if NDS_RENDERER_SCREEN_SPACE_CENSUS
-static void ndsRendererScreenSpaceCensusReset(void)
-{
-    memset((void *)gNdsRendererScreenSpaceCensus, 0,
-           sizeof(gNdsRendererScreenSpaceCensus));
-    memset((void *)gNdsRendererScreenSpaceStageOwnerTicks, 0,
-           sizeof(gNdsRendererScreenSpaceStageOwnerTicks));
-    gNdsRendererScreenSpaceCensusFrameCount = 0u;
-    gNdsRendererScreenSpaceCensusOverflowCount = 0u;
-}
-
-static void ndsRendererScreenSpaceCensusTriangle(
-    u32 owner,
-    u32 part,
-    u32 identity,
-    const NDSRendererClipVertex20p12 clip[3])
-{
-    volatile NDSRendererScreenSpaceCensusRow *row;
-    s32 x_q4[3];
-    s32 y_q4[3];
-    s64 cross;
-    u64 area2_q8;
-    u32 i;
-
-    if ((gNdsRendererScreenSpaceCensusArmed == 0u) ||
-        (owner >= NDS_RENDERER_PROFILE_OWNER_COUNT) ||
-        (part >= NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT))
-    {
-        if ((gNdsRendererScreenSpaceCensusArmed != 0u) &&
-            ((owner >= NDS_RENDERER_PROFILE_OWNER_COUNT) ||
-             (part >= NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT)))
-        {
-            gNdsRendererScreenSpaceCensusOverflowCount++;
-        }
-        return;
-    }
-    row = &gNdsRendererScreenSpaceCensus[owner][part];
-    if (row->identity == 0u)
-    {
-        row->identity = identity;
-    }
-    row->triangle_count++;
-    for (i = 0u; i < 3u; i++)
-    {
-        v16 projected_x;
-        v16 projected_y;
-
-        if (clip[i].w <= 0)
-        {
-            row->invalid_count++;
-            return;
-        }
-        projected_x = ndsRendererHardwareProjectToV16(
-            (s64)clip[i].x * 4096, clip[i].w);
-        projected_y = ndsRendererHardwareProjectToV16(
-            (s64)clip[i].y * 4096, clip[i].w);
-        /* 256x192 viewport, retained as Q4 screen coordinates. */
-        x_q4[i] = (s32)projected_x / 2;
-        y_q4[i] = ((s32)projected_y * 3) / 8;
-    }
-    cross =
-        (s64)(x_q4[1] - x_q4[0]) * (y_q4[2] - y_q4[0]) -
-        (s64)(y_q4[1] - y_q4[0]) * (x_q4[2] - x_q4[0]);
-    area2_q8 = (cross < 0) ? (u64)-cross : (u64)cross;
-    if (area2_q8 < 512u)
-    {
-        row->area_lt_1px_count++;
-    }
-    if (area2_q8 < 2048u)
-    {
-        row->area_lt_4px_count++;
-    }
-    row->area2_q8_sum += area2_q8;
-}
-
-static void ndsRendererScreenSpaceCensusStageSegment(
-    const NDSNativeStageSegment *segment)
-{
-    u32 run_offset;
-
-    if ((gNdsRendererScreenSpaceCensusArmed == 0u) || (segment == NULL))
-    {
-        return;
-    }
-    for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
-    {
-        const NDSNativeStageRun *run = &sNdsNativeStageRuns[
-            (u32)segment->first_run + run_offset];
-        u32 triangle_offset;
-
-        for (triangle_offset = 0u;
-             triangle_offset < run->triangle_count;
-             triangle_offset++)
-        {
-            NDSRendererClipVertex20p12 clip[3];
-            u32 corner_offset;
-
-            for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
-            {
-                u32 dense_index = sNdsNativeStageCorners[
-                    (u32)run->first_corner + triangle_offset * 3u +
-                    corner_offset];
-                const NDSNativeStageDenseVertex *dense =
-                    &sNdsNativeStageVertices[dense_index];
-                NDSRendererInputVertex input = {0};
-
-                input.x = dense->x;
-                input.y = dense->y;
-                input.z = dense->z;
-                ndsRendererTransformVertex20p12(
-                    &sNdsNativeStageOwnerExecution.binding_composed[
-                        dense->matrix_binding],
-                    &input, &clip[corner_offset]);
-            }
-            ndsRendererScreenSpaceCensusTriangle(
-                NDS_RENDERER_PROFILE_OWNER_STAGE,
-                run->binding_index,
-                sNdsNativeStageBindings[run->binding_index].root_offset,
-                clip);
-        }
-    }
-}
-
-static void ndsRendererScreenSpaceCensusFighterRun(
-    const NDSNativeRun *run,
-    const NDSRendererNativeFighterRoot *inputs,
-    u32 input_count,
-    u32 root_index)
-{
-    u32 run_index;
-    u32 triangle_offset;
-
-    if ((gNdsRendererScreenSpaceCensusArmed == 0u) || (run == NULL) ||
-        (inputs == NULL) || (root_index >= input_count) ||
-        /* A LEAN_TRIM image has no matrix bindings to read. */
-        (sNdsNativeFighterActiveTables->dense_vertices == NULL))
-    {
-        return;
-    }
-    run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
-    for (triangle_offset = 0u;
-         triangle_offset < run->triangle_count;
-         triangle_offset++)
-    {
-        NDSRendererClipVertex20p12 clip[3];
-        u32 corner_offset;
-
-        for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
-        {
-            u32 packed = sNdsNativeFighterActiveTables->packed_corners[
-                (u32)run->first_triangle * 3u +
-                triangle_offset * 3u + corner_offset];
-            u32 dense_id =
-                ((NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables) != FALSE) &&
-                 (((u32)run->submit_class & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK) !=
-                  NDS_NATIVE_RUN_CROSS_MATRIX)) ?
-                packed : (packed & NDS_NATIVE_DENSE_ID_MASK);
-            const NDSNativeDenseVertex *dense =
-                &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
-            const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
-            u32 matrix_binding = dense->matrix_binding;
-            NDSRendererInputVertex input = {0};
-
-            if (matrix_binding >= input_count)
-            {
-                matrix_binding = root_index;
-            }
-            input.x = (s16)(prepared->gx_xy & 0xffffu) / 16;
-            input.y = (s16)(prepared->gx_xy >> 16) / 16;
-            input.z = (s16)prepared->gx_z / 16;
-            ndsRendererTransformVertex20p12(
-                inputs[matrix_binding].composed_matrix,
-                &input, &clip[corner_offset]);
-        }
-        ndsRendererScreenSpaceCensusTriangle(
-            (u32)sNdsRendererRuntimeOwner,
-            root_index,
-            inputs[root_index].root_offset,
-            clip);
-    }
-}
-#endif
 
 static inline v16 ndsRendererHardwareSourceDepthToV16(
     s64 numerator, s32 denominator)
@@ -403,27 +192,7 @@ static inline v16 ndsRendererHardwareSourceDepthToV16(
 static void ndsRendererProfileVertexRange(
     const NDSRendererInputVertex *vtx, v16 x, v16 y, v16 z)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (vtx == NULL)
-    {
-        return;
-    }
-
-    if (vtx->x < gNdsRendererProfileRawVertexMinX) { gNdsRendererProfileRawVertexMinX = vtx->x; }
-    if (vtx->x > gNdsRendererProfileRawVertexMaxX) { gNdsRendererProfileRawVertexMaxX = vtx->x; }
-    if (vtx->y < gNdsRendererProfileRawVertexMinY) { gNdsRendererProfileRawVertexMinY = vtx->y; }
-    if (vtx->y > gNdsRendererProfileRawVertexMaxY) { gNdsRendererProfileRawVertexMaxY = vtx->y; }
-    if (vtx->z < gNdsRendererProfileRawVertexMinZ) { gNdsRendererProfileRawVertexMinZ = vtx->z; }
-    if (vtx->z > gNdsRendererProfileRawVertexMaxZ) { gNdsRendererProfileRawVertexMaxZ = vtx->z; }
-    if ((s32)x < gNdsRendererProfileHWVertexMinX) { gNdsRendererProfileHWVertexMinX = x; }
-    if ((s32)x > gNdsRendererProfileHWVertexMaxX) { gNdsRendererProfileHWVertexMaxX = x; }
-    if ((s32)y < gNdsRendererProfileHWVertexMinY) { gNdsRendererProfileHWVertexMinY = y; }
-    if ((s32)y > gNdsRendererProfileHWVertexMaxY) { gNdsRendererProfileHWVertexMaxY = y; }
-    if ((s32)z < gNdsRendererProfileHWVertexMinZ) { gNdsRendererProfileHWVertexMinZ = z; }
-    if ((s32)z > gNdsRendererProfileHWVertexMaxZ) { gNdsRendererProfileHWVertexMaxZ = z; }
-#else
     (void)vtx;
-#endif
     if ((x == (v16)32767) || (x == (v16)-32768) ||
         (y == (v16)32767) || (y == (v16)-32768) ||
         (z == (v16)32767) || (z == (v16)-32768))
@@ -434,14 +203,6 @@ static void ndsRendererProfileVertexRange(
 
 static void ndsRendererProfileHWVertexRange(v16 x, v16 y, v16 z)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if ((s32)x < gNdsRendererProfileHWVertexMinX) { gNdsRendererProfileHWVertexMinX = x; }
-    if ((s32)x > gNdsRendererProfileHWVertexMaxX) { gNdsRendererProfileHWVertexMaxX = x; }
-    if ((s32)y < gNdsRendererProfileHWVertexMinY) { gNdsRendererProfileHWVertexMinY = y; }
-    if ((s32)y > gNdsRendererProfileHWVertexMaxY) { gNdsRendererProfileHWVertexMaxY = y; }
-    if ((s32)z < gNdsRendererProfileHWVertexMinZ) { gNdsRendererProfileHWVertexMinZ = z; }
-    if ((s32)z > gNdsRendererProfileHWVertexMaxZ) { gNdsRendererProfileHWVertexMaxZ = z; }
-#endif
     if ((x == (v16)32767) || (x == (v16)-32768) ||
         (y == (v16)32767) || (y == (v16)-32768) ||
         (z == (v16)32767) || (z == (v16)-32768))
@@ -450,90 +211,6 @@ static void ndsRendererProfileHWVertexRange(v16 x, v16 y, v16 z)
     }
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static u32 ndsRendererAbsDiffS32(s32 lhs, s32 rhs)
-{
-    s64 diff = (s64)lhs - (s64)rhs;
-
-    if (diff < 0)
-    {
-        diff = -diff;
-    }
-    return (diff > (s64)0xffffffffu) ? 0xffffffffu : (u32)diff;
-}
-
-static void ndsRendererHardwareRecordOracleVertex(
-    const NDSRendererTraversalState *state, u32 index)
-{
-    const NDSRendererMatrixSnapshot *snapshot;
-    const NDSRendererMatrix20p12 *matrix = NULL;
-    NDSRendererClipVertex20p12 expected;
-    const NDSRendererClipVertex20p12 *actual;
-    u32 dx;
-    u32 dy;
-    u32 dz;
-    u32 dw;
-    u32 max_delta;
-
-    if ((state == NULL) ||
-        (index >= NDS_RENDERER_MAX_VTX) ||
-        ((state->input_vertex_valid_mask & (1u << index)) == 0u) ||
-        ((state->vertex_valid_mask & (1u << index)) == 0u) ||
-        (state->vertex_clip_snapshot[index] !=
-         state->vertex_matrix_snapshot[index]))
-    {
-        return;
-    }
-
-    snapshot = ndsRendererGetMatrixSnapshot(
-        state, state->vertex_matrix_snapshot[index]);
-    if (snapshot != NULL)
-    {
-        matrix = &snapshot->matrix;
-    }
-    else if (((state->current_transform_vertex_mask & (1u << index)) != 0u) &&
-             (state->matrix_valid != 0u))
-    {
-        /* Bounded-table overflow is eagerly transformed at VTX load. */
-        matrix = &state->matrix;
-    }
-    if (matrix == NULL)
-    {
-        return;
-    }
-
-    ndsRendererTransformVertex20p12(matrix,
-                                    &state->input_vertices[index],
-                                    &expected);
-    actual = &state->vertices[index];
-    dx = ndsRendererAbsDiffS32(expected.x, actual->x);
-    dy = ndsRendererAbsDiffS32(expected.y, actual->y);
-    dz = ndsRendererAbsDiffS32(expected.z, actual->z);
-    dw = ndsRendererAbsDiffS32(expected.w, actual->w);
-    max_delta = dx;
-    if (dy > max_delta) { max_delta = dy; }
-    if (dz > max_delta) { max_delta = dz; }
-    if (dw > max_delta) { max_delta = dw; }
-
-    gNdsRendererProfileOracleSamples++;
-    if (max_delta > gNdsRendererProfileOracleMaxDelta)
-    {
-        gNdsRendererProfileOracleMaxDelta = max_delta;
-    }
-    if (max_delta > NDS_RENDERER_HW_ORACLE_EPSILON)
-    {
-        gNdsRendererProfileOracleMismatches++;
-    }
-}
-
-static void ndsRendererHardwareRecordOracleTriangle(
-    const NDSRendererTraversalState *state, u32 i0, u32 i1, u32 i2)
-{
-    ndsRendererHardwareRecordOracleVertex(state, i0);
-    ndsRendererHardwareRecordOracleVertex(state, i1);
-    ndsRendererHardwareRecordOracleVertex(state, i2);
-}
-#endif
 
 static s32 ndsRendererCombineUsesColor(u32 w0, u32 w1, u32 source)
 {
@@ -1026,46 +703,8 @@ static void ndsRendererHardwareRecordUseTextureReject(
     const NDSRendererStats *stats,
     u32 reason)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    switch (reason)
-    {
-    case NDS_RENDERER_HW_USETEX_REJECT_NO_STATS:
-        gNdsRendererProfileUseTextureRejectNoStatsCount++;
-        break;
-    case NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF:
-        gNdsRendererProfileUseTextureRejectStateOffCount++;
-        break;
-    case NDS_RENDERER_HW_USETEX_REJECT_NO_COMBINE:
-        gNdsRendererProfileUseTextureRejectNoCombineCount++;
-        break;
-    case NDS_RENDERER_HW_USETEX_REJECT_PRIMITIVE_DECAL:
-        gNdsRendererProfileUseTextureRejectPrimitiveDecalCount++;
-        break;
-    case NDS_RENDERER_HW_USETEX_REJECT_NO_TEXEL0:
-        gNdsRendererProfileUseTextureRejectNoTexel0Count++;
-        break;
-    default:
-        break;
-    }
-    if (gNdsRendererProfileUseTextureRejectFirstReason == 0u)
-    {
-        gNdsRendererProfileUseTextureRejectFirstReason = reason;
-        if (stats != NULL)
-        {
-            gNdsRendererProfileUseTextureRejectFirstFlags =
-                stats->texture_state_flags;
-            gNdsRendererProfileUseTextureRejectFirstW0 =
-                stats->texture_combine_w0;
-            gNdsRendererProfileUseTextureRejectFirstW1 =
-                stats->texture_combine_w1;
-            gNdsRendererProfileUseTextureRejectFirstGeometry =
-                stats->geometry_mode;
-        }
-    }
-#else
     (void)stats;
     (void)reason;
-#endif
 }
 
 static s32 ndsRendererHardwareTextureImplicitStateOn(
@@ -1117,9 +756,6 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
                 stats, NDS_RENDERER_HW_USETEX_REJECT_STATE_OFF);
             return FALSE;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileUseTextureImplicitOnCount++;
-#endif
     }
     if (stats->texture_combine_count == 0u)
     {
@@ -1506,28 +1142,6 @@ static s16 ndsRendererHardwareTexCoord(s16 coord, u32 scale, u32 origin,
     return (s16)(scaled_t16 - origin_t16 + offset);
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererProfileTextureCoord(s16 s, s16 t)
-{
-    gNdsRendererProfileTexturedVertexCount++;
-    if (s < gNdsRendererProfileTextureCoordMinS)
-    {
-        gNdsRendererProfileTextureCoordMinS = s;
-    }
-    if (s > gNdsRendererProfileTextureCoordMaxS)
-    {
-        gNdsRendererProfileTextureCoordMaxS = s;
-    }
-    if (t < gNdsRendererProfileTextureCoordMinT)
-    {
-        gNdsRendererProfileTextureCoordMinT = t;
-    }
-    if (t > gNdsRendererProfileTextureCoordMaxT)
-    {
-        gNdsRendererProfileTextureCoordMaxT = t;
-    }
-}
-#endif
 
 static u32 ndsRendererHardwareColorByte(u32 color, u32 shift)
 {
@@ -1559,7 +1173,6 @@ static u8 ndsRendererHardwareClampColor(s32 value)
     return (u8)value;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 *
 ndsRendererHardwareFindLightShadeLut(u32 diffuse, u32 ambient)
 {
@@ -1589,21 +1202,11 @@ ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
 
     /* Cache only the exact RGB function of the two source light colors and
      * diffuse numerator. Vertex normals, direction, and alpha stay live. */
-#if NDS_TASK90_SHADE_CENSUS
-    gNdsTask90LutGetCalls++;
-    gNdsTask90LutTraceDiffuse[gNdsTask90LutTraceNext] = diffuse;
-    gNdsTask90LutTraceAmbient[gNdsTask90LutTraceNext] = ambient;
-    gNdsTask90LutTraceNext =
-        (gNdsTask90LutTraceNext + 1u) % NDS_TASK90_LUT_TRACE_COUNT;
-#endif
     resident = ndsRendererHardwareFindLightShadeLut(diffuse, ambient);
     if (resident != NULL)
     {
         return resident;
     }
-#if NDS_TASK90_SHADE_CENSUS
-    gNdsTask90LutBuilds++;
-#endif
 
     entry = &sNdsRendererHardwareLightShadeCache[
         sNdsRendererHardwareLightShadeCacheNext];
@@ -1630,7 +1233,6 @@ ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
     entry->valid = TRUE;
     return entry->rgb;
 }
-#endif
 
 static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
                                          u32 color, u32 fallback)
@@ -1640,9 +1242,6 @@ static u32 ndsRendererHardwareLightColor(NDSRendererStats *stats, u32 mask,
         if (stats != NULL)
         {
             stats->light_fallback_count++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            gNdsRendererProfileLightFallbackCount++;
-#endif
         }
         return fallback;
     }
@@ -1670,39 +1269,6 @@ static void ndsRendererHardwarePrepareLitDirection(
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
         (modelview != NULL))
     {
-#if NDS_SCENE_MIP_CACHE_LAB && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        s64 transformed_x =
-            (s64)light_x * modelview->m[0][0] +
-            (s64)light_y * modelview->m[0][1] +
-            (s64)light_z * modelview->m[0][2];
-        s64 transformed_y =
-            (s64)light_x * modelview->m[1][0] +
-            (s64)light_y * modelview->m[1][1] +
-            (s64)light_z * modelview->m[1][2];
-        s64 transformed_z =
-            (s64)light_x * modelview->m[2][0] +
-            (s64)light_y * modelview->m[2][1] +
-            (s64)light_z * modelview->m[2][2];
-        s64 length_squared =
-            (transformed_x * transformed_x) +
-            (transformed_y * transformed_y) +
-            (transformed_z * transformed_z);
-
-        if (length_squared > 0)
-        {
-            u32 length = ndsR2HwMathSqrt64((u64)length_squared);
-
-            if (length != 0u)
-            {
-                light_x = (s32)ndsR2HwMathDiv64(transformed_x * 127,
-                                               (s32)length);
-                light_y = (s32)ndsR2HwMathDiv64(transformed_y * 127,
-                                               (s32)length);
-                light_z = (s32)ndsR2HwMathDiv64(transformed_z * 127,
-                                               (s32)length);
-            }
-        }
-#else
         f32 transformed_x = (f32)(
             (s64)light_x * modelview->m[0][0] +
             (s64)light_y * modelview->m[0][1] +
@@ -1725,7 +1291,6 @@ static void ndsRendererHardwarePrepareLitDirection(
             light_y = (s32)((transformed_y * 127.0F) / length);
             light_z = (s32)((transformed_z * 127.0F) / length);
         }
-#endif
     }
 
     out->x = light_x;
@@ -1767,11 +1332,6 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
     return ndsRendererHardwareDivideLitDotBy127((u32)dot);
 }
 
-#if NDS_R2_FLASH_PROBE
-/* R2-03 E59. The probe's storage is defined ~100 lines below, next to the rest
- * of the flash slots; this shade function is the first user of it. */
-extern volatile u32 gNdsR2FlashLive[];
-#endif
 
 static u32 NDS_R2_ITCM_PACK2_EVICTED_CODE
 ndsRendererHardwareLitShadeColorPrepared(
@@ -1805,16 +1365,6 @@ ndsRendererHardwareLitShadeColorPrepared(
     light_2 = ndsRendererHardwareLightColor(
         stats, NDS_RENDERER_LIGHT_COLOR_2_MASK, stats->light_color_2,
         NDS_RENDERER_LIGHT_COLOR_2_FALLBACK);
-#if NDS_R2_FLASH_PROBE
-    /* R2-03 E59. E58 established the emitted colour is built from these two, so
-     * "is the flash a light-colour change?" is answered by whether they move
-     * between a hitlag frame and an ordinary one. This is the GENERIC path's
-     * resolved pair, after the mask/fallback logic -- the value that actually
-     * produced the greys and reds E55 sampled. */
-    gNdsR2FlashLive[12] = light_1;
-    gNdsR2FlashLive[13] = light_2;
-    gNdsR2FlashLive[14] = stats->light_color_mask;
-#endif
     diffuse = light_1;
     ambient = light_2;
 
@@ -1856,14 +1406,10 @@ static u32 ndsRendererHardwareLitShadeColor(
 static inline u16 ndsRendererHardwareModulatePackedColor(
     u16 color, u32 color_modulate)
 {
-#if NDS_TASK39_FX_FLASH
     u32 alpha = color_modulate & 0xffu;
 
     if (alpha != 0u)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        u32 start = cpuGetTiming();
-#endif
         u32 inverse = 255u - alpha;
         u32 red = (((u32)(color & 0x1fu) * inverse) +
                    (((color_modulate >> 27) & 0x1fu) * alpha) + 127u) /
@@ -1876,133 +1422,10 @@ static inline u16 ndsRendererHardwareModulatePackedColor(
                    255u;
 
         color = RGB15(red, green, blue);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
-#endif
     }
-#else
-    (void)color_modulate;
-#endif
     return color;
 }
 
-#if NDS_R2_FLASH_PROBE
-/* R2-03 E48. Which branch of the generic colour path draws the hurt flash.
- *
- * Four hypotheses have been spent guessing at E32's regression -- E36
- * (color_modulate), E41 (fold arithmetic, then E16's hardware lighting), E42
- * (USE_VERTEX) and E47 (the material derivation) -- and each cost a build. The
- * campaign's own standing rule is to bracket the thing rather than reason about
- * it, so this records what the generic path actually does instead.
- *
- * Counters are per presented frame and latched at two named frames, because a
- * cumulative total is dominated by stage geometry and says nothing about the
- * fighter. Frame A is a hitlag frame and frame B an ordinary one; the branch
- * that differs between the two snapshots is the flash. Same matched-control
- * shape R2-03 E35 used to attribute the SRC excursion.
- *
- * Slots: 0 material-only (generic emits the material colour), 1 no-vertex
- * (emits RGB15(31,31,31) -- pure white), 2 resolved (shade combined with
- * material), 3 lit-shade recompute, 4 total calls, 5 last material colour,
- * 6 last packed result, 7 last flags: bit0 use_material, bit1 use_vertex,
- * bit2 vertex_color_valid.
- *
- * R2-03 E50 adds the uniformity question E49 left open. E49 proved the baked
- * dense colours cannot carry the flash (they are `static const`), so the only
- * cheap fix left is a per-epoch constant colour -- and that is viable only if
- * the flash really is one colour across the fighter. Slots 8..11 answer it
- * directly: 8 min vertex colour, 9 max, 10 the first one seen, 11 how many
- * differed from the first. Slot 11 == 0 means uniform and the constant-colour
- * fix is on; anything else and it is per-vertex and that option dies too. */
-#define NDS_R2_FLASH_SLOTS 20u
-#define NDS_R2_FLASH_SLOT_MIN 8u
-/* R2-03 E55: per-vertex samples in call order, for the two-hitlag-frame ratio
- * test described at the record site. 24 is enough to separate "constant ratio"
- * from "scattered" and small enough to read in one GDB stop. */
-#define NDS_R2_FLASH_VTX 24u
-volatile u32 gNdsR2FlashLive[NDS_R2_FLASH_SLOTS];
-volatile u32 gNdsR2FlashSnapA[NDS_R2_FLASH_SLOTS];
-volatile u32 gNdsR2FlashSnapB[NDS_R2_FLASH_SLOTS];
-volatile u32 gNdsR2FlashVtxLive[NDS_R2_FLASH_VTX];
-volatile u32 gNdsR2FlashVtxA[NDS_R2_FLASH_VTX];
-volatile u32 gNdsR2FlashVtxB[NDS_R2_FLASH_VTX];
-/* R2-03 E58. The RAW decoded source colour for the same sampled vertices.
- * gNdsR2FlashVtx* holds state->vertex_colors[], which is LitShade(source) --
- * lighting sits between the flash and that value, and E50 mistook the lighting's
- * per-vertex variation for the flash's. `vtx` at this call site is the decoded
- * NDSRendererInputVertex, i.e. the source bytes the flash actually rewrites, so
- * this array answers the question with no lighting in the way: is the flashed
- * INPUT one constant? Recorded in the same branch at the same stride as the lit
- * array, so index k names one vertex in both and they cannot desync. */
-volatile u32 gNdsR2FlashRawLive[NDS_R2_FLASH_VTX];
-volatile u32 gNdsR2FlashRawA[NDS_R2_FLASH_VTX];
-/* The recording branch lives in ndsRendererHardwarePackedValidVertexColor, which
- * is `static inline` and does not take the input vertex. Rather than thread a
- * probe-only parameter through four call sites, the caller that HAS the vertex
- * parks it here immediately before delegating. The only other caller of that
- * function is the native stage path, which E48 proved never reaches the
- * recording branch (0 calls on an ordinary frame); it clears this anyway, so a
- * stage contribution would read as 0 and be visible rather than silently stale. */
-volatile u32 gNdsR2FlashRawPending;
-/* Writable over GDB so a run can be re-aimed without a rebuild. E55 pointed B at
- * a SECOND hitlag frame because the slots it read (0..14) are generic-path only
- * and the generic path has 0 calls on an ordinary frame (E48), so an
- * ordinary-frame snapshot was empty by construction.
- *
- * E59 adds owner-side slots 15..19, which run on EVERY frame, so B goes back to
- * an ordinary frame and each snapshot answers a different question:
- *   A(12..14) vs A(15..17) -- do the two paths see different light state on the
- *                             same frame? (E54: only one fighter falls back, so
- *                             911 runs both paths at once.)
- *   A(15..18) vs B(15..18) -- does the OWNER's own light state move during
- *                             hitlag at all? B(12..14) is 0 by construction. */
-volatile u32 gNdsR2FlashFrameA = 911u;
-volatile u32 gNdsR2FlashFrameB = 904u;
-volatile u32 gNdsR2FlashLatchedA;
-volatile u32 gNdsR2FlashLatchedB;
-
-void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
-{
-    u32 i;
-
-    if (presented_frame == gNdsR2FlashFrameA)
-    {
-        for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
-        {
-            gNdsR2FlashSnapA[i] = gNdsR2FlashLive[i];
-        }
-        for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
-        {
-            gNdsR2FlashVtxA[i] = gNdsR2FlashVtxLive[i];
-            gNdsR2FlashRawA[i] = gNdsR2FlashRawLive[i];
-        }
-        NDS_DIAG(gNdsR2FlashLatchedA++);
-    }
-    else if (presented_frame == gNdsR2FlashFrameB)
-    {
-        for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
-        {
-            gNdsR2FlashSnapB[i] = gNdsR2FlashLive[i];
-        }
-        for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
-        {
-            gNdsR2FlashVtxB[i] = gNdsR2FlashVtxLive[i];
-        }
-        NDS_DIAG(gNdsR2FlashLatchedB++);
-    }
-    for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
-    {
-        gNdsR2FlashLive[i] = 0u;
-    }
-    for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
-    {
-        gNdsR2FlashVtxLive[i] = 0u;
-        gNdsR2FlashRawLive[i] = 0u;
-    }
-    /* Min starts at the top so the first sample always wins. */
-    gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = 0xffffffffu;
-}
-#endif
 
 static inline u16 ndsRendererHardwarePackedResolvedColor(
     u32 color,
@@ -2051,12 +1474,6 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
                   (u8)((material_color >> 11) & 0x1fu)),
             color_modulate);
 
-#if NDS_R2_FLASH_PROBE
-        gNdsR2FlashLive[0]++;
-        gNdsR2FlashLive[5] = material_color;
-        gNdsR2FlashLive[6] = packed;
-        gNdsR2FlashLive[7] = 1u;
-#endif
         return packed;
     }
     if (use_vertex_color == FALSE)
@@ -2064,76 +1481,8 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
         u16 packed = ndsRendererHardwareModulatePackedColor(
             RGB15(31u, 31u, 31u), color_modulate);
 
-#if NDS_R2_FLASH_PROBE
-        gNdsR2FlashLive[1]++;
-        gNdsR2FlashLive[5] = material_color;
-        gNdsR2FlashLive[6] = packed;
-        gNdsR2FlashLive[7] = 0u;
-#endif
         return packed;
     }
-#if NDS_R2_FLASH_PROBE
-    gNdsR2FlashLive[2]++;
-    gNdsR2FlashLive[5] = material_color;
-    gNdsR2FlashLive[7] = 2u | ((use_material_color != FALSE) ? 1u : 0u);
-    /* E50: is the flash one colour, or per vertex? */
-    if (vertex_color < gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN])
-    {
-        gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = vertex_color;
-    }
-    if (vertex_color > gNdsR2FlashLive[9])
-    {
-        gNdsR2FlashLive[9] = vertex_color;
-    }
-    if (gNdsR2FlashLive[2] == 1u)
-    {
-        gNdsR2FlashLive[10] = vertex_color;
-    }
-    else if (vertex_color != gNdsR2FlashLive[10])
-    {
-        gNdsR2FlashLive[11]++;
-    }
-    /* R2-03 E55. Per-vertex pairs across TWO hitlag frames, in call order.
-     *
-     * E50 killed the constant-colour route by showing 172/273 vertices differ.
-     * What is still open is whether the flash is a one-parameter transform of
-     * the base colour -- `flashed = base + (255 - base) * t` -- because then the
-     * native owner reproduces it exactly from the baked table with one lerp and
-     * E32 keeps its measured -51,136 (E54).
-     *
-     * The test needs no baked-table mapping, and it works because HITLAG FREEZES
-     * THE POSE: frames 909..913 draw the same vertices with the same normals, so
-     * the per-vertex lighting factor is identical between them and cancels. If
-     * both frames are lerps of one base with t_A and t_B, then for every vertex
-     *
-     *     (255 - A_k) / (255 - B_k) = (1 - t_A) / (1 - t_B)
-     *
-     * a single constant. Constant across k confirms the route; scattered refutes
-     * it. If A_k == B_k for all k the flash does not ramp within the burst, which
-     * is a null result for this test and is worth knowing before spending more.
-     *
-     * Call order is deterministic for a frozen pose, so index k names the same
-     * vertex in both snapshots. */
-    {
-        /* Stride, not prefix. The first 24 of 273 were all pure grey, which is
-         * the whole finding -- so sampling the prefix again would only re-confirm
-         * the part already known. Every 11th call spreads the 24 slots across the
-         * entire vertex set and is what tests whether E50's non-grey minimum
-         * (0x240F11FF) is a real minority or came from elsewhere. */
-        u32 call = gNdsR2FlashLive[2] - 1u;
-
-        if ((call % 11u) == 0u)
-        {
-            u32 slot = call / 11u;
-
-            if (slot < NDS_R2_FLASH_VTX)
-            {
-                gNdsR2FlashVtxLive[slot] = vertex_color;
-                gNdsR2FlashRawLive[slot] = gNdsR2FlashRawPending;
-            }
-        }
-    }
-#endif
     return ndsRendererHardwarePackedResolvedColor(
         vertex_color, material_color, use_material_color,
         color_modulate);
@@ -2151,12 +1500,6 @@ static u16 ndsRendererHardwarePackedVertexColor(
 {
     u32 color;
 
-#if NDS_R2_FLASH_PROBE
-    gNdsR2FlashLive[4]++;
-    gNdsR2FlashRawPending = (vtx != NULL) ?
-        (((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
-         ((u32)vtx->b << 8) | (u32)vtx->a) : 0u;
-#endif
     if (vertex_color_valid != FALSE)
     {
         return ndsRendererHardwarePackedValidVertexColor(
@@ -2176,20 +1519,13 @@ static u16 ndsRendererHardwarePackedVertexColor(
             use_vertex_color, vertex_color, color_modulate);
     }
     color = ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
-#if NDS_R2_FLASH_PROBE
-    gNdsR2FlashLive[3]++;
-    gNdsR2FlashLive[5] = material_color;
-    gNdsR2FlashLive[7] = 4u | ((use_material_color != FALSE) ? 1u : 0u);
-#endif
     return ndsRendererHardwarePackedResolvedColor(
         color, material_color, use_material_color, color_modulate);
 }
 
-#if NDS_P4
 /* reloc_preview_pack.c: a P4 battle pack's half-resolution material frame,
  * repeated to its full size in the pack's scratch; anything else unchanged. */
 const void *ndsRelocPreviewHalfResSource(const void *ptr);
-#endif
 
 static const void *ndsRendererResolveTextureDataPointer(
     const NDSRendererConfig *config, const void *ptr, size_t bytes)
@@ -2208,9 +1544,7 @@ static const void *ndsRendererResolveTextureDataPointer(
     {
         return NULL;
     }
-#if NDS_P4
     ptr = ndsRelocPreviewHalfResSource(ptr);
-#endif
     return ptr;
 }
 
@@ -2225,27 +1559,7 @@ static s32 ndsRendererHardwareTextureKeyEqual(
     return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static u32 ndsRendererProfileTextureKeyHashFull(
-    const NDSRendererHardwareTextureKey *key)
-{
-    const u32 *words = (const u32 *)key;
-    u32 hash = 0u;
-    u32 i;
 
-    if (key == NULL)
-    {
-        return 0u;
-    }
-    for (i = 0u; i < (sizeof(*key) / sizeof(*words)); i++)
-    {
-        hash = ndsRendererProfileHashU32(hash, words[i]);
-    }
-    return hash;
-}
-#endif
-
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static u32 ndsRendererHardwareTextureKeyHash(
     const NDSRendererHardwareTextureKey *key)
 {
@@ -2354,7 +1668,6 @@ static void ndsRendererHardwareTextureLookupRemove(
         slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
     }
 }
-#endif
 
 static s32 ndsRendererHardwareTexel1RefreshCompatible(
     const NDSRendererHardwareTextureKey *a,
@@ -2377,87 +1690,19 @@ static s32 ndsRendererHardwareTexel1RefreshCompatible(
             (a->combine_w1 == b->combine_w1)) ? TRUE : FALSE;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static s32 ndsRendererHardwareTextureKeyWouldLegacyAlias(
-    const NDSRendererHardwareTextureKey *a,
-    const NDSRendererHardwareTextureKey *b)
-{
-    if ((a == NULL) || (b == NULL))
-    {
-        return FALSE;
-    }
-    return ((a->image == b->image) &&
-            (a->image_width == b->image_width) &&
-            (a->tlut_image == b->tlut_image) &&
-            (a->tlut_count == b->tlut_count) &&
-            (a->format == b->format) &&
-            (a->size == b->size) &&
-            (a->width == b->width) &&
-            (a->height == b->height) &&
-            (a->render_tile == b->render_tile) &&
-            (a->render_tmem == b->render_tmem) &&
-            (a->render_palette == b->render_palette) &&
-            (a->render_tile_cms == b->render_tile_cms) &&
-            (a->render_tile_cmt == b->render_tile_cmt) &&
-            (a->render_tile_masks == b->render_tile_masks) &&
-            (a->render_tile_maskt == b->render_tile_maskt) &&
-            (a->render_tile_shifts == b->render_tile_shifts) &&
-            (a->render_tile_shiftt == b->render_tile_shiftt) &&
-            (a->load_tile == b->load_tile) &&
-            (a->load_uls == b->load_uls) &&
-            (a->load_ult == b->load_ult) &&
-            (a->load_lrs == b->load_lrs) &&
-            (a->load_dxt == b->load_dxt) &&
-            (a->load_texels == b->load_texels) &&
-            (a->tile_uls == b->tile_uls) &&
-            (a->tile_ult == b->tile_ult) &&
-            (a->line == b->line) &&
-            (a->flags == b->flags) &&
-            (a->texel1_image == b->texel1_image) &&
-            (a->texel1_image_format == b->texel1_image_format) &&
-            (a->texel1_image_size == b->texel1_image_size) &&
-            (a->texel1_image_width == b->texel1_image_width) &&
-            (a->texel1_load_kind == b->texel1_load_kind) &&
-            (a->texel1_render_tmem == b->texel1_render_tmem) &&
-            (a->texel1_render_line == b->texel1_render_line) &&
-            (a->texel1_render_palette == b->texel1_render_palette) &&
-            (a->texel1_render_tile_cms == b->texel1_render_tile_cms) &&
-            (a->texel1_render_tile_cmt == b->texel1_render_tile_cmt) &&
-            (a->texel1_render_tile_masks == b->texel1_render_tile_masks) &&
-            (a->texel1_render_tile_maskt == b->texel1_render_tile_maskt) &&
-            (a->texel1_render_tile_shifts == b->texel1_render_tile_shifts) &&
-            (a->texel1_render_tile_shiftt == b->texel1_render_tile_shiftt) &&
-            (a->texel1_load_tile == b->texel1_load_tile) &&
-            (a->texel1_load_uls == b->texel1_load_uls) &&
-            (a->texel1_load_ult == b->texel1_load_ult) &&
-            (a->texel1_load_lrs == b->texel1_load_lrs) &&
-            (a->texel1_load_dxt == b->texel1_load_dxt) &&
-            (a->texel1_load_texels == b->texel1_load_texels) &&
-            (a->texel1_tile_uls == b->texel1_tile_uls) &&
-            (a->texel1_tile_ult == b->texel1_tile_ult) &&
-            (a->prim_lod_fraction == b->prim_lod_fraction) &&
-            (a->combine_w0 == b->combine_w0) &&
-            (a->combine_w1 == b->combine_w1)) ? TRUE : FALSE;
-}
-#endif
 
 static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
                                u32 key_hash)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     NDSRendererHardwareTextureCacheEntry *entry;
     u32 slot;
     u32 probe;
-#else
-    u32 i;
-#endif
 
     if (key == NULL)
     {
         return NULL;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     sNdsRendererRuntimeFrameSummary.texture_lookup_call_count++;
     entry = (NDSRendererHardwareTextureCacheEntry *)
         sNdsRendererHardwareActiveTextureEntry;
@@ -2489,33 +1734,7 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
         }
         slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
     }
-#else
-    (void)key_hash;
-    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
-    {
-        NDSRendererHardwareTextureKey resident;
-
-        if (sNdsRendererHardwareTextureCache[i].ready == 0u)
-        {
-            continue;
-        }
-        if (ndsRendererHardwareEntryKeyEqual(
-                &sNdsRendererHardwareTextureCache[i], key) != FALSE)
-        {
-            return &sNdsRendererHardwareTextureCache[i];
-        }
-        ndsRendererHardwareEntryCopyKey(
-            &sNdsRendererHardwareTextureCache[i], &resident);
-        if (ndsRendererHardwareTextureKeyWouldLegacyAlias(
-                &resident, key) != FALSE)
-        {
-            ndsRendererProfileRecordTextureAliasAvoid();
-        }
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count++;
-#endif
     return NULL;
 }
 
@@ -2639,7 +1858,7 @@ static s32 ndsRendererHardwareReplaceTextureData(
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_REPLACE_REFRESH);
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if ((entry == NULL) || (entry->name == 0) ||
         (texture == NULL) || (staged_bytes == 0u) ||
         (texture_bytes == 0u) ||
@@ -2765,7 +1984,6 @@ static s32 ndsRendererHardwareReplaceTextureData(
 #endif
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererHardwareTextureRefreshUses(
     const u16 *pixels)
 {
@@ -2792,7 +2010,7 @@ static s32 ndsRendererHardwareQueueTextureRefresh(
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_REPLACE_REFRESH);
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
     (void)entry;
     (void)pixels;
     (void)staged_bytes;
@@ -2830,28 +2048,14 @@ static s32 ndsRendererHardwareQueueTextureRefresh(
     {
         memcpy(refresh->row_map, row_map, row_count);
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileTextureVBlankQueuedUploads++;
-    gNdsRendererProfileTextureVBlankQueuedBytes += texture_bytes;
-#endif
     return TRUE;
 #endif
 }
-#endif
 
 u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 committed = 0u;
     u32 i;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 start;
-    u32 start_line;
-
-    start_line = REG_VCOUNT;
-    start = cpuGetTiming();
-    gNdsRendererProfileTextureVBlankStartLine = start_line;
-#endif
 
     for (i = 0u; i < sNdsRendererHardwareTextureRefreshCount; i++)
     {
@@ -2866,12 +2070,6 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
         {
             committed++;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        else
-        {
-            gNdsRendererProfileTextureVBlankFallbackCount++;
-        }
-#endif
         refresh->entry = NULL;
         refresh->pixels = NULL;
         refresh->staged_bytes = 0u;
@@ -2880,27 +2078,10 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
         refresh->row_count = 0u;
     }
     sNdsRendererHardwareTextureRefreshCount = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileTextureVBlankCommittedUploads += committed;
-    gNdsRendererProfileTextureVBlankCommitTicks += cpuGetTiming() - start;
-    gNdsRendererProfileTextureVBlankEndLine = REG_VCOUNT;
-    if ((committed != 0u) &&
-        ((start_line < 192u) ||
-         (gNdsRendererProfileTextureVBlankEndLine < 192u)))
-    {
-        gNdsRendererProfileTextureVBlankOutsideCount++;
-    }
-#endif
     return committed;
-#else
-    /* Profile 2 keeps its large semantic/oracle ledger resident. Shipping and
-     * coarse builds own the compact VBlank staging buffers; the forensic build
-     * retains the exact synchronous upload as its independent oracle route. */
-    return 0u;
-#endif
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveNoteRelease(
     const NDSRendererHardwareTextureCacheEntry *entry);
 #endif
@@ -2913,9 +2094,7 @@ ndsRendererHardwareReleaseTexture(
     {
         return NULL;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
-#endif
     ndsRendererHardwareEndBatch();
     /* Unconditional. This is hygiene, NOT the second-entry texture failure --
      * making it unconditional was tried against that failure and changed
@@ -2940,7 +2119,7 @@ ndsRendererHardwareReleaseTexture(
     /* A carved name (slice 2c) has no libnds record: its VRAM belongs to the
      * admission's carve regions, which go back to libnds with their last
      * entry. */
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     if ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) != 0u)
     {
         ndsFtrCarveNoteRelease(entry);
@@ -2998,7 +2177,7 @@ s32 ndsFtrLeanAdmitOpenHoles(void);
 void ndsFtrLeanAdmitCloseHoles(void);
 /* Uploads that took A+B's holes (ndsFtrLeanAdmitOpenHoles). */
 volatile u32 gNdsFtrAdmitHoleUploads;
-#if (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE)
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
 /* A benchmark build compiles no admission and no bank lock. */
 s32 ndsFtrLeanAdmitOpenHoles(void)
 {
@@ -3242,10 +2421,8 @@ volatile u32 gNdsHyruleNativeTexturePrepareCount;
 volatile u32 gNdsHyruleNativeTextureFailCount;
 #endif
 
-#if NDS_R2_FOX_GUN_OVERLAY
 static void ndsRendererHardwareResetFoxGunTextureState(void);
 static void ndsRendererHardwareReleaseFoxGunTexture(void);
-#endif
 
 /* The ground Thunder Jolt's three A5I3 coverage names are not cache entries, so
  * the loops below do not reach them -- and glResetTextures runs immediately
@@ -3277,13 +2454,11 @@ void ndsRendererHardwareDiscardTextureCache(void)
 #if NDS_P2_STAGE_HYRULE
     ndsRendererHardwareReleaseHyruleTextures();
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     memset(sNdsRendererHardwareTextureLookup, 0,
            sizeof(sNdsRendererHardwareTextureLookup));
     memset(sNdsRendererHardwareTextureRefreshQueue, 0,
            sizeof(sNdsRendererHardwareTextureRefreshQueue));
     sNdsRendererHardwareTextureRefreshCount = 0u;
-#endif
     if (sNdsRendererHardwareNoTextureName != 0)
     {
         ndsRendererHardwareFencedGlDeleteTextures(
@@ -3306,22 +2481,18 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererPrimRgbTexel0AlphaSourceOrigin = 0u;
     sNdsRendererPrimRgbTexel0AlphaSampler = 0u;
     gNdsRendererPrimEnvMaskedBakeCount = 0u;
-#if NDS_R2_IMPACT_WAVE_NATIVE
     for (i = 0u; i < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT; i++)
     {
         ndsRendererHardwareReleaseIFCommonCloudAtlas(
             &sNdsRendererImpactWaveTextureName[i]);
         sNdsRendererImpactWaveTextureName[i] = 0u;
     }
-#endif
-#if NDS_R2_REBIRTH_HALO_NATIVE
     for (i = 0u; i < NDS_REBIRTH_HALO_TEXTURE_COUNT; i++)
     {
         ndsRendererHardwareReleaseIFCommonCloudAtlas(
             &sNdsRendererRebirthHaloTextureName[i]);
         sNdsRendererRebirthHaloTextureName[i] = 0u;
     }
-#endif
     ndsNativeThunderGroundReleaseCoverageTextures();
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
     {
@@ -3342,12 +2513,10 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
-#if NDS_R2_FOX_GUN_OVERLAY
     /* Fox's gun is a direct scene-owned GL name, not a material-cache entry.
      * Delete it before glResetTextures and clear the fast-path identity so a
      * rematch cannot accept a stale/recycled name. */
     ndsRendererHardwareReleaseFoxGunTexture();
-#endif
     ndsRendererHardwareResetSourceCaches();
     sNdsRendererBattleStaticTextureArmed = FALSE;
 }
@@ -3385,7 +2554,7 @@ void ndsRendererHardwareDiscardTextureCache(void)
 volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
 volatile u32 gNdsRendererSceneTextureVramResetCount;
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrAdmitSceneResetGuard(void);
 #endif
 
@@ -3401,7 +2570,7 @@ void ndsRendererHardwareResetSceneTextureVram(void)
     {
         return;
     }
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     /* P2-2p8 Phase 1 slice 2b: a previous battle's texture regions still
      * active here means its exit hook was missed; close them first. */
     ndsFtrAdmitSceneResetGuard();
@@ -3420,9 +2589,7 @@ void ndsRendererHardwareResetSceneTextureVram(void)
      * NDS_R2_STAGE_DIRECT; this function is scoped to NDS_RENDERER_HW_TRIANGLES,
      * which is the weaker condition, and the audio-FGM harness is a config that
      * has the second without the first. */
-#if NDS_R2_STAGE_DIRECT
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
-#endif
     gNdsRendererSceneTextureVramResetCount++;
 }
 
@@ -3430,68 +2597,10 @@ s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
                                             const u16 *mip1,
                                             const u16 *mip2)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    const u16 *pixels[NDS_RENDERER_SCENE_MIP_COUNT] = {
-        mip0, mip1, mip2
-    };
-    u32 i;
-
-    if ((mip0 == NULL) || (mip1 == NULL) || (mip2 == NULL))
-    {
-        return FALSE;
-    }
-    ndsRendererHardwareDiscardTextureCache();
-    for (i = 0u; i < NDS_RENDERER_SCENE_MIP_COUNT; i++)
-    {
-        if (sNdsRendererSceneMipTextureNames[i] != 0)
-        {
-            ndsRendererHardwareFencedGlDeleteTextures(
-                1, &sNdsRendererSceneMipTextureNames[i]);
-            sNdsRendererSceneMipTextureNames[i] = 0;
-        }
-        if (ndsRendererHardwareFencedGlGenTextures(
-                1, &sNdsRendererSceneMipTextureNames[i]) == 0)
-        {
-            break;
-        }
-        ndsRendererHardwareBindTextureState(
-            sNdsRendererSceneMipTextureNames[i]);
-        if (ndsRendererHardwareFencedGlTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA,
-                TEXTURE_SIZE_128, TEXTURE_SIZE_128, 0,
-                TEXGEN_TEXCOORD, pixels[i]) == 0)
-        {
-            ndsRendererHardwareFencedGlDeleteTextures(
-                1, &sNdsRendererSceneMipTextureNames[i]);
-            sNdsRendererSceneMipTextureNames[i] = 0;
-            break;
-        }
-    }
-    if (i != NDS_RENDERER_SCENE_MIP_COUNT)
-    {
-        u32 j;
-
-        for (j = 0u; j < NDS_RENDERER_SCENE_MIP_COUNT; j++)
-        {
-            if (sNdsRendererSceneMipTextureNames[j] != 0)
-            {
-                ndsRendererHardwareFencedGlDeleteTextures(
-                    1, &sNdsRendererSceneMipTextureNames[j]);
-                sNdsRendererSceneMipTextureNames[j] = 0;
-            }
-        }
-        sNdsRendererHardwareBoundTextureName = 0u;
-        return FALSE;
-    }
-    sNdsRendererHardwareBoundTextureName = 0u;
-    sNdsRendererHardwareActiveTextureEntry = NULL;
-    return TRUE;
-#else
     (void)mip0;
     (void)mip1;
     (void)mip2;
     return FALSE;
-#endif
 }
 
 s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
@@ -3500,92 +2609,12 @@ s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
                                           u32 columns,
                                           u32 rows)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    v16 vertex_x[64];
-    v16 vertex_y[64];
-    u32 vertex_count;
-    u32 row;
-    u32 column;
-    u32 triangle_count;
-
-    if ((mip_index >= NDS_RENDERER_SCENE_MIP_COUNT) ||
-        (sNdsRendererSceneMipTextureNames[mip_index] == 0) ||
-        (tex_s_q4 == NULL) || (tex_t_q4 == NULL) ||
-        (columns < 2u) || (rows < 2u))
-    {
-        return FALSE;
-    }
-    vertex_count = columns * rows;
-    if (vertex_count > (sizeof(vertex_x) / sizeof(vertex_x[0])))
-    {
-        return FALSE;
-    }
-    for (row = 0u; row < rows; row++)
-    {
-        for (column = 0u; column < columns; column++)
-        {
-            u32 index = (row * columns) + column;
-
-            vertex_x[index] = (v16)(-4096 +
-                (s32)((8192u * column) / (columns - 1u)));
-            vertex_y[index] = (v16)(4096 -
-                (s32)((8192u * row) / (rows - 1u)));
-        }
-    }
-
-    ndsRendererHardwareEndBatch();
-    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    ndsRendererHardwareBindTextureState(
-        sNdsRendererSceneMipTextureNames[mip_index]);
-    ndsRendererHardwareSetPolyFmt(
-        POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(63));
-    glColor(RGB15(31, 31, 31));
-    glBegin(GL_TRIANGLE);
-    for (row = 0u; row + 1u < rows; row++)
-    {
-        for (column = 0u; column + 1u < columns; column++)
-        {
-            u32 i00 = (row * columns) + column;
-            u32 i10 = i00 + 1u;
-            u32 i01 = i00 + columns;
-            u32 i11 = i01 + 1u;
-
-#define NDS_SCENE_MIP_EMIT(index) do { \
-    glTexCoord2t16((t16)tex_s_q4[(index)], \
-                   (t16)tex_t_q4[(index)]); \
-    glVertex3v16(vertex_x[(index)], vertex_y[(index)], (v16)4090); \
-} while (0)
-            NDS_SCENE_MIP_EMIT(i00);
-            NDS_SCENE_MIP_EMIT(i01);
-            NDS_SCENE_MIP_EMIT(i10);
-            NDS_SCENE_MIP_EMIT(i10);
-            NDS_SCENE_MIP_EMIT(i01);
-            NDS_SCENE_MIP_EMIT(i11);
-#undef NDS_SCENE_MIP_EMIT
-        }
-    }
-    triangle_count = (columns - 1u) * (rows - 1u) * 2u;
-    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
-        triangle_count * 3u;
-    sNdsRendererHardwareSubmitted = TRUE;
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
-    sNdsRendererHardwareMatrixGeneration = 0u;
-    sNdsRendererHardwareBoundTextureName = 0u;
-    sNdsRendererHardwareActiveTextureEntry = NULL;
-    return TRUE;
-#else
     (void)mip_index;
     (void)tex_s_q4;
     (void)tex_t_q4;
     (void)columns;
     (void)rows;
     return FALSE;
-#endif
 }
 
 static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
@@ -3617,7 +2646,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name,
     u32 color0_transparent)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     int size_x;
     int size_y;
     int name = 0;
@@ -3785,7 +2814,6 @@ s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
         fill, user_data, texture_name, TRUE);
 }
 
-#if NDS_R2_IMPACT_WAVE_NATIVE
 static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
                                           void *user_data)
 {
@@ -3798,9 +2826,7 @@ static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
            NDS_RENDERER_IMPACT_WAVE_TEX_BYTES);
     return TRUE;
 }
-#endif
 
-#if NDS_R2_REBIRTH_HALO_NATIVE
 typedef struct NDSRebirthHaloTextureFill
 {
     const u8 *pixels;
@@ -3822,9 +2848,7 @@ static s32 ndsRendererRebirthHaloTextureFill(u8 *pixels, u32 bytes,
     memcpy(pixels, fill->pixels, fill->bytes);
     return TRUE;
 }
-#endif
 
-#if NDS_P4
 /* The P4 article textures' texels are read only here, at preparation, so
  * they live in NitroFS rather than as .main data every scene's heap would pay
  * for (32 KB for the eighteen contents). One handle per preparation pass;
@@ -3857,7 +2881,6 @@ static void ndsRendererEntryTexelsClose(void)
         sNdsEntryTexelsFile = NULL;
     }
 }
-#endif
 
 static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
                                               void *user_data)
@@ -3920,7 +2943,6 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
         }
         swiDecompressLZSSWram(texture->texels, pixels);
     }
-#if NDS_P4
     else if (texture->compression == NDS_ENTRY_EFFECT_COMPRESSION_FILE)
     {
         if ((texture->texel_bytes != decoded_bytes) ||
@@ -3931,7 +2953,6 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
             return FALSE;
         }
     }
-#endif
     else
     {
         return FALSE;
@@ -3941,7 +2962,7 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
 
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 {
-#if NDS_R2_IMPACT_WAVE_NATIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 variant;
 
     for (variant = 0u; variant < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT;
@@ -3970,7 +2991,7 @@ s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 
 s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 {
-#if NDS_R2_REBIRTH_HALO_NATIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     static const struct
     {
         const u8 *pixels;
@@ -4032,7 +3053,7 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     int name;
 
     if ((texture_name == NULL) || (*texture_name == 0u))
@@ -4060,7 +3081,7 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
  * native owner's tint batch reads it to aim its single texcoord. */
 #define NDS_R2_FIGHTER_TINT_DIM 8u
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* A SOLID TEXEL, SO A TINTED BODY CAN MULTIPLY AFTER IT SHADES.
  *
  * Fighters draw PRIM x SHADE (then x ENV, which is the stage light colour and
@@ -4431,7 +3452,7 @@ volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
  * caller says when that stage is live; nothing else keeps its textures. */
 volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 {
     u32 root_index;
@@ -4459,7 +3480,7 @@ static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 void __attribute__((cold, optimize("Os")))
 ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 i;
 
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
@@ -4503,7 +3524,7 @@ ndsRendererHardwareReleaseEntryStartupTextures(void)
 #endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2a (lab only): texture and palette VRAM census.
  *
@@ -4889,13 +3910,11 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
     {
         ndsVramCensusMark(sNdsR2FighterTints[i].name, nNdsVcTint);
     }
-#if NDS_R2_REBIRTH_HALO_NATIVE
     for (i = 0u; i < NDS_REBIRTH_HALO_TEXTURE_COUNT; i++)
     {
         ndsVramCensusMark(sNdsRendererRebirthHaloTextureName[i],
                           nNdsVcHaloShield);
     }
-#endif
     for (i = 0u; i < 5u; i++)
     {
         ndsVramCensusMark(sNdsEntryShieldTextureName[i], nNdsVcHaloShield);
@@ -5007,7 +4026,7 @@ void ndsVramCensusCaptureBurst(void)
     DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveLabPublish(void);
 #endif
 
@@ -5022,7 +4041,7 @@ void ndsVramCensusFrame(void)
 #if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
     DC_FlushRange(&gNdsTexIdentLab, sizeof(gNdsTexIdentLab));
 #endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     ndsFtrCarveLabPublish();
 #endif
     if (gNdsVramCensusEnable == 0u)
@@ -5407,7 +4426,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_x, u32 texture_y, u32 texture_width,
     u32 texture_height, u32 poly_id)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     NDSRendererIFCommonCloudDraw *draw;
 
     if ((texture_name == 0u) || (width_q16 <= 0) || (height_q16 <= 0) ||
@@ -5450,7 +4469,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
 
 static void ndsRendererHardwareEmitIFCommonClouds(void)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 draw_index;
 
     if (sNdsRendererIFCommonCloudQueueCount == 0u)
@@ -5733,18 +4752,12 @@ static void __attribute__((noinline)) ndsRendererHardwareApplyTextureParams(u32 
           NDS_RENDERER_GX_STATE_TEXTURE_PARAMS) != 0u) &&
         (sNdsRendererGXStateShadow.texture_params == params))
     {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        gNdsRendererM3G2TextureParamSkipCount++;
-#endif
         return;
     }
     glTexParameter(GL_TEXTURE_2D, (int)params);
     sNdsRendererGXStateShadow.texture_params = params;
     sNdsRendererGXStateShadow.valid_mask |=
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    gNdsRendererM3G2TextureParamWriteCount++;
-#endif
 }
 
 #define NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT 128u
@@ -5762,14 +4775,6 @@ typedef struct NDSRendererStageTextureSite
     u32 height;
     u32 uses_texel1;
     u32 prim_lod_fraction;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 semantic_key_hash;
-    u32 semantic_params;
-    u32 texel1_tile_state;
-    u32 texel1_primary_state;
-    u32 texel1_image0;
-    u32 texel1_image1;
-#endif
 } NDSRendererStageTextureSite;
 
 static NDSRendererStageTextureSite
@@ -5783,20 +4788,6 @@ _Static_assert(
 static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererProfileTextureCacheEntry(
-    const NDSRendererHardwareTextureCacheEntry *entry);
-static void ndsRendererProfileTexturePixel(u16 color, u32 *green_texels,
-                                           u32 *nonwhite_texels);
-static void ndsRendererProfileTextureFormat(
-    volatile u32 *mask,
-    u32 format,
-    u32 size);
-static void ndsRendererRecordTextureLaneUse(
-    const NDSRendererConfig *config,
-    u32 format,
-    u32 size);
-#endif
 
 static u32 ndsRendererStageTextureSiteSlot(const Gfx *site)
 {
@@ -5884,26 +4875,6 @@ static s32 ndsRendererStageTextureSiteTryBind(
     stats->hardware_texture_format = plan->format;
     stats->hardware_texture_width = plan->width;
     stats->hardware_texture_height = plan->height;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererSemanticLastTextureKeyHash = plan->semantic_key_hash;
-    sNdsRendererSemanticLastTextureParams = plan->semantic_params;
-    ndsRendererRecordTextureLaneUse(config, plan->format, plan->size);
-    if (plan->uses_texel1 != 0u)
-    {
-        ndsRendererRecordTextureLaneUse(config, plan->format, plan->size);
-        ndsRendererProfileRecordTexel1Composite();
-        gNdsRendererProfileTexel1LastTileState = plan->texel1_tile_state;
-        gNdsRendererProfileTexel1LastPrimaryState =
-            plan->texel1_primary_state;
-        gNdsRendererProfileTexel1LastFraction = plan->prim_lod_fraction;
-        gNdsRendererProfileTexel1LastImage0 = plan->texel1_image0;
-        gNdsRendererProfileTexel1LastImage1 = plan->texel1_image1;
-    }
-    ndsRendererProfileTextureFormat(
-        &gNdsRendererProfileTextureBindFormatMask,
-        plan->format, plan->size);
-    ndsRendererProfileTextureCacheEntry(entry);
-#endif
     return TRUE;
 }
 
@@ -5984,14 +4955,6 @@ static void ndsRendererStageTextureSiteRemember(
                          0u) ? TRUE : FALSE;
     plan->prim_lod_fraction = ndsRendererHardwareEntryKeyWord(
         entry, NDS_RENDERER_HW_TEXTURE_KEY_WORD(prim_lod_fraction));
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    plan->semantic_key_hash = sNdsRendererSemanticLastTextureKeyHash;
-    plan->semantic_params = sNdsRendererSemanticLastTextureParams;
-    plan->texel1_tile_state = gNdsRendererProfileTexel1LastTileState;
-    plan->texel1_primary_state = gNdsRendererProfileTexel1LastPrimaryState;
-    plan->texel1_image0 = gNdsRendererProfileTexel1LastImage0;
-    plan->texel1_image1 = gNdsRendererProfileTexel1LastImage1;
-#endif
 }
 
 static void ndsRendererTextureSourceHashCommand(
@@ -6045,58 +5008,6 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name)
 {
-#if NDS_TASK107_RENDER_STATE_CENSUS
-    u32 i;
-    s32 seen = FALSE;
-
-    NDS_DIAG(gNdsTask107BindRequests++);
-    if (sNdsTask107BindFrameSerial != sNdsRendererHardwareFrameSerial)
-    {
-        sNdsTask107BindFrameSerial = sNdsRendererHardwareFrameSerial;
-        sNdsTask107BindNameCount = 0u;
-    }
-    if (texture_name == 0u)
-    {
-        NDS_DIAG(gNdsTask107BindZeroNameExits++);
-        return;
-    }
-    if (sNdsRendererHardwareBoundTextureName == texture_name)
-    {
-        NDS_DIAG(gNdsTask107BindCurrentNameElisions++);
-        return;
-    }
-    NDS_DIAG(gNdsTask107BindIssues++);
-    for (i = 0u; i < sNdsTask107BindNameCount; i++)
-    {
-        if (sNdsTask107BindNames[i] == texture_name)
-        {
-            seen = TRUE;
-            break;
-        }
-    }
-    if (seen != FALSE)
-    {
-        NDS_DIAG(gNdsTask107BindRevisitIssues++);
-    }
-    else if (sNdsTask107BindNameCount < NDS_TASK107_BIND_NAME_CAPACITY)
-    {
-        sNdsTask107BindNames[sNdsTask107BindNameCount++] = texture_name;
-    }
-    else
-    {
-        NDS_DIAG(gNdsTask107BindNameSetOverflow++);
-    }
-    {
-        ndsRendererHardwareEndBatch();
-        ndsRendererHardwareBindTextureState((int)texture_name);
-        sNdsRendererHardwareBoundTextureName = texture_name;
-        ndsRendererProfileRecordTextureBind();
-        if (stats != NULL)
-        {
-            stats->hardware_texture_bind_count++;
-        }
-    }
-#else
     if (texture_name == 0u)
     {
         return;
@@ -6112,7 +5023,6 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
             stats->hardware_texture_bind_count++;
         }
     }
-#endif
 }
 
 /* Bind a GL name the texture cache does not own -- a fighter tint tile --
@@ -6168,7 +5078,7 @@ static const void *ndsRendererHardwareBattleStaticPointer(
     const void *pointer;
     uintptr_t address;
 
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
     pointer = ndsRelocNativeAssetAddress(base, source_offset);
 #else
     if ((source_offset >= bytes) ||
@@ -6277,9 +5187,7 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
         NDSRendererHardwareTextureKey key;
         u32 slot = ndsRendererHardwareEntrySlot(entry);
         u32 *pointers;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         u32 key_hash;
-#endif
 
         if (record == NULL)
         {
@@ -6322,11 +5230,9 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
             continue;
         }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         /* Remove under the OLD pointer-derived hash before changing identity. */
         ndsRendererHardwareTextureLookupRemove(entry);
         key_hash = ndsRendererHardwareTextureKeyHash(&key);
-#endif
         ndsRendererHardwareEntrySetStaticKey(entry, &key);
         sNdsRendererHardwareTextureKeyGeneration++;
         if (sNdsRendererHardwareTextureKeyGeneration == 0u)
@@ -6334,10 +5240,8 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
             sNdsRendererHardwareTextureKeyGeneration++;
         }
         entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         entry->key_hash = key_hash;
         ndsRendererHardwareTextureLookupInsert(entry);
-#endif
         refreshed++;
     }
     if (refreshed != 0u)
@@ -6451,12 +5355,6 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         u32 key_hash;
         int size_x;
         int size_y;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        u32 green_texels = 0u;
-        u32 nonwhite_texels = 0u;
-        u32 x;
-        u32 y;
-#endif
 
         if (record == NULL)
         {
@@ -6516,11 +5414,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             goto fail;
         }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         key_hash = ndsRendererHardwareTextureKeyHash(&key);
-#else
-        key_hash = 0u;
-#endif
         if (ndsRendererHardwareFindTexture(&key, key_hash) != NULL)
         {
             gNdsRendererBattleStaticTextureFailStep = 5u;
@@ -6535,23 +5429,6 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             gNdsRendererBattleStaticTextureFailStep = 6u;
             goto fail;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        /* The profile scan reads halfwords, so it only means anything for a
-         * direct-colour span. A paletted one is indices. */
-        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
-        {
-            for (y = 0u; y < record->logical_height; y++)
-            {
-                for (x = 0u; x < record->logical_width; x++)
-                {
-                    ndsRendererProfileTexturePixel(
-                        sNdsRendererHardwareTextureScratch[
-                            (y * record->upload_width) + x],
-                        &green_texels, &nonwhite_texels);
-                }
-            }
-        }
-#endif
         if ((record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16) ||
             (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256))
         {
@@ -6686,26 +5563,14 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             sNdsRendererHardwareTextureKeyGeneration++;
         }
         entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         entry->key_hash = key_hash;
-#endif
         entry->params = (u32)glGetTexParameter();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        entry->source_texels = (u32)record->logical_width *
-            (u32)record->logical_height;
-        entry->green_texels = green_texels;
-        entry->nonwhite_texels = nonwhite_texels;
-        entry->profile_width = record->upload_width;
-        entry->profile_height = record->upload_height;
-#endif
         entry->last_used_frame = 0u;
         entry->pinned = TRUE;
         entry->static_record_plus1 = record_index + 1u;
         entry->static_owner_mask = record->owner_mask;
         entry->ready = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupInsert(entry);
-#endif
         gNdsRendererBattleStaticTexturePreparedCount++;
         gNdsRendererBattleStaticTexturePreparedBytes +=
             record->payload_bytes;
@@ -6788,7 +5653,6 @@ fail:
     return FALSE;
 }
 
-#if NDS_R2_PARTICLE_RUNTIME
 /* R2-07 particle draw path -- the upload half.
  *
  * ONE atlas, one GL name, and therefore ONE bind for every particle in a
@@ -6811,12 +5675,9 @@ static u32 sNdsRendererHealSparkleCellValidMask;
 volatile u32 gNdsRendererWhispyNativePrepareCount;
 volatile u32 gNdsRendererWhispyNativeFailCount;
 volatile u32 gNdsRendererWhispyNativeBytes;
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
 volatile u32 gNdsRendererFoxBlasterGlowFailCount;
 volatile u32 gNdsRendererFoxBlasterGlowBytes;
-#endif
-#if NDS_R2_FOX_GUN_OVERLAY
 /* BUGS.md "Fox's pistol model is missing". DrawCount is the engagement proof:
  * the model-part STATE half already rises (gNdsFighterModelPartOnCount), so a
  * zero here means the overlay was skipped, not that the gun was never asked
@@ -6826,7 +5687,6 @@ volatile u32 gNdsRendererFoxGunFailCount;
 volatile u32 gNdsRendererFoxGunBytes;
 volatile u32 gNdsRendererFoxGunDrawCount;
 volatile u32 gNdsRendererFoxGunTriangleCount;
-#endif
 
 /* Bumped by every writer of the particle sheet, variant and binding tables
  * (the particle lookup memos). */
@@ -6853,14 +5713,11 @@ static void ndsRendererParticleAtlasReleaseSheets(void)
                 1, &sNdsRendererParticleAtlasName[sheet]);
             sNdsRendererParticleAtlasName[sheet] = 0;
         }
-#if NDS_R2_WHISPY_NATIVE_AOT
         memset(&sNdsRendererParticleAtlasBinding[sheet], 0,
                sizeof(sNdsRendererParticleAtlasBinding[sheet]));
-#endif
     }
 }
 
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
 /* Three source textures, three hardware-native encodings selected AOT by the
  * generator: A5I3 for IA16 dust, A3I5 for I8 air, and lossless PAL16 for leaf
  * frame zero. Upload happens once at scene prepare; the hot path receives only
@@ -6891,9 +5748,7 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
         int params = TEXGEN_TEXCOORD;
         int size_x;
         int size_y;
-#if NDS_R2_WHISPY_NATIVE_AOT
         int palette_format = -1;
-#endif
 
         switch (texture)
         {
@@ -6980,7 +5835,6 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
         }
         glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0,
                         sNdsRendererParticleAtlasPalette);
-#if NDS_R2_WHISPY_NATIVE_AOT
         /* GFX_PAL_FORMAT is a write-only GX command port, not readable state.
          * Ask libnds for the palette object's encoded PLTT_BASE word so the
          * direct binder and packet stream reproduce glBindTexture exactly. */
@@ -6990,8 +5844,6 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
         {
             goto fail;
         }
-#endif
-#if NDS_R2_WHISPY_NATIVE_AOT
         sNdsRendererWhispyNativeBinding[texture].texture_name =
             (u32)name;
         sNdsRendererWhispyNativeBinding[texture].texture_format =
@@ -7001,7 +5853,6 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
         sNdsRendererWhispyNativeBinding[texture].palette_name =
             (s32)glGlob->activePalette;
         sNdsRendererWhispyNativeBinding[texture].valid = TRUE;
-#endif
     }
     if (ndsRendererHardwareFencedTextureFclose(file) != 0)
     {
@@ -7019,9 +5870,7 @@ fail:
     gNdsRendererWhispyNativeFailCount++;
     return FALSE;
 }
-#endif
 
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* EFCommon texture 27 is already an exact DS PAL16 payload in the generated
  * particle asset: 16x8 CI4 + fourteen RGBA5551 colours becomes 64 texel bytes
  * plus 28 palette bytes with zero model error. Script 0x62 immediately issues
@@ -7142,7 +5991,6 @@ fail:
     gNdsRendererFoxBlasterGlowFailCount++;
     return FALSE;
 }
-#endif
 
 /* KO BLAST PILLAR ENVIRONMENT VARIANTS.
  *
@@ -7197,10 +6045,8 @@ typedef struct NDSParticleEnvVariant
     u32 prim;
     u32 env;
     int name;
-#if NDS_R2_WHISPY_NATIVE_AOT
     u32 palette_format;
     s32 palette_name;
-#endif
     /* The palette's LCD address (NULL: never rewritten in place), the banks
      * it spans (bit 0 E, 1 F, 2 G), the last epoch that referenced it, and a
      * refused allocation (palette RAM full) that is not retried. */
@@ -7241,7 +6087,6 @@ static u32 sNdsParticleEnvMemoName;
  * particle on that sheet would keep the KO ramp. 64 bytes of palette RAM per
  * sheet that ever uses a variant, and none for a sheet that never does. */
 static int sNdsParticleBasePaletteName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
-#if NDS_R2_WHISPY_NATIVE_AOT
 static u32
     sNdsParticleBasePaletteFormat[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 static s32
@@ -7253,7 +6098,6 @@ static s32
  * did not change. */
 static u32 sNdsRendererParticlePacketStateDirty;
 static void ndsRendererFlushWhispyNativePacket(void);
-#endif
 volatile u32 gNdsParticleEnvVariantBakeCount;
 volatile u32 gNdsParticleEnvVariantHitCount;
 /* ENVCOLOR was set and no variant could be produced, so the quad drew with the
@@ -7405,13 +6249,11 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     if (sNdsParticleBasePaletteName[sheet] == 0)
     {
         int base_name = 0;
-#if NDS_R2_WHISPY_NATIVE_AOT
         int base_palette_format = -1;
 
         /* glGen/bind/upload below changes live GX/libnds texture state.  A
          * packet already carrying older vertices must reach GX first. */
         ndsRendererFlushWhispyNativePacket();
-#endif
 
         if (ndsRendererHardwareFencedGlGenTextures(1, &base_name) == 0)
         {
@@ -7430,7 +6272,6 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             sNdsRendererHardwareBoundTextureName = 0u;
             return 0u;
         }
-#if NDS_R2_WHISPY_NATIVE_AOT
         glGetColorTableParameterEXT(
             GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &base_palette_format);
         if (base_palette_format < 0)
@@ -7442,14 +6283,11 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         sNdsParticleBasePaletteFormat[sheet] = (u32)base_palette_format;
         sNdsParticleBasePaletteActive[sheet] = (s32)glGlob->activePalette;
         sNdsRendererParticlePacketStateDirty = TRUE;
-#endif
         sNdsParticleBasePaletteName[sheet] = base_name;
     }
     if (variant->valid == 0u)
     {
-#if NDS_R2_WHISPY_NATIVE_AOT
         ndsRendererFlushWhispyNativePacket();
-#endif
         if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
         {
             return 0u;
@@ -7457,14 +6295,12 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         variant->name = name;
         variant->valid = TRUE;
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     else
     {
         /* The palette object is about to be rewritten.  No queued GX command
          * may retain its old PLTT_BASE contents past this point. */
         ndsRendererFlushWhispyNativePacket();
     }
-#endif
     ndsRendererHardwareBindTextureName(NULL, (u32)variant->name);
     glColorTableEXT(GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
                     bake);
@@ -7479,7 +6315,6 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         sNdsRendererHardwareBoundTextureName = 0u;
         return 0u;
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     {
         int variant_palette_format = -1;
 
@@ -7499,7 +6334,6 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         variant->palette_name = (s32)glGlob->activePalette;
         sNdsRendererParticlePacketStateDirty = TRUE;
     }
-#endif
     /* Where the palette lives, so later misses rewrite it in place. */
     variant->vram = NULL;
     variant->banks = 0u;
@@ -7592,10 +6426,8 @@ static void ndsRendererParticleEnvVariantDiscard(void)
                 1, &sNdsParticleEnvVariants[slot].name);
             sNdsParticleEnvVariants[slot].name = 0;
             sNdsParticleEnvVariants[slot].valid = FALSE;
-#if NDS_R2_WHISPY_NATIVE_AOT
             sNdsParticleEnvVariants[slot].palette_format = 0u;
             sNdsParticleEnvVariants[slot].palette_name = 0;
-#endif
         }
         sNdsParticleEnvVariants[slot].vram = NULL;
         sNdsParticleEnvVariants[slot].banks = 0u;
@@ -7617,15 +6449,11 @@ static void ndsRendererParticleEnvVariantDiscard(void)
             ndsRendererHardwareFencedGlDeleteTextures(
                 1, &sNdsParticleBasePaletteName[slot]);
             sNdsParticleBasePaletteName[slot] = 0;
-#if NDS_R2_WHISPY_NATIVE_AOT
             sNdsParticleBasePaletteFormat[slot] = 0u;
             sNdsParticleBasePaletteActive[slot] = 0;
-#endif
         }
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     sNdsRendererParticlePacketStateDirty = TRUE;
-#endif
 }
 
 
@@ -7686,9 +6514,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
     {
         int name = 0;
-#if NDS_R2_WHISPY_NATIVE_AOT
         int palette_format = -1;
-#endif
 
         if ((ndsRendererHardwareFencedTextureFseek(
                  file, (long)(sheet * NDS_PARTICLE_QUAD_SHEET_BYTES),
@@ -7753,7 +6579,6 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
             GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
             &sNdsRendererParticleAtlasPalette[
                 sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES]);
-#if NDS_R2_WHISPY_NATIVE_AOT
         glGetColorTableParameterEXT(
             GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
         if (palette_format < 0)
@@ -7768,7 +6593,6 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         sNdsRendererParticleAtlasBinding[sheet].palette_name =
             (s32)glGlob->activePalette;
         sNdsRendererParticleAtlasBinding[sheet].valid = TRUE;
-#endif
     }
 
     if (ndsRendererHardwareFencedTextureFclose(file) != 0)
@@ -7777,18 +6601,14 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
     file = NULL;
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
     if (ndsRendererHardwarePrepareWhispyNativeTextures() == FALSE)
     {
         goto fail;
     }
-#endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     if (ndsRendererHardwarePrepareFoxBlasterGlowTexture() == FALSE)
     {
         goto fail;
     }
-#endif
 #if NDS_P2_STAGE_HYRULE
     if ((gNdsParticleBankHyruleID != 0xffu) &&
         (ndsRendererHardwarePrepareHyruleTextures() == FALSE))
@@ -7857,26 +6677,20 @@ u32 ndsRendererHardwareParticleAtlasName(void)
 
 u32 ndsRendererHardwareFoxBlasterGlowName(void)
 {
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     if (sNdsRendererParticleAtlasPrepared != 0u)
     {
         return (u32)sNdsRendererFoxBlasterGlowName;
     }
-#endif
     return 0u;
 }
 
 u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
 {
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
     if ((sNdsRendererParticleAtlasPrepared != 0u) &&
         (texture_id < NDS_WHISPY_NATIVE_TEXTURE_COUNT))
     {
         return (u32)sNdsRendererWhispyNativeName[texture_id];
     }
-#else
-    (void)texture_id;
-#endif
     return 0u;
 }
 
@@ -7885,7 +6699,6 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     u32 sheet;
 
     ndsRendererParticleAtlasReleaseSheets();
-#if NDS_R2_WHISPY_NATIVE_TEXTURES
     for (sheet = 0u; sheet < NDS_WHISPY_NATIVE_TEXTURE_COUNT; sheet++)
     {
         if (sNdsRendererWhispyNativeName[sheet] != 0)
@@ -7899,16 +6712,12 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
                 1, &sNdsRendererWhispyNativeName[sheet]);
         }
         sNdsRendererWhispyNativeName[sheet] = 0;
-#if NDS_R2_WHISPY_NATIVE_AOT
         sNdsRendererWhispyNativeBinding[sheet].texture_name = 0u;
         sNdsRendererWhispyNativeBinding[sheet].texture_format = 0u;
         sNdsRendererWhispyNativeBinding[sheet].palette_format = 0u;
         sNdsRendererWhispyNativeBinding[sheet].palette_name = 0;
         sNdsRendererWhispyNativeBinding[sheet].valid = FALSE;
-#endif
     }
-#endif
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     if (sNdsRendererFoxBlasterGlowName != 0)
     {
         if (sNdsRendererHardwareBoundTextureName ==
@@ -7923,7 +6732,6 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     memset(&sNdsRendererWhispyNativeBinding[
                NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
            sizeof(sNdsRendererWhispyNativeBinding[0]));
-#endif
 #if NDS_P2_STAGE_HYRULE
     /* The atlas tail owns these names, so every atlas discard drops them for
      * the same reason whispy and fox glow release above: glResetTextures (and
@@ -7938,9 +6746,7 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     gNdsRendererParticleAtlasBytes = 0u;
     sNdsRendererHealSparkleCellValidMask = 0u;
     gNdsRendererWhispyNativeBytes = 0u;
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
     gNdsRendererFoxBlasterGlowBytes = 0u;
-#endif
 }
 
 /* BUGS.md "VFX get x flattened around stage edges ... why is there a limit
@@ -8243,7 +7049,6 @@ volatile s32 gNdsParticleCamTz;
  * the one caller that sits above it in the file. */
 static void ndsRendererCopyMtx20p12ToM4x4(
     const NDSRendererMatrix20p12 *src, m4x4 *dst);
-#if NDS_R2_FOX_GUN_OVERLAY
 /* Declared here for ndsRendererSubmitFoxGun, which sits above the definition.
  * It is the ONLY correct way to hand this renderer a CPU-composed MVP: it
  * forces GL_PROJECTION to identity and divides the composed homogeneous row by
@@ -8251,7 +7056,6 @@ static void ndsRendererCopyMtx20p12ToM4x4(
  * encoding. A submit that loads the MVP itself gets neither. */
 static void ndsRendererLoadHardwareRawComposedMatrix(
     const NDSRendererMatrix20p12 *composed, u32 generation);
-#endif
 
 static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
 static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
@@ -8390,7 +7194,6 @@ static s32 ndsRendererLoadParticleCameraMatrices(void)
     return TRUE;
 }
 
-#if NDS_R2_FOX_BLASTER_QUAD
 static s32 ndsRendererHardwareNextProjectedDepth(void);
 static void ndsRendererHardwareBindNoTexture(NDSRendererStats *stats);
 
@@ -8440,9 +7243,7 @@ static s32 ndsRendererLoadFoxBlasterNoZCameraMatrices(void)
     gNdsParticleCamTz = scaled_modelview.m[3][2];
     return TRUE;
 }
-#endif
 
-#if NDS_R2_WHISPY_NATIVE_AOT
 static NDS_RENDERER_FAST_RUN_CODE void
 ndsRendererPrepareWhispyQuadState(u32 texture_name, u32 poly_alpha,
                                   u32 texture_slot, u32 submit_route);
@@ -8453,7 +7254,6 @@ static s32 ndsRendererSubmitParticleQuadPacket(
     const s32 right_leg_q8[3], const s32 up_leg_q8[3],
     u32 color, u32 poly_alpha, u32 mirror_mask,
     u32 atlas_x, u32 atlas_y, u32 atlas_w, u32 atlas_h);
-#endif
 
 /* One quad, camera-facing, in world space. `right` and `up` are the camera
  * basis the caller derived from the CObj -- computed there because that is
@@ -8682,320 +7482,13 @@ s32 ndsRendererSubmitParticleQuadQ8(u32 atlas_name, const s32 center[3],
             gNdsParticleEnvVariantFallbackCount++;
         }
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     return ndsRendererSubmitParticleQuadPacket(
         atlas_name, env_palette_name,
         center_q8, right_leg_q8, up_leg_q8,
         color, poly_alpha, mirror_mask,
         atlas_x, atlas_y, atlas_w, atlas_h);
-#else
-    if ((sNdsRendererParticleQuadOpen != 0u) &&
-        ((poly_alpha != sNdsRendererParticleQuadAlpha) ||
-         (atlas_name != sNdsRendererParticleQuadTexture)))
-    {
-        /* NO glEnd() -- ndsRendererEndParticleQuads explains why at length: an
-         * extra FIFO write desynchronises this command stream and hung the ROM
-         * at GXSTAT=0e008900. POLYGON_ATTR latches at glBegin, so re-issuing
-         * the format and starting the next group is the whole operation.
-         *
-         * A SHEET CHANGE COSTS EXACTLY THE SAME THING, which is what made
-         * splitting the atlas across four 8,192-byte allocations affordable:
-         * TEXIMAGE_PARAM latches per group just as POLYGON_ATTR does, so
-         * rebinding and reopening the group is a rebind plus a glBegin, not a
-         * flush. Counted separately from the alpha breaks so the two costs stay
-         * attributable -- if SheetBreaks ever approaches the quad count, the
-         * pack order and not the sheet count is what needs revisiting. */
-        if (atlas_name != sNdsRendererParticleQuadTexture)
-        {
-            ndsRendererHardwareBindTextureName(NULL, atlas_name);
-            sNdsRendererParticleQuadTexture = atlas_name;
-            gNdsParticleQuadSheetBreaks++;
-        }
-        ndsRendererHardwareSetPolyFmt(
-            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
-        if (poly_alpha != sNdsRendererParticleQuadAlpha)
-        {
-            gNdsParticleQuadAlphaBreaks++;
-        }
-        sNdsRendererParticleQuadAlpha = poly_alpha;
-        glBegin(GL_QUAD);
-    }
-    if (sNdsRendererParticleQuadOpen == 0u)
-    {
-        /* TEMPORARY, BUGS.md rows 1/4/6/KO-VFX. The particle pass loads NO
-         * matrix, so every quad is drawn under whatever the last object left
-         * active. If that is a fighter bone or a stage segment rather than the
-         * scene's own camera matrix, particles land in that object's space --
-         * which is exactly "effects don't play at correct locations" and "the
-         * KO effect plays too close to the camera instead of at the fighters'
-         * z depth". Latch the mode so the guess is measured, not assumed. */
-        gNdsParticleMatrixModeSeen |= 1u << (sNdsRendererHardwareMatrixMode & 7u);
-        gNdsParticleMatrixLoadedSeen = sNdsRendererHardwareMatrixLoaded;
-        gNdsParticleBatchOpens++;
-        ndsRendererHardwareEndBatch();
-        /* Same translation shift every other root load applies
-         * (ndsRendererLoadHardwareSplitMatrices): vertices arrive at world
-         * x16, so the shared loader brings the camera translation down by the
-         * matching WORLD_UNIT_SHIFT. A missing camera preserves the old
-         * behavior of proceeding without a camera reload. */
-        (void)ndsRendererLoadParticleCameraMatrices();
-        /* The scale that compensates the vertex factor, so quads land where
-         * they always did and only their representable RANGE changes. Pushed
-         * unconditionally even at shift 0 (scale 1) so the pop in
-         * ndsRendererEndParticleQuads is symmetric whether or not the batch
-         * ever escalated, and so an escalation is a pop/push of a matrix that
-         * is already on the stack rather than a special first case. */
-        sNdsRendererParticleScaleShift = 0u;
-        glPushMatrix();
-        glEnable(GL_TEXTURE_2D);
-        ndsRendererHardwareBindTextureName(NULL, atlas_name);
-        sNdsRendererParticleQuadTexture = atlas_name;
-        /* Translucent, unlit, both faces: a billboard has no meaningful
-         * winding and the source draws these with the RDP's blender rather
-         * than the lighting pipeline. */
-        ndsRendererHardwareSetPolyFmt(
-            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
-        sNdsRendererParticleQuadAlpha = poly_alpha;
-        glBegin(GL_QUAD);
-        sNdsRendererParticleQuadOpen = TRUE;
-    }
-    /* Palette selection rides beside the (alpha, sheet) group key on BOTH
-     * batch routes above: the AOT prepare and the generic grouping know
-     * nothing of variants, so a change re-issues the format and starts a new
-     * group here, the same no-glEnd FIFO-safe pattern the break path uses.
-     * Palette addresses are immutable throughout queued draws -- only the
-     * selected binding changes and the texels stay resident, the same
-     * arrangement the entry-effect KO path relies on -- and assigning the
-     * sheet's own name restores its base palette on the way back to legacy
-     * quads. A group is always open at this point (both routes above open
-     * one), and legacy quads never leave 0, so the untouched path issues no
-     * new GL calls. */
-    if (env_palette_name != sNdsRendererParticleQuadPalette)
-    {
-        u32 assign_name = env_palette_name;
-
-        if (assign_name == 0u)
-        {
-            /* Back to the sheet's OWN palette, which lives under the base
-             * name: glAssignColorTable copies from the named texture onto the
-             * bound one, so assigning atlas_name to itself restores nothing
-             * once a variant has overwritten it. A sheet with no base name
-             * never carried a variant, so its palette was never touched and
-             * there is nothing to restore. */
-            u32 base_sheet = ndsRendererParticleSheetForName(atlas_name);
-
-            assign_name = (base_sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS) ?
-                (u32)sNdsParticleBasePaletteName[base_sheet] : 0u;
-        }
-        if (assign_name != 0u)
-        {
-            glAssignColorTable(GL_TEXTURE_2D, (int)assign_name);
-        }
-        sNdsRendererParticleQuadPalette = env_palette_name;
-        ndsRendererHardwareSetPolyFmt(
-            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
-        glBegin(GL_QUAD);
-        gNdsParticleQuadPaletteBreaks++;
-    }
-
-    /* The furthest corner this quad will reach, per axis, without evaluating
-     * all four: |centre| + |right leg| + |up leg| bounds every combination of
-     * the two signs. If it does not fit the batch's current factor, coarsen the
-     * factor now -- before any of this quad's vertices are queued. */
-    {
-        u32 ex = ndsRendererParticleAbsQ8(center_q8[0]) +
-                 ndsRendererParticleAbsQ8(right_leg_q8[0]) +
-                 ndsRendererParticleAbsQ8(up_leg_q8[0]);
-        u32 ey = ndsRendererParticleAbsQ8(center_q8[1]) +
-                 ndsRendererParticleAbsQ8(right_leg_q8[1]) +
-                 ndsRendererParticleAbsQ8(up_leg_q8[1]);
-        u32 ez = ndsRendererParticleAbsQ8(center_q8[2]) +
-                 ndsRendererParticleAbsQ8(right_leg_q8[2]) +
-                 ndsRendererParticleAbsQ8(up_leg_q8[2]);
-        u32 extent_q8 = (ex > ey) ? ex : ey;
-        u32 needed;
-
-        if (ez > extent_q8) { extent_q8 = ez; }
-        if (extent_q8 <= (UINT_MAX - NDS_RENDERER_PARTICLE_EXTENT_GUARD_Q8))
-        {
-            extent_q8 += NDS_RENDERER_PARTICLE_EXTENT_GUARD_Q8;
-        }
-        else
-        {
-            extent_q8 = UINT_MAX;
-        }
-        needed = ndsRendererParticleScaleShiftForQ8(extent_q8);
-        if (needed > sNdsRendererParticleScaleShift)
-        {
-            /* Vertices already queued were transformed against the matrix that
-             * was live when they were submitted, so swapping it now moves only
-             * what follows. Pop back to the camera modelview, push the coarser
-             * compensation, continue the same primitive group -- no glEnd, for
-             * the reason ndsRendererEndParticleQuads states at length. */
-            s32 factor = inttof32(1 << needed);
-
-            glPopMatrix(1);
-            glPushMatrix();
-            glScalef32(factor, factor, factor);
-            sNdsRendererParticleScaleShift = needed;
-            gNdsParticleScaleEscalations++;
-            if (needed > gNdsParticleScaleShiftMax)
-            {
-                gNdsParticleScaleShiftMax = needed;
-            }
-        }
-    }
-    /* The baked variant palette already carries the full
-     * (PRIM - ENV) * TEXEL + ENV lerp, so the vertex stays white and out of
-     * the way; the sheet-coverage alpha bit in the palette and the polygon
-     * alpha above are both untouched. Legacy quads keep vertex `color`. */
-    if (env_palette_name != 0u)
-    {
-        color = NDS_PARTICLE_ENV_VARIANT_WHITE;
-    }
-    glColor((rgb)color);
-
-    mirror_mask &= 3u;
-    if (mirror_mask == 0u)
-    {
-        u32 corner;
-
-        /* Counter-clockwise from the bottom-left, with T increasing downward
-         * to match the atlas rows. */
-        for (corner = 0u; corner < 4u; corner++)
-        {
-            s32 sx = ((corner == 0u) || (corner == 3u)) ? -1 : 1;
-            s32 sy = (corner < 2u) ? -1 : 1;
-            u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
-                                         ? 0u : atlas_w);
-            u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
-            u32 shift = sNdsRendererParticleScaleShift;
-
-            glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
-            glVertex3v16(
-                ndsRendererParticleQ8ToV16(
-                    center_q8[0] + right_leg_q8[0] * sx +
-                    up_leg_q8[0] * sy, shift),
-                ndsRendererParticleQ8ToV16(
-                    center_q8[1] + right_leg_q8[1] * sx +
-                    up_leg_q8[1] * sy, shift),
-                ndsRendererParticleQ8ToV16(
-                    center_q8[2] + right_leg_q8[2] * sx +
-                    up_leg_q8[2] * sy, shift));
-        }
-    }
-    else
-    {
-        /* N64 lbParticle does NOT stretch a MASKS/MASKT source fragment over
-         * the rectangle. It doubles dsdx/dtdy and sets G_TX_MIRROR, making a
-         * triangle wave across the SAME rectangle:
-         *
-         *   S:  left 0 -> centre W -> right 0
-         *   T:  top  0 -> centre H -> bottom 0
-         *
-         * The DS can mirror a whole texture name, but this name is an atlas;
-         * hardware wrap would cross the cell boundary into another effect.
-         * Build the 3x3 world grid once using only +/- adds (the expensive
-         * right/up * size products above remain once per particle), then emit
-         * 2 or 4 atlas-cell quads with the exact triangle-wave UVs. */
-        s32 right_x[3] = { -right_leg_q8[0], 0, right_leg_q8[0] };
-        s32 right_y[3] = { -right_leg_q8[1], 0, right_leg_q8[1] };
-        s32 right_z[3] = { -right_leg_q8[2], 0, right_leg_q8[2] };
-        s32 up_x[3] = { -up_leg_q8[0], 0, up_leg_q8[0] };
-        s32 up_y[3] = { -up_leg_q8[1], 0, up_leg_q8[1] };
-        s32 up_z[3] = { -up_leg_q8[2], 0, up_leg_q8[2] };
-        v16 grid_x[3][3];
-        v16 grid_y[3][3];
-        v16 grid_z[3][3];
-        u32 s_edge[3];
-        u32 t_edge[3];
-        u32 s_uv_q4[3];
-        u32 t_uv_q4[3];
-        u32 s_parts;
-        u32 t_parts;
-        u32 row;
-        u32 column;
-        u32 shift = sNdsRendererParticleScaleShift;
-
-        for (row = 0u; row < 3u; row++)
-        {
-            for (column = 0u; column < 3u; column++)
-            {
-                grid_x[row][column] = ndsRendererParticleQ8ToV16(
-                    center_q8[0] + right_x[column] + up_x[row], shift);
-                grid_y[row][column] = ndsRendererParticleQ8ToV16(
-                    center_q8[1] + right_y[column] + up_y[row], shift);
-                grid_z[row][column] = ndsRendererParticleQ8ToV16(
-                    center_q8[2] + right_z[column] + up_z[row], shift);
-            }
-        }
-
-        if ((mirror_mask & 1u) != 0u)
-        {
-            s_parts = 2u;
-            s_edge[0] = 0u; s_edge[1] = 1u; s_edge[2] = 2u;
-            s_uv_q4[0] = atlas_x << 4;
-            /* Atlas cells have no padding. The N64 mirror fold duplicates the
-             * source's last texel; sampling exactly at atlas_x+atlas_w could
-             * name the NEXT cell at the fold. Stay one 1/16-texel unit inside
-             * the source cell so both halves meet on its own edge texel. */
-            s_uv_q4[1] = ((atlas_x + atlas_w) << 4) - 1u;
-            s_uv_q4[2] = atlas_x << 4;
-        }
-        else
-        {
-            s_parts = 1u;
-            s_edge[0] = 0u; s_edge[1] = 2u;
-            s_uv_q4[0] = atlas_x << 4;
-            s_uv_q4[1] = (atlas_x + atlas_w) << 4;
-        }
-        if ((mirror_mask & 2u) != 0u)
-        {
-            t_parts = 2u;
-            t_edge[0] = 0u; t_edge[1] = 1u; t_edge[2] = 2u;
-            /* Grid row 0 is the BOTTOM. Source T increases downward: bottom
-             * and top are both 0 under mirror, and the centre is H. */
-            t_uv_q4[0] = atlas_y << 4;
-            t_uv_q4[1] = ((atlas_y + atlas_h) << 4) - 1u;
-            t_uv_q4[2] = atlas_y << 4;
-        }
-        else
-        {
-            t_parts = 1u;
-            t_edge[0] = 0u; t_edge[1] = 2u;
-            t_uv_q4[0] = (atlas_y + atlas_h) << 4;
-            t_uv_q4[1] = atlas_y << 4;
-        }
-
-        for (row = 0u; row < t_parts; row++)
-        {
-            for (column = 0u; column < s_parts; column++)
-            {
-                u32 s0 = s_edge[column];
-                u32 s1 = s_edge[column + 1u];
-                u32 t0 = t_edge[row];
-                u32 t1 = t_edge[row + 1u];
-
-                glTexCoord2t16((t16)s_uv_q4[column],
-                               (t16)t_uv_q4[row]);
-                glVertex3v16(grid_x[t0][s0], grid_y[t0][s0], grid_z[t0][s0]);
-                glTexCoord2t16((t16)s_uv_q4[column + 1u],
-                               (t16)t_uv_q4[row]);
-                glVertex3v16(grid_x[t0][s1], grid_y[t0][s1], grid_z[t0][s1]);
-                glTexCoord2t16((t16)s_uv_q4[column + 1u],
-                               (t16)t_uv_q4[row + 1u]);
-                glVertex3v16(grid_x[t1][s1], grid_y[t1][s1], grid_z[t1][s1]);
-                glTexCoord2t16((t16)s_uv_q4[column],
-                               (t16)t_uv_q4[row + 1u]);
-                glVertex3v16(grid_x[t1][s0], grid_y[t1][s0], grid_z[t1][s0]);
-            }
-        }
-    }
-    return TRUE;
-#endif /* native standalone quad path when Whispy/particle packets are absent */
 }
 
-#if NDS_R2_WHISPY_NATIVE_AOT
 #define NDS_RENDERER_WHISPY_BASIS_SHIFT 14u
 #define NDS_RENDERER_WHISPY_SIZE_SHIFT 8u
 #define NDS_RENDERER_WHISPY_COORD_SHIFT 12u
@@ -10360,30 +8853,6 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
     }
     return 1;
 }
-#else
-void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
-{
-    (void)right; (void)up;
-}
-
-s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
-                                      u32 texture_slot,
-                                      const Vec3f *pos, f32 size,
-                                      const s32 fixed_center_q12[3],
-                                      s32 fixed_size_q8,
-                                      u32 color, u8 alpha,
-                                      u32 mirror_mask,
-                                      u32 texture_w, u32 texture_h,
-                                      sb32 packet)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
-    (void)fixed_center_q12; (void)fixed_size_q8;
-    (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
-    (void)packet;
-    return -1;
-}
-#endif
 
 void ndsRendererEndParticleQuads(void)
 {
@@ -10391,11 +8860,9 @@ void ndsRendererEndParticleQuads(void)
     u32 whispy_packet_popped = FALSE;
     sNdsRendererParticleViewSpace = FALSE;
 
-#if NDS_R2_WHISPY_NATIVE_AOT
     /* Route 4 leaves the final source-ordered packet in cached RAM until this
      * natural pass boundary. The balancing pop rides after its last vertex. */
     whispy_packet_popped = ndsRendererFinishWhispyNativePacket();
-#endif
     if (sNdsRendererParticleQuadOpen != 0u)
     {
         /* NO glEnd(). Task 29 removed libnds's dummy glEnd FIFO writes from
@@ -10431,9 +8898,7 @@ void ndsRendererEndParticleQuads(void)
          * the next real bind compares against it correctly. */
         sNdsRendererHardwareActiveTextureEntry = NULL;
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     sNdsRendererWhispyBasisValid = FALSE;
-#endif
 }
 
 /* A frame whose only geometry is world quads (the staff roll's names) is still
@@ -10444,7 +8909,6 @@ void ndsRendererHardwareNoteQuadFrame(void)
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
-#if NDS_R2_FOX_BLASTER_QUAD
 /* ARM946E-S has no FPU. The beam's source DObj is already a closed four-vertex
  * contract, so paying __aeabi_fmul/__aeabi_f2iz for every coordinate would
  * throw away most of the native-submit gain. Decode finite IEEE-754 directly
@@ -10630,9 +9094,7 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
         return FALSE;
     }
 
-#if NDS_R2_WHISPY_NATIVE_AOT
     ndsRendererFlushWhispyNativePacket();
-#endif
     /* A direct weapon display cannot borrow an open particle primitive. Flush
      * it first if ordering ever places one here, then own one balanced matrix
      * push for this source quad. */
@@ -10684,9 +9146,7 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
     return TRUE;
 }
-#endif /* NDS_R2_FOX_BLASTER_QUAD */
 
-#if NDS_R2_FOX_GUN_OVERLAY
 /* Fox's blaster geometry, uploaded once. Unlike the glow this reads no asset
  * file: nds_fox_gun.c carries the source's own CI4 32x16 and its 16 RGBA5551
  * colours in the DS channel order, so the "conversion" is a memcpy into VRAM.
@@ -10887,7 +9347,6 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
     gNdsRendererFoxGunTriangleCount += triangle_count;
     return TRUE;
 }
-#endif /* NDS_R2_FOX_GUN_OVERLAY */
 
 /* The afterimage trail (nds_renderer.h). The source strip
  * (ftdisplaymain.c:589-596) is one gSPVertex of `count` shaded vertices and
@@ -10934,9 +9393,7 @@ s32 ndsRendererSubmitAfterImage(const NDSRendererMatrix20p12 *composed,
             }
         }
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
     ndsRendererFlushWhispyNativePacket();
-#endif
     ndsRendererEndParticleQuads();
     ndsRendererHardwareEndBatch();
     ndsRendererLoadHardwareRawComposedMatrix(
@@ -10989,9 +9446,7 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
                                    f32 bottom, f32 width)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_R2_WHISPY_NATIVE_AOT
     ndsRendererFlushWhispyNativePacket();
-#endif
     if (sNdsRendererParticleQuadOpen == 0u)
     {
         return;
@@ -11032,7 +9487,6 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
     /* Leave the triangle group open; ndsRendererEndParticleQuads flushes it. Do
      * NOT re-enable GL_TEXTURE_2D here -- the batch is about to close. */
 }
-#endif /* NDS_R2_PARTICLE_RUNTIME */
 
 void ndsRendererHardwareArmBattleStaticTextures(void)
 {
@@ -11405,9 +9859,6 @@ static u32 ndsRendererHardwareTextureSourceWidthPixels(u32 render_size,
     return image_width;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static u32 ndsRendererHardwareTextureFormatBit(u32 format, u32 size);
-#endif
 
 static NDSRendererTextureDataLayout ndsRendererTextureDataLayout(
     const NDSRendererConfig *config)
@@ -11424,51 +9875,7 @@ static NDSRendererTextureDataLayout ndsRendererTextureDataLayout(
     return NDS_RENDERER_TEXTURE_DATA_NATIVE;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static u32 ndsRendererTexturePackMap(
-    NDSRendererTextureDataLayout layout, u32 stride)
-{
-    u32 map = 0u;
-    u32 i;
 
-    for (i = 0u; i < 4u; i++)
-    {
-        u32 physical = i;
-
-        if (layout == NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED)
-        {
-            physical = i ^ stride;
-        }
-        map |= (physical & 0xffu) << (i * 8u);
-    }
-    return map;
-}
-#endif
-
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererRecordTextureLaneCount(
-    NDSRendererTextureDataLayout layout, u32 is_halfword,
-    u32 format, u32 size, u32 count)
-{
-    u32 format_bit = ndsRendererHardwareTextureFormatBit(format, size);
-
-    gNdsRendererProfileTextureLaneLayoutMask |= 1u << (u32)layout;
-    if (is_halfword != 0u)
-    {
-        gNdsRendererProfileTextureLaneHalfwordAccessCount += count;
-        gNdsRendererProfileTextureLaneHalfwordFormatMask |= format_bit;
-        gNdsRendererProfileTextureLaneHalfwordMap =
-            ndsRendererTexturePackMap(layout, 1u);
-    }
-    else
-    {
-        gNdsRendererProfileTextureLaneByteAccessCount += count;
-        gNdsRendererProfileTextureLaneByteFormatMask |= format_bit;
-        gNdsRendererProfileTextureLaneByteMap =
-            ndsRendererTexturePackMap(layout, 3u);
-    }
-}
-#endif
 
 static u32 ndsRendererTextureLogicalByteIndex(
     NDSRendererTextureDataLayout layout, u32 logical_index)
@@ -11577,36 +9984,6 @@ static u16 ndsRendererReadTextureHalfword(
     return data[ndsRendererTextureLogicalHalfwordIndex(layout, logical_index)];
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsRendererRecordTextureLaneUseCount(
-    const NDSRendererConfig *config, u32 format, u32 size, u32 count)
-{
-    NDSRendererTextureDataLayout layout = ndsRendererTextureDataLayout(config);
-
-    if ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
-        (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))
-    {
-        ndsRendererRecordTextureLaneCount(
-            layout, FALSE, format, size, count);
-    }
-    else if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
-    {
-        ndsRendererRecordTextureLaneCount(
-            layout, TRUE, format, size, count);
-    }
-    if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
-    {
-        ndsRendererRecordTextureLaneCount(
-            layout, TRUE, format, NDS_RENDERER_HW_TEXTURE_SIZ_16B, count);
-    }
-}
-
-static void ndsRendererRecordTextureLaneUse(
-    const NDSRendererConfig *config, u32 format, u32 size)
-{
-    ndsRendererRecordTextureLaneUseCount(config, format, size, 1u);
-}
-#endif
 
 static u16 ndsRendererHardwarePaletteColor(
     const NDSRendererConfig *config, const u16 *palette, u32 index, u32 count,
@@ -11773,165 +10150,6 @@ static u16 ndsRendererHardwareTextureValueColor(
     return ndsRendererHardwareConvertI((u8)value);
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static s32 ndsRendererTextureColorNonWhite(u16 color)
-{
-    u32 r;
-    u32 g;
-    u32 b;
-
-    if ((color & (1u << 15)) == 0u)
-    {
-        return FALSE;
-    }
-    r = color & 0x1fu;
-    g = (color >> 5) & 0x1fu;
-    b = (color >> 10) & 0x1fu;
-    return ((r < 29u) || (g < 29u) || (b < 29u)) ? TRUE : FALSE;
-}
-
-static s32 ndsRendererTextureColorDominantGreen(u16 color)
-{
-    u32 r;
-    u32 g;
-    u32 b;
-
-    if ((color & (1u << 15)) == 0u)
-    {
-        return FALSE;
-    }
-    r = color & 0x1fu;
-    g = (color >> 5) & 0x1fu;
-    b = (color >> 10) & 0x1fu;
-    return ((g >= 10u) && (g > (r + 2u)) && (g > (b + 2u))) ?
-        TRUE : FALSE;
-}
-
-static void ndsRendererProfileTexturePixel(u16 color, u32 *green_texels,
-                                           u32 *nonwhite_texels)
-{
-    if (ndsRendererTextureColorNonWhite(color) != FALSE)
-    {
-        if (nonwhite_texels != NULL)
-        {
-            (*nonwhite_texels)++;
-        }
-    }
-    if (ndsRendererTextureColorDominantGreen(color) != FALSE)
-    {
-        if (green_texels != NULL)
-        {
-            (*green_texels)++;
-        }
-    }
-}
-
-static void ndsRendererProfileTextureCacheEntry(
-    const NDSRendererHardwareTextureCacheEntry *entry)
-{
-    if ((entry == NULL) || (entry->ready == FALSE))
-    {
-        return;
-    }
-    gNdsRendererProfileTextureSourceTexels += entry->source_texels;
-    gNdsRendererProfileTextureGreenTexels += entry->green_texels;
-    gNdsRendererProfileTextureNonWhiteTexels += entry->nonwhite_texels;
-}
-
-static s32 ndsRendererHardwareTextureWrapCoord(s32 coord, u32 size,
-                                               u32 wrap, u32 mirror)
-{
-    s32 period;
-
-    if (size == 0u)
-    {
-        return 0;
-    }
-    if (wrap == 0u)
-    {
-        if (coord < 0)
-        {
-            return 0;
-        }
-        if ((u32)coord >= size)
-        {
-            return (s32)size - 1;
-        }
-        return coord;
-    }
-
-    period = (s32)((mirror != 0u) ? size * 2u : size);
-    if (period <= 0)
-    {
-        return 0;
-    }
-    coord %= period;
-    if (coord < 0)
-    {
-        coord += period;
-    }
-    if ((mirror != 0u) && ((u32)coord >= size))
-    {
-        coord = ((s32)size * 2) - 1 - coord;
-    }
-    return coord;
-}
-
-static void ndsRendererProfileTextureSample(s16 s, s16 t)
-{
-    const NDSRendererHardwareTextureCacheEntry *entry =
-        sNdsRendererHardwareActiveTextureEntry;
-    s32 sample_s;
-    s32 sample_t;
-
-    if ((entry == NULL) ||
-        (entry->profile_width == 0u) ||
-        (entry->profile_height == 0u))
-    {
-        return;
-    }
-
-    sample_s = ndsRendererHardwareTextureWrapCoord(
-        ((s32)s) >> 4, entry->profile_width,
-        (entry->params & GL_TEXTURE_WRAP_S) != 0u,
-        (entry->params & GL_TEXTURE_FLIP_S) != 0u);
-    sample_t = ndsRendererHardwareTextureWrapCoord(
-        ((s32)t) >> 4, entry->profile_height,
-        (entry->params & GL_TEXTURE_WRAP_T) != 0u,
-        (entry->params & GL_TEXTURE_FLIP_T) != 0u);
-    if (((u32)sample_s >= entry->profile_width) ||
-        ((u32)sample_t >= entry->profile_height))
-    {
-        return;
-    }
-
-    gNdsRendererProfileTextureSampleCount++;
-    if (entry->nonwhite_texels != 0u)
-    {
-        gNdsRendererProfileTextureSampleNonWhiteCount++;
-    }
-    if (entry->green_texels != 0u)
-    {
-        gNdsRendererProfileTextureSampleGreenCount++;
-    }
-}
-
-static u32 ndsRendererHardwareTextureFormatBit(u32 format, u32 size)
-{
-    u32 index = (format * 4u) + size;
-
-    return (index < 32u) ? (1u << index) : 0u;
-}
-
-static void ndsRendererProfileTextureFormat(volatile u32 *mask,
-                                            u32 format, u32 size)
-{
-    if (mask != NULL)
-    {
-        *mask |= ndsRendererHardwareTextureFormatBit(format, size);
-    }
-}
-#endif
 
 /* Stage textures whose palette read ran past a short LOADTLUT (see the
  * palette block in ndsRendererHardwareResolveOrBindTexture). */
@@ -11953,63 +10171,9 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
     {
         stats->hardware_texture_reject_count++;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererProfileTextureFormat(
-        &gNdsRendererProfileTextureRejectFormatMask, format, size);
-    gNdsRendererProfileTextureRejectReasonMask |= reason;
-#elif NDS_R2_STAGE_ROUTE_PROBE
-    /* R2-07 E2. The reason mask is the last link in the chain the probe is
-     * following: owner reject 342 -> PrepareRun reason 2 -> this resolve
-     * refusing. The mask word is already in the ELF; only its writer was gated
-     * on profile level 2, which also drags in the oracle comparisons. Take the
-     * mask alone. */
-    gNdsRendererProfileTextureRejectReasonMask |= reason;
-    /* TEXIMAGE means the eviction retry loop ran out of things to evict, and
-     * that has two very different causes with two different fixes: texture VRAM
-     * genuinely full (bytes), or every cache slot pinned/touched-this-frame so
-     * nothing MAY be evicted (slots). Census the cache at the first rejection
-     * -- first only, because later ones happen after the loop has already
-     * released entries and would describe the aftermath. */
-    if (gNdsR2TexRejectCensusValid == 0u)
-    {
-        u32 census_index;
-
-        gNdsR2TexRejectCensusValid = 1u;
-        for (census_index = 0u;
-             census_index < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT;
-             census_index++)
-        {
-            const NDSRendererHardwareTextureCacheEntry *census_entry =
-                &sNdsRendererHardwareTextureCache[census_index];
-
-            if (census_entry->name == 0)
-            {
-                gNdsR2TexRejectCensusFree++;
-                continue;
-            }
-            gNdsR2TexRejectCensusLive++;
-            if (census_entry->pinned != 0u)
-            {
-                gNdsR2TexRejectCensusPinned++;
-            }
-            else if (census_entry->last_used_frame ==
-                     (sNdsRendererHardwareFrameSerial + 1u))
-            {
-                gNdsR2TexRejectCensusThisFrame++;
-            }
-            else
-            {
-                gNdsR2TexRejectCensusEvictable++;
-            }
-        }
-    }
-    (void)format;
-    (void)size;
-#else
     (void)format;
     (void)size;
     (void)reason;
-#endif
 }
 
 static s32 ndsRendererHardwarePrepareTexel1Source(
@@ -12053,21 +10217,6 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
     }
 
     tile = &stats->texture_tiles[NDS_RENDERER_RENDER_TILE_1];
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileTexel1LastTileState =
-        (tile->set_seen & 1u) |
-        ((tile->size_seen & 1u) << 1) |
-        ((tile->line & 0x1ffu) << 2) |
-        ((tile->format & 0x7u) << 11) |
-        ((tile->size & 0x3u) << 14) |
-        ((tile->shifts & 0xfu) << 16) |
-        ((tile->shiftt & 0xfu) << 20);
-    gNdsRendererProfileTexel1LastPrimaryState =
-        (primary_format & 0x7u) |
-        ((primary_size & 0x3u) << 3) |
-        ((primary_width & 0xffu) << 8) |
-        ((primary_height & 0xffu) << 16);
-#endif
     if ((primary_format != NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
         (primary_size != NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
         (tile->set_seen == 0u) || (tile->size_seen == 0u) ||
@@ -12185,9 +10334,6 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
         return FALSE;
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererRecordTextureLaneUse(config, primary_format, primary_size);
-#endif
     source_last_index =
         ((source_origin_t + source_read_height - 1u) * source_width) +
         source_origin_s + source_read_width - 1u;
@@ -12531,9 +10677,6 @@ ndsRendererHardwareBuildTexel01Ci4Lut(
         (memcmp(sNdsRendererHardwareTexel01Ci4LutPalette1,
                 palette1, sizeof(palette1)) == 0))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        sNdsRendererProfileCi4LutReuseCount++;
-#endif
         return;
     }
     memcpy(sNdsRendererHardwareTexel01Ci4LutPalette0,
@@ -12542,9 +10685,6 @@ ndsRendererHardwareBuildTexel01Ci4Lut(
            palette1, sizeof(palette1));
     sNdsRendererHardwareTexel01Ci4LutFraction = fraction;
     sNdsRendererHardwareTexel01Ci4LutKeyValid = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererProfileCi4LutBuildCount++;
-#endif
     for (index0 = 0u; index0 < 16u; index0++)
     {
         for (index1 = 0u; index1 < 16u; index1++)
@@ -12603,7 +10743,6 @@ static inline u8 ndsRendererHardwareReadCi4Direct(
         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u8 *ndsRendererHardwareGetCi4Indices(
     const u8 *source, u32 source_texels, u32 byte_lane_xor,
     const u8 *protected_indices)
@@ -12696,9 +10835,7 @@ static u32 ndsRendererHardwareBuildCi4RepresentativeMap(
     }
     return unique;
 }
-#endif
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererHardwareStageUniqueTextureRows(
     const u16 *source,
     u16 *staging,
@@ -12758,7 +10895,6 @@ static s32 ndsRendererHardwareStageUniqueTextureRows(
     *staged_bytes = unique_rows * row_bytes;
     return TRUE;
 }
-#endif
 
 static s32 NDS_TASK82_EVICTED_HOT_CODE
 ndsRendererHardwareConvertTexel01Ci4Direct(
@@ -12787,27 +10923,16 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
         (ndsRendererTextureDataLayout(config) ==
          NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED) ? 3u : 0u;
     const NDSRendererTileState *render_tile1 = source1->render_tile;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u8 *indices0 = ndsRendererHardwareGetCi4Indices(
         texels0, source0_texels, byte_lane_xor, NULL);
     const u8 *indices1 = ndsRendererHardwareGetCi4Indices(
         source1->texels, source1->source_texels, byte_lane_xor, indices0);
-#else
-    (void)source0_texels;
-#endif
     u32 x;
     u32 y;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     sNdsRendererHardwareTexel01Ci4RepresentativeRowsValid = FALSE;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     (void)green_texels;
     (void)nonwhite_texels;
-#else
-    (void)compact_row_map;
-    (void)compact_staged_bytes;
-#endif
     /* Animated tile origins can wrap or mirror TEXEL1. Resolve those exact
      * addressing rules once per S coordinate, then reuse them for every row. */
     for (x = 0u; x < width; x++)
@@ -12835,7 +10960,6 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                 render_tile1->maskt);
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((indices0 != NULL) && (indices1 != NULL))
     {
         u32 texels = width * height;
@@ -13003,7 +11127,6 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
         }
         return FALSE;
     }
-#endif
     for (y = 0u; y < height; y++)
     {
         u32 source0_y = (materialize0_t != FALSE) ?
@@ -13035,30 +11158,6 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                 index0, index1, x, y, texel1_alpha_from_texel1);
 
             sNdsRendererHardwareTextureScratch[dst_index + x] = color;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            {
-                u16 reference = ndsRendererHardwareBlendTexel01(
-                    sNdsRendererHardwareTexel01Ci4LutPalette0[index0],
-                    sNdsRendererHardwareTexel01Ci4LutPalette1[index1],
-                    sNdsRendererHardwareTexel01Ci4LutFraction, x, y);
-
-                if (texel1_alpha_from_texel1 != FALSE)
-                {
-                    reference = (u16)(
-                        (reference & NDS_RENDERER_HW_TEXEL01_RGB_MASK) |
-                        (sNdsRendererHardwareTexel01Ci4LutPalette1[index1] &
-                         0x8000u));
-                }
-
-                gNdsRendererProfileTexturePairOracleChecks++;
-                if (color != reference)
-                {
-                    gNdsRendererProfileTexturePairOracleMismatches++;
-                }
-            }
-            ndsRendererProfileTexturePixel(
-                color, green_texels, nonwhite_texels);
-#endif
         }
     }
     return FALSE;
@@ -13356,7 +11455,7 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
     gNdsRendererPrimRgbTexel0AlphaBindCount++;
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* P2-2p8 Phase 1 slice 2c: while the fighter admission runs, a new cache entry
  * is carved (ndsFtrCarveUpload, with the admission below) instead of taking a
  * libnds name and glTexImage2D. */
@@ -13396,13 +11495,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     NDSRendererHardwareResolvedTexture *resolved,
     s32 allow_stage_source_frame)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 texture_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 convert_start;
-    u32 upload_start;
-#endif
 #if NDS_TICK_HUD
     /* OUTSIDE the PROFILE_LEVEL guard on purpose. Its two uses are guarded on
      * NDS_TICK_HUD alone, and the tick-HUD build is PROFILE_LEVEL 0 -- nesting
@@ -13426,11 +11518,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 upload_bytes;
     u32 resident_upload_bytes;
     u32 staged_bytes;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 staged_row_bytes = 0u;
     u32 staged_row_count = 0u;
     u8 staged_row_map[NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT];
-#endif
     u32 texels;
     u32 bytes;
     u32 loaded_bytes;
@@ -13478,10 +11568,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 ia_graded_alpha = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     s32 queue_texture_refresh = FALSE;
     s32 compact_row_output = FALSE;
-#endif
     s32 texel1_origin_delta_s = 0;
     s32 texel1_origin_delta_t = 0;
     const NDSRendererTileState *render_tile;
@@ -13497,10 +11585,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 y;
     u16 *upload_buffer = sNdsRendererHardwareTextureScratch;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererSemanticLastTextureKeyHash = 0u;
-    sNdsRendererSemanticLastTextureParams = 0u;
-#endif
     if (stats == NULL)
     {
         return FALSE;
@@ -13511,14 +11595,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if ((resolved == NULL) &&
         (ndsRendererStageTextureSiteTryBind(stats, state, config) != FALSE))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
         return TRUE;
     }
-#if NDS_TASK107_RENDER_STATE_CENSUS
-    ndsRendererTask107RecordTextureSync(stats, NDS_TASK107_SYNC_RESOLVE);
-#endif
     ndsRendererSyncTextureTile(stats);
     render_tile_index = ndsRendererActiveTextureTile(stats);
     render_tile = &stats->texture_tiles[render_tile_index];
@@ -13832,14 +11910,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             ndsRendererHardwareTextureParams(stats, render_tile, upload_width,
                                              upload_height),
             format, width, height);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
         return TRUE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererRecordTextureLaneUse(config, format, size);
-#endif
     source_last_index =
         ((source_origin_t + source_read_height - 1u) * source_width) +
         source_origin_s + source_read_width - 1u;
@@ -13877,13 +11949,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 ndsRendererHardwareTileOriginDelta(
                     render_tile->ult, texel1_source.render_tile->ult));
             ndsRendererProfileRecordTexel1Composite();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            gNdsRendererProfileTexel1LastFraction =
-                stats->prim_lod_fraction;
-            gNdsRendererProfileTexel1LastImage0 = primary_image;
-            gNdsRendererProfileTexel1LastImage1 =
-                texel1_source.load->image;
-#endif
         }
         else
         {
@@ -14093,11 +12158,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         key.combine_w1 = stats->env_color & 0xffffff00u;
     }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     key_hash = ndsRendererHardwareTextureKeyHash(&key);
-#else
-    key_hash = 0u;
-#endif
 #if NDS_FTR_CARVE_LIVE && NDS_VRAM_CENSUS_LIVE
     if (sNdsFtrAdmitKeyProbe != NULL)
     {
@@ -14105,70 +12166,19 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         return FALSE;
     }
 #endif
-#if NDS_TASK93_TEXKEY_CENSUS
-    /* Task 93 E0. Everything above this line is the key rebuild -- ~59 stats
-     * fields, the tile sync, and the extent arithmetic -- and it runs before
-     * the resident-entry lookup can say the answer was already known. This
-     * records the request sequence so a front cache is sized from the trace
-     * rather than from a hit rate, as Task 90 did for the light-shade LUT. */
-    gNdsTask93BindCalls++;
-    if (resolved != NULL) { gNdsTask93PreflightCalls++; }
-    if (key_hash == gNdsTask93LastKeyHash) { gNdsTask93ConsecutiveRepeat++; }
-    gNdsTask93LastKeyHash = key_hash;
-    gNdsTask93KeyTrace[gNdsTask93KeyTraceNext] = key_hash;
-    gNdsTask93KeyTraceNext =
-        (gNdsTask93KeyTraceNext + 1u) % NDS_TASK93_KEY_TRACE_COUNT;
-#endif
 
     fraction_entry = NULL;
     entry = ndsRendererHardwareFindTexture(&key, key_hash);
     params = ndsRendererHardwareTextureParams(stats, render_tile,
                                                upload_width, upload_height);
-#if NDS_R2_STAGE_ROUTE_PROBE
-    {
-        u32 source_frame_tried = 0u;
-#endif
     if ((entry == NULL) && (allow_stage_source_frame != FALSE) &&
         (sNdsRendererBattleStaticTextureArmed != 0u))
     {
         /* Dynamic Pupupu materials keep their source animation and geometry,
          * but reuse the first resident source image when a later image was not
          * prepared before GO. Every other renderer-key word must still match. */
-#if NDS_R2_STAGE_ROUTE_PROBE
-        source_frame_tried = 1u;
-#endif
         entry = ndsRendererHardwareFindStageSourceFrameTexture(&key);
     }
-#if NDS_R2_STAGE_ROUTE_PROBE
-        if ((resolved != NULL) && (entry == NULL))
-        {
-            gNdsR2StageTextureMissCount++;
-            if (gNdsR2StageTextureMissCount == 1u)
-            {
-                gNdsR2StageTextureMissRun = gNdsR2StageTextureProbeRun;
-                gNdsR2StageTextureMissHash = key_hash;
-                gNdsR2StageTextureMissArmed =
-                    (sNdsRendererBattleStaticTextureArmed != 0u) ? 1u : 0u;
-                gNdsR2StageTextureMissSourceFrameTried = source_frame_tried;
-                memcpy((void *)gNdsR2StageTextureMissKeyWords,
-                       &key, sizeof(key));
-                (void)ndsRelocGetLoadedPointerProvenance(
-                    (const void *)(uintptr_t)key.image,
-                    (u32 *)&gNdsR2StageTextureMissImageAsset,
-                    (u32 *)&gNdsR2StageTextureMissImageOffset);
-                (void)ndsRelocGetLoadedPointerProvenance(
-                    (const void *)(uintptr_t)key.tlut_image,
-                    (u32 *)&gNdsR2StageTextureMissTlutAsset,
-                    (u32 *)&gNdsR2StageTextureMissTlutOffset);
-            }
-        }
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererSemanticLastTextureKeyHash =
-        ndsRendererProfileTextureKeyHashFull(&key);
-    sNdsRendererSemanticLastTextureParams = params;
-#endif
     if (entry != NULL)
     {
         if (resolved != NULL)
@@ -14205,16 +12215,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         stats->hardware_texture_format = format;
         stats->hardware_texture_width = width;
         stats->hardware_texture_height = height;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        ndsRendererProfileTextureFormat(
-            &gNdsRendererProfileTextureBindFormatMask, format, size);
-        ndsRendererProfileTextureCacheEntry(entry);
-#endif
         ndsRendererStageTextureSiteRemember(
             state, stats, entry, format, size, width, height);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
         return TRUE;
     }
     if (resolved != NULL)
@@ -14294,7 +12296,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             ndsRendererHardwareFindTexel1RefreshTexture(&key);
     }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
+#if 0 == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
     if ((sNdsRendererHardwareFrameSerial != 0u) &&
         (fraction_entry != NULL))
     {
@@ -14305,9 +12307,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          * branch occurs before source resolution, conversion, or VRAM upload. */
         entry = fraction_entry;
         ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupRemove(entry);
-#endif
         ndsRendererHardwareEntrySetKey(entry, &key);
         sNdsRendererHardwareTextureKeyGeneration++;
         if (sNdsRendererHardwareTextureKeyGeneration == 0u)
@@ -14315,15 +12315,11 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             sNdsRendererHardwareTextureKeyGeneration++;
         }
         entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         entry->key_hash = key_hash;
-#endif
         entry->params = ndsRendererHardwareMergeTextureParams(params);
         entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
         entry->ready = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupInsert(entry);
-#endif
         sNdsRendererHardwareActiveTextureEntry = entry;
         stats->hardware_texture_ready_count++;
         stats->hardware_texture_format = format;
@@ -14381,9 +12377,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     {
         ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
             stats, params, format, width, height);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
         return TRUE;
     }
     tlut_src = NULL;
@@ -14495,26 +12488,18 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 NDS_RENDERER_HW_TEXREJECT_BAD_TLUT_PTR);
             return FALSE;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        ndsRendererProfileTextureFormat(
-            &gNdsRendererProfileTexturePaletteFormatMask, format, size);
-#endif
     }
 
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_CONVERT);
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_PALETTE_DECODE);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    convert_start = cpuGetTiming();
-#endif
     upload_bytes = upload_width * upload_height * sizeof(u16);
     NDS_RENDERER_CAPACITY_HIGH_WATER(
         gNdsRendererTextureScratchDynamicUploadBytesHighWater, upload_bytes);
     resident_upload_bytes = upload_bytes;
     staged_bytes = upload_bytes;
-#if (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
     if (fraction_entry != NULL)
     {
         if ((upload_bytes <=
@@ -14593,7 +12578,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     if (use_texel1_ci4_direct != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         compact_row_output = ndsRendererHardwareConvertTexel01Ci4Direct(
             config, texels_src, source_texels, source_width, source_origin_s,
             source_origin_t, render_tile, materialize_s, materialize_t,
@@ -14604,14 +12588,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
              (width == upload_width) && (height == upload_height)) ?
                 staged_row_map : NULL,
             &staged_bytes, &green_texels, &nonwhite_texels);
-#else
-        (void)ndsRendererHardwareConvertTexel01Ci4Direct(
-            config, texels_src, source_texels, source_width, source_origin_s,
-            source_origin_t, render_tile, materialize_s, materialize_t,
-            &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
-            texel1_alpha_from_texel1, width, height, upload_width, NULL, NULL,
-            &green_texels, &nonwhite_texels);
-#endif
         ndsRendererProfileRecordTextureCi4Direct(width * height);
     }
     else
@@ -14770,10 +12746,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                     color |= 0x8000u;
                 }
                 sNdsRendererHardwareTextureScratch[dst_index] = color;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                ndsRendererProfileTexturePixel(color, &green_texels,
-                                               &nonwhite_texels);
-#endif
             }
         }
     }
@@ -14801,18 +12773,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     /* Preserve the canonical lane-observation totals while paying one volatile
      * update per converted texture instead of one per texel. */
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererRecordTextureLaneUseCount(config, format, size, texels);
-    if (use_texel1 != FALSE)
-    {
-        ndsRendererRecordTextureLaneUseCount(
-            config, texel1_source.format, texel1_source.size, texels);
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererProfileTextureFormat(
-        &gNdsRendererProfileTextureConvertFormatMask, format, size);
-#endif
 
     /* TEXEL1 is the one path that may refresh an existing direct-colour
      * allocation in place when only the blend fraction changes. Keep that
@@ -14886,17 +12846,11 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             }
         }
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileTextureConvertTicks += cpuGetTiming() - convert_start;
-
-    upload_start = cpuGetTiming();
-#endif
 #if NDS_TICK_HUD
     /* R2-07: the same span, re-marked, because upload_start above only exists
      * at NDS_RENDERER_PROFILE_LEVEL >= 1 and the tick-HUD build is level 0. */
     tickhud_upload_mark = cpuGetTiming();
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (upload_buffer == sNdsRendererHardwareTextureRefreshLarge)
     {
         staged_row_bytes = upload_width * sizeof(u16);
@@ -14913,9 +12867,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             staged_bytes = upload_bytes;
             staged_row_bytes = 0u;
             staged_row_count = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-            gNdsRendererProfileTextureVBlankFallbackCount++;
-#endif
         }
     }
     else if (upload_buffer != sNdsRendererHardwareTextureScratch)
@@ -14937,27 +12888,18 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             gNdsRendererTextureRefreshLargeBytesHighWater, staged_bytes);
     }
 #endif
-#endif
     entry = fraction_entry;
     if (entry != NULL)
     {
         s32 refresh_ready = FALSE;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (queue_texture_refresh != FALSE)
         {
             refresh_ready = ndsRendererHardwareQueueTextureRefresh(
                 entry, upload_buffer, staged_bytes, upload_bytes,
                 (staged_row_count != 0u) ? staged_row_map : NULL,
                 staged_row_bytes, staged_row_count);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-            if (refresh_ready == FALSE)
-            {
-                gNdsRendererProfileTextureVBlankFallbackCount++;
-            }
-#endif
         }
-#endif
         if ((refresh_ready == FALSE) &&
             (ndsRendererHardwareReplaceTextureData(
                  entry, upload_buffer, staged_bytes, upload_bytes, NULL, 0u,
@@ -15071,18 +13013,13 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         }
     }
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileTextureUploadTicks += cpuGetTiming() - upload_start;
-#endif
 #if NDS_TICK_HUD
     gNdsMiscTexUploadTicks += cpuGetTiming() - tickhud_upload_mark;
 #endif
     /* P2-2p8 Phase 1 slice 1: fighter texture uploads (after GO). */
     ndsFtrLeanNoteTextureUpload(resident_upload_bytes);
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
-#endif
     ndsRendererHardwareEntrySetKey(entry, &key);
     sNdsRendererHardwareTextureKeyGeneration++;
     if (sNdsRendererHardwareTextureKeyGeneration == 0u)
@@ -15090,49 +13027,27 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         sNdsRendererHardwareTextureKeyGeneration++;
     }
     entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     entry->key_hash = key_hash;
-#endif
     entry->params = ndsRendererHardwareMergeTextureParams(params);
-#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
     /* Slice 2a (lab): the distinct fighter textures each slot uploads. */
     ndsVramCensusNoteCacheKey(entry, &key, resident_palette_entries);
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    entry->source_texels = texels;
-    entry->green_texels = green_texels;
-    entry->nonwhite_texels = nonwhite_texels;
-    entry->profile_width = upload_width;
-    entry->profile_height = upload_height;
-#else
     (void)green_texels;
     (void)nonwhite_texels;
-#endif
     entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
     entry->ready = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupInsert(entry);
-#endif
     sNdsRendererHardwareActiveTextureEntry = entry;
     stats->hardware_texture_upload_count++;
     stats->hardware_texture_ready_count++;
     stats->hardware_texture_format = format;
     stats->hardware_texture_width = width;
     stats->hardware_texture_height = height;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererProfileTextureFormat(
-        &gNdsRendererProfileTextureBindFormatMask, format, size);
-#endif
     ndsRendererHardwareApplyTextureParams(entry->params);
     ndsRendererProfileRecordTextureUpload(resident_upload_bytes);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    ndsRendererProfileTextureCacheEntry(entry);
-#endif
     ndsRendererStageTextureSiteRemember(
         state, stats, entry, format, size, width, height);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
     return TRUE;
 }
 
@@ -15146,26 +13061,6 @@ static s32 ndsRendererHardwareBindTexture(
     const NDSRendererConfig *config,
     NDSRendererTraversalState *state)
 {
-#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
-    if (gNdsEffectPhaseActive != 0u)
-    {
-        u32 phase_mark = cpuGetTiming();
-        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
-            stats, config, state, NULL, FALSE);
-        u32 phase_ticks = cpuGetTiming() - phase_mark;
-
-        gNdsEffectPhaseTexTicks += phase_ticks;
-        /* The in-Exec twin, added cycle 91. This site and the stage-source-frame
-         * site below both charged gNdsEffectPhaseTexTicks with no twin, so
-         * gNdsEffectPhaseTexInExecTicks read 0 for a whole cycle and the texture
-         * sub-share folded silently into the derived traversal residual. */
-        if (sNdsEffectPacketArmed != 0u)
-        {
-            gNdsEffectPhaseTexInExecTicks += phase_ticks;
-        }
-        return phase_result;
-    }
-#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, NULL, FALSE);
 }
@@ -15423,26 +13318,6 @@ static s32 ndsRendererHardwareResolveResidentTexture(
         return FALSE;
     }
     memset(resolved, 0, sizeof(*resolved));
-#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
-    if (gNdsEffectPhaseActive != 0u)
-    {
-        u32 phase_mark = cpuGetTiming();
-        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
-            stats, config, state, resolved, FALSE);
-        u32 phase_ticks = cpuGetTiming() - phase_mark;
-
-        gNdsEffectPhaseTexTicks += phase_ticks;
-        /* The in-Exec twin. gNdsEffectPhaseTexTicks is armed by the whole-tree
-         * flag, so it can accumulate outside the interpreter call and cannot
-         * close an identity against Exec; this one is armed by the same flag as
-         * the Vtx/Tri spans, so all four nest in the same window. */
-        if (sNdsEffectPacketArmed != 0u)
-        {
-            gNdsEffectPhaseTexInExecTicks += phase_ticks;
-        }
-        return phase_result;
-    }
-#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, resolved, FALSE);
 }
@@ -15458,23 +13333,6 @@ static s32 ndsRendererHardwareResolveStageSourceFrameTexture(
         return FALSE;
     }
     memset(resolved, 0, sizeof(*resolved));
-#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
-    if (gNdsEffectPhaseActive != 0u)
-    {
-        u32 phase_mark = cpuGetTiming();
-        s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
-            stats, config, state, resolved, TRUE);
-        u32 phase_ticks = cpuGetTiming() - phase_mark;
-
-        gNdsEffectPhaseTexTicks += phase_ticks;
-        /* The in-Exec twin, added cycle 91; see ndsRendererHardwareBindTexture. */
-        if (sNdsEffectPacketArmed != 0u)
-        {
-            gNdsEffectPhaseTexInExecTicks += phase_ticks;
-        }
-        return phase_result;
-    }
-#endif
     return ndsRendererHardwareResolveOrBindTexture(
         stats, config, state, resolved, TRUE);
 }
@@ -15625,28 +13483,10 @@ static void ndsRendererLoadHardwareMatrixPair(
     glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(modelview));
 
     ndsRendererProfileRecordMatrixLoad();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileMatrixScaleWorld = scale_world;
-    gNdsRendererProfileProjectionM00 = projection->m[0][0];
-    gNdsRendererProfileProjectionM11 = projection->m[1][1];
-    gNdsRendererProfileProjectionM22 = projection->m[2][2];
-    gNdsRendererProfileProjectionM32 = projection->m[3][2];
-    gNdsRendererProfileModelviewM00 = modelview->m[0][0];
-    gNdsRendererProfileModelviewM11 = modelview->m[1][1];
-    gNdsRendererProfileModelviewM22 = modelview->m[2][2];
-    gNdsRendererProfileModelviewM30 = modelview->m[3][0];
-    gNdsRendererProfileModelviewM31 = modelview->m[3][1];
-    gNdsRendererProfileModelviewM32 = modelview->m[3][2];
-#endif
 
     sNdsRendererHardwareMatrixMode = mode;
     sNdsRendererHardwareMatrixGeneration = generation;
     sNdsRendererHardwareMatrixLoaded = TRUE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererHardwareMatrixSignature =
-        ndsRendererProfileHashMatrixPair(
-            projection, modelview, mode, generation);
-#endif
 }
 
 static void ndsRendererLoadHardwareRawComposedMatrix(
@@ -15670,7 +13510,6 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
         generation, TRUE);
 }
 
-#if NDS_R2_FIGHTER_HW_MTX
 /* R2-03 E16b. The composed load hands the geometry engine one CPU-built
  * modelview x projection with an identity projection. libnds `GL_MODELVIEW` is
  * DS matrix mode 2, position AND vector, so a vector matrix is already being
@@ -15692,23 +13531,6 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
  * ndsRendererExecuteNativeFighterOwnerProduction lives in `.itcm.native_fighter`
  * and ITCM has no room -- inlining this overflowed the region by 72 bytes. It
  * runs once per root, so an out-of-line call costs nothing measurable. */
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-/* R2-03 E22. The per-root bracket is ~40,000/frame and E17 already took 17,600
- * of it. What remains is ~28 matrix loads a frame, deduplicated by a generation
- * counter. E21's rule applies directly: the generation is the TARGET identity,
- * and the question is WRITE identity -- how many loads that the generation check
- * lets through are re-loading a matrix the hardware already holds. Only that
- * fraction is elidable by a content compare. */
-u32 gNdsR2MtxLoadCalls;
-u32 gNdsR2MtxLoadElidedByGeneration;
-u32 gNdsR2MtxLoadPerformed;
-u32 gNdsR2MtxLoadIdenticalContent;
-u32 gNdsR2MtxLoadIdenticalProjection;
-u32 gNdsR2MtxLoadIdenticalModelview;
-static NDSRendererMatrix20p12 sNdsR2MtxLastProjection;
-static NDSRendererMatrix20p12 sNdsR2MtxLastModelview;
-static u8 sNdsR2MtxLastValid;
-#endif
 
 /* Capture-free matrix registers for the fighter-exclusive split loader.
  *
@@ -15728,20 +13550,7 @@ static u8 sNdsR2MtxLastValid;
  * scaling loop spent reading the copy back. */
 static inline void ndsRendererHardwareFighterSetMatrixMode(u32 mode)
 {
-#if NDS_TASK49_GX_DIFFER && !NDS_RENDERER_M3_PHASE0_PROFILE
-    /* The split loader intentionally bypasses the normal GX wrappers in
-     * shipping builds.  Task49 is the one exception: mirror the direct FIFO
-     * write into the diagnostic stream so EFFECT can prove M1's effective
-     * transform without changing the production path. */
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_MODE, &mode, 1u);
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    /* Leave the M3 state shadow authoritative when that profile is built; its
-     * own bookkeeping dwarfs the census hook there. */
-    ndsRendererHardwareSetMatrixMode((int)mode);
-#else
     MATRIX_CONTROL = mode;
-#endif
 }
 
 static inline void ndsRendererHardwareFighterLoadMatrix4x4(
@@ -15749,10 +13558,6 @@ static inline void ndsRendererHardwareFighterLoadMatrix4x4(
 {
     u32 row;
 
-#if NDS_TASK49_GX_DIFFER
-    ndsRendererTask29GXRecord(
-        NDS_TASK29_GX_MATRIX_LOAD4X4, (const u32 *)matrix, 16u);
-#endif
     for (row = 0u; row < 4u; row++)
     {
         MATRIX_LOAD4x4 = matrix->m[row][0];
@@ -15767,18 +13572,9 @@ static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
 {
     u32 row;
     u32 col;
-#if NDS_TASK49_GX_DIFFER
-    u32 words[16];
-#endif
 
     for (row = 0u; row < 3u; row++)
     {
-#if NDS_TASK49_GX_DIFFER
-        words[(row * 4u) + 0u] = (u32)matrix->m[row][0];
-        words[(row * 4u) + 1u] = (u32)matrix->m[row][1];
-        words[(row * 4u) + 2u] = (u32)matrix->m[row][2];
-        words[(row * 4u) + 3u] = (u32)matrix->m[row][3];
-#endif
         MATRIX_LOAD4x4 = matrix->m[row][0];
         MATRIX_LOAD4x4 = matrix->m[row][1];
         MATRIX_LOAD4x4 = matrix->m[row][2];
@@ -15789,14 +13585,8 @@ static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
         s32 value = ndsRendererRoundShiftS32Signed(
             matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
 
-#if NDS_TASK49_GX_DIFFER
-        words[12u + col] = (u32)value;
-#endif
         MATRIX_LOAD4x4 = value;
     }
-#if NDS_TASK49_GX_DIFFER
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_LOAD4X4, words, 16u);
-#endif
 }
 
 static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
@@ -15809,63 +13599,14 @@ ndsRendererLoadHardwareSplitMatrices(
     {
         return;
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    NDS_DIAG(gNdsR2MtxLoadCalls++);
-    /* Anyone else loading a matrix invalidates the content memo, or the compare
-     * below would report "same as my last load" while the hardware holds
-     * someone else's matrix. Conservative direction. */
-    if ((sNdsRendererHardwareMatrixLoaded == 0u) ||
-        (sNdsRendererHardwareMatrixMode !=
-         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED))
-    {
-        sNdsR2MtxLastValid = 0u;
-    }
-#endif
     if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
         (sNdsRendererHardwareMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
         (sNdsRendererHardwareMatrixGeneration == generation))
     {
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-        NDS_DIAG(gNdsR2MtxLoadElidedByGeneration++);
-#endif
         return;
     }
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
-    {
-    NDSRendererMatrix20p12 scaled_modelview;
-    u32 col;
-
-    /* The census memo compares the matrix the hardware actually receives, so it
-     * has to materialise what the FIFO writer scales on the fly. It is a
-     * diagnostic and pays for its own copy. */
-    scaled_modelview = *modelview;
-    for (col = 0u; col < 4u; col++)
-    {
-        scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
-            scaled_modelview.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-    }
-
-    NDS_DIAG(gNdsR2MtxLoadPerformed++);
-    if (sNdsR2MtxLastValid != 0u)
-    {
-        /* Scored separately: the loader writes two matrices per call and only
-         * the modelview is per-root. A joint compare reports "nothing is
-         * redundant" while the projection half may be redundant every time. */
-        u32 same_projection = (memcmp(&sNdsR2MtxLastProjection, projection,
-                                      sizeof(NDSRendererMatrix20p12)) == 0);
-        u32 same_modelview = (memcmp(&sNdsR2MtxLastModelview, &scaled_modelview,
-                                     sizeof(NDSRendererMatrix20p12)) == 0);
-        NDS_DIAG(gNdsR2MtxLoadIdenticalProjection += same_projection);
-        NDS_DIAG(gNdsR2MtxLoadIdenticalModelview += same_modelview);
-        NDS_DIAG(gNdsR2MtxLoadIdenticalContent += (same_projection & same_modelview));
-    }
-    sNdsR2MtxLastProjection = *projection;
-    sNdsR2MtxLastModelview = scaled_modelview;
-    sNdsR2MtxLastValid = 1u;
-    }
-#endif
 
     ndsRendererHardwareEndBatch();
     /* R2-03 E23 tried skipping this half when unchanged -- E22 measured 29 of
@@ -15883,16 +13624,12 @@ ndsRendererLoadHardwareSplitMatrices(
     sNdsRendererHardwareMatrixLoaded = TRUE;
 }
 
-#if NDS_R2_FIGHTER_GX_COMPOSE
 /* The adapter stops composing at all under this flag, so `modelview_matrix` is
  * the seed rather than a world. BindProductionRoot only leaves it unread when
  * HW_MTX and SHADE_SKIP_SOFT_LIGHT both hold; without them the software light
  * preparation would take a root's transform from a matrix that is no longer
  * one. The SHADE_SKIP half cannot be tested here -- it is #defined 4,000 lines
  * further down, next to the code it guards -- so it is asserted there. */
-#if !NDS_R2_FIGHTER_HW_MTX
-#error "NDS_R2_FIGHTER_GX_COMPOSE requires NDS_R2_FIGHTER_HW_MTX"
-#endif
 
 u32 gNdsR2GxComposeRoots;
 u32 gNdsR2GxComposeMults;
@@ -16039,8 +13776,6 @@ ndsRendererLoadHardwareGxComposedMatrices(
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
 
-#endif
-#endif
 
 static void ndsRendererLoadHardwareMatrices(
     const NDSRendererTraversalState *state, u32 scale_world)
@@ -16079,279 +13814,6 @@ static void ndsRendererLoadHardwareMatrices(
         NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY, 0u, FALSE);
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static u64 ndsRendererHardwareAbsS64(s64 value)
-{
-    return (value < 0) ? (u64)(-(value + 1)) + 1u : (u64)value;
-}
-
-static u64 ndsRendererHardwareAbsDiffS64(s64 lhs, s64 rhs)
-{
-    if ((lhs < 0) == (rhs < 0))
-    {
-        return (lhs >= rhs) ? (u64)(lhs - rhs) : (u64)(rhs - lhs);
-    }
-    return ndsRendererHardwareAbsS64(lhs) + ndsRendererHardwareAbsS64(rhs);
-}
-
-static u32 ndsRendererHardwarePosTestCrossError(
-    s32 hardware_axis, s32 hardware_w,
-    s32 cpu_axis, s32 cpu_w)
-{
-    s64 lhs = (s64)hardware_axis * cpu_w;
-    s64 rhs = (s64)cpu_axis * hardware_w;
-    u64 error = ndsRendererHardwareAbsDiffS64(lhs, rhs);
-    u64 scale = ndsRendererHardwareAbsS64(cpu_axis) +
-                ndsRendererHardwareAbsS64(cpu_w);
-    u64 normalized;
-
-    if (scale == 0u)
-    {
-        scale = 1u;
-    }
-    normalized = (error / scale) + ((error % scale) != 0u);
-    return (normalized > UINT_MAX) ? UINT_MAX : (u32)normalized;
-}
-
-static u32 ndsRendererHardwarePosTestInside(s32 axis, s32 w)
-{
-    return (ndsRendererHardwareAbsS64(axis) <=
-            ndsRendererHardwareAbsS64(w)) ? TRUE : FALSE;
-}
-
-static void ndsRendererHardwareQueueRawMatrixPosTestValues(
-    const NDSRendererMatrix20p12 *matrix, u32 generation,
-    const NDSRendererInputVertex *input,
-    const NDSRendererClipVertex20p12 *clip, u32 matrix_word)
-{
-    NDSRendererHardwarePendingPosTest *probe;
-
-    if ((matrix == NULL) || (input == NULL) || (clip == NULL) ||
-        (generation == 0u) ||
-        (generation == sNdsRendererHardwarePendingPosTestLastGeneration))
-    {
-        return;
-    }
-    sNdsRendererHardwarePendingPosTestLastGeneration =
-        generation;
-    if (sNdsRendererHardwarePendingPosTestCount >=
-        NDS_RENDERER_HW_POS_TEST_MAX)
-    {
-        gNdsRendererProfileMatrixPosTestDropped++;
-        return;
-    }
-
-    probe = &sNdsRendererHardwarePendingPosTests[
-        sNdsRendererHardwarePendingPosTestCount++];
-    probe->matrix = *matrix;
-    probe->input = *input;
-    probe->clip = *clip;
-    probe->generation = generation;
-    probe->matrix_word = matrix_word;
-}
-
-static void ndsRendererHardwareQueueRawMatrixPosTest(
-    const NDSRendererTraversalState *state, u32 index)
-{
-    if ((state == NULL) || (index >= NDS_RENDERER_MAX_VTX) ||
-        (state->matrix_valid == 0u))
-    {
-        return;
-    }
-    ndsRendererHardwareQueueRawMatrixPosTestValues(
-        &state->matrix, state->matrix_generation,
-        &state->input_vertices[index], &state->vertices[index],
-        state->matrix_word_valid);
-}
-
-static void ndsRendererHardwareQueueSnapshotMatrixPosTest(
-    const NDSRendererTraversalState *state, u32 snapshot_id, u32 index)
-{
-    const NDSRendererMatrixSnapshot *snapshot =
-        ndsRendererGetMatrixSnapshot(state, snapshot_id);
-
-    if ((snapshot == NULL) || (index >= NDS_RENDERER_MAX_VTX))
-    {
-        return;
-    }
-    ndsRendererHardwareQueueRawMatrixPosTestValues(
-        &snapshot->matrix, snapshot->generation,
-        &state->input_vertices[index], &state->vertices[index], FALSE);
-}
-
-static void ndsRendererHardwareQueueMatrixWordPosTestFixture(void)
-{
-    NDSRendererHardwarePendingPosTest *base;
-    NDSRendererHardwarePendingPosTest *probe;
-    NDSRendererTraversalState state;
-    NDSRendererStats stats;
-    NDSRendererMatrix20p12 target_matrix;
-    Mtx target_raw;
-    const u32 *target_words;
-    u32 *current_words;
-    u32 i;
-
-    if (sNdsRendererHardwarePendingPosTestCount == 0u)
-    {
-        return;
-    }
-    for (i = 0u; i < sNdsRendererHardwarePendingPosTestCount; i++)
-    {
-        if (sNdsRendererHardwarePendingPosTests[i].matrix_word != 0u)
-        {
-            return;
-        }
-    }
-
-    /*
-     * The current Pupupu frame does not naturally issue G_MW_MATRIX. Derive
-     * one backend-only fixture from its first eligible matrix so profile 2
-     * still proves the exact MVP-recalc + matrix-word reconstruction used by
-     * BattleShip. This runs after the submitted triangle batch has closed and
-     * cannot alter production geometry.
-     */
-    base = &sNdsRendererHardwarePendingPosTests[0];
-    memset(&state, 0, sizeof(state));
-    memset(&stats, 0, sizeof(stats));
-    state.matrix = base->matrix;
-    state.matrix_valid = TRUE;
-    ndsRendererApplyMvpRecalcCommand(&stats, &state, 1u, 0u);
-
-    target_matrix = state.matrix;
-    if (target_matrix.m[3][0] <=
-        (INT_MAX - NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA))
-    {
-        target_matrix.m[3][0] +=
-            NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA;
-    }
-    else
-    {
-        target_matrix.m[3][0] -=
-            NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA;
-    }
-    ndsRendererMtxStoreDS20p12ToN64(&target_matrix, &target_raw);
-    target_words = (const u32 *)&target_raw.m[0][0];
-    current_words = (u32 *)&state.matrix_word_raw.m[0][0];
-    for (i = 0u; i < NDS_RENDERER_MATRIX_WORD_COUNT; i++)
-    {
-        if (current_words[i] != target_words[i])
-        {
-            ndsRendererApplyMatrixMoveWordCommand(
-                &stats, &state,
-                (NDS_RENDERER_MOVEWORD_MATRIX <<
-                 NDS_RENDERER_MOVEWORD_INDEX_SHIFT) |
-                    (i * NDS_RENDERER_MATRIX_WORD_BYTES),
-                target_words[i]);
-            current_words = (u32 *)&state.matrix_word_raw.m[0][0];
-        }
-    }
-    if ((stats.matrix_mvp_recalc_count != 1u) ||
-        (stats.matrix_move_word_count == 0u))
-    {
-        gNdsRendererProfileMatrixPosTestDropped++;
-        return;
-    }
-
-    if (sNdsRendererHardwarePendingPosTestCount <
-        NDS_RENDERER_HW_POS_TEST_MAX)
-    {
-        probe = &sNdsRendererHardwarePendingPosTests[
-            sNdsRendererHardwarePendingPosTestCount++];
-    }
-    else
-    {
-        probe = &sNdsRendererHardwarePendingPosTests[
-            NDS_RENDERER_HW_POS_TEST_MAX - 1u];
-    }
-    probe->matrix = state.matrix;
-    probe->input = base->input;
-    ndsRendererTransformVertex20p12(&probe->matrix, &probe->input,
-                                    &probe->clip);
-    probe->generation = state.matrix_generation;
-    probe->matrix_word = TRUE;
-}
-
-static void ndsRendererHardwareRunRawMatrixPosTests(void)
-{
-    u32 i;
-
-    ndsRendererHardwareQueueMatrixWordPosTestFixture();
-
-    for (i = 0u; i < sNdsRendererHardwarePendingPosTestCount; i++)
-    {
-        const NDSRendererHardwarePendingPosTest *probe =
-            &sNdsRendererHardwarePendingPosTests[i];
-        v16 x = ndsRendererHardwareVertexCoord(probe->input.x, TRUE);
-        v16 y = ndsRendererHardwareVertexCoord(probe->input.y, TRUE);
-        v16 z = ndsRendererHardwareVertexCoord(probe->input.z, TRUE);
-        s32 hardware_x;
-        s32 hardware_y;
-        s32 hardware_z;
-        s32 hardware_w;
-        u32 error_x;
-        u32 error_y;
-        u32 error_z;
-        u32 max_error;
-        u32 w_sign_mismatch;
-        u32 clip_mismatch;
-
-        ndsRendererLoadHardwareRawComposedMatrix(
-            &probe->matrix, probe->generation);
-        PosTest(x, y, z);
-        hardware_x = PosTestXresult();
-        hardware_y = PosTestYresult();
-        hardware_z = PosTestZresult();
-        hardware_w = PosTestWresult();
-        error_x = ndsRendererHardwarePosTestCrossError(
-            hardware_x, hardware_w, probe->clip.x, probe->clip.w);
-        error_y = ndsRendererHardwarePosTestCrossError(
-            hardware_y, hardware_w, probe->clip.y, probe->clip.w);
-        error_z = ndsRendererHardwarePosTestCrossError(
-            hardware_z, hardware_w, probe->clip.z, probe->clip.w);
-        max_error = error_x;
-        if (error_y > max_error) { max_error = error_y; }
-        if (error_z > max_error) { max_error = error_z; }
-        w_sign_mismatch = (((hardware_w < 0) != (probe->clip.w < 0)) ||
-                           ((hardware_w == 0) != (probe->clip.w == 0))) ?
-                              TRUE : FALSE;
-        clip_mismatch =
-            ((ndsRendererHardwarePosTestInside(hardware_x, hardware_w) !=
-              ndsRendererHardwarePosTestInside(probe->clip.x,
-                                               probe->clip.w)) ||
-             (ndsRendererHardwarePosTestInside(hardware_y, hardware_w) !=
-              ndsRendererHardwarePosTestInside(probe->clip.y,
-                                               probe->clip.w)) ||
-             (ndsRendererHardwarePosTestInside(hardware_z, hardware_w) !=
-              ndsRendererHardwarePosTestInside(probe->clip.z,
-                                               probe->clip.w))) ? TRUE : FALSE;
-
-        gNdsRendererProfileMatrixPosTestSamples++;
-        if (probe->matrix_word != 0u)
-        {
-            gNdsRendererProfileMatrixPosTestMatrixWordSamples++;
-        }
-        if (max_error > gNdsRendererProfileMatrixPosTestMaxError)
-        {
-            gNdsRendererProfileMatrixPosTestMaxError = max_error;
-        }
-        if (w_sign_mismatch != FALSE)
-        {
-            gNdsRendererProfileMatrixPosTestWSignMismatches++;
-        }
-        if (clip_mismatch != FALSE)
-        {
-            gNdsRendererProfileMatrixPosTestClipMismatches++;
-        }
-        if ((max_error > NDS_RENDERER_HW_POS_TEST_TOLERANCE) ||
-            (w_sign_mismatch != FALSE) || (clip_mismatch != FALSE))
-        {
-            gNdsRendererProfileMatrixPosTestMismatches++;
-        }
-    }
-    sNdsRendererHardwarePendingPosTestCount = 0u;
-    sNdsRendererHardwarePendingPosTestLastGeneration = 0u;
-}
-#endif
 
 static s32 ndsRendererHardwareNextProjectedDepth(void)
 {
@@ -16467,9 +13929,6 @@ static void ndsRendererHardwarePainterSlotFoldFrame(void)
 
 static void ndsRendererHardwareClipVertex(
     const NDSRendererClipVertex20p12 *vtx, s32 z
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    , NDSRendererSemanticVertex *semantic_vertex
-#endif
     )
 {
     v16 x;
@@ -16487,25 +13946,12 @@ static void ndsRendererHardwareClipVertex(
         (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     out_z = ndsRendererHardwareSourceDepthToV16(
         (s64)z * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (semantic_vertex != NULL)
-    {
-        semantic_vertex->x = x;
-        semantic_vertex->y = y;
-        semantic_vertex->z = out_z;
-        semantic_vertex->valid_flags |=
-            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
-    }
-#endif
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
 }
 
 static void ndsRendererHardwareClipVertexNdcDepth(
     const NDSRendererClipVertex20p12 *vtx, s32 z
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    , NDSRendererSemanticVertex *semantic_vertex
-#endif
     )
 {
     v16 x;
@@ -16521,16 +13967,6 @@ static void ndsRendererHardwareClipVertexNdcDepth(
     y = ndsRendererHardwareProjectToV16(
         (s64)vtx->y * NDS_RENDERER_HW_PROJECTED_VERTEX, vtx->w);
     out_z = ndsRendererHardwareClampS64ToV16(z);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (semantic_vertex != NULL)
-    {
-        semantic_vertex->x = x;
-        semantic_vertex->y = y;
-        semantic_vertex->z = out_z;
-        semantic_vertex->valid_flags |=
-            NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
-    }
-#endif
     ndsRendererProfileHWVertexRange(x, y, out_z);
     glVertex3v16(x, y, out_z);
 }
@@ -16646,9 +14082,6 @@ ndsRendererHardwareSubmitVertex(
     NDSRendererTraversalState *state,
     u32 vertex_index,
     s32 projected_z
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    , NDSRendererSemanticVertex *semantic_vertex
-#endif
     )
 {
     const NDSRendererInputVertex *vtx;
@@ -16672,12 +14105,6 @@ ndsRendererHardwareSubmitVertex(
     s32 source_clip_depth;
     u16 hardware_color;
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (semantic_vertex != NULL)
-    {
-        memset(semantic_vertex, 0, sizeof(*semantic_vertex));
-    }
-#endif
     if ((stats == NULL) || (state == NULL) ||
         (vertex_index >= NDS_RENDERER_MAX_VTX))
     {
@@ -16708,7 +14135,6 @@ ndsRendererHardwareSubmitVertex(
     source_clip_depth =
         context_flags & NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((state != NULL) &&
         (vertex_index < NDS_RENDERER_MAX_VTX) &&
         ((state->prepared_vertex_color_valid_mask &
@@ -16717,35 +14143,23 @@ ndsRendererHardwareSubmitVertex(
         hardware_color = state->prepared_vertex_colors[vertex_index];
     }
     else
-#endif
     {
         hardware_color = ndsRendererHardwarePackedVertexColor(
             stats, vtx, material_color, use_material_color,
             use_vertex_color, vertex_color, vertex_color_valid,
             state->color_modulate);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((state != NULL) && (vertex_index < NDS_RENDERER_MAX_VTX))
         {
             state->prepared_vertex_colors[vertex_index] = hardware_color;
             state->prepared_vertex_color_valid_mask |= 1u << vertex_index;
         }
-#endif
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (semantic_vertex != NULL)
-    {
-        semantic_vertex->color = hardware_color;
-        semantic_vertex->valid_flags |=
-            NDS_RENDERER_SEMANTIC_VERTEX_COLOR_VALID;
-    }
-#endif
     glColor(hardware_color);
     if (use_texture != FALSE)
     {
         s16 s;
         s16 t;
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((state != NULL) &&
             (vertex_index < NDS_RENDERER_MAX_VTX) &&
             ((state->prepared_texcoord_valid_mask &
@@ -16755,7 +14169,6 @@ ndsRendererHardwareSubmitVertex(
             t = state->prepared_texcoord_t[vertex_index];
         }
         else
-#endif
         {
             s = ndsRendererHardwareTexCoord(vtx->s, scale_s,
                                             texture_origin_s,
@@ -16763,71 +14176,30 @@ ndsRendererHardwareSubmitVertex(
             t = ndsRendererHardwareTexCoord(vtx->t, scale_t,
                                             texture_origin_t,
                                             texture_offset);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
             if ((state != NULL) && (vertex_index < NDS_RENDERER_MAX_VTX))
             {
                 state->prepared_texcoord_s[vertex_index] = s;
                 state->prepared_texcoord_t[vertex_index] = t;
                 state->prepared_texcoord_valid_mask |= 1u << vertex_index;
             }
-#endif
         }
 
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        ndsRendererProfileTextureCoord(s, t);
-        ndsRendererProfileTextureSample(s, t);
-        if (semantic_vertex != NULL)
-        {
-            semantic_vertex->s = s;
-            semantic_vertex->t = t;
-            semantic_vertex->valid_flags |=
-                NDS_RENDERER_SEMANTIC_VERTEX_ST_VALID;
-        }
-#endif
         glTexCoord2t16(s, t);
     }
     if ((zbuffered != FALSE) &&
         (decal_depth == FALSE) &&
         (prim_depth == FALSE))
     {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareSubmitVertexRawZCold(vtx, scale_world);
-#else
-        v16 x = ndsRendererHardwareVertexCoord(vtx->x, scale_world);
-        v16 y = ndsRendererHardwareVertexCoord(vtx->y, scale_world);
-        v16 z = ndsRendererHardwareVertexCoord(vtx->z, scale_world);
-        if (semantic_vertex != NULL)
-        {
-            semantic_vertex->x = x;
-            semantic_vertex->y = y;
-            semantic_vertex->z = z;
-            semantic_vertex->valid_flags |=
-                NDS_RENDERER_SEMANTIC_VERTEX_XYZ_VALID;
-        }
-        ndsRendererProfileVertexRange(vtx, x, y, z);
-        glVertex3v16(x, y, z);
-#endif
     }
     else if (prim_depth != FALSE)
     {
         ndsRendererHardwareClipVertex(clip_vtx, projected_z
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                                      , semantic_vertex
-#endif
                                       );
     }
     else if (decal_depth != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareSubmitVertexDecalCold(clip_vtx, projected_z);
-#else
-        if (clip_vtx != NULL)
-        {
-            ndsRendererHardwareClipVertex(
-                clip_vtx, clip_vtx->z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS,
-                semantic_vertex);
-        }
-#endif
     }
     else
     {
@@ -16836,42 +14208,8 @@ ndsRendererHardwareSubmitVertex(
         if ((source_clip_depth != FALSE) && (clip_vtx != NULL) &&
             (clip_vtx->w != 0))
         {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            s32 depth = ndsRendererHardwareSourceDepthToV16(
-                (s64)clip_vtx->z * NDS_RENDERER_HW_PROJECTED_VERTEX,
-                clip_vtx->w);
-
-            if (stats->hardware_projected_depth_sample_count == 0u)
-            {
-                stats->hardware_projected_depth_min = depth;
-                stats->hardware_projected_depth_max = depth;
-                stats->hardware_projected_w_min = clip_vtx->w;
-                stats->hardware_projected_w_max = clip_vtx->w;
-            }
-            else
-            {
-                if (depth < stats->hardware_projected_depth_min)
-                {
-                    stats->hardware_projected_depth_min = depth;
-                }
-                if (depth > stats->hardware_projected_depth_max)
-                {
-                    stats->hardware_projected_depth_max = depth;
-                }
-                if (clip_vtx->w < stats->hardware_projected_w_min)
-                {
-                    stats->hardware_projected_w_min = clip_vtx->w;
-                }
-                if (clip_vtx->w > stats->hardware_projected_w_max)
-                {
-                    stats->hardware_projected_w_max = clip_vtx->w;
-                }
-            }
-            stats->hardware_projected_depth_sample_count++;
-#endif
             projected_z = clip_vtx->z;
         }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((state != NULL) &&
             (vertex_index < NDS_RENDERER_MAX_VTX) &&
             (clip_vtx != NULL) && (clip_vtx->w != 0))
@@ -16931,18 +14269,6 @@ ndsRendererHardwareSubmitVertex(
         {
             ndsRendererHardwareClipVertexNdcDepth(clip_vtx, projected_z);
         }
-#else
-        if (source_clip_depth != FALSE)
-        {
-            ndsRendererHardwareClipVertex(
-                clip_vtx, projected_z, semantic_vertex);
-        }
-        else
-        {
-            ndsRendererHardwareClipVertexNdcDepth(
-                clip_vtx, projected_z, semantic_vertex);
-        }
-#endif
     }
 }
 
@@ -16977,7 +14303,6 @@ static s32 ndsRendererHardwareClipZWInsideNearPlane(s32 z, s32 w)
     return ((w > 0) && (((s64)z + (s64)w) >= 0)) ? TRUE : FALSE;
 }
 
-#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 __attribute__((optimize("Os"))) ndsRendererHardwareClipLerpQ16(
     s32 from, s32 to, s32 ratio_q16)
 {
@@ -17210,7 +14535,6 @@ ndsRendererHardwareSubmitNearClippedTriangle(
     }
     return emitted;
 }
-#endif
 
 static s32 ndsRendererHardwareTriangleInsideNearPlane(
     const NDSRendererClipVertex20p12 *v0,
@@ -17290,9 +14614,6 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
             return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
         }
         ndsRendererProfileRecordRawCurrentCandidate();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
-#endif
         NDS_EFFECT_SUBMIT_BIN(5u);
         return NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
     }
@@ -17307,10 +14628,6 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
         {
             *out_snapshot_id = snapshot_id;
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        ndsRendererHardwareQueueSnapshotMatrixPosTest(
-            state, snapshot_id, i0);
-#endif
         NDS_EFFECT_SUBMIT_BIN(6u);
         return NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX;
     }
@@ -17320,7 +14637,7 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
+#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
 static void __attribute__((noinline)) NDS_RENDERER_HOT_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
@@ -17404,90 +14721,24 @@ ndsRendererSubmitHardwareTriangle(
     s32 raw_submit;
     s32 source_clip_depth;
     s32 no_oracle;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     s32 near_clipped = FALSE;
-#endif
     u32 raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     const NDSRendererMatrixSnapshot *raw_snapshot = NULL;
     NDSRendererHWSubmitClass submit_class;
     s32 projected_z[3] = { 0, 0, 0 };
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    u32 vertex_submit_start;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    NDSRendererSemanticEvent semantic_event;
-#endif
 
     if (stats == NULL)
     {
         return;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    memset(&semantic_event, 0, sizeof(semantic_event));
-    semantic_event.owner = (u32)sNdsRendererProfileOwner;
-    semantic_event.owner_occurrence =
-        sNdsRendererSemanticSourceProvenance.owner_occurrence;
-    semantic_event.list_ordinal =
-        sNdsRendererSemanticSourceProvenance.list_ordinal;
-    semantic_event.branch_path = (state != NULL) ?
-        state->semantic_branch_path :
-        sNdsRendererSemanticSourceProvenance.root_branch_path;
-    semantic_event.command_index = (state != NULL) ?
-        state->semantic_command_index : 0u;
-    semantic_event.tri2_half = (state != NULL) ?
-        state->semantic_tri2_half : 0u;
-    semantic_event.outcome = NDS_RENDERER_SEMANTIC_INPUT_REJECT;
-    semantic_event.packed = packed;
-    semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
-    semantic_event.source_state_hash =
-        ndsRendererSemanticSourceStateHash(stats);
-    semantic_event.raw_snapshot_id =
-        NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
-    semantic_event.no_z_depth_before =
-        sNdsRendererHardwareProjectedDepth;
-    semantic_event.no_z_depth_after =
-        sNdsRendererHardwareProjectedDepth;
-    semantic_event.no_z_background_before =
-        sNdsRendererHardwareProjectedBackground;
-    semantic_event.no_z_background_after =
-        sNdsRendererHardwareProjectedBackground;
-    semantic_event.fog_color = stats->fog_color;
-    semantic_event.fog_min = stats->fog_min;
-    semantic_event.fog_max = stats->fog_max;
-    semantic_event.fog_status = stats->fog_status;
-#endif
     if (ndsRendererInputTriangleReady(state, packed, &i0, &i1, &i2) == FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        semantic_event.vertex_index[0] = i0;
-        semantic_event.vertex_index[1] = i1;
-        semantic_event.vertex_index[2] = i2;
-        ndsRendererSemanticCommitEvent(&semantic_event);
-#endif
         stats->hardware_oracle_reject_count++;
         ndsRendererProfileRecordSubmitClass(
             NDS_RENDERER_HW_SUBMIT_REJECT);
         return;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.vertex_index[0] = i0;
-    semantic_event.vertex_index[1] = i1;
-    semantic_event.vertex_index[2] = i2;
-    semantic_event.vertex_matrix_snapshot[0] =
-        state->vertex_matrix_snapshot[i0];
-    semantic_event.vertex_matrix_snapshot[1] =
-        state->vertex_matrix_snapshot[i1];
-    semantic_event.vertex_matrix_snapshot[2] =
-        state->vertex_matrix_snapshot[i2];
-    semantic_event.vertex_clip_snapshot[0] =
-        state->vertex_clip_snapshot[i0];
-    semantic_event.vertex_clip_snapshot[1] =
-        state->vertex_clip_snapshot[i1];
-    semantic_event.vertex_clip_snapshot[2] =
-        state->vertex_clip_snapshot[i2];
-#endif
     no_oracle = (sNdsRendererHardwareNoOracle != 0u) ? TRUE : FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (state->texture_prepare_valid != 0u)
     {
         source_zbuffered =
@@ -17499,7 +14750,6 @@ ndsRendererSubmitHardwareTriangle(
             (state->texture_prepare_prim_depth != 0u) ? TRUE : FALSE;
     }
     else
-#endif
     {
         zbuffered =
             ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) != 0u) ?
@@ -17529,20 +14779,6 @@ ndsRendererSubmitHardwareTriangle(
     projected_submit =
         ((source_zbuffered != FALSE) && (raw_submit == FALSE)) ? TRUE : FALSE;
     source_clip_depth = projected_submit;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.submit_class = (u32)submit_class;
-    semantic_event.raw_snapshot_id = raw_snapshot_id;
-    semantic_event.source_zbuffered =
-        (source_zbuffered != FALSE) ? TRUE : FALSE;
-    semantic_event.zbuffered = (zbuffered != FALSE) ? TRUE : FALSE;
-    semantic_event.raw_submit = (raw_submit != FALSE) ? TRUE : FALSE;
-    semantic_event.projected_submit =
-        (projected_submit != FALSE) ? TRUE : FALSE;
-    semantic_event.decal_depth = (decal_depth != FALSE) ? TRUE : FALSE;
-    semantic_event.prim_depth = (prim_depth != FALSE) ? TRUE : FALSE;
-    semantic_event.source_clip_depth =
-        (source_clip_depth != FALSE) ? TRUE : FALSE;
-#endif
     transformed_ready = TRUE;
     if (raw_submit == FALSE)
     {
@@ -17554,11 +14790,6 @@ ndsRendererSubmitHardwareTriangle(
     }
     if (transformed_ready == FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        semantic_event.outcome = NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT;
-        semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
-        ndsRendererSemanticCommitEvent(&semantic_event);
-#endif
         stats->hardware_oracle_reject_count++;
         ndsRendererProfileRecordSubmitClass(
             NDS_RENDERER_HW_SUBMIT_REJECT);
@@ -17574,24 +14805,7 @@ ndsRendererSubmitHardwareTriangle(
          * the same way rather than dropping it (BUGS.md #10); emitting the
          * raw post-divide vertices is what would create a screen-spanning
          * primitive, and the clipper never does that. */
-#if NDS_RENDERER_PROFILE_LEVEL < 2
         near_clipped = TRUE;
-#else
-        if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-        {
-            (void)ndsRendererHardwareNextProjectedDepth();
-        }
-        if (source_zbuffered != FALSE)
-        {
-            ndsRendererHardwareEnterProjectedForeground();
-        }
-        semantic_event.outcome = NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT;
-        semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
-        ndsRendererSemanticCommitEvent(&semantic_event);
-        ndsRendererProfileRecordNearPlaneTriangleReject();
-        ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
-        return;
-#endif
     }
     if (no_oracle == FALSE)
     {
@@ -17601,13 +14815,6 @@ ndsRendererSubmitHardwareTriangle(
     {
         raw_snapshot = ndsRendererGetMatrixSnapshot(state, raw_snapshot_id);
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    if (sNdsRendererHardwareNoOracle == 0u)
-    {
-        ndsRendererHardwareRecordOracleTriangle(state, i0, i1, i2);
-    }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (state->texture_prepare_valid == 0u)
     {
         material_color = ndsRendererHardwareColorSource(stats);
@@ -17620,28 +14827,6 @@ ndsRendererSubmitHardwareTriangle(
             ((use_vertex_color != FALSE) ?
                  NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u);
     }
-#else
-    material_color = ndsRendererHardwareColorSource(stats);
-    use_material_color = ndsRendererHardwareUseMaterialColor(stats);
-    use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
-    state->texture_prepare_material_color = material_color;
-    state->texture_prepare_vertex_flags =
-        ((use_material_color != FALSE) ?
-             NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u) |
-        ((use_vertex_color != FALSE) ?
-             NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX : 0u);
-    if (stats->texture_combine_count != 0u)
-    {
-        if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
-        {
-            gNdsRendererProfileLitShadeCombineCount++;
-        }
-        if (use_material_color != FALSE)
-        {
-            gNdsRendererProfileMaterialCombineCount++;
-        }
-    }
-#endif
     if (state->texture_prepare_valid == 0u)
     {
         poly_alpha = ndsRendererHardwareAlpha(stats, v0);
@@ -17663,19 +14848,8 @@ ndsRendererSubmitHardwareTriangle(
     {
         poly_alpha = ndsRendererHardwareAlpha(stats, v0);
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.poly_alpha = poly_alpha;
-    semantic_event.alpha_key = ndsRendererHardwareAlphaStateKey(stats);
-    semantic_event.fog_key = ndsRendererHardwareFogStateKey(stats);
-#endif
     if (poly_alpha == 0u)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        semantic_event.outcome = NDS_RENDERER_SEMANTIC_ALPHA_ZERO;
-        semantic_event.poly_fmt =
-            ndsRendererHardwarePolyFmt(stats, poly_alpha);
-        ndsRendererSemanticCommitEvent(&semantic_event);
-#endif
         return;
     }
     ndsRendererProfileRecordSubmitClass(submit_class);
@@ -17700,12 +14874,6 @@ ndsRendererSubmitHardwareTriangle(
             ndsRendererHardwareTextureImplicitStateOn(stats);
         use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ?
             ndsRendererHardwareBindTexture(stats, config, state) : FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        state->texture_prepare_key_hash = (use_texture != FALSE) ?
-            sNdsRendererSemanticLastTextureKeyHash : 0u;
-        state->texture_prepare_params = (use_texture != FALSE) ?
-            sNdsRendererSemanticLastTextureParams : 0u;
-#endif
         state->texture_prepare_valid = TRUE;
         state->texture_prepare_enabled =
             (use_texture != FALSE) ? TRUE : FALSE;
@@ -17745,22 +14913,7 @@ ndsRendererSubmitHardwareTriangle(
         use_texture =
             (state->texture_prepare_enabled != 0u) ? TRUE : FALSE;
         ndsRendererProfileRecordTexturePrepareReuse();
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        if (use_texture != FALSE)
-        {
-            state->texture_prepare_vertex_flags |=
-                NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
-        }
-#endif
     }
-#if NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY
-    if (use_texture != FALSE)
-    {
-        state->texture_prepare_vertex_flags &=
-            ~(NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL |
-              NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
-    }
-#endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
         ndsRendererSubmitHardwareTriangleRawMatrixCold(
@@ -17795,21 +14948,6 @@ ndsRendererSubmitHardwareTriangle(
         state->texture_prepare_poly_fmt :
         ndsRendererHardwarePolyFmt(stats, poly_alpha);
     texture_name = state->texture_prepare_name;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.poly_fmt = poly_fmt;
-    semantic_event.texture_name = texture_name;
-    semantic_event.texture_key_hash = state->texture_prepare_key_hash;
-    semantic_event.texture_params = state->texture_prepare_params;
-    semantic_event.matrix_loaded = sNdsRendererHardwareMatrixLoaded;
-    semantic_event.matrix_mode = sNdsRendererHardwareMatrixMode;
-    semantic_event.matrix_generation =
-        sNdsRendererHardwareMatrixGeneration;
-    semantic_event.matrix_signature =
-        sNdsRendererHardwareMatrixSignature;
-    semantic_event.projected_z[0] = projected_z[0];
-    semantic_event.projected_z[1] = projected_z[1];
-    semantic_event.projected_z[2] = projected_z[2];
-#endif
     ndsRendererHardwareBeginTriangleBatch(
         stats, (use_texture != FALSE) ? TRUE : FALSE,
         texture_name, poly_fmt, sNdsRendererHardwareMatrixMode,
@@ -17827,14 +14965,6 @@ ndsRendererSubmitHardwareTriangle(
              NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH : 0u) |
         ((source_clip_depth != FALSE) ?
              NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH : 0u);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.context_flags = state->texture_prepare_vertex_flags;
-    semantic_event.zbuffered = (zbuffered != FALSE) ? TRUE : FALSE;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    vertex_submit_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (near_clipped != FALSE)
     {
         if (ndsRendererHardwareSubmitNearClippedTriangle(
@@ -17844,42 +14974,21 @@ ndsRendererSubmitHardwareTriangle(
         }
     }
     else
-#endif
     {
     ndsRendererHardwareSubmitVertex(stats, state, i0, projected_z[0]
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                                    , &semantic_event.vertex[0]
-#endif
                                     );
     ndsRendererHardwareSubmitVertex(stats, state, i1, projected_z[1]
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                                    , &semantic_event.vertex[1]
-#endif
                                     );
     ndsRendererHardwareSubmitVertex(stats, state, i2, projected_z[2]
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-                                    , &semantic_event.vertex[2]
-#endif
                                     );
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    sNdsRendererProfileVertexSubmitTicks +=
-        cpuGetTiming() - vertex_submit_start;
-#endif
     if (source_zbuffered != FALSE)
     {
         ndsRendererHardwareEnterProjectedForeground();
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-    semantic_event.outcome = NDS_RENDERER_SEMANTIC_EMITTED;
-    semantic_event.no_z_depth_after = sNdsRendererHardwareProjectedDepth;
-    semantic_event.no_z_background_after =
-        sNdsRendererHardwareProjectedBackground;
-    ndsRendererSemanticCommitEvent(&semantic_event);
-#endif
 
     sNdsRendererHardwareSubmitted = TRUE;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+#if 0 != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount++;
 #endif
     stats->hardware_triangle_count++;
@@ -17897,7 +15006,7 @@ ndsRendererSubmitHardwareTriangle(
 }
 #endif
 
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2b: fighter texture admission and battle VRAM regions
  * (include/nds/renderer_fighter_lean.h, gNdsFtrLeanAdmit).
@@ -19151,7 +16260,6 @@ ndsFtrAdmitRecord(NDSFtrAdmitPass *pass, const u32 *w, u32 i, u32 kind,
     }
 }
 
-#if NDS_P4
 /* P4 (2026-10-13): the contents' records (scripts/p4/p4_admission.py) -- the
  * cast's record format under a header naming the content ids it indexes, then
  * (first, count) per content id x detail. A content was noted under its
@@ -19260,7 +16368,6 @@ ndsFtrAdmitP4Pass(NDSFtrAdmitPass *pass, const u32 *fkind, const u32 *costume,
     }
     ndsRelocAssetStreamClose(&stream);
 }
-#endif
 
 u32 NDS_FTR_ADMIT_COLD_CODE
 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
@@ -19392,11 +16499,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
         }
     }
     ndsRelocAssetStreamClose(&stream);
-#if NDS_P4
     ndsFtrAdmitP4Pass(&pass, fkind, costume, detail, player, content, count);
-#else
-    (void)content;
-#endif
     ndsFtrCarveClose();
     if (sNdsFtrCarveLive == 0u)
     {

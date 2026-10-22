@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
 
 #include <ft/fighter.h>
 
@@ -20,4 +19,3 @@
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialhi.c"
 
-#endif

@@ -374,11 +374,6 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
     sNdsNativeStageBlobPacket.state_spans =
         (offsets[12] != NDS_NATIVE_STAGE_BLOB_ABSENT) ?
         (const void *)(slab + offsets[12]) : NULL;
-#if NDS_TASK51_STAGE_NATIVE
-    sNdsNativeStageBlobPacket.baked_world =
-        (offsets[13] != NDS_NATIVE_STAGE_BLOB_ABSENT) ?
-        (const void *)(slab + offsets[13]) : NULL;
-#endif
     sNdsNativeStageBlobPacket.asset_count = (u16)counts[0];
     sNdsNativeStageBlobPacket.segment_count = (u16)counts[1];
     sNdsNativeStageBlobPacket.dobj_count = (u16)counts[2];

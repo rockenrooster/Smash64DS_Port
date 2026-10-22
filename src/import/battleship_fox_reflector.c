@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 
 #include <common.h>
 #include <ef/effect.h>
@@ -42,16 +41,13 @@ sb32 ftFoxSpecialLwTurnCheckInterruptLoop(GObj *fighter_gobj);
 
 uintptr_t llFoxMainMotionLwReflectorFTSpecialColl = 0x19B0u;
 
-#if NDS_P4
 /* Remix's ground_dsp table (S3), lent like the other special-move starters
  * (battleship_special_common.c). */
 #include <nds/nds_p4.h>
 #define ftCommonSpecialLwCheckInterruptCommon \
     ndsP4SourceFTCommonSpecialLwCheckInterruptCommon
 sb32 ndsP4SourceFTCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj);
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspeciallw.c"
-#if NDS_P4
 #undef ftCommonSpecialLwCheckInterruptCommon
 
 sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj)
@@ -63,7 +59,6 @@ sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *fighter_gobj)
                                  ndsP4SourceFTCommonSpecialLwCheckInterruptCommon,
                                  tables, slots, ARRAY_COUNT(slots));
 }
-#endif
 #define ftFoxSpecialLwStartSetStatus battleship_ftFoxSpecialLwStartSetStatus
 #define ftFoxSpecialAirLwStartSetStatus battleship_ftFoxSpecialAirLwStartSetStatus
 #define ftFoxSpecialLwHitSetStatus battleship_ftFoxSpecialLwHitSetStatus
@@ -108,4 +103,3 @@ void ftFoxSpecialLwHitSetStatus(GObj *fighter_gobj)
     battleship_ftFoxSpecialLwHitSetStatus(fighter_gobj);
 }
 
-#endif

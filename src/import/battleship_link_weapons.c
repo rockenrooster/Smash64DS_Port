@@ -63,41 +63,12 @@ sb32 wpLinkBoomerangProcHop(GObj *weapon_gobj);
 sb32 wpLinkBoomerangProcReflector(GObj *weapon_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/wp/wplink/wplinkspinattack.c"
-#if NDS_P2_LINK_SPECIAL_TOUR
-volatile u32 gNdsLinkBoomerangProjectCount;
-volatile f32 gNdsLinkBoomerangProjectWorldX;
-volatile f32 gNdsLinkBoomerangProjectWorldY;
-volatile f32 gNdsLinkBoomerangProjectScreenX;
-volatile f32 gNdsLinkBoomerangProjectScreenY;
-volatile u32 gNdsLinkBoomerangDisplayCallCount;
-volatile u32 gNdsLinkBoomerangDisplayTreeCount;
-volatile u32 gNdsLinkBoomerangDisplayMode;
-volatile u32 gNdsLinkBoomerangDisplayAttackState;
-
-static void ndsLinkBoomerangProject(CObj *cobj, Mtx44f matrix, Vec3f *pos,
-                                    f32 *screen_x, f32 *screen_y)
-{
-    func_ovl2_800EB924(cobj, matrix, pos, screen_x, screen_y);
-    gNdsLinkBoomerangProjectCount++;
-    gNdsLinkBoomerangProjectWorldX = pos->x;
-    gNdsLinkBoomerangProjectWorldY = pos->y;
-    gNdsLinkBoomerangProjectScreenX = *screen_x;
-    gNdsLinkBoomerangProjectScreenY = *screen_y;
-}
-#define func_ovl2_800EB924 ndsLinkBoomerangProject
-#endif
 #define wpLinkBoomerangMakeWeapon battleship_wpLinkBoomerangMakeWeapon
 #include "../../decomp/BattleShip-main/decomp/src/wp/wplink/wplinkboomerang.c"
 #undef wpLinkBoomerangMakeWeapon
-#if NDS_P2_LINK_SPECIAL_TOUR
-#undef func_ovl2_800EB924
-#endif
 
 static void ndsLinkBoomerangDrawTree(GObj *weapon_gobj)
 {
-#if NDS_P2_LINK_SPECIAL_TOUR
-    gNdsLinkBoomerangDisplayTreeCount++;
-#endif
     gcDrawDObjTreeForGObj(weapon_gobj);
 }
 
@@ -115,13 +86,6 @@ static void ndsLinkBoomerangDrawTree(GObj *weapon_gobj)
  * root.  No gameplay, lifetime, collision, or return/catch callback changes. */
 static void ndsLinkBoomerangProcDisplay(GObj *weapon_gobj)
 {
-#if NDS_P2_LINK_SPECIAL_TOUR
-    WPStruct *wp = wpGetStruct(weapon_gobj);
-
-    gNdsLinkBoomerangDisplayCallCount++;
-    gNdsLinkBoomerangDisplayMode = (u32)wp->display_mode;
-    gNdsLinkBoomerangDisplayAttackState = (u32)wp->attack_coll.attack_state;
-#endif
     wpDisplayMain(weapon_gobj, ndsLinkBoomerangDrawTree);
 }
 

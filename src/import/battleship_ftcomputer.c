@@ -17,11 +17,7 @@
  * published battle ROM and every verifier are bit-identical to before; build
  * NDS_R2_FOX_CPU_DEFAULT=0 for a look-at-it ROM, which also skips the 3/2/1/GO
  * wait and freezes the match timer. */
-#if NDS_R2_FOX_CPU_DEFAULT
 volatile u32 gNdsBattlePlayableFoxCpuEnabled = 1u;
-#else
-volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -37,7 +33,6 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 #pragma weak ftComputerCheckEvadeDistance
 #pragma weak ftComputerCheckDetectTarget
 
-#if NDS_P4
 /* P4: Remix hooks the recover objective after its walk (AI.asm
  * custom_recovery_logic). The definition `(FTStruct *fp)` pastes to the
  * base name, the decomp's call `(fp)` to the port's copy below, which adds
@@ -96,7 +91,6 @@ static void ndsP4FTComputerFollowObjectiveUseItem(FTStruct *fp);
 #define NDS_P4_COUNTER_fp ndsP4FTComputerFollowObjectiveCounterAttack(fp
 #define ftComputerFollowObjectiveCounterAttack(arg) NDS_P4_COUNTER_##arg)
 static void ndsP4FTComputerFollowObjectiveCounterAttack(FTStruct *fp);
-#endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
 #define ftComputerSetFighterDamageDetectSize \
@@ -104,7 +98,6 @@ static void ndsP4FTComputerFollowObjectiveCounterAttack(FTStruct *fp);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcomputer.c"
 
-#if NDS_P4
 #undef ftComputerFollowObjectiveWalk
 #undef ftComputerFollowObjectiveRecover
 #undef ftComputerProcessObjective
@@ -509,9 +502,7 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
         }
         if (target_kind == nFTKindNess)
         {
-#if NDS_P4_SHEIK
             if (ndsP4Content(this_fp) != NDS_P4_CONTENT_SHEIK)
-#endif
             {
                 return FALSE;
             }
@@ -576,7 +567,6 @@ sb32 func_ovl3_80138AA8(FTStruct *this_fp, sb32 is_delay)
 {
     return ndsP4FTComputerLongRange(this_fp, is_delay);
 }
-#endif
 #undef ftComputerSetupAll
 #undef ftComputerProcessAll
 #undef ftComputerSetFighterDamageDetectSize
@@ -759,10 +749,6 @@ void ftComputerProcessAll(GObj *fighter_gobj)
      * ndsR2AnimCachePreloadStep. cpuGetTiming is forward-declared for the reason
      * given in battleship_lbparticle.c:1697; libnds nds/timers.h:255 is the
      * authority for the signature. */
-#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
-    extern u32 cpuGetTiming(void);
-    u32 computer_start = cpuGetTiming();
-#endif
 
     if ((gNdsSceneHarnessMode ==
          NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
@@ -776,7 +762,6 @@ void ftComputerProcessAll(GObj *fighter_gobj)
     }
     else
     {
-#if NDS_P4 && NDS_P2_KIRBY
         /* S8: where the CPU tests Kirby's copy_id, Remix's sees a content
          * power's own id, which none of the source's cases name; the port's
          * copy_id is the parent's kind, so it reads as an unnamed id for the
@@ -789,14 +774,11 @@ void ftComputerProcessAll(GObj *fighter_gobj)
         {
             fp->passive_vars.kirby.copy_id = nFTKindEnumCount;
         }
-#endif
         ndsBaseFTComputerProcessAll(fighter_gobj);
-#if NDS_P4 && NDS_P2_KIRBY
         if (is_kirby_power != FALSE)
         {
             fp->passive_vars.kirby.copy_id = kirby_copy_id;
         }
-#endif
 #if NDS_SHIP_TELEMETRY
         gNdsFTComputerProcessCount++;
         ndsFTComputerRecord(fp);
@@ -807,9 +789,6 @@ void ftComputerProcessAll(GObj *fighter_gobj)
     {
         ndsLabForceInput(fp);
     }
-#endif
-#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
-    gNdsTickHudSrcComputerTicks += cpuGetTiming() - computer_start;
 #endif
 }
 

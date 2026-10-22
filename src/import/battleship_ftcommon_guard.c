@@ -14,9 +14,7 @@
 #include <nds/nds_p4_contents.h>
 #include <sys/audio.h>
 #include <sys/obj.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 #ifndef AOBJ_ANIM_NULL
 #define AOBJ_ANIM_NULL 0.0F
@@ -118,7 +116,6 @@ static void ndsGuardSourcePlayAnimEventsAll(GObj *fighter_gobj)
 #define ftCommonGuardGetJointTransform ndsBaseFTCommonGuardGetJointTransform
 #define ftCommonGuardGetJointTransformScale \
     ndsBaseFTCommonGuardGetJointTransformScale
-#if NDS_P4
 /* EXTRA's static parts (nds_p4.h static_parts): the guard's joint count and
  * its DObjDesc rows leave them out (StaticPart.asm
  * fix_ftCommonGuardUpdateJoints_, fix_ftCommonGuardInitJoints_). The source
@@ -132,10 +129,6 @@ static void ndsGuardSourcePlayAnimEventsAll(GObj *fighter_gobj)
 #define NDS_P4_GUARD_INIT_fighter_gobj ndsP4GuardInitJoints(fighter_gobj
 static void ndsP4GuardUpdateJoints(GObj *fighter_gobj);
 static void ndsP4GuardInitJoints(GObj *fighter_gobj);
-#else
-#define ftCommonGuardUpdateJoints ndsBaseFTCommonGuardUpdateJoints
-#define ftCommonGuardInitJoints ndsBaseFTCommonGuardInitJoints
-#endif
 #define ftCommonGuardOnProcUpdate ndsBaseFTCommonGuardOnProcUpdate
 #define ftCommonGuardCommonProcInterrupt \
     ndsBaseFTCommonGuardCommonProcInterrupt
@@ -171,14 +164,10 @@ void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 /* P4: Yoshi's egg shield. Remix extends these compares to J Yoshi only
  * (yoshishared.asm yoshi_shield_fix_1-8), so a content aliasing Yoshi
  * (Bowser) guards with the common shield (nds_p4.h NDS_P4_PARENT_KIND). */
-#if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard2.c"
-#if NDS_P4
 #undef nFTKindYoshi
-#endif
 
 #undef gcAddDObjAnimJoint
 #undef lbCommonAddDObjAnimJointAll
@@ -195,7 +184,6 @@ void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 #undef ftCommonGuardGetJointTransformScale
 #undef ftCommonGuardUpdateJoints
 #undef ftCommonGuardInitJoints
-#if NDS_P4
 #undef NDS_P4_GUARD_UPDATE_GObj
 #undef NDS_P4_GUARD_UPDATE_fighter_gobj
 #undef NDS_P4_GUARD_INIT_GObj
@@ -242,7 +230,6 @@ static void ndsP4GuardInitJoints(GObj *fighter_gobj)
 {
     ndsP4GuardRun(fighter_gobj, ndsBaseFTCommonGuardInitJoints);
 }
-#endif
 #undef ftCommonGuardOnProcUpdate
 #undef ftCommonGuardCommonProcInterrupt
 #undef ftCommonGuardOnSetStatus

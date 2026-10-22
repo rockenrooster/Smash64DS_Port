@@ -16,7 +16,6 @@
  * voice IDs, and the N64 display-list calls are not) are referenced verbatim
  * and listed in the task report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <gm/gmsound.h>
@@ -367,4 +366,3 @@ GObj* itKabigonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
     return item_gobj;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

@@ -7,9 +7,7 @@
 #include <it/item.h>
 #include <sys/obj.h>
 #include <nds/nds_p4_contents.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos);
 GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj);
@@ -80,13 +78,9 @@ void ndsBaseFTCommonCatchWaitSetStatus(GObj *fighter_gobj);
  * Piano's throw) only, yoshi_grab_fix_1/2 and yoshi_throw_fix_1, so a
  * content aliasing Yoshi (Bowser) grabs like everyone else (nds_p4.h
  * NDS_P4_PARENT_KIND). */
-#if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncatch2.c"
-#if NDS_P4
 #undef nFTKindYoshi
-#endif
 
 #undef ftCommonCatchPullProcUpdate
 #undef ftCommonCatchPullProcCatch
@@ -113,13 +107,9 @@ void ndsBaseFTCommonCapturePulledProcMap(GObj *fighter_gobj);
 void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj,
                                              GObj *capture_gobj);
 
-#if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturewait.c"
-#if NDS_P4
 #undef nFTKindYoshi
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturepulled.c"
 
 #undef ftCommonCaptureWaitProcMap
@@ -172,28 +162,20 @@ void ndsBaseFTCommonThrowProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonThrowSetStatus(GObj *fighter_gobj, sb32 is_throwf);
 sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 
-#if NDS_P4
 /* A content compares as its own id here, except one Remix sends down
  * Yoshi's branch (yoshishared.asm yoshi_throw_fix_1: Mad Piano). */
 #define nFTKindYoshi \
     ((ndsP4ThrownHidden(capture_fp) != FALSE) ? capture_fp->fkind : \
      NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi))
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c"
-#if NDS_P4
 #undef nFTKindYoshi
-#endif
-#if NDS_P4
 /* P4: a content whose forward throw Remix sends down Kirby's branch
  * (jigglypuffkirbyshared.asm kirby_fthrow_1_fix, Bowser). The file's one
  * ftMainSetStatus is ftCommonThrowSetStatus's. */
 #define ftMainSetStatus(gobj_, status_, frame_, speed_, flags_) \
     ndsP4ThrowMainSetStatus((gobj_), (status_), (frame_), (speed_), (flags_))
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrow.c"
-#if NDS_P4
 #undef ftMainSetStatus
-#endif
 
 #undef ftCommonThrownProcUpdate
 #undef ftCommonThrownProcPhysics
@@ -280,17 +262,13 @@ void ndsBaseFTCommonThrownUpdateDamageStats(FTStruct *this_fp);
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
 void ndsBaseFTCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj);
 
-#if NDS_P4
 /* Owner p7h (2026-10-19): a content's damage scale (NDSP4Fighter
  * damage_scale) takes its throws too. The file's three staled-damage calls
  * are the throw's damage, each with the thrower in capture_fp. */
 #define ftParamGetStaledDamage(player_, damage_, attack_id_, count_) \
     ndsP4StaledDamage(capture_fp, (player_), (damage_), (attack_id_), (count_))
-#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown2.c"
-#if NDS_P4
 #undef ftParamGetStaledDamage
-#endif
 
 #undef ftCommonThrownReleaseFighterLoseGrip
 #undef ftCommonThrownDecideFighterLoseGrip

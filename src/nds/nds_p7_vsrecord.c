@@ -66,15 +66,11 @@ void ndsP7VsRecordLoad(NDSP7VsRecordData *d)
         }
         else
         {
-#if NDS_P4
             const u32 content = sel - NDS_P7_SEL_CONTENT(0u);
 
             shown = ((content < NDS_P4_CONTENT_LIMIT) &&
                      (ndsP4Fighter(content) != NULL)) ?
                 ndsP7FighterUnlocked(sel) : FALSE;
-#else
-            shown = FALSE;
-#endif
         }
         if (shown != FALSE)
         {

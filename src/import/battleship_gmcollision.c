@@ -134,15 +134,8 @@ void scManagerRunPrintGObjStatus(void);
  * cluster (NDS_R2_COLLISION_FIXED). They share one pair of wrappers because
  * they hook the same two entry points, and hooking them twice would mean two
  * renames of one definition. */
-#if NDS_TICK_HUD || NDS_R2_COLLISION_FIXED || NDS_P2_HURTBOX_REJECT
 #define NDS_R2_CFX_RING_WRAP 1
-#else
-#define NDS_R2_CFX_RING_WRAP 0
-#endif
 
-#if NDS_R2_COLLISION_FIXED
-#include <nds/nds_r2_collision_ring.h>
-#endif
 
 #if NDS_R2_CFX_RING_WRAP
 /* R2-07 slice 52 law-1 counter: the ENGAGEMENT of the fighter narrow phase.
@@ -194,30 +187,7 @@ sb32 ndsBaseGmCollisionCheckFighterAttackShieldCollide(
     ndsBaseGmCollisionCheckFighterAttackShieldCollide
 #endif /* NDS_R2_CFX_RING_WRAP */
 
-#if NDS_R2_SIM_MAC_SHADOW
-/* THE WARM-MAC EXCHANGE-RATE INSTRUMENT. Lab only, default off, and it changes
- * NO gameplay value at either arm: the decomp float body still runs, still
- * writes the same result, and the fixed form is evaluated beside it and thrown
- * away. See include/nds/nds_r2_sim_mac_fixed.h for what it measures and why a
- * replacement route could not measure it (a route A/B cannot price a gameplay
- * change; one on this exact code ended with damage 130/51 against 33/65).
- *
- * COVERAGE IS PARTIAL AND THE COUNTERS SAY BY HOW MUCH. The rename below moves
- * the DEFINITION and gmcollision.c's own fifteen call sites together, so these
- * wrappers see cross-TU calls only -- the property the ring wrapper above
- * relies on (`ZERO in-TU callers`) is exactly what these two do NOT have.
- * Makefile:2302 forbids a decomp overlay patch for a new adaptation, so 100%
- * capture is not purchasable without editing the source of truth. */
-#include <nds/nds_r2_sim_mac_fixed.h>
 
-void ndsR2SimMacBaseGetWorldPosition(Mtx44f mtx, Vec3f *vec);
-void ndsR2SimMacBaseCompose(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
-
-#define gmCollisionGetWorldPosition ndsR2SimMacBaseGetWorldPosition
-#define func_ovl2_800ED490 ndsR2SimMacBaseCompose
-#endif /* NDS_R2_SIM_MAC_SHADOW */
-
-#if NDS_P2_HURTBOX_REJECT
 /* The weapon/item attack paths against fighter hurtboxes: same joint frame,
  * same TestRectangle. Their only callers are in ftmain.c, so this rename moves
  * the definitions and captures every call. */
@@ -227,7 +197,6 @@ sb32 ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
     ITAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll);
 #define gmCollisionCheckWeaponAttackFighterDamageCollide     ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide
 #define gmCollisionCheckItemAttackFighterDamageCollide     ndsBaseGmCollisionCheckItemAttackFighterDamageCollide
-#endif
 
 #if NDS_P2_JOINT_RESIDENT
 /* Owner ruling D13 (2026-10-04): fighter joint worlds stay in fixed point
@@ -241,7 +210,7 @@ void ndsBaseGmCollisionGetFighterPartsWorldPosition(DObj *main_dobj,
     ndsBaseGmCollisionGetFighterPartsWorldPosition
 #endif
 
-#if NDS_P2_JOINT_RESIDENT && NDS_P2_HURTBOX_REJECT
+#if NDS_P2_JOINT_RESIDENT
 /* P2-2p8 (2026-10-05): every entry point into this file that can set a
  * fighter FTParts latch (unk_dobjtrans_0x5/6/7, transform_update_mode 1) bumps
  * gNdsFtPartsLatchWrites first, so the per-tick latch clears
@@ -287,11 +256,9 @@ sb32 ndsLatchBaseItemAttackSpecialCollide(ITAttackColl *attack_coll,
 /* 2026-10-06: the strong definitions of the three attack-near-fighter tests
  * (bounds once, order-key compares, same answers) are in
  * nds_p2_hurtbox_reject.c. */
-#if NDS_P2_HURTBOX_REJECT
 #pragma weak gmCollisionCheckFighterInFighterRange
 #pragma weak gmCollisionCheckWeaponInFighterRange
 #pragma weak gmCollisionCheckItemInFighterRange
-#endif
 
 #if NDS_P2_JOINT_RESIDENT
 /* 2026-10-06 (owner: "hit VFX play at wrong locations"). The hurtbox test
@@ -398,7 +365,6 @@ void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
 }
 #endif
 
-#if NDS_P2_HURTBOX_REJECT
 #undef gmCollisionCheckWeaponAttackFighterDamageCollide
 #undef gmCollisionCheckItemAttackFighterDamageCollide
 
@@ -462,104 +428,7 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
     return ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
 }
-#endif
 
-#if NDS_R2_SIM_MAC_SHADOW
-#undef gmCollisionGetWorldPosition
-#undef func_ovl2_800ED490
-
-void gmCollisionGetWorldPosition(Mtx44f mtx, Vec3f *vec)
-{
-    const u32 arm = gNdsR2SimMacShadowArm;
-    f32 in[3];
-
-    /* Before the base call: it writes *vec in place. */
-    in[0] = vec->x;
-    in[1] = vec->y;
-    in[2] = vec->z;
-
-    ndsR2SimMacBaseGetWorldPosition(mtx, vec);
-    gNdsR2SimMacXfrmCalls++;
-
-    if ((arm & NDS_R2_SIM_MAC_ARM_TRANSFORM) != 0u)
-    {
-        f32 ref[3];
-
-        ref[0] = vec->x;
-        ref[1] = vec->y;
-        ref[2] = vec->z;
-        ndsR2SimMacShadowTransform(mtx, in, ref, arm);
-    }
-    if ((arm & NDS_R2_SIM_MAC_ARM_COMPOSE) != 0u)
-    {
-        ndsR2SimMacShadowCompose(mtx, arm);
-    }
-}
-
-void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs)
-{
-    ndsR2SimMacBaseCompose(dst, lhs, rhs);
-    gNdsR2SimMacCmpsCalls++;
-}
-
-/* THE DRIVING SEAM, and it is not the one the shape wanted.
- *
- * The wrappers above measured their own coverage on the first run and it is
- * 0.082 entries a frame for the transform and EXACTLY ZERO for the compose, so
- * neither can drive a measurable delta. This one can: the fighter damage-collide
- * gateway has zero in-TU callers -- the property the ring wrapper above already
- * relies on -- so it captures 100% of its 1,938 calls a match, and its operands
- * are the live joint matrix and the live hurtbox offset, i.e. the SAME data
- * gm/gmcollision.c:504/527/1953 hands gmCollisionGetWorldPosition.
- *
- * It is still only 0.95 calls a frame against the real 45.2 and 19.0, which is
- * why the arm word carries a repeat count: the slope in R is the warm marginal
- * cost and the intercept is what a driving call pays once, and the real
- * per-entry cost is bracketed between them. See the header. */
-void ndsR2SimMacDriveJoint(DObj *joint, const Vec3f *offset, u32 arm)
-{
-    FTParts *parts;
-    f32 in[3];
-    f32 ref[3];
-
-    if ((joint == NULL) || (offset == NULL))
-    {
-        return;
-    }
-    parts = ftGetParts(joint);
-    if (parts == NULL)
-    {
-        return;
-    }
-    in[0] = offset->x;
-    in[1] = offset->y;
-    in[2] = offset->z;
-    ref[0] = 0.0F;
-    ref[1] = 0.0F;
-    ref[2] = 0.0F;
-    if ((arm & NDS_R2_SIM_MAC_ARM_GRADE) != 0u)
-    {
-        /* The float reference, produced by the decomp body itself on the same
-         * inputs. It is a REAL soft-float call and it is deliberately confined
-         * to the grading arm, whose ticks are never used as a price. */
-        Vec3f reference = *offset;
-
-        ndsR2SimMacBaseGetWorldPosition(parts->mtx_translate, &reference);
-        ref[0] = reference.x;
-        ref[1] = reference.y;
-        ref[2] = reference.z;
-    }
-    if ((arm & NDS_R2_SIM_MAC_ARM_TRANSFORM) != 0u)
-    {
-        ndsR2SimMacShadowTransform(parts->mtx_translate, in, ref, arm);
-    }
-    if ((arm & NDS_R2_SIM_MAC_ARM_COMPOSE) != 0u)
-    {
-        ndsR2SimMacShadowCompose(parts->mtx_translate, arm);
-    }
-    gNdsR2SimMacDriveCalls++;
-}
-#endif /* NDS_R2_SIM_MAC_SHADOW */
 
 #if NDS_R2_CFX_RING_WRAP
 #undef gmCollisionCheckFighterAttackDamageCollide
@@ -574,7 +443,6 @@ void ndsR2SimMacDriveJoint(DObj *joint, const Vec3f *offset, u32 arm)
  * still gmCollisionTestRectangle's, unchanged, in decomp code.
  *
  * Before the base call, not after: the base is where the latches are read. */
-#if NDS_P2_HURTBOX_REJECT
 /* P2-2p8 A5 (src/port/nds_p2_hurtbox_reject.c): the pair decided in fixed
  * point, or a proof that the float test below would miss; -1 leaves it to
  * the float tail. */
@@ -582,16 +450,11 @@ int ndsP2HurtboxDecideTest(const FTAttackColl *attack,
                            const FTDamageColl *damage);
 extern volatile u32 gNdsP2HurtboxRejects;
 extern volatile u32 gNdsP2HurtboxPasses;
-#endif
 
 sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
                                                 FTDamageColl *damage_coll)
 {
     sb32 hit;
-#if NDS_R2_COLLISION_FIXED && NDS_R2_COLLISION_FIXED_NARROW
-    int fixed_result;
-#endif
-#if NDS_P2_HURTBOX_REJECT
     {
         /* The kernel proves a miss or, since 2026-10-05, decides the pair in
          * fixed point (src/port/nds_p2_hurtbox_reject.c); -1 leaves it to the
@@ -605,42 +468,10 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
         }
         NDS_DIAG(gNdsP2HurtboxPasses++);
     }
-#endif
 
     NDS_FTPARTS_LATCH_MARK();
-#if NDS_R2_COLLISION_FIXED
-    ndsR2CfxPrepareFighterJoint(damage_coll->joint);
-#endif
-#if NDS_R2_COLLISION_FIXED && NDS_R2_COLLISION_FIXED_NARROW
-    /* R2-07 slice 53. The decomp tail this replaces is three statements --
-     * func_ovl2_800EDE00, func_ovl2_800EDE5C, gmCollisionTestRectangle -- and
-     * prepare above already ran the first two in fixed point. A decline falls
-     * through to the base, which runs all three exactly as before. */
-    fixed_result = ndsR2CfxTestFighterDamage(
-        (struct FTAttackColl *)attack_coll, (struct FTDamageColl *)damage_coll);
-    if (fixed_result != NDS_R2_CFX_NARROW_DECLINE)
-    {
-        hit = (fixed_result != 0) ? TRUE : FALSE;
-    }
-    else
-#endif
     hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
                                                             damage_coll);
-#if NDS_R2_SIM_MAC_SHADOW
-    /* After the base, never before: the base is where the joint's matrices are
-     * brought up to date, so this reads exactly what the source's own call read.
-     * At arm 0 this is one volatile load, a test and a not-taken branch, paid
-     * identically on every arm. */
-    {
-        const u32 sim_mac_arm = gNdsR2SimMacShadowArm;
-
-        if (sim_mac_arm != 0u)
-        {
-            ndsR2SimMacDriveJoint(damage_coll->joint, &damage_coll->offset,
-                                  sim_mac_arm);
-        }
-    }
-#endif
 #if NDS_TICK_HUD
     NDS_DIAG(gNdsCfxFighterDamagePhaseCalls++);
     if (hit != FALSE)
@@ -658,9 +489,6 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
     sb32 hit;
 
     NDS_FTPARTS_LATCH_MARK();
-#if NDS_R2_COLLISION_FIXED
-    ndsR2CfxPrepareFighterJoint(dobj);
-#endif
     hit = ndsBaseGmCollisionCheckFighterAttackShieldCollide(
         attack_coll, fighter_gobj, dobj, p_angle);
 #if NDS_TICK_HUD
@@ -674,185 +502,3 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
 }
 #endif /* NDS_R2_CFX_RING_WRAP */
 
-#if NDS_R2_COLLISION_L7_ORACLE
-/* R2-07 L7 step one. Lives in THIS translation unit and not in a port file
- * because it has to call the decomp's own gmCollisionGetWorldPosition as the
- * reference, and after the include above that symbol is right here. Comparing
- * against a transcription of the reference would prove the transcription.
- *
- * Read-only: it reads mtx_translate and unk_dobjtrans_0x9C, writes only its own
- * counters, and runs after the gameplay tick. The header explains what each
- * counter settles. */
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_collision_oracle.h>
-
-extern DObj *gcGetTreeDObjNext(DObj *dobj);
-
-volatile u32 gNdsR2CollisionOracleSamples;
-volatile u32 gNdsR2CollisionOracleSingular;
-volatile u32 gNdsR2CollisionOracleMaxDevQ12[NDS_R2_COLLISION_ORACLE_BUCKETS];
-volatile u32 gNdsR2CollisionOracleOverBoundCount;
-volatile u32 gNdsR2CollisionOracleScaleMinQ12 = 0xffffffffu;
-volatile u32 gNdsR2CollisionOracleScaleMaxQ12;
-
-static s32 ndsR2CollisionOracleToQ12(f32 value)
-{
-    /* Round-half-away-from-zero, matching ndsR2CollisionRoundShift so the two
-     * representations agree on the boundary rather than differing by a unit
-     * depending on which produced the value. */
-    f32 scaled = value * (f32)NDS_R2_COLLISION_MTX_ONE;
-
-    return (s32)((scaled < 0.0f) ? (scaled - 0.5f) : (scaled + 0.5f));
-}
-
-static u32 ndsR2CollisionOracleAbsQ12(f32 reference, s32 candidate_q12)
-{
-    s32 delta = ndsR2CollisionOracleToQ12(reference) - candidate_q12;
-
-    return (u32)((delta < 0) ? -delta : delta);
-}
-
-static void ndsR2CollisionOracleSamplePart(FTParts *parts)
-{
-    static const s32 offsets[NDS_R2_COLLISION_ORACLE_BUCKETS] = {
-        NDS_R2_COLLISION_ORACLE_OFFSET_0,
-        NDS_R2_COLLISION_ORACLE_OFFSET_1,
-        NDS_R2_COLLISION_ORACLE_OFFSET_2,
-    };
-    NDSR2CollisionMtx source;
-    NDSR2CollisionMtx frame;
-    u32 bucket;
-    u32 row;
-    u32 col;
-
-    for (row = 0u; row < 4u; row++)
-    {
-        for (col = 0u; col < 3u; col++)
-        {
-            source.m[row][col] =
-                ndsR2CollisionOracleToQ12(parts->mtx_translate[row][col]);
-        }
-    }
-    if (ndsR2CollisionInvertFrame(&frame, &source) == 0)
-    {
-        gNdsR2CollisionOracleSingular++;
-        return;
-    }
-    gNdsR2CollisionOracleSamples++;
-
-    /* The domain question, free: func_ovl2_800EDE5C already computed the row
-     * magnitudes into vec_scale, and its latch is checked by the caller. */
-    {
-        f32 scales[3];
-        u32 i;
-
-        scales[0] = parts->vec_scale.x;
-        scales[1] = parts->vec_scale.y;
-        scales[2] = parts->vec_scale.z;
-        for (i = 0u; i < 3u; i++)
-        {
-            s32 q12 = ndsR2CollisionOracleToQ12(scales[i]);
-
-            if (q12 <= 0)
-            {
-                continue;
-            }
-            if ((u32)q12 < gNdsR2CollisionOracleScaleMinQ12)
-            {
-                gNdsR2CollisionOracleScaleMinQ12 = (u32)q12;
-            }
-            if ((u32)q12 > gNdsR2CollisionOracleScaleMaxQ12)
-            {
-                gNdsR2CollisionOracleScaleMaxQ12 = (u32)q12;
-            }
-        }
-    }
-
-    for (bucket = 0u; bucket < NDS_R2_COLLISION_ORACLE_BUCKETS; bucket++)
-    {
-        u32 axis;
-
-        /* One probe per axis at this distance. The joint origin itself is not
-         * probed: (p - t) is then exactly zero and the multiply that carries
-         * all of the error never happens, so it would report a flattering
-         * zero for every joint. */
-        for (axis = 0u; axis < 3u; axis++)
-        {
-            Vec3f probe;
-            Vec3f reference;
-            s32 point[3];
-            s32 local[3];
-            u32 component;
-            u32 worst = 0u;
-
-            probe.x = parts->mtx_translate[3][0];
-            probe.y = parts->mtx_translate[3][1];
-            probe.z = parts->mtx_translate[3][2];
-            switch (axis)
-            {
-            case 0u: probe.x += (f32)offsets[bucket]; break;
-            case 1u: probe.y += (f32)offsets[bucket]; break;
-            default: probe.z += (f32)offsets[bucket]; break;
-            }
-            point[0] = ndsR2CollisionOracleToQ12(probe.x);
-            point[1] = ndsR2CollisionOracleToQ12(probe.y);
-            point[2] = ndsR2CollisionOracleToQ12(probe.z);
-
-            reference = probe;
-            gmCollisionGetWorldPosition(parts->unk_dobjtrans_0x9C, &reference);
-            ndsR2CollisionWorldToLocal(local, &frame, point);
-
-            worst = ndsR2CollisionOracleAbsQ12(reference.x, local[0]);
-            component = ndsR2CollisionOracleAbsQ12(reference.y, local[1]);
-            if (component > worst) { worst = component; }
-            component = ndsR2CollisionOracleAbsQ12(reference.z, local[2]);
-            if (component > worst) { worst = component; }
-
-            if (worst > gNdsR2CollisionOracleMaxDevQ12[bucket])
-            {
-                gNdsR2CollisionOracleMaxDevQ12[bucket] = worst;
-            }
-            if (worst > NDS_R2_COLLISION_ORACLE_BOUND_Q12)
-            {
-                gNdsR2CollisionOracleOverBoundCount++;
-            }
-        }
-    }
-}
-
-/* Walk the LIVE fighter tree, not the port's parts pool. The first draft walked
- * sNdsFighterPartsPool because the board recorded that ftGetParts resolves to
- * it; the linker map says that pool is not linked at all in the shipping-shaped
- * build, and referencing it costs 33,152 bytes -- eight arena steps, enough by
- * itself to put the battle under the 25 KiB GObj latch. The DObj tree is where
- * the FTParts collision actually reads live, in every configuration, and it
- * costs no storage. */
-void ndsR2CollisionOracleSampleFrame(void)
-{
-    GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
-
-    while (fighter_gobj != NULL)
-    {
-        DObj *dobj;
-
-        for (dobj = DObjGetStruct(fighter_gobj); dobj != NULL;
-             dobj = gcGetTreeDObjNext(dobj))
-        {
-            FTParts *parts = ftGetParts(dobj);
-
-            /* 0x7 is the invert latch and 0x6 the scale latch. Requiring both
-             * means the part was inverted by collision THIS frame and its
-             * vec_scale is live, so every sample is a joint the hit path
-             * actually used -- not a stale entry, and not a joint the float
-             * path never touched. */
-            if ((parts == NULL) || (parts->unk_dobjtrans_0x7 == 0) ||
-                (parts->unk_dobjtrans_0x6 == 0))
-            {
-                continue;
-            }
-            ndsR2CollisionOracleSamplePart(parts);
-        }
-        fighter_gobj = fighter_gobj->link_next;
-    }
-}
-#endif

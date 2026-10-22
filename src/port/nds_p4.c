@@ -7,11 +7,8 @@
 #if NDS_P5
 #include "nds_p5_native_stages.generated.h"
 #endif
-#if NDS_P4
 #include "nds_p4_onep_art.generated.h"
-#endif
 
-#if NDS_P4
 
 #include <math.h>
 #include <stddef.h>
@@ -33,10 +30,8 @@
 #include <sys/taskman.h>
 #include <wp/weapon.h>
 #include <nds/nds_p7.h>
-#if NDS_P2_KIRBY
 #include <reloc_data.h>
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -618,14 +613,12 @@ GObj *(*ndsP4Fireball(const FTStruct *fp))(GObj *fighter_gobj, Vec3f *pos)
     {
         return o->fireball;
     }
-#if NDS_P2_KIRBY
     if ((fp->nds_p4_content == 0u) && (fp->nds_p4_kirby_copy != 0u))
     {
         const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
 
         return ((f != NULL) && (f->overrides != NULL)) ? f->overrides->kirby_fireball : NULL;
     }
-#endif
     return NULL;
 }
 
@@ -1388,10 +1381,8 @@ void ndsP4ComputerPostProcess(FTStruct *fp)
     }
 }
 
-#if NDS_P2_KIRBY
 extern const NDSP4SwordTrail gNdsP4KirbySwordTrails[];
 extern const u32 gNdsP4KirbySwordTrailCount;
-#endif
 
 const NDSP4SwordTrail *ndsP4SwordTrail(const FTStruct *fp, u32 id)
 {
@@ -1405,14 +1396,12 @@ const NDSP4SwordTrail *ndsP4SwordTrail(const FTStruct *fp, u32 id)
         rows = f->sword_trails;
         count = *f->sword_trail_count;
     }
-#if NDS_P2_KIRBY
     /* S8: the rows Kirby's power scripts select. */
     else if (fp->fkind == nFTKindKirby)
     {
         rows = gNdsP4KirbySwordTrails;
         count = gNdsP4KirbySwordTrailCount;
     }
-#endif
     else
     {
         return NULL;
@@ -1497,10 +1486,8 @@ void ndsP4OnSetStatus(GObj *fighter_gobj)
 }
 
 static u8 sNdsP4SpecialStatusResolved[NDS_P4_CONTENT_LIMIT];
-#if NDS_P2_KIRBY
 static FTStatusDesc *ndsP4KirbySpecialStatusDescs(const FTStruct *fp,
                                                   const FTStatusDesc *parent);
-#endif
 
 FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
                                       const FTStatusDesc *parent)
@@ -1511,11 +1498,7 @@ FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
 
     if (f == NULL)
     {
-#if NDS_P2_KIRBY
         return ndsP4KirbySpecialStatusDescs(fp, parent);
-#else
-        return NULL;
-#endif
     }
     if (sNdsP4SpecialStatusResolved[content] == 0u)
     {
@@ -1557,7 +1540,6 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     const NDSP4Overrides *ov = ndsP4Overrides(fp);
 
-#if NDS_P2_KIRBY
     if ((fp->nds_p4_content == 0u) && (fp->nds_p4_kirby_copy != 0u))
     {
         const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
@@ -1570,7 +1552,6 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj)
         f->overrides->kirby_colanim_end(fighter_gobj);
         return TRUE;
     }
-#endif
     if ((ov == NULL) || (ov->colanim_end == NULL))
     {
         return FALSE;
@@ -1717,7 +1698,7 @@ const NDSP4Jab *ndsP4JabRows(const FTStruct *fp)
     return ((f != NULL) && (f->jab != NULL)) ? f->jab : &none;
 }
 
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
 static void ndsKirbyMetalAfterProcMap(FTStruct *fp);
 #endif
 
@@ -1802,7 +1783,6 @@ void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
     {
         o->after_proc_map(fighter_gobj);
     }
-#if NDS_P2_KIRBY
     else if ((fp->nds_p4_content == 0u) && (fp->nds_p4_kirby_copy != 0u))
     {
         const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
@@ -1813,12 +1793,11 @@ void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
             f->overrides->kirby_after_proc_map(fighter_gobj);
         }
     }
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
     if (fp->nds_kirby_metal != 0u)
     {
         ndsKirbyMetalAfterProcMap(ftGetStruct(fighter_gobj));
     }
-#endif
 #endif
 }
 
@@ -1840,7 +1819,6 @@ void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type)
     {
         o->on_hit_interact(fp, attack_type);
     }
-#if NDS_P2_KIRBY
     else if ((fp->nds_p4_content == 0u) && (fp->nds_p4_kirby_copy != 0u))
     {
         const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
@@ -1851,7 +1829,6 @@ void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type)
             f->overrides->kirby_on_hit_interact(fp, attack_type);
         }
     }
-#endif
 }
 
 sb32 ndsP4GravitySlow(FTStruct *fp)
@@ -1928,7 +1905,6 @@ void ndsP4OnLanding(FTStruct *fp, sb32 cliff)
 
     if (fp->nds_p4_content == 0u)
     {
-#if NDS_P2_KIRBY
         /* S8: Kirby's grounded_script row, run for the power he holds. */
         if (fp->nds_p4_kirby_copy != 0u)
         {
@@ -1940,7 +1916,6 @@ void ndsP4OnLanding(FTStruct *fp, sb32 cliff)
                 f->overrides->kirby_on_landing(fp);
             }
         }
-#endif
         return;
     }
     o = ndsP4Overrides(fp);
@@ -2061,7 +2036,6 @@ s32 ndsP4KirbyInhaleStatus(GObj *fighter_gobj, s32 status_id)
 
     if (fp->nds_p4_content == 0u)
     {
-#if NDS_P2_KIRBY
         /* S8: a Kirby holding Dedede's power inhales on his DEDEDE_NSP
          * statuses. */
         if (fp->nds_p4_kirby_copy != 0u)
@@ -2074,7 +2048,6 @@ s32 ndsP4KirbyInhaleStatus(GObj *fighter_gobj, s32 status_id)
                 return f->overrides->kirby_copy_inhale_status(status_id);
             }
         }
-#endif
         return status_id;
     }
     o = ndsP4Overrides(fp);
@@ -2122,7 +2095,6 @@ void *ndsP4KirbyCopyFile(void)
     return (void *)sNdsP4KirbyCopyTable;
 }
 
-#if NDS_P2_KIRBY
 /* ---- S8: Kirby's copies of the contents (nds_p4.h NDSP4KirbyPower) ---- */
 
 extern FTStatusDesc gNdsP4KirbySpecialStatusDescs[];
@@ -2564,7 +2536,7 @@ void ndsP4KirbyCatch(FTStruct *kirby_fp, FTStruct *victim_fp)
         }
     }
     sNdsP4KirbyPending[kirby_fp->player & 3u] = (u8)power;
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
     ndsKirbyMetalCatch(kirby_fp, victim_fp);
 #endif
 }
@@ -2615,7 +2587,7 @@ void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script)
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
     ndsP4KirbyClearSilhouette(fp);
-#if NDS_P2_KIRBY && NDS_P2_MMARIO
+#if NDS_P2_MMARIO
     ndsKirbyMetalClear(fp);
 #endif
     fp->nds_p4_kirby_copy = 0u;
@@ -2779,7 +2751,6 @@ sb32 ndsP4KirbyHatTextureAsset(u32 asset_id)
     }
     return FALSE;
 }
-#endif
 
 s32 ndsP4KirbyCaptureWait(FTStruct *victim_fp, s32 breakout_wait)
 {
@@ -2841,7 +2812,6 @@ void ndsP4OnCustomReflect(GObj *fighter_gobj)
 
     if (fp->nds_p4_content == 0u)
     {
-#if NDS_P2_KIRBY
         if (fp->nds_p4_kirby_copy != 0u)
         {
             const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
@@ -2852,7 +2822,6 @@ void ndsP4OnCustomReflect(GObj *fighter_gobj)
                 f->overrides->kirby_on_custom_reflect(fighter_gobj);
             }
         }
-#endif
         return;
     }
     o = ndsP4Overrides(fp);
@@ -2894,7 +2863,6 @@ void ndsP4FallSpecialSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begi
     ftMainSetStatus(fighter_gobj, status_id, frame_begin, anim_speed, flags);
 }
 
-#if NDS_P2_YOSHI
 GObj *wpYoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
 
 GObj *ndsP4YoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos)
@@ -2907,7 +2875,6 @@ GObj *ndsP4YoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos)
     }
     return wpYoshiStarMakeStars(fighter_gobj, pos);
 }
-#endif
 
 void ndsP4ThrowMainSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
                              f32 anim_speed, u32 flags)
@@ -2960,7 +2927,6 @@ sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
             starts[i] = f->special_starts[i];
         }
     }
-#if NDS_P2_KIRBY
     /* S8: Kirby's neutral special with a content's power starts where
      * Remix's kirby_ground_nsp / kirby_air_nsp rows say; a NULL row keeps
      * the source's copy dispatch, on the parent's copy_id. */
@@ -2974,7 +2940,6 @@ sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
             starts[NDS_P4_SPECIAL_AIR_N] = p->nsp_air;
         }
     }
-#endif
     else
     {
         return check(fighter_gobj);
@@ -3320,14 +3285,12 @@ const char *ndsP4RelocAssetPath(u32 file_id)
         const u16 *assets = (f != NULL) ? f->assets : NULL;
         u32 count = (f != NULL) ? *f->asset_count : 0u;
 
-#if NDS_P2_KIRBY
         /* Past the contents: Kirby's power files (S8). */
         if (c == NDS_P4_CONTENT_LIMIT)
         {
             assets = gNdsP4KirbyRelocAssets;
             count = gNdsP4KirbyRelocAssetCount;
         }
-#endif
         found = ndsP4AssetListHas(assets, count, file_id);
     }
 #if NDS_P5 && (NDS_P5_RELOC_FILE_COUNT > 0)
@@ -3507,7 +3470,6 @@ static u32 ndsP4FindAnim(u32 asset_id)
             found = ndsP4FindAnimIn(f->anims, *f->anim_count, asset_id);
         }
     }
-#if NDS_P2_KIRBY
     /* Past the contents: Kirby's power animations (S8), ascending too
      * (p4_kirby.py sorts them). */
     if (found == 0u)
@@ -3515,7 +3477,6 @@ static u32 ndsP4FindAnim(u32 asset_id)
         found = ndsP4FindAnimIn(gNdsP4KirbyAnims, gNdsP4KirbyAnimCount,
                                 asset_id);
     }
-#endif
     sNdsP4FindAnimLastId = asset_id;
     sNdsP4FindAnimLast = found;
     return found;
@@ -3820,4 +3781,3 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
     return p;
 }
 
-#endif /* NDS_P4 */

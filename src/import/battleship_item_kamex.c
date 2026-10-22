@@ -21,7 +21,6 @@
  * one exception is the hydro spawn sparks, which are deferred, not merely
  * undeclared; see the note at itKamexAttackUpdateHydro.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -613,4 +612,3 @@ void itKamexAttackMakeHydro(GObj *item_gobj, Vec3f *pos)
     itKamexWeaponHydroMakeWeapon(item_gobj, pos);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

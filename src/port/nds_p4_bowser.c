@@ -23,11 +23,8 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_BOWSER
 
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 #include <ef/effect.h>
 #include <ft/ftcomputer.h>
 #include <gm/gmsound.h>
@@ -115,15 +112,11 @@ static u16 *ndsP4BowserFlame(FTStruct *fp)
 /* Kirby's copy (S8): BowserNSP sets Kirby's own BOWSER_NSP statuses. */
 static s32 ndsP4BowserNSPStatus(const FTStruct *fp, s32 status_id)
 {
-#if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
         return (status_id == BOWSER_STATUS_NSP) ? NDS_P4_KIRBY_STATUS_BOWSER_NSP_GROUND :
                                                   NDS_P4_KIRBY_STATUS_BOWSER_NSP_AIR;
     }
-#else
-    (void)fp;
-#endif
     return status_id;
 }
 
@@ -642,4 +635,3 @@ const NDSP4Computer gNdsP4BowserComputer = {
     .post_process = ndsP4BowserComputerPostProcess,
 };
 
-#endif /* NDS_P4_BOWSER */

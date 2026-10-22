@@ -6,9 +6,6 @@
 #include <port/coroutine.h>
 
 #define NDS_COROUTINE_MIN_STACK 4096u
-#if NDS_TASK20_STACK_PROFILE
-#define NDS_TASK20_STACK_POISON 0xa5u
-#endif
 
 typedef struct NDSCoroutineContext {
     u32 r4, r5, r6, r7, r8, r9, r10, r11;
@@ -154,121 +151,10 @@ ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg)
     return ndsDtcmHotStackCall(fn, arg);
 }
 
-#if NDS_TASK20_STACK_PROFILE
-extern u8 __dtcm_bss_end[];
-extern u8 __sp_usr[];
-static uintptr_t sMainStackPoisonStart;
-
-volatile NDSTask20CoroutineCensusRow
-    gNdsTask20CoroutineCensus[NDS_TASK20_COROUTINE_CENSUS_CAPACITY];
-volatile uint32_t gNdsTask20CoroutineCensusCount;
-volatile uint32_t gNdsTask20CoroutineCensusOverflowCount;
-volatile uint32_t gNdsTask20CoroutineCensusLiveCount;
-volatile uint32_t gNdsTask20CoroutineCensusPeakLiveCount;
-volatile uint32_t gNdsTask20CoroutineCensusLargeLiveCount;
-volatile uint32_t gNdsTask20CoroutineCensusPeakLargeLiveCount;
-#endif
 
 extern void ndsCoroutineSwap(NDSCoroutineContext *from,
                              NDSCoroutineContext *to);
 extern void ndsCoroutineTrampoline(void);
-#if NDS_TASK20_STACK_PROFILE
-extern uintptr_t ndsCoroutineReadSp(void);
-extern void ndsCoroutinePoisonWords(void *start, void *end, u32 value);
-static size_t portCoroutinePoisonHighWater(const void *stack,
-                                           size_t stack_size)
-{
-    const volatile u8 *bytes = stack;
-    size_t i;
-
-    for (i = 0; i < stack_size; i++) {
-        if (bytes[i] != NDS_TASK20_STACK_POISON) break;
-    }
-    return stack_size - i;
-}
-
-static volatile NDSTask20CoroutineCensusRow *
-portCoroutineTask20FindRow(const PortCoroutine *coroutine)
-{
-    uint32_t i;
-    uint32_t address = (uint32_t)(uintptr_t)coroutine;
-
-    for (i = 0; i < gNdsTask20CoroutineCensusCount; i++) {
-        if (gNdsTask20CoroutineCensus[i].coroutine_address == address) {
-            return &gNdsTask20CoroutineCensus[i];
-        }
-    }
-    return NULL;
-}
-
-static void portCoroutineTask20Register(PortCoroutine *coroutine,
-                                        int owner_id,
-                                        size_t requested_stack_size)
-{
-    volatile NDSTask20CoroutineCensusRow *row;
-    uint32_t index = gNdsTask20CoroutineCensusCount;
-
-    gNdsTask20CoroutineCensusLiveCount++;
-    if (gNdsTask20CoroutineCensusLiveCount >
-        gNdsTask20CoroutineCensusPeakLiveCount) {
-        gNdsTask20CoroutineCensusPeakLiveCount =
-            gNdsTask20CoroutineCensusLiveCount;
-    }
-    if (coroutine->stack_size >= (16u * 1024u)) {
-        gNdsTask20CoroutineCensusLargeLiveCount++;
-        if (gNdsTask20CoroutineCensusLargeLiveCount >
-            gNdsTask20CoroutineCensusPeakLargeLiveCount) {
-            gNdsTask20CoroutineCensusPeakLargeLiveCount =
-                gNdsTask20CoroutineCensusLargeLiveCount;
-        }
-    }
-
-    if (index >= NDS_TASK20_COROUTINE_CENSUS_CAPACITY) {
-        gNdsTask20CoroutineCensusOverflowCount++;
-        return;
-    }
-    gNdsTask20CoroutineCensusCount = index + 1u;
-    row = &gNdsTask20CoroutineCensus[index];
-    row->owner_id = owner_id;
-    row->requested_stack_size = (uint32_t)requested_stack_size;
-    row->actual_stack_size = (uint32_t)coroutine->stack_size;
-    row->stack_base = (uint32_t)(uintptr_t)coroutine->stack;
-    row->coroutine_address = (uint32_t)(uintptr_t)coroutine;
-    row->state = 1u;
-}
-
-void portCoroutineTask20Sample(PortCoroutine *coroutine)
-{
-    volatile NDSTask20CoroutineCensusRow *row;
-    size_t high_water;
-
-    if (coroutine == NULL || coroutine->stack == NULL) return;
-    row = portCoroutineTask20FindRow(coroutine);
-    if (row == NULL) return;
-    high_water = portCoroutinePoisonHighWater(coroutine->stack,
-                                              coroutine->stack_size);
-    if (high_water > row->high_water) {
-        row->high_water = (uint32_t)high_water;
-    }
-}
-
-static void portCoroutineTask20Retire(PortCoroutine *coroutine)
-{
-    volatile NDSTask20CoroutineCensusRow *row;
-
-    if (coroutine == NULL) return;
-    portCoroutineTask20Sample(coroutine);
-    row = portCoroutineTask20FindRow(coroutine);
-    if (row != NULL) row->state = 2u;
-    if (gNdsTask20CoroutineCensusLiveCount != 0u) {
-        gNdsTask20CoroutineCensusLiveCount--;
-    }
-    if ((coroutine->stack_size >= (16u * 1024u)) &&
-        (gNdsTask20CoroutineCensusLargeLiveCount != 0u)) {
-        gNdsTask20CoroutineCensusLargeLiveCount--;
-    }
-}
-#endif
 
 void portCoroutineTrampolineC(PortCoroutine *coroutine)
 {
@@ -283,14 +169,6 @@ void portCoroutineTrampolineC(PortCoroutine *coroutine)
 void portCoroutineInitMain(void)
 {
     sCurrentCoroutine = NULL;
-#if NDS_TASK20_STACK_PROFILE
-    sMainStackPoisonStart = ndsCoroutineReadSp() & ~(uintptr_t)3u;
-    if (sMainStackPoisonStart > (uintptr_t)__dtcm_bss_end) {
-        ndsCoroutinePoisonWords(__dtcm_bss_end,
-                                (void *)sMainStackPoisonStart,
-                                0xa5a5a5a5u);
-    }
-#endif
 }
 
 PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
@@ -298,11 +176,7 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
 {
     PortCoroutine *coroutine;
     uintptr_t stack_top;
-#if NDS_TASK20_STACK_PROFILE
-    size_t requested_stack_size = stack_size;
-#else
     (void)owner_id;
-#endif
 
     if (entry == NULL) return NULL;
     if (stack_size < NDS_COROUTINE_MIN_STACK) {
@@ -322,18 +196,11 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
     coroutine->entry = entry;
     coroutine->arg = arg;
     coroutine->stack_size = stack_size;
-#if NDS_TASK20_STACK_PROFILE
-    memset(coroutine->stack, NDS_TASK20_STACK_POISON, stack_size);
-#endif
 
     stack_top = ((uintptr_t)coroutine->stack + stack_size) & ~(uintptr_t)7u;
     coroutine->context.r4 = (u32)(uintptr_t)coroutine;
     coroutine->context.sp = (u32)stack_top;
     coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
-#if NDS_TASK20_STACK_PROFILE
-    portCoroutineTask20Register(coroutine, owner_id,
-                                requested_stack_size);
-#endif
 
     return coroutine;
 }
@@ -350,9 +217,7 @@ PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
     uintptr_t top;
     size_t overhead = portCoroutineStaticOverhead();
     size_t stack_size;
-#if !NDS_TASK20_STACK_PROFILE
     (void)owner_id;
-#endif
 
     if (entry == NULL || base == NULL) return NULL;
     top = ((uintptr_t)base + size) & ~(uintptr_t)7u;
@@ -369,18 +234,12 @@ PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
     coroutine->stack = base;
     coroutine->stack_size = stack_size;
     coroutine->is_static = 1;
-#if NDS_TASK20_STACK_PROFILE
-    memset(base, NDS_TASK20_STACK_POISON, stack_size);
-#endif
 
     /* The context sits directly above the stack, so `top` is both the initial
      * SP and the context's address. It is 8-aligned, which AAPCS requires. */
     coroutine->context.r4 = (u32)(uintptr_t)coroutine;
     coroutine->context.sp = (u32)top;
     coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
-#if NDS_TASK20_STACK_PROFILE
-    portCoroutineTask20Register(coroutine, owner_id, stack_size);
-#endif
 
     return coroutine;
 }
@@ -388,9 +247,6 @@ PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
 void portCoroutineDestroy(PortCoroutine *coroutine)
 {
     if (coroutine == NULL || coroutine == sCurrentCoroutine) return;
-#if NDS_TASK20_STACK_PROFILE
-    portCoroutineTask20Retire(coroutine);
-#endif
     if (coroutine->is_static) {
         /* The block belongs to the caller's pool (BattleShip recycles it
          * through gcEjectGObjStack). Clear it so a stale resume is impossible
@@ -442,46 +298,3 @@ PortCoroutine *portCoroutineCurrent(void)
     return sCurrentCoroutine;
 }
 
-#if NDS_TASK20_STACK_PROFILE
-size_t portCoroutineStackHighWater(const PortCoroutine *coroutine)
-{
-    if (coroutine == NULL || coroutine->stack == NULL) return 0;
-    return portCoroutinePoisonHighWater(coroutine->stack,
-                                        coroutine->stack_size);
-}
-
-void *portCoroutineStackBase(const PortCoroutine *coroutine)
-{
-    return (coroutine != NULL) ? coroutine->stack : NULL;
-}
-
-size_t portCoroutineStackSize(const PortCoroutine *coroutine)
-{
-    return (coroutine != NULL) ? coroutine->stack_size : 0;
-}
-
-size_t portCoroutineMainStackHighWater(void)
-{
-    size_t poisoned_size;
-
-    if (sMainStackPoisonStart <= (uintptr_t)__dtcm_bss_end) return 0;
-    poisoned_size = sMainStackPoisonStart - (uintptr_t)__dtcm_bss_end;
-    return ((uintptr_t)__sp_usr - sMainStackPoisonStart) +
-        portCoroutinePoisonHighWater(__dtcm_bss_end, poisoned_size);
-}
-
-uintptr_t portCoroutineMainStackPoisonStart(void)
-{
-    return sMainStackPoisonStart;
-}
-
-uintptr_t portCoroutineMainStackBottom(void)
-{
-    return (uintptr_t)__dtcm_bss_end;
-}
-
-uintptr_t portCoroutineMainStackTop(void)
-{
-    return (uintptr_t)__sp_usr;
-}
-#endif

@@ -15528,10 +15528,8 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsItemRendererLastOtherModeL = 0u;
     gNdsItemRendererLastOtherModeH = 0u;
     gNdsItemRendererAttach52BuildCount = 0u;
-#if NDS_R2_FOX_BLASTER_QUAD
     gNdsFoxBlasterQuadDrawCount = 0u;
     gNdsFoxBlasterQuadFallbackCount = 0u;
-#endif
     gNdsWeaponRendererRejectedDrawCount = 0u;
     gNdsEffectRendererCaptureCount = 0u;
     gNdsEffectRendererDObjDrawCount = 0u;

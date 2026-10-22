@@ -20,7 +20,6 @@
  * header-unpublished imports whose definitions are proven in the linked ROM
  * text or the item-core source -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ef/effect.h>
@@ -433,4 +432,3 @@ void itLGunMakeAmmo(GObj *fighter_gobj, Vec3f *pos)
     ip->multi--;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

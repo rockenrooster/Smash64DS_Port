@@ -15,10 +15,7 @@
 #include <nds/nds_p4.h>
 #include <ft/ftcomputer.h>
 
-#if NDS_P4_FALCO
-#if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
-#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 s32 syUtilsRandIntRange(s32 range);
@@ -201,7 +198,6 @@ void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id)
     }
 }
 
-#if NDS_P2_KIRBY
 /* Kirby's Phantasm (S8): Remix's Kirby takes Falco's power as his own
  * FALCO_NSP statuses, which Kirby.clone_power_action_swap_ sets in place of
  * his Fox copy's blaster; Phantasm.set_variables_ replaces that copy's init
@@ -219,7 +215,6 @@ static void ndsP4FalcoKirbyOnStatus(GObj *fighter_gobj, s32 status_id)
 const NDSP4Overrides gNdsP4FalcoOverrides = {
     .kirby_on_status = ndsP4FalcoKirbyOnStatus,
 };
-#endif
 
 /* Falco.asm recovery_logic, the CPU's: run after the recover objective's
  * walk (AI.asm custom_recovery_logic). In the air Phantasm it holds B (the
@@ -365,4 +360,3 @@ f32 ndsP4FoxSpecialHiArcTan2(FTStruct *fp, f32 y, f32 x, sb32 is_ground_launch)
     return syUtilsArcTan2(y, x);
 }
 
-#endif /* NDS_P4_FALCO */

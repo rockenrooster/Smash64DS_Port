@@ -138,7 +138,6 @@ void ndsBaseFTCommonDamageUpdateCatchResist(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
 
-#if NDS_P4
 #include <nds/nds_p4.h>
 /* P4: Remix's damage_patch_ (LankySpecial.asm) picks the status
  * ftCommonDamageInitDamageVars sets, and for an electric hit the one it
@@ -148,7 +147,6 @@ void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
 #define NDS_P4_DAMAGE_SET_STATUS_fighter_gobj(s_) ftMainSetStatus(fighter_gobj, s_
 #define NDS_P4_DAMAGE_SET_STATUS_this_gobj(s_) \
     ftMainSetStatus(this_gobj, ndsP4DamageStatus(this_gobj, s_, &status_id_var)
-#endif
 #if NDS_P5
 /* P5: Remix's bomb_hitstun_ (Hazards.asm, patch at 0x80140F44) scales the
  * hitstun ftCommonDamageInitDamageVars reads from ftParamGetHitStun, before
@@ -177,11 +175,9 @@ f32 ndsP5HitStunTake(f32 hitstun_tics);
 #undef NDS_P5_FT_GET_this_gobj
 #define ftGetStruct(fighter_gobj) ((FTStruct*)(fighter_gobj)->user_data.p)
 #endif
-#if NDS_P4
 #undef ftMainSetStatus
 #undef NDS_P4_DAMAGE_SET_STATUS_fighter_gobj
 #undef NDS_P4_DAMAGE_SET_STATUS_this_gobj
-#endif
 
 #undef dFTCommonDamageStatusGroundIDs
 #undef dFTCommonDamageStatusAirIDs

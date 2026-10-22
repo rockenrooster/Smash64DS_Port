@@ -154,7 +154,6 @@ volatile u32 gNdsFighterDonkeySpecialsLwLoopFlagFrames;
 volatile u32 gNdsFighterDonkeySpecialsLwEndFrames;
 volatile u32 gNdsFighterDonkeySpecialsLwWaitFrames;
 #endif
-#if NDS_P2_SAMUS
 volatile u32 gNdsFighterSamusSpecialsSlot;
 volatile u32 gNdsFighterSamusSpecialsNPressFrames;
 volatile u32 gNdsFighterSamusSpecialsNStartFrames;
@@ -167,75 +166,7 @@ volatile u32 gNdsFighterSamusSpecialsNReleaseWaitFrames;
 volatile u32 gNdsFighterSamusSpecialsLwPressFrames;
 volatile u32 gNdsFighterSamusSpecialsLwFrames;
 volatile u32 gNdsFighterSamusSpecialsLwWaitFrames;
-#endif
 volatile u32 gNdsFighterNaturalMovesetMask;
-#if NDS_P2_SAMUS_STATE_TOUR
-volatile u32 gNdsSamusStateTourMask;
-volatile u32 gNdsSamusStateTourPhase;
-volatile u32 gNdsSamusStateTourPhaseFrames;
-volatile u32 gNdsSamusStateTourStatus;
-volatile u32 gNdsSamusStateTourMotion;
-volatile u32 gNdsSamusStateTourCliffID;
-volatile u32 gNdsSamusStateTourStageCount;
-#endif
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-volatile u32 gNdsSamusTumbleTourMask;
-volatile u32 gNdsSamusTumbleTourDamageFlyMask;
-volatile u32 gNdsSamusTumbleTourScenario;
-volatile u32 gNdsSamusTumbleTourStep;
-volatile u32 gNdsSamusTumbleTourFrames;
-volatile u32 gNdsSamusTumbleTourStatus;
-volatile u32 gNdsSamusTumbleTourMotion;
-volatile u32 gNdsSamusTumbleTourHitCount;
-volatile u32 gNdsSamusTumbleTourStageCount;
-volatile u32 gNdsSamusTumbleTourDone;
-#endif
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-volatile u32 gNdsSamusDamageFlyTourMask;
-volatile u32 gNdsSamusDamageFlyTourScenario;
-volatile u32 gNdsSamusDamageFlyTourStep;
-volatile u32 gNdsSamusDamageFlyTourFrames;
-volatile u32 gNdsSamusDamageFlyTourStatus;
-volatile u32 gNdsSamusDamageFlyTourMotion;
-volatile u32 gNdsSamusDamageFlyTourAttackerMask;
-volatile u32 gNdsSamusDamageFlyTourPlacementPacked;
-volatile u32 gNdsSamusDamageFlyTourHitCount;
-volatile u32 gNdsSamusDamageFlyTourRollAttempts;
-volatile u32 gNdsSamusDamageFlyTourSakuraiHitCount;
-volatile u32 gNdsSamusDamageFlyTourTopAngle80Count;
-volatile u32 gNdsSamusDamageFlyTourRollPercent;
-volatile u32 gNdsSamusDamageFlyTourMismatchCount;
-volatile u32 gNdsSamusDamageFlyTourStageCount;
-volatile u32 gNdsSamusDamageFlyTourTerminalCount;
-volatile u32 gNdsSamusDamageFlyTourDone;
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-volatile u32 gNdsSamusAttackTourMask;
-volatile u32 gNdsSamusAttackTourScenario;
-volatile u32 gNdsSamusAttackTourStep;
-volatile u32 gNdsSamusAttackTourFrames;
-volatile u32 gNdsSamusAttackTourStatus;
-volatile u32 gNdsSamusAttackTourMotion;
-volatile u32 gNdsSamusAttackTourStageCount;
-volatile u32 gNdsSamusAttackTourTerminalCount;
-volatile u32 gNdsSamusAttackTourCatchAttr;
-volatile u32 gNdsSamusAttackTourGrabInputCount;
-volatile u32 gNdsSamusAttackTourCatchStatusMask;
-volatile u32 gNdsSamusAttackTourCatchFrames;
-volatile u32 gNdsSamusAttackTourCatchActiveFrames;
-volatile u32 gNdsSamusAttackTourCatchSearchFrames;
-volatile u32 gNdsSamusAttackTourCatchAttackMask;
-volatile u32 gNdsSamusAttackTourCatchAnimFrameMaxMilli;
-volatile u32 gNdsSamusAttackTourVictimGrabbableMask;
-volatile u32 gNdsSamusAttackTourVictimNormalMask;
-volatile u32 gNdsSamusAttackTourJoint36SeenCount;
-volatile u32 gNdsSamusAttackTourJoint36AttackMask;
-volatile s32 gNdsSamusAttackTourMinGrabDXMilli;
-volatile s32 gNdsSamusAttackTourGrab0XMilli;
-volatile s32 gNdsSamusAttackTourGrab1XMilli;
-volatile s32 gNdsSamusAttackTourFoxXMilli;
-volatile u32 gNdsSamusAttackTourDone;
-#endif
 volatile u32 gNdsFighterNaturalMovesetPhase;
 volatile u32 gNdsFighterNaturalMovesetPhaseFrames;
 volatile u32 gNdsFighterNaturalMovesetTiltS3Frames;
@@ -347,18 +278,9 @@ volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
 volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
-#if (NDS_HARNESS_FAST_LOGIC == 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
 volatile u32 gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
 volatile u32 gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
-#else
-volatile u32 gNdsBuildModeCanonicalWord;
-volatile u32 gNdsBuildModeShippedWord;
-#endif
-#if NDS_HARNESS_FAST_LOGIC != 0
-volatile u32 gNdsBuildModeFastWord = NDS_BUILD_MODE_FAST_WORD;
-#else
 volatile u32 gNdsBuildModeFastWord;
-#endif
 volatile u32 gNdsRendererProfileFrameCount;
 /* Keep the immutable benchmark-build identity beside the already-live profile
  * word so --gc-sections retains both without any per-frame touch. */
@@ -592,25 +514,6 @@ volatile u32 gNdsTickHudVBlankWaitTicks;
  *
  * Cumulative; the sampler differences consecutive frames. Tick-HUD only, so
  * the published ROM is untouched. */
-#if NDS_TASK68_FALLBACK_CENSUS
-volatile u32 gNdsTickHudNativeOwnerFallbackCount;
-volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
-    nNDSTickHudNativeOwnerFallbackReasonCount];
-#endif
-#if NDS_TASK75_LOAD_CENSUS
-/* Task 75 E0. Task 71 profiled one expensive `SRC` frame and found a NitroFS
- * open, a cartridge read, a relocation and a figatree parse inside the frame
- * that needed the animation -- but section 5 left the obligation open: one
- * frame was profiled, and it was never shown that every high-`SRC` frame is a
- * load. Task 106 made that question the gate's, by proving the `SRC` excursion
- * survives halving the update rate unchanged (+518,016 vs +522,720).
- *
- * Counts completed file loads. Cumulative, differenced per frame into the same
- * census ring the Task 70 fallback counter uses, so the load count and the
- * bucket costs land on one index and can be compared directly rather than
- * correlated across separate runs. Tick-HUD lab builds only. */
-volatile u32 gNdsTask75AssetLoadCount;
-#endif
 #endif
 /* Cycle 99: the baked fighter draw plan's engagement counters, written only
  * from #if NDS_TICK_HUD code and read by a debugger. The plan is unconditional

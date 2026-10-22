@@ -20,7 +20,6 @@
  * particle-bank entry points below are referenced verbatim and listed in
  * the task report -- no values invented here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <wp/weapon.h>
@@ -535,4 +534,3 @@ void itLizardonAttackMakeFlame(GObj *item_gobj, Vec3f *pos, s32 lr)
     func_800269C0_275C0(nSYAudioFGMLizardonFlame);
 }
 
-#endif /* NDS_P2_ITEM_CORE */

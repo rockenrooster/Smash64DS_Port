@@ -70,9 +70,7 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
-#if NDS_P4
 #include <nds/nds_p4.h>
-#endif
 
 /* Source declarations normally supplied by sc1pbonusstage.h, lbcommon.h,
  * mpcollision.h and gmcamera.h. The port's umbrella headers are narrower. */
@@ -211,14 +209,12 @@ extern u8 gNdsP7OnePlayerMetal;
 
 static u32 ndsSC1PBonusPracticeSel(void)
 {
-#if NDS_P4
     const NDSP4Fighter *f = ndsP4Fighter(gNdsP7BonusPracticeContent);
 
     if ((f != NULL) && (f->parent_kind == (s32)gSCManagerSceneData.bonus_fkind))
     {
         return NDS_P7_SEL_CONTENT(gNdsP7BonusPracticeContent);
     }
-#endif
     return ((gNdsP7BonusPracticeMetal != 0u) &&
             (gSCManagerSceneData.bonus_fkind == nFTKindMario)) ?
         NDS_P7_SEL_METAL : NDS_P7_SEL_COUNT;
@@ -287,9 +283,7 @@ void sc1PBonusStageStartScene(void)
              * (sc1pbonusstage.c:1227) or its unlock rows' challengers -- with
              * bonus_fkind as the player's kind: the content and the metal
              * flag go with it. */
-#if NDS_P4
             gNdsP4OnePlayerContent = gNdsP7BonusPracticeContent;
-#endif
             gNdsP7OnePlayerMetal = gNdsP7BonusPracticeMetal;
         }
     }

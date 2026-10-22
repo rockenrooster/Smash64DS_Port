@@ -5,20 +5,14 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_p5.h>
 #include <it/item.h>
-#if NDS_R2_FIREBALL_QUAD
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
  * this flag's path uses either, so neither is pulled in unconditionally. */
 #include <nds/generated/nds_particle_banks.generated.h>
-#endif
-#if NDS_R2_FIREBALL_QUAD || NDS_R2_FOX_BLASTER_QUAD
 #include <nds/nds_renderer.h>
-#endif
 #include <sc/scene.h>
 /* R01-B: the Results winner-emblem series roots, generated from the source
  * selection tables by scripts/menus/generate_nds_native_vs_emblem.py. */
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
 #include <nds/generated/nds_native_vs_emblem.generated.h>
-#endif
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 /* YOSTER-CLOUDS: route beside IsTaruCann. */
 #if NDS_P2_STAGE_YOSTER
@@ -42,38 +36,13 @@ extern void *ndsGRInishieScaleStringGObj(u32 index);
 extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #endif
 
-#ifndef NDS_SCENE_MIP_CACHE_LAB
-#define NDS_SCENE_MIP_CACHE_LAB 0
-#endif
-#ifndef NDS_P2_NESS_VFX_PROOF
-#define NDS_P2_NESS_VFX_PROOF 0
-#endif
-#ifndef NDS_P2_YOSHI_BUG_PROOF
-#define NDS_P2_YOSHI_BUG_PROOF 0
-#endif
 
 /* Focused Ness regression driver.  It exists only in the bounded fast-logic
  * proof when the ordinary proof descriptor selects Ness for human slot 0.
  * The driver supplies controller input only; BattleShip still owns every
  * status transition, article/effect spawn, collision and lifetime. */
-#if NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && \
-    (NDS_HARNESS_FAST_LOGIC || NDS_P2_NESS_VFX_PROOF)
-#define NDS_P2_NESS_SPECIAL_TOUR 1
-#include <nds/nds_particle_runtime.h>
-extern volatile u32 gNdsFtrRejectCountBySlot[];
-extern volatile u32 gNdsParticleSubmitOkCount;
-extern volatile u32 gNdsParticleSubmitFailCount;
-#else
 #define NDS_P2_NESS_SPECIAL_TOUR 0
-#endif
-#if NDS_P2_YOSHI && (NDS_P2_PROOF_FIGHTER0 == 6) && NDS_P2_YOSHI_BUG_PROOF
-#define NDS_P2_YOSHI_BUG_TOUR 1
-extern u32 ndsRendererNativeFighterRootProgram(u32 slot);
-extern volatile u32 gNdsFighterDLAllDrawP0HardwareTriangleCount;
-extern volatile u32 gNdsFtrRejectCountBySlot[];
-#else
 #define NDS_P2_YOSHI_BUG_TOUR 0
-#endif
 
 extern void ndsIFCommonRecordHUDState(void);
 
@@ -4078,7 +4047,6 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
     }
 }
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define NDS_FIGHTER_NATURAL_MOTION_WAIT_FRAMES_REQUIRED 300u
 #define NDS_FIGHTER_NATURAL_MOTION_WALK_FRAMES_REQUIRED 8u
 #define NDS_FIGHTER_NATURAL_STAGE_SIDE_MASK_REQUIRED 0x24fu
@@ -4122,11 +4090,9 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_DONKEY_CHARGE_SPARKLE_MASK2 (1u << (73u - 64u))
 #define NDS_FIGHTER_DONKEY_SPECIAL_SETTLE_FRAMES_REQUIRED 10u
 #endif
-#if NDS_P2_SAMUS
 /* BattleShip ftsamus.h:8. Keep the source constant local to this proof rather
  * than importing ftcomputer.h solely for its duplicate convenience macro. */
 #define NDS_FIGHTER_SAMUS_CHARGE_MAX 7u
-#endif
 
 /* Scripted input phases for the natural original-runtime combat chain.
  * Input only flows through controller playback into the original
@@ -4165,7 +4131,6 @@ enum {
     nNDSNaturalCombatPhaseSettleAppeal
 };
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 enum {
     nNDSNaturalMovesetPhaseIdle = 0,
     nNDSNaturalMovesetPhaseTiltS3,
@@ -4184,139 +4149,11 @@ enum {
     nNDSNaturalMovesetPhaseSettleThrow,
     nNDSNaturalMovesetPhaseDone
 };
-#endif
 
-#if NDS_P2_SAMUS_STATE_TOUR
-enum {
-    nNDSSamusStateTourRollF = 0,
-    nNDSSamusStateTourRollB,
-    nNDSSamusStateTourBombGround,
-    nNDSSamusStateTourBombAir,
-    nNDSSamusStateTourQuickAttack,
-    nNDSSamusStateTourQuickEscape,
-    nNDSSamusStateTourQuickClimb,
-    nNDSSamusStateTourSlowAttack,
-    nNDSSamusStateTourSlowEscape,
-    nNDSSamusStateTourSlowClimb,
-    nNDSSamusStateTourDone
-};
 
-enum {
-    nNDSSamusStateTourStepPrepare = 0,
-    nNDSSamusStateTourStepGuard,
-    nNDSSamusStateTourStepJump,
-    nNDSSamusStateTourStepAwaitAction,
-    nNDSSamusStateTourStepRunOff,
-    nNDSSamusStateTourStepAwaitCliff,
-    nNDSSamusStateTourStepCliffWait,
-    nNDSSamusStateTourStepRecover
-};
 
-#define NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL 0x0001ffffu
-#define NDS_SAMUS_STATE_TOUR_MORPH_MASK_ALL 0x001e0000u
-#define NDS_SAMUS_STATE_TOUR_MASK_ALL \
-    (NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL | NDS_SAMUS_STATE_TOUR_MORPH_MASK_ALL)
-#define NDS_SAMUS_STATE_TOUR_TIMEOUT 1800u
-#endif
 
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-enum {
-    nNDSSamusTumbleTourPassive = 0,
-    nNDSSamusTumbleTourPassiveStandF,
-    nNDSSamusTumbleTourPassiveStandB,
-    nNDSSamusTumbleTourDownStandD,
-    nNDSSamusTumbleTourDownStandU,
-    nNDSSamusTumbleTourDownForwardD,
-    nNDSSamusTumbleTourDownForwardU,
-    nNDSSamusTumbleTourDownBackD,
-    nNDSSamusTumbleTourDownBackU,
-    nNDSSamusTumbleTourDownAttackD,
-    nNDSSamusTumbleTourDownAttackU,
-    nNDSSamusTumbleTourDone
-};
 
-enum {
-    nNDSSamusTumbleTourStepPrepareHit = 0,
-    nNDSSamusTumbleTourStepAttack,
-    nNDSSamusTumbleTourStepDamageFly,
-    nNDSSamusTumbleTourStepDamageFall,
-    nNDSSamusTumbleTourStepLanding,
-    nNDSSamusTumbleTourStepDownWait,
-    nNDSSamusTumbleTourStepRecover
-};
-
-#define NDS_SAMUS_TUMBLE_TOUR_MASK_ALL 0x0001ffffu
-#define NDS_SAMUS_TUMBLE_TOUR_TIMEOUT 1200u
-#endif
-
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-enum {
-    nNDSSamusDamageFlyTourHi = 0,
-    nNDSSamusDamageFlyTourN,
-    nNDSSamusDamageFlyTourLw,
-    nNDSSamusDamageFlyTourTop,
-    nNDSSamusDamageFlyTourRoll,
-    nNDSSamusDamageFlyTourDone
-};
-
-enum {
-    nNDSSamusDamageFlyTourStepPrepare = 0,
-    nNDSSamusDamageFlyTourStepRearm,
-    nNDSSamusDamageFlyTourStepDrive,
-    nNDSSamusDamageFlyTourStepDamageFly,
-    nNDSSamusDamageFlyTourStepDamageFall,
-    nNDSSamusDamageFlyTourStepLanding,
-    nNDSSamusDamageFlyTourStepRecover
-};
-
-#define NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL 0x0000001fu
-#define NDS_SAMUS_DAMAGEFLY_TOUR_TIMEOUT 1200u
-#define NDS_SAMUS_DAMAGEFLY_TOUR_ROLL_ATTEMPTS_MAX 32u
-#define NDS_SAMUS_DAMAGEFLY_TOUR_MISMATCH_MAX 12u
-#endif
-
-#if NDS_P2_SAMUS_ATTACK_TOUR
-enum {
-    nNDSSamusAttackTourJab = 0,
-    nNDSSamusAttackTourDash,
-    nNDSSamusAttackTourS3Hi,
-    nNDSSamusAttackTourS3HiS,
-    nNDSSamusAttackTourS3,
-    nNDSSamusAttackTourS3LwS,
-    nNDSSamusAttackTourS3Lw,
-    nNDSSamusAttackTourHi3,
-    nNDSSamusAttackTourLw3,
-    nNDSSamusAttackTourS4Hi,
-    nNDSSamusAttackTourS4HiS,
-    nNDSSamusAttackTourS4,
-    nNDSSamusAttackTourS4LwS,
-    nNDSSamusAttackTourS4Lw,
-    nNDSSamusAttackTourHi4,
-    nNDSSamusAttackTourLw4,
-    nNDSSamusAttackTourAirN,
-    nNDSSamusAttackTourAirF,
-    nNDSSamusAttackTourAirB,
-    nNDSSamusAttackTourAirHi,
-    nNDSSamusAttackTourAirLw,
-    nNDSSamusAttackTourThrowF,
-    nNDSSamusAttackTourThrowB,
-    nNDSSamusAttackTourDone
-};
-
-enum {
-    nNDSSamusAttackTourStepPrepare = 0,
-    nNDSSamusAttackTourStepRearm,
-    nNDSSamusAttackTourStepDrive,
-    nNDSSamusAttackTourStepRecover
-};
-
-#define NDS_SAMUS_ATTACK_TOUR_MASK_ALL 0x00ffffffu
-#define NDS_SAMUS_ATTACK_TOUR_TIMEOUT 1200u
-#endif
-
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 enum {
     nNDSNaturalSpecialsPhaseIdle = 0,
     nNDSNaturalSpecialsPhaseMarioHi,
@@ -4336,14 +4173,11 @@ enum {
     /* Appended so the established DK phase numbers above remain stable. */
     nNDSNaturalSpecialsPhaseDonkeyNFullCharge,
 #endif
-#if NDS_P2_SAMUS
     /* Append after every established phase so legacy verifier values remain
      * stable. These are controller-driven legs in the existing proof. */
     nNDSNaturalSpecialsPhaseSamusNFullCharge,
     nNDSNaturalSpecialsPhaseSamusLw
-#endif
 };
-#endif
 
 typedef struct NDSFighterNaturalMotionState {
     f32 first_wait_anim;
@@ -4389,145 +4223,15 @@ static u32 sNdsNaturalProjectileActorSlot;
 static u32 sNdsNaturalProjectileButtonPressed;
 static u32 sNdsNaturalProjectileExpectedKind;
 static u32 sNdsNaturalProjectileKORecoveryActive;
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static u32 sNdsNaturalReflectorFoxSlot;
 static u32 sNdsNaturalReflectorProjectileSlot;
 static u32 sNdsNaturalReflectorButtonPressed;
-#endif
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static u32 sNdsNaturalMovesetPhase;
 static u32 sNdsNaturalMovesetPhaseFrames;
 static u32 sNdsNaturalMovesetSettleFrames;
 static u32 sNdsNaturalMovesetDone;
 static u32 sNdsNaturalMovesetKORecoveryActive;
 static u32 sNdsNaturalMovesetKORecoveryPhase;
-#endif
-#if NDS_P2_SAMUS_STATE_TOUR
-static u32 sNdsSamusStateTourScenario;
-static u32 sNdsSamusStateTourStep;
-static u32 sNdsSamusStateTourFrames;
-static u32 sNdsSamusStateTourActionSeen;
-static u32 sNdsSamusStateTourInputPressed;
-static s32 sNdsSamusStateTourFloorLine;
-static u32 sNdsSamusStateTourActive;
-static u32 sNdsSamusStateTourDone;
-#endif
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-static u32 sNdsSamusTumbleTourScenario;
-static u32 sNdsSamusTumbleTourStep;
-static u32 sNdsSamusTumbleTourFrames;
-static u32 sNdsSamusTumbleTourAttackSeen;
-static u32 sNdsSamusTumbleTourActionSeen;
-static u32 sNdsSamusTumbleTourDownWaitObserved;
-static s32 sNdsSamusTumbleTourFloorLine;
-static u32 sNdsSamusTumbleTourActive;
-#endif
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-static u32 sNdsSamusDamageFlyTourScenario;
-static u32 sNdsSamusDamageFlyTourStep;
-static u32 sNdsSamusDamageFlyTourFrames;
-static u32 sNdsSamusDamageFlyTourActive;
-static u32 sNdsSamusDamageFlyTourAttackPressed;
-static u32 sNdsSamusDamageFlyTourHitRecorded;
-static u32 sNdsSamusDamageFlyTourScenarioAccepted;
-static s32 sNdsSamusDamageFlyTourFloorLine;
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-static u32 sNdsSamusAttackTourScenario;
-static u32 sNdsSamusAttackTourStep;
-static u32 sNdsSamusAttackTourFrames;
-static u32 sNdsSamusAttackTourActive;
-static u32 sNdsSamusAttackTourExpectedMask;
-static s32 sNdsSamusAttackTourFloorLine;
-#endif
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
-enum NDSLinkBombTourStep
-{
-    nNDSLinkBombTourWaitGround = 0,
-    nNDSLinkBombTourAwaitHold,
-    nNDSLinkBombTourAwaitHeldDraw,
-    nNDSLinkBombTourPressThrow,
-    nNDSLinkBombTourAwaitThrow,
-    nNDSLinkBombTourAwaitFuse,
-    nNDSLinkBombTourAwaitExplode,
-    nNDSLinkBombTourDestroy
-};
-
-static u32 sNdsLinkBombTourStep;
-static u32 sNdsLinkBombTourFrames;
-static GObj *sNdsLinkBombTourItemGObj;
-
-volatile u32 gNdsLinkBombTourPhase;
-volatile u32 gNdsLinkBombTourFrames;
-volatile u32 gNdsLinkBombTourInputCount;
-volatile u32 gNdsLinkBombTourFixtureCount;
-volatile u32 gNdsLinkBombTourStatusMask;
-volatile u32 gNdsLinkBombTourAttrValidCount;
-volatile u32 gNdsLinkBombTourHoldObserved;
-volatile u32 gNdsLinkBombTourThrowObserved;
-volatile u32 gNdsLinkBombTourColAnimObserved;
-volatile u32 gNdsLinkBombTourExplodeObserved;
-volatile u32 gNdsLinkBombTourDestroyObserved;
-volatile u32 gNdsLinkBombTourHoldKind;
-volatile u32 gNdsLinkBombTourHoldLifetime;
-volatile u32 gNdsLinkBombTourThrowLifetime;
-volatile s32 gNdsLinkBombTourThrowVelXMilli;
-volatile s32 gNdsLinkBombTourThrowVelYMilli;
-volatile u32 gNdsLinkBombTourColAnimRGBA;
-volatile u32 gNdsLinkBombTourRenderEnvRGBA;
-volatile u32 gNdsLinkBombTourExplodeDamage;
-volatile u32 gNdsLinkBombTourExplodeSize;
-volatile s32 gNdsLinkBombTourExplodeAngle;
-volatile u32 gNdsLinkBombTourExplodeElement;
-volatile u32 gNdsLinkBombTourExplodeEventID;
-volatile u32 gNdsLinkBombTourExplodeMulti;
-volatile u32 gNdsLinkBombTourDestroyMulti;
-#endif
-#if NDS_P2_LINK_SPECIAL_TOUR
-extern GObj *gNdsLinkSpecialTourEntryCreatedGObj[2];
-extern volatile u32 gNdsLinkSpecialTourEntryCreateCount;
-extern volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
-enum NDSLinkSpecialTourStep
-{
-    nNDSLinkSpecialTourAwaitEntry = 0,
-    nNDSLinkSpecialTourAwaitEntryDraw,
-    nNDSLinkSpecialTourAwaitEntryEject,
-    nNDSLinkSpecialTourAwaitNeutralWait,
-    nNDSLinkSpecialTourAwaitBoomerang,
-    nNDSLinkSpecialTourAwaitBoomerangDraw,
-    nNDSLinkSpecialTourAwaitBoomerangCatch,
-    nNDSLinkSpecialTourAwaitUpBWait,
-    nNDSLinkSpecialTourAwaitSpin,
-    nNDSLinkSpecialTourAwaitSpinDraw,
-    nNDSLinkSpecialTourAwaitSpinEnd,
-    nNDSLinkSpecialTourDone
-};
-
-static u32 sNdsLinkSpecialTourStep;
-static u32 sNdsLinkSpecialTourFrames;
-static GObj *sNdsLinkSpecialTourEntryGObj[2];
-static u32 sNdsLinkSpecialTourEntryDrawBase[2];
-static u32 sNdsLinkSpecialTourBoomerangDrawBase[2];
-static u32 sNdsLinkSpecialTourSpinDrawBase[2];
-
-volatile u32 gNdsLinkSpecialTourPhase;
-volatile u32 gNdsLinkSpecialTourFrames;
-volatile u32 gNdsLinkSpecialTourInputCount;
-volatile u32 gNdsLinkSpecialTourFixtureCount;
-volatile u32 gNdsLinkSpecialTourEntrySeenMask;
-volatile u32 gNdsLinkSpecialTourEntryDrawMask;
-volatile u32 gNdsLinkSpecialTourEntryEjectMask;
-volatile u32 gNdsLinkSpecialTourEntryStatusMask;
-volatile u32 gNdsLinkSpecialTourEntryInitialAnim[2];
-volatile u32 gNdsLinkSpecialTourEntryLiveFrames[2];
-volatile u32 gNdsLinkSpecialTourStatusMask;
-volatile u32 gNdsLinkSpecialTourBoomerangObserved;
-volatile u32 gNdsLinkSpecialTourBoomerangDrawObserved;
-volatile u32 gNdsLinkSpecialTourBoomerangCatchObserved;
-volatile u32 gNdsLinkSpecialTourSpinObserved;
-volatile u32 gNdsLinkSpecialTourSpinDrawObserved;
-volatile u32 gNdsLinkSpecialTourDone;
-#endif
 #if NDS_P2_NESS_SPECIAL_TOUR
 enum NDSNessSpecialTourStep
 {
@@ -4652,24 +4356,15 @@ volatile u32 gNdsYoshiBugTourRetryCount;
 volatile u32 gNdsYoshiBugTourStallPhase;
 volatile u32 gNdsYoshiBugTourDone;
 #endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static u32 sNdsNaturalSpecialsPhase;
 static u32 sNdsNaturalSpecialsPhaseFrames;
 static u32 sNdsNaturalSpecialsDone;
 static u32 sNdsNaturalSpecialsButtonPressed;
-#endif
 
 static sb32 ndsFighterBattlePlayableProofEnabled(void)
 {
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE && \
-    (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
-#if NDS_HARNESS_FAST_LOGIC
-    return TRUE;
-#else
+#if NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
     return FALSE;
-#endif
 #else
     return FALSE;
 #endif
@@ -4677,16 +4372,9 @@ static sb32 ndsFighterBattlePlayableProofEnabled(void)
 
 static sb32 ndsFighterNaturalProjectileProofEnabled(void)
 {
-#if NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER && \
-    (NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL || \
-     NDS_IMPORT_BATTLESHIP_FOX_BLASTER)
     return (ndsFighterBattlePlayableProofEnabled() != FALSE) ? TRUE : FALSE;
-#else
-    return FALSE;
-#endif
 }
 
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static sb32 ndsFighterNaturalReflectorProofEnabled(void)
 {
     /* P2-3r3: the reflector proof needs a second, projectile-capable fighter
@@ -4700,16 +4388,11 @@ static sb32 ndsFighterNaturalReflectorProofEnabled(void)
             (sNdsNaturalReflectorFoxSlot !=
              sNdsNaturalProjectileActorSlot)) ? TRUE : FALSE;
 }
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static sb32 ndsFighterNaturalSpecialsProofEnabled(void)
 {
     return (ndsFighterBattlePlayableProofEnabled() != FALSE) ? TRUE : FALSE;
 }
-#endif
 
 static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
 {
@@ -4720,7 +4403,7 @@ static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
      * per-frame presentation remain unchanged while the input is reproducible. */
     return TRUE;
 #else
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_MARIOFOX_DASH_RUN_HARNESS
+#if NDS_MARIOFOX_DASH_RUN_HARNESS
     return TRUE;
 #else
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
@@ -4808,7 +4491,6 @@ static void ndsFighterNaturalMotionPauseNonTargetVisitor(GObj *gobj,
     {
         return;
     }
-#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
     {
         extern GObj *gGMCameraGObj;
 
@@ -4817,7 +4499,6 @@ static void ndsFighterNaturalMotionPauseNonTargetVisitor(GObj *gobj,
             return;
         }
     }
-#endif
     if (gobj->gobjproc_head != NULL)
     {
         gcPauseGObjProcessAll(gobj);
@@ -5008,20 +4689,17 @@ static sb32 ndsFighterNaturalIsDonkey(const FTStruct *fp)
 }
 #endif
 
-#if NDS_P2_SAMUS
 static sb32 ndsFighterNaturalIsSamus(const FTStruct *fp)
 {
     return ((fp != NULL) &&
             ((fp->fkind == nFTKindSamus) || (fp->fkind == nFTKindNSamus))) ?
         TRUE : FALSE;
 }
-#endif
 
 static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
 {
     u32 i;
 
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
     for (i = 0u; i < 2u; i++)
     {
         if (ndsFighterNaturalIsMarioSpecialFamily(fp[i]) != FALSE)
@@ -5029,8 +4707,6 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
             return i;
         }
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
     for (i = 0u; i < 2u; i++)
     {
         if (fp[i]->fkind == nFTKindFox)
@@ -5038,8 +4714,6 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
             return i;
         }
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL
     for (i = 0u; i < 2u; i++)
     {
         if (ndsFighterNaturalIsMarioSpecialFamily(fp[i]) != FALSE)
@@ -5047,11 +4721,9 @@ static u32 ndsFighterNaturalProjectileSelectSlot(FTStruct *fp[2])
             return i;
         }
     }
-#endif
     return sNdsNaturalCombatAttackerSlot;
 }
 
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static u32 ndsFighterNaturalReflectorSelectFoxSlot(FTStruct *fp[2])
 {
     u32 i;
@@ -5065,22 +4737,17 @@ static u32 ndsFighterNaturalReflectorSelectFoxSlot(FTStruct *fp[2])
     }
     return 1u - sNdsNaturalProjectileActorSlot;
 }
-#endif
 
 static u32 ndsFighterNaturalProjectileExpectedKind(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
     if (ndsFighterNaturalIsMarioSpecialFamily(fp) != FALSE)
     {
         return nWPKindFireball;
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_FOX_BLASTER
     if ((fp != NULL) && (fp->fkind == nFTKindFox))
     {
         return nWPKindBlaster;
     }
-#endif
     return nWPKindFireball;
 }
 
@@ -5175,7 +4842,6 @@ static sb32 ndsFighterNaturalProjectileStatusIsSpecialLw(FTStruct *fp)
     return FALSE;
 }
 
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
 static void ndsFighterNaturalReflectorRecordFireball(FTStruct *fox)
 {
     GObj *weapon_gobj;
@@ -5309,11 +4975,9 @@ static void ndsFighterNaturalReflectorRecord(FTStruct *fp[2])
             NDS_FIGHTER_REFLECTOR_PROOF_PASS;
     }
 }
-#endif
 
 static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
 {
-#if NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER
     GObj *weapon_gobj;
     FTStruct *actor;
     u32 mask;
@@ -5414,15 +5078,9 @@ static void ndsFighterNaturalProjectileRecord(FTStruct *fp[2])
         gNdsFighterProjectileProofResult =
             NDS_FIGHTER_PROJECTILE_PROOF_PASS;
     }
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
     ndsFighterNaturalReflectorRecord(fp);
-#endif
-#else
-    (void)fp;
-#endif
 }
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static sb32 ndsFighterNaturalMovesetStatusIsTiltS3(s32 status_id)
 {
     return ((status_id >= nFTCommonStatusAttackS3Hi) &&
@@ -5481,7 +5139,6 @@ static sb32 ndsFighterNaturalMovesetStatusIsRecovering(s32 status_id)
             (ndsFighterNaturalMovesetStatusIsLandingAir(status_id) !=
                 FALSE)) ? TRUE : FALSE;
 }
-#endif
 
 static sb32 ndsFighterNaturalCombatHitboxActive(FTStruct *fp)
 {
@@ -5725,7 +5382,6 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
             ndsFighterNaturalCombatRecordAttackColl(attacker);
         }
     }
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         sb32 is_hitbox_active =
@@ -5825,7 +5481,6 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
             gNdsFighterNaturalMovesetThrowRecoverFrames++;
         }
     }
-#endif
 
     if (ndsFighterNaturalCombatStatusIsDamage(victim->status_id) != FALSE)
     {
@@ -5909,20 +5564,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     fp[0] = p0;
     fp[1] = p1;
 
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
-    /* The mode-163 fighter GObjs become visible before BattleShip has finished
-     * its match-start Entry -> Appear handoff. Arming as soon as the pointers
-     * exist races that handoff. Wait until the real Link has reached source
-     * Appear: the Bomb-only proof may then use its bounded Wait fixture below,
-     * while the integrated special tour leaves Appear untouched and observes
-     * Wave + Beam through their natural 120-tick completion. */
-    if ((p0->fkind == nFTKindLink) &&
-        (p0->status_id != nFTLinkStatusAppearR) &&
-        (p0->status_id != nFTLinkStatusAppearL))
-    {
-        return;
-    }
-#endif
 #if NDS_P2_NESS_SPECIAL_TOUR
     /* This tour proves specials, not Ness's entry.  His custom Appear ladder
      * can run before the match-start common Entry reset, so Appear itself is
@@ -5943,15 +5584,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
      * entry/countdown threads and publishes GO immediately, so the fighter
      * remains in common Entry forever unless the focused verifier completes
      * the same source entry branch explicitly below. */
-#if NDS_HARNESS_FAST_LOGIC
-    if ((gSCManagerBattleState == NULL) ||
-        (gSCManagerBattleState->game_status != nSCBattleGameStatusGo) ||
-        (p0->fkind != nFTKindYoshi) ||
-        (p0->is_control_disable != FALSE))
-    {
-        return;
-    }
-#else
     if ((gSCManagerBattleState == NULL) ||
         (gSCManagerBattleState->game_status != nSCBattleGameStatusGo) ||
         (p0->fkind != nFTKindYoshi) ||
@@ -5960,7 +5592,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     {
         return;
     }
-#endif
 #endif
 
     bzero(sNdsFighterNaturalMotionStates,
@@ -5980,188 +5611,14 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalCombatApproachLastDX = 0.0F;
     sNdsNaturalCombatVictimHitSeen = 0u;
     sNdsNaturalCombatVictimHitPosX = 0.0F;
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     sNdsNaturalMovesetPhase = nNDSNaturalMovesetPhaseIdle;
     sNdsNaturalMovesetPhaseFrames = 0u;
     sNdsNaturalMovesetSettleFrames = 0u;
     sNdsNaturalMovesetDone = 0u;
     sNdsNaturalMovesetKORecoveryActive = 0u;
     sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
-#endif
-#if NDS_P2_SAMUS_STATE_TOUR
-    sNdsSamusStateTourScenario = nNDSSamusStateTourRollF;
-    sNdsSamusStateTourStep = nNDSSamusStateTourStepPrepare;
-    sNdsSamusStateTourFrames = 0u;
-    sNdsSamusStateTourActionSeen = 0u;
-    sNdsSamusStateTourInputPressed = 0u;
-    sNdsSamusStateTourFloorLine = -1;
-    sNdsSamusStateTourActive = 0u;
-    sNdsSamusStateTourDone = 0u;
-    gNdsSamusStateTourMask = 0u;
-    gNdsSamusStateTourPhase = nNDSSamusStateTourRollF;
-    gNdsSamusStateTourPhaseFrames = 0u;
-    gNdsSamusStateTourStatus = 0u;
-    gNdsSamusStateTourMotion = 0u;
-    gNdsSamusStateTourCliffID = (u32)-1;
-    gNdsSamusStateTourStageCount = 0u;
-#endif
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-    sNdsSamusTumbleTourScenario = nNDSSamusTumbleTourPassive;
-    sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepPrepareHit;
-    sNdsSamusTumbleTourFrames = 0u;
-    sNdsSamusTumbleTourAttackSeen = 0u;
-    sNdsSamusTumbleTourActionSeen = 0u;
-    sNdsSamusTumbleTourDownWaitObserved = 0u;
-    sNdsSamusTumbleTourFloorLine = -1;
-    sNdsSamusTumbleTourActive = 0u;
-    gNdsSamusTumbleTourMask = 0u;
-    gNdsSamusTumbleTourDamageFlyMask = 0u;
-    gNdsSamusTumbleTourScenario = nNDSSamusTumbleTourPassive;
-    gNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepPrepareHit;
-    gNdsSamusTumbleTourFrames = 0u;
-    gNdsSamusTumbleTourStatus = 0u;
-    gNdsSamusTumbleTourMotion = 0u;
-    gNdsSamusTumbleTourHitCount = 0u;
-    gNdsSamusTumbleTourStageCount = 0u;
-    gNdsSamusTumbleTourDone = 0u;
-#endif
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-    sNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourHi;
-    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
-    sNdsSamusDamageFlyTourFrames = 0u;
-    sNdsSamusDamageFlyTourActive = 0u;
-    sNdsSamusDamageFlyTourAttackPressed = 0u;
-    sNdsSamusDamageFlyTourHitRecorded = 0u;
-    sNdsSamusDamageFlyTourScenarioAccepted = 0u;
-    sNdsSamusDamageFlyTourFloorLine = -1;
-    gNdsSamusDamageFlyTourMask = 0u;
-    gNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourHi;
-    gNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
-    gNdsSamusDamageFlyTourFrames = 0u;
-    gNdsSamusDamageFlyTourStatus = 0u;
-    gNdsSamusDamageFlyTourMotion = 0u;
-    gNdsSamusDamageFlyTourAttackerMask = 0u;
-    gNdsSamusDamageFlyTourPlacementPacked = 0u;
-    gNdsSamusDamageFlyTourHitCount = 0u;
-    gNdsSamusDamageFlyTourRollAttempts = 0u;
-    gNdsSamusDamageFlyTourSakuraiHitCount = 0u;
-    gNdsSamusDamageFlyTourTopAngle80Count = 0u;
-    gNdsSamusDamageFlyTourRollPercent = 0u;
-    gNdsSamusDamageFlyTourMismatchCount = 0u;
-    gNdsSamusDamageFlyTourStageCount = 0u;
-    gNdsSamusDamageFlyTourTerminalCount = 0u;
-    gNdsSamusDamageFlyTourDone = 0u;
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-    sNdsSamusAttackTourScenario = nNDSSamusAttackTourJab;
-    sNdsSamusAttackTourStep = nNDSSamusAttackTourStepPrepare;
-    sNdsSamusAttackTourFrames = 0u;
-    sNdsSamusAttackTourActive = 0u;
-    sNdsSamusAttackTourExpectedMask = 0u;
-    sNdsSamusAttackTourFloorLine = -1;
-    gNdsSamusAttackTourMask = 0u;
-    gNdsSamusAttackTourScenario = nNDSSamusAttackTourJab;
-    gNdsSamusAttackTourStep = nNDSSamusAttackTourStepPrepare;
-    gNdsSamusAttackTourFrames = 0u;
-    gNdsSamusAttackTourStatus = 0u;
-    gNdsSamusAttackTourMotion = 0u;
-    gNdsSamusAttackTourStageCount = 0u;
-    gNdsSamusAttackTourTerminalCount = 0u;
-    gNdsSamusAttackTourCatchAttr = 0u;
-    gNdsSamusAttackTourGrabInputCount = 0u;
-    gNdsSamusAttackTourCatchStatusMask = 0u;
-    gNdsSamusAttackTourCatchFrames = 0u;
-    gNdsSamusAttackTourCatchActiveFrames = 0u;
-    gNdsSamusAttackTourCatchSearchFrames = 0u;
-    gNdsSamusAttackTourCatchAttackMask = 0u;
-    gNdsSamusAttackTourCatchAnimFrameMaxMilli = 0u;
-    gNdsSamusAttackTourVictimGrabbableMask = 0u;
-    gNdsSamusAttackTourVictimNormalMask = 0u;
-    gNdsSamusAttackTourJoint36SeenCount = 0u;
-    gNdsSamusAttackTourJoint36AttackMask = 0u;
-    gNdsSamusAttackTourMinGrabDXMilli = 0x7fffffff;
-    gNdsSamusAttackTourGrab0XMilli = 0;
-    gNdsSamusAttackTourGrab1XMilli = 0;
-    gNdsSamusAttackTourFoxXMilli = 0;
-    gNdsSamusAttackTourDone = 0u;
-#endif
-#if NDS_P2_LINK_BOMB_TOUR
-    sNdsLinkBombTourStep = nNDSLinkBombTourWaitGround;
-    sNdsLinkBombTourFrames = 0u;
-    sNdsLinkBombTourItemGObj = NULL;
-    gNdsLinkBombTourPhase = nNDSLinkBombTourWaitGround;
-    gNdsLinkBombTourFrames = 0u;
-    gNdsLinkBombTourInputCount = 0u;
-    gNdsLinkBombTourFixtureCount = 0u;
-    gNdsLinkBombTourStatusMask = 0u;
-    gNdsLinkBombTourAttrValidCount = 0u;
-    gNdsLinkBombTourHoldObserved = 0u;
-    gNdsLinkBombTourThrowObserved = 0u;
-    gNdsLinkBombTourColAnimObserved = 0u;
-    gNdsLinkBombTourExplodeObserved = 0u;
-    gNdsLinkBombTourDestroyObserved = 0u;
-    gNdsLinkBombTourHoldKind = 0u;
-    gNdsLinkBombTourHoldLifetime = 0u;
-    gNdsLinkBombTourThrowLifetime = 0u;
-    gNdsLinkBombTourThrowVelXMilli = 0;
-    gNdsLinkBombTourThrowVelYMilli = 0;
-    gNdsLinkBombTourColAnimRGBA = 0u;
-    gNdsLinkBombTourRenderEnvRGBA = 0u;
-    gNdsLinkBombTourExplodeDamage = 0u;
-    gNdsLinkBombTourExplodeSize = 0u;
-    gNdsLinkBombTourExplodeAngle = 0;
-    gNdsLinkBombTourExplodeElement = 0u;
-    gNdsLinkBombTourExplodeEventID = 0u;
-    gNdsLinkBombTourExplodeMulti = 0u;
-    gNdsLinkBombTourDestroyMulti = 0u;
-#endif
-#if NDS_P2_LINK_SPECIAL_TOUR
-    sNdsLinkSpecialTourStep = nNDSLinkSpecialTourAwaitEntry;
-    sNdsLinkSpecialTourFrames = 0u;
-    sNdsLinkSpecialTourEntryGObj[0] = gNdsLinkSpecialTourEntryCreatedGObj[0];
-    sNdsLinkSpecialTourEntryGObj[1] = gNdsLinkSpecialTourEntryCreatedGObj[1];
-    sNdsLinkSpecialTourEntryDrawBase[0] = 0u;
-    sNdsLinkSpecialTourEntryDrawBase[1] = 0u;
-    sNdsLinkSpecialTourBoomerangDrawBase[0] = 0u;
-    sNdsLinkSpecialTourBoomerangDrawBase[1] = 0u;
-    sNdsLinkSpecialTourSpinDrawBase[0] = 0u;
-    sNdsLinkSpecialTourSpinDrawBase[1] = 0u;
-    gNdsLinkSpecialTourPhase = nNDSLinkSpecialTourAwaitEntry;
-    gNdsLinkSpecialTourFrames = 0u;
-    gNdsLinkSpecialTourInputCount = 0u;
-    gNdsLinkSpecialTourFixtureCount = 0u;
-    gNdsLinkSpecialTourEntrySeenMask =
-        ((sNdsLinkSpecialTourEntryGObj[0] != NULL) ? 1u : 0u) |
-        ((sNdsLinkSpecialTourEntryGObj[1] != NULL) ? 2u : 0u);
-    gNdsLinkSpecialTourEntryDrawMask = 0u;
-    gNdsLinkSpecialTourEntryEjectMask = 0u;
-    gNdsLinkSpecialTourEntryStatusMask = 0u;
-    gNdsLinkSpecialTourEntryInitialAnim[0] =
-        gNdsLinkSpecialTourEntryCreateAnim[0];
-    gNdsLinkSpecialTourEntryInitialAnim[1] =
-        gNdsLinkSpecialTourEntryCreateAnim[1];
-    gNdsLinkSpecialTourEntryLiveFrames[0] = 0u;
-    gNdsLinkSpecialTourEntryLiveFrames[1] = 0u;
-    gNdsLinkSpecialTourStatusMask = 0u;
-    gNdsLinkSpecialTourBoomerangObserved = 0u;
-    gNdsLinkSpecialTourBoomerangDrawObserved = 0u;
-    gNdsLinkSpecialTourBoomerangCatchObserved = 0u;
-    gNdsLinkSpecialTourSpinObserved = 0u;
-    gNdsLinkSpecialTourSpinDrawObserved = 0u;
-    gNdsLinkSpecialTourDone = 0u;
-#endif
 #if NDS_P2_NESS_SPECIAL_TOUR
-#if NDS_P2_NESS_VFX_PROOF
-    /* The dedicated Up-B VFX proof needs only the real Up-B controller path.
-     * Starting with PK Fire can consume the whole realtime verifier window
-     * while the fighters naturally align for a hit, without adding any
-     * coverage for PK Thunder presentation.  Begin at the ordinary Up-B
-     * approach phase; all status/article creation and rendering remain source
-     * owned. */
-    sNdsNessSpecialTourStep = nNDSNessSpecialTourAwaitUpWait;
-#else
     sNdsNessSpecialTourStep = nNDSNessSpecialTourAwaitWait;
-#endif
     sNdsNessSpecialTourFrames = 0u;
     sNdsNessSpecialTourWeaponSubmitBase = gNdsWeaponRendererSubmitCount;
     sNdsNessSpecialTourWeaponVisibleBase = gNdsWeaponRendererVisibleDrawCount;
@@ -6245,9 +5702,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsYoshiBugTourStallPhase = 0xffffffffu;
     gNdsYoshiBugTourDone = 0u;
 #endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     sNdsNaturalSpecialsPhase = nNDSNaturalSpecialsPhaseIdle;
     sNdsNaturalSpecialsPhaseFrames = 0u;
     sNdsNaturalSpecialsDone = 0u;
@@ -6273,7 +5727,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         gNdsFighterDonkeySpecialsSlot = 1u;
     }
 #endif
-#if NDS_P2_SAMUS
     gNdsFighterSamusSpecialsSlot = 0u;
     if (ndsFighterNaturalIsSamus(p1) != FALSE)
     {
@@ -6290,8 +5743,6 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsFighterSamusSpecialsLwPressFrames = 0u;
     gNdsFighterSamusSpecialsLwFrames = 0u;
     gNdsFighterSamusSpecialsLwWaitFrames = 0u;
-#endif
-#endif
     sNdsNaturalCombatAttackerSlot =
         ((gNdsBattlePlayableFoxCpuEnabled != 0u) &&
          (p1->fkind == nFTKindFox)) ? 1u : 0u;
@@ -6306,12 +5757,10 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         ndsFighterNaturalProjectileSelectSlot(fp);
     sNdsNaturalProjectileExpectedKind =
         ndsFighterNaturalProjectileExpectedKind(fp[sNdsNaturalProjectileActorSlot]);
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
     sNdsNaturalReflectorProjectileSlot = sNdsNaturalProjectileActorSlot;
     sNdsNaturalReflectorFoxSlot =
         ndsFighterNaturalReflectorSelectFoxSlot(fp);
     sNdsNaturalReflectorButtonPressed = 0u;
-#endif
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         FTStruct *victim =
@@ -6338,81 +5787,14 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         sNdsNaturalCombatVictimStartPercent;
     ndsControllerPlaybackReset();
     ndsControllerPlaybackSetConnectedMask(0x3u);
-#if NDS_DEV_LIVE_INPUT_PREVIEW
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         ndsControllerPlaybackSetEnabled(FALSE);
     }
     else
-#endif
     {
         ndsControllerPlaybackSetEnabled(TRUE);
     }
-#if NDS_P2_LINK_BOMB_TOUR
-    /* The bounded Bomb verifier isolates Link's item state machine rather than
-     * the entry presentation. Once the real Link GObj has reached source
-     * Appear, replay the exact non-Boss completion branch from BattleShip
-     * ftcommonentry.c:118-130: restore facing, the saved entry position and
-     * floor line, then enter source Wait.  This skips only the remaining Appear
-     * animation time; the settled gameplay state is the one the source itself
-     * would publish.  The normal GO thread's source helper then unlocks input. */
-    if (p0->fkind == nFTKindLink)
-    {
-        GObj *link_gobj = ndsFighterManagerLiveGObj(0u);
-
-        if (link_gobj != NULL)
-        {
-            p0->lr = p0->status_vars.common.entry.lr;
-            DObjGetStruct(link_gobj)->translate.vec.f = p0->entry_pos;
-            p0->coll_data.floor_line_id =
-                p0->status_vars.common.entry.floor_line_id;
-            ftCommonWaitSetStatus(link_gobj);
-            ftParamUnlockPlayerControl(link_gobj);
-            NDS_DIAG(gNdsLinkBombTourFixtureCount++);
-        }
-    }
-#endif
-#if NDS_P2_YOSHI_BUG_TOUR && NDS_HARNESS_FAST_LOGIC
-    /* Fast iteration intentionally omits the visible entry/countdown threads.
-     * Complete only their already-selected, non-Boss entry result so the
-     * focused action proof starts from the same grounded source Wait state as a
-     * normal match. This is the same bounded fixture used by the Link Bomb
-     * verifier above; no Yoshi special/catch/throw state is injected.
-     *
-     * Do both fighters because Neutral-B and common Catch require the opponent
-     * to be in ordinary grounded Wait as well. */
-    {
-        u32 fixture_slot;
-
-        for (fixture_slot = 0u; fixture_slot < 2u; fixture_slot++)
-        {
-            FTStruct *fixture_fp = fp[fixture_slot];
-            GObj *fixture_gobj = ndsFighterManagerLiveGObj(fixture_slot);
-
-            if ((fixture_fp != NULL) && (fixture_gobj != NULL))
-            {
-                DObjGetStruct(fixture_gobj)->translate.vec.f =
-                    fixture_fp->entry_pos;
-                fixture_fp->coll_data.floor_line_id =
-                    fixture_fp->status_vars.common.entry.floor_line_id;
-                ftCommonWaitSetStatus(fixture_gobj);
-                ftParamUnlockPlayerControl(fixture_gobj);
-            }
-        }
-        /* Fast iteration bypasses the source Entry thread that normally copies
-         * each spawn's facing into status_vars.common.entry.lr. The field is
-         * therefore not authoritative here (measured Yoshi=NaN, Fox=0), and
-         * copying it made the approach/facing test impossible. Face the two
-         * already-source-positioned fighters toward each other, exactly the
-         * invariant the normal entry handoff establishes before GO. */
-        if ((fp[0] != NULL) && (fp[1] != NULL))
-        {
-            fp[0]->lr = (fp[1]->entry_pos.x >= fp[0]->entry_pos.x) ? 1.0F : -1.0F;
-            fp[1]->lr = -fp[0]->lr;
-        }
-        NDS_DIAG(gNdsYoshiBugTourFixtureCount++);
-    }
-#endif
     gNdsFighterNaturalMotionGObjCountBefore = (u32)gcGetGObjsActiveNum();
 
     if (ndsFighterBattlePlayableProofEnabled() == FALSE)
@@ -6521,16 +5903,13 @@ static sb32 ndsFighterNaturalProjectileHandleKORecovery(FTStruct *fp[2])
         sNdsNaturalProjectileKORecoveryActive = 0u;
         sNdsNaturalProjectileButtonPressed = 0u;
         sNdsNaturalCombatPassPressed = 0u;
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         sNdsNaturalReflectorButtonPressed = 0u;
-#endif
         ndsFighterNaturalCombatSetPhase(
             nNDSNaturalCombatPhaseProjectileSettle);
     }
     return TRUE;
 }
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static void ndsFighterNaturalMovesetSetPhase(u32 phase)
 {
     sNdsNaturalMovesetPhase = phase;
@@ -6755,7 +6134,6 @@ static sb32 ndsFighterNaturalMovesetHandleKORecovery(FTStruct *fp[2])
     }
     return TRUE;
 }
-#endif
 
 static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
 {
@@ -6776,7 +6154,6 @@ static sb32 ndsFighterNaturalCombatSettled(FTStruct *fp[2])
         TRUE : FALSE;
 }
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static sb32 ndsFighterNaturalMovesetSettled(FTStruct *fp[2])
 {
     FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
@@ -7040,1894 +6417,11 @@ static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
     }
     return FALSE;
 }
-#endif
 
-#if NDS_P2_SAMUS_STATE_TOUR
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-#endif
 
-static void ndsSamusStateTourRecord(FTStruct *samus)
-{
-    u32 bit = 0u;
 
-    if (samus == NULL)
-    {
-        return;
-    }
-    gNdsSamusStateTourStatus = (u32)samus->status_id;
-    gNdsSamusStateTourMotion = (u32)samus->motion_id;
-    gNdsSamusStateTourCliffID = (u32)samus->coll_data.cliff_id;
-    switch (samus->status_id)
-    {
-    case nFTCommonStatusFall: bit = 1u << 0; break;
-    case nFTCommonStatusCliffCatch: bit = 1u << 1; break;
-    case nFTCommonStatusCliffWait: bit = 1u << 2; break;
-    case nFTCommonStatusCliffQuick: bit = 1u << 3; break;
-    case nFTCommonStatusCliffAttackQuick1: bit = 1u << 4; break;
-    case nFTCommonStatusCliffAttackQuick2: bit = 1u << 5; break;
-    case nFTCommonStatusCliffEscapeQuick1: bit = 1u << 6; break;
-    case nFTCommonStatusCliffEscapeQuick2: bit = 1u << 7; break;
-    case nFTCommonStatusCliffClimbQuick1: bit = 1u << 8; break;
-    case nFTCommonStatusCliffClimbQuick2: bit = 1u << 9; break;
-    case nFTCommonStatusCliffSlow: bit = 1u << 10; break;
-    case nFTCommonStatusCliffAttackSlow1: bit = 1u << 11; break;
-    case nFTCommonStatusCliffAttackSlow2: bit = 1u << 12; break;
-    case nFTCommonStatusCliffEscapeSlow1: bit = 1u << 13; break;
-    case nFTCommonStatusCliffEscapeSlow2: bit = 1u << 14; break;
-    case nFTCommonStatusCliffClimbSlow1: bit = 1u << 15; break;
-    case nFTCommonStatusCliffClimbSlow2: bit = 1u << 16; break;
-    case nFTCommonStatusEscapeF: bit = 1u << 17; break;
-    case nFTCommonStatusEscapeB: bit = 1u << 18; break;
-    case nFTSamusStatusSpecialLw: bit = 1u << 19; break;
-    case nFTSamusStatusSpecialAirLw: bit = 1u << 20; break;
-    default: break;
-    }
-    gNdsSamusStateTourMask |= bit;
-}
 
-static sb32 ndsSamusStateTourExpectedMorphStatus(s32 status_id)
-{
-    switch (sNdsSamusStateTourScenario)
-    {
-    case nNDSSamusStateTourRollF:
-        return (status_id == nFTCommonStatusEscapeF) ? TRUE : FALSE;
-    case nNDSSamusStateTourRollB:
-        return (status_id == nFTCommonStatusEscapeB) ? TRUE : FALSE;
-    case nNDSSamusStateTourBombGround:
-        return (status_id == nFTSamusStatusSpecialLw) ? TRUE : FALSE;
-    case nNDSSamusStateTourBombAir:
-        return (status_id == nFTSamusStatusSpecialAirLw) ? TRUE : FALSE;
-    default:
-        return FALSE;
-    }
-}
 
-static sb32 ndsSamusStateTourMorphPresentationStatus(s32 status_id)
-{
-    switch (status_id)
-    {
-    case nFTCommonStatusEscapeF:
-    case nFTCommonStatusEscapeB:
-    case nFTCommonStatusCliffEscapeQuick2:
-    case nFTCommonStatusCliffEscapeSlow2:
-    case nFTSamusStatusSpecialLw:
-    case nFTSamusStatusSpecialAirLw:
-        return TRUE;
-    default:
-        return FALSE;
-    }
-}
-
-static sb32 ndsSamusStateTourExpectedAction2(s32 status_id)
-{
-    switch (sNdsSamusStateTourScenario)
-    {
-    case nNDSSamusStateTourQuickAttack:
-        return (status_id == nFTCommonStatusCliffAttackQuick2) ? TRUE : FALSE;
-    case nNDSSamusStateTourQuickEscape:
-        return (status_id == nFTCommonStatusCliffEscapeQuick2) ? TRUE : FALSE;
-    case nNDSSamusStateTourQuickClimb:
-        return (status_id == nFTCommonStatusCliffClimbQuick2) ? TRUE : FALSE;
-    case nNDSSamusStateTourSlowAttack:
-        return (status_id == nFTCommonStatusCliffAttackSlow2) ? TRUE : FALSE;
-    case nNDSSamusStateTourSlowEscape:
-        return (status_id == nFTCommonStatusCliffEscapeSlow2) ? TRUE : FALSE;
-    case nNDSSamusStateTourSlowClimb:
-        return (status_id == nFTCommonStatusCliffClimbSlow2) ? TRUE : FALSE;
-    default:
-        return FALSE;
-    }
-}
-
-static sb32 ndsSamusStateTourPrepareMorph(FTStruct *samus)
-{
-    if ((samus == NULL) || (samus->fkind != nFTKindSamus) ||
-        (samus->status_id != nFTCommonStatusWait) ||
-        (samus->ga != nMPKineticsGround))
-    {
-        return FALSE;
-    }
-
-    sNdsSamusStateTourInputPressed = 0u;
-    sNdsSamusStateTourFrames = 0u;
-    switch (sNdsSamusStateTourScenario)
-    {
-    case nNDSSamusStateTourRollF:
-    case nNDSSamusStateTourRollB:
-        sNdsSamusStateTourStep = nNDSSamusStateTourStepGuard;
-        break;
-    case nNDSSamusStateTourBombGround:
-        sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitAction;
-        break;
-    case nNDSSamusStateTourBombAir:
-        sNdsSamusStateTourStep = nNDSSamusStateTourStepJump;
-        break;
-    default:
-        return FALSE;
-    }
-    return TRUE;
-}
-
-static sb32 ndsSamusStateTourPrepareLedge(FTStruct *samus)
-{
-    DObj *root;
-    Vec3f edge;
-    u16 flags;
-
-    if ((samus == NULL) || (samus->fkind != nFTKindSamus) ||
-        (samus->status_id != nFTCommonStatusWait) ||
-        (samus->ga != nMPKineticsGround))
-    {
-        return FALSE;
-    }
-    root = samus->joints[nFTPartsJointTopN];
-    if (root == NULL)
-    {
-        return FALSE;
-    }
-
-    /* Dream Land's source main floor is line 3.  Stage only the scenario
-     * precondition while Samus is already in source Wait; the ordinary
-     * Wait/Walk/Run map callbacks must select Fall before any cliff sweep is
-     * staged.  No fighter status or motion is assigned here. */
-    sNdsSamusStateTourFloorLine = 3;
-    mpCollisionGetFloorEdgeR(sNdsSamusStateTourFloorLine, &edge);
-    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusStateTourFloorLine);
-    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
-    {
-        return FALSE;
-    }
-
-    samus->percent_damage =
-        (sNdsSamusStateTourScenario >= nNDSSamusStateTourSlowAttack) ?
-        FTCOMMON_CLIFF_DAMAGE_HIGH : 0;
-    samus->lr = +1;
-    samus->cliffcatch_wait = 0;
-    samus->is_cliff_hold = FALSE;
-    samus->physics.vel_ground.x = 0.0F;
-    samus->vel_ground.x = 0.0F;
-    root->translate.vec.f.x = edge.x - 48.0F;
-    root->translate.vec.f.y = edge.y - samus->coll_data.map_coll.bottom;
-    root->translate.vec.f.z = 0.0F;
-    samus->coll_data.p_translate = &root->translate.vec.f;
-    samus->coll_data.p_lr = &samus->lr;
-    samus->coll_data.p_map_coll = &samus->coll_data.map_coll;
-    samus->coll_data.pos_prev = root->translate.vec.f;
-    samus->coll_data.floor_line_id = sNdsSamusStateTourFloorLine;
-    samus->coll_data.floor_flags = flags;
-    samus->coll_data.mask_curr = MAP_FLAG_FLOOR;
-    samus->coll_data.mask_stat = MAP_FLAG_FLOOR;
-    samus->coll_data.cliff_id = -1;
-    samus->coll_data.ignore_line_id = -1;
-    NDS_DIAG(gNdsSamusStateTourStageCount++);
-    sNdsSamusStateTourFrames = 0u;
-    sNdsSamusStateTourStep = nNDSSamusStateTourStepRunOff;
-    return TRUE;
-}
-
-static sb32 ndsSamusStateTourStageCliffSweep(FTStruct *samus)
-{
-    DObj *root;
-    Vec3f edge;
-    Vec2f cliffcatch;
-    f32 sample_x;
-
-    if ((samus == NULL) || (samus->status_id != nFTCommonStatusFall) ||
-        (samus->ga != nMPKineticsAir))
-    {
-        return FALSE;
-    }
-    root = samus->joints[nFTPartsJointTopN];
-    if (root == NULL)
-    {
-        return FALSE;
-    }
-    mpCollisionGetFloorEdgeR(sNdsSamusStateTourFloorLine, &edge);
-    cliffcatch = samus->coll_data.cliffcatch_coll;
-    if (cliffcatch.x <= 0.0F)
-    {
-        cliffcatch.x = 64.0F;
-    }
-    if (cliffcatch.y == 0.0F)
-    {
-        cliffcatch.y = 64.0F;
-    }
-    sample_x = edge.x - 100.0F;
-
-    /* Source R-cliff test uses (root - cliffcatch) and requires lr == -1.
-     * These guest writes establish a descending sweep after source Fall has
-     * already been selected; BattleShip mpprocess still decides whether it is
-     * a cliff and ftCommonCliffCatchSetStatus still owns the transition. */
-    samus->lr = -1;
-    samus->cliffcatch_wait = 0;
-    samus->is_cliff_hold = FALSE;
-    samus->coll_data.cliffcatch_coll = cliffcatch;
-    samus->coll_data.p_translate = &root->translate.vec.f;
-    samus->coll_data.p_lr = &samus->lr;
-    samus->coll_data.pos_prev.x = sample_x + cliffcatch.x;
-    samus->coll_data.pos_prev.y = edge.y - cliffcatch.y + 2.0F;
-    samus->coll_data.pos_prev.z = 0.0F;
-    root->translate.vec.f.x = sample_x + cliffcatch.x;
-    /* mpCommonUpdateFighterCollisionData snapshots the current translate into
-     * pos_prev at the beginning of the next source map update.  Keep the live
-     * grab point ABOVE the floor here; ordinary Fall physics then advances it
-     * below the floor in that update, producing the source-required descending
-     * (+ -> -) cliff sweep.  Staging it below the floor made the real call
-     * observe -2 -> -7.9 and correctly reject the cliff. */
-    root->translate.vec.f.y = edge.y - cliffcatch.y + 2.0F;
-    root->translate.vec.f.z = 0.0F;
-    samus->physics.vel_air.x = 0.0F;
-    samus->physics.vel_air.y = -4.0F;
-    samus->physics.vel_air.z = 0.0F;
-    samus->vel_air = samus->physics.vel_air;
-    samus->coll_data.update_tic = gMPCollisionUpdateTic;
-    samus->coll_data.mask_curr = 0u;
-    samus->coll_data.mask_stat = 0u;
-    samus->coll_data.floor_line_id = -1;
-    samus->coll_data.cliff_id = -1;
-    samus->coll_data.ignore_line_id = -1;
-    NDS_DIAG(gNdsSamusStateTourStageCount++);
-    sNdsSamusStateTourFrames = 0u;
-    sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitCliff;
-    return TRUE;
-}
-
-static sb32 ndsSamusStateTourAdvance(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-
-    sNdsSamusStateTourActive = 1u;
-    if (sNdsSamusStateTourDone != 0u)
-    {
-        return TRUE;
-    }
-    if ((samus == NULL) || (samus->fkind != nFTKindSamus))
-    {
-        return FALSE;
-    }
-    ndsSamusStateTourRecord(samus);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    if (ndsSamusStateTourMorphPresentationStatus(samus->status_id) != FALSE)
-    {
-        /* Fast mode 163 normally defers its hardware draw until the bounded
-         * update run is over, after these source states have already returned
-         * to Wait. Request the existing ordinary hardware presentation while
-         * the live root vector is in each morph state so programs 2/3 and
-         * their real triangle submission can be observed. This changes no
-         * fighter, animation, weapon, input or source-frame state. */
-        ndsHarnessFastPresentRequest();
-    }
-#endif
-    gNdsSamusStateTourPhase = sNdsSamusStateTourScenario;
-    gNdsSamusStateTourPhaseFrames = ++sNdsSamusStateTourFrames;
-    if (sNdsSamusStateTourFrames > NDS_SAMUS_STATE_TOUR_TIMEOUT)
-    {
-        NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-        return FALSE;
-    }
-
-    switch (sNdsSamusStateTourStep)
-    {
-    case nNDSSamusStateTourStepPrepare:
-        if (sNdsSamusStateTourScenario < nNDSSamusStateTourQuickAttack)
-        {
-            (void)ndsSamusStateTourPrepareMorph(samus);
-        }
-        else
-        {
-            (void)ndsSamusStateTourPrepareLedge(samus);
-        }
-        break;
-    case nNDSSamusStateTourStepGuard:
-        if (ndsSamusStateTourExpectedMorphStatus(samus->status_id) != FALSE)
-        {
-            sNdsSamusStateTourActionSeen = 1u;
-            sNdsSamusStateTourFrames = 0u;
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
-        }
-        break;
-    case nNDSSamusStateTourStepJump:
-        if (samus->ga == nMPKineticsAir)
-        {
-            sNdsSamusStateTourInputPressed = 0u;
-            sNdsSamusStateTourFrames = 0u;
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitAction;
-        }
-        break;
-    case nNDSSamusStateTourStepAwaitAction:
-        if (ndsSamusStateTourExpectedMorphStatus(samus->status_id) != FALSE)
-        {
-            sNdsSamusStateTourActionSeen = 1u;
-            sNdsSamusStateTourFrames = 0u;
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
-        }
-        break;
-    case nNDSSamusStateTourStepRunOff:
-        if (samus->status_id == nFTCommonStatusFall)
-        {
-            (void)ndsSamusStateTourStageCliffSweep(samus);
-        }
-        break;
-    case nNDSSamusStateTourStepAwaitCliff:
-        if (samus->status_id == nFTCommonStatusCliffWait)
-        {
-            sNdsSamusStateTourFrames = 0u;
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepCliffWait;
-        }
-        break;
-    case nNDSSamusStateTourStepCliffWait:
-        if (ndsSamusStateTourExpectedAction2(samus->status_id) != FALSE)
-        {
-            sNdsSamusStateTourActionSeen = 1u;
-            sNdsSamusStateTourFrames = 0u;
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
-        }
-        break;
-    case nNDSSamusStateTourStepRecover:
-        if ((sNdsSamusStateTourActionSeen != 0u) &&
-            (samus->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround))
-        {
-            sNdsSamusStateTourScenario++;
-            sNdsSamusStateTourActionSeen = 0u;
-            sNdsSamusStateTourInputPressed = 0u;
-            sNdsSamusStateTourFrames = 0u;
-            if (sNdsSamusStateTourScenario >= nNDSSamusStateTourDone)
-            {
-                sNdsSamusStateTourDone = 1u;
-                gNdsSamusStateTourPhase = nNDSSamusStateTourDone;
-                return TRUE;
-            }
-            sNdsSamusStateTourStep = nNDSSamusStateTourStepPrepare;
-        }
-        break;
-    default:
-        break;
-    }
-    return FALSE;
-}
-
-static sb32 ndsSamusStateTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                        s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *samus = fp[0];
-
-    if ((sNdsSamusStateTourActive == 0u) ||
-        (sNdsSamusStateTourDone != 0u) || (samus == NULL) ||
-        (samus->fkind != nFTKindSamus))
-    {
-        return FALSE;
-    }
-    if (sNdsSamusStateTourStep == nNDSSamusStateTourStepGuard)
-    {
-        s32 forward = (samus->lr >= 0.0F) ? 80 : -80;
-
-        button[0] = Z_TRIG;
-        if ((samus->status_id == nFTCommonStatusGuard) &&
-            (sNdsSamusStateTourInputPressed == 0u))
-        {
-            stick_x[0] =
-                (sNdsSamusStateTourScenario == nNDSSamusStateTourRollF) ?
-                forward : -forward;
-            sNdsSamusStateTourInputPressed = 1u;
-        }
-    }
-    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepJump)
-    {
-        if ((samus->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround) &&
-            (sNdsSamusStateTourInputPressed == 0u))
-        {
-            button[0] = U_CBUTTONS;
-            sNdsSamusStateTourInputPressed = 1u;
-        }
-    }
-    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepAwaitAction)
-    {
-        if ((sNdsSamusStateTourInputPressed == 0u) &&
-            (((sNdsSamusStateTourScenario == nNDSSamusStateTourBombGround) &&
-              (samus->status_id == nFTCommonStatusWait) &&
-              (samus->ga == nMPKineticsGround)) ||
-             ((sNdsSamusStateTourScenario == nNDSSamusStateTourBombAir) &&
-              (samus->ga == nMPKineticsAir))))
-        {
-            button[0] = B_BUTTON;
-            stick_y[0] = -80;
-            sNdsSamusStateTourInputPressed = 1u;
-        }
-    }
-    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepRunOff)
-    {
-        stick_x[0] = 80;
-    }
-    else if ((sNdsSamusStateTourStep == nNDSSamusStateTourStepCliffWait) &&
-             (samus->status_id == nFTCommonStatusCliffWait) &&
-             (samus->status_vars.common.cliffwait.is_allow_interrupt != FALSE))
-    {
-        switch (sNdsSamusStateTourScenario)
-        {
-        case nNDSSamusStateTourQuickAttack:
-        case nNDSSamusStateTourSlowAttack:
-            button[0] = A_BUTTON;
-            break;
-        case nNDSSamusStateTourQuickEscape:
-        case nNDSSamusStateTourSlowEscape:
-            button[0] = Z_TRIG;
-            break;
-        case nNDSSamusStateTourQuickClimb:
-        case nNDSSamusStateTourSlowClimb:
-            stick_y[0] = 80;
-            break;
-        default:
-            break;
-        }
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-static void ndsSamusTumbleTourRecord(FTStruct *samus)
-{
-    u32 bit = 0u;
-
-    if (samus == NULL)
-    {
-        return;
-    }
-    gNdsSamusTumbleTourStatus = (u32)samus->status_id;
-    gNdsSamusTumbleTourMotion = (u32)samus->motion_id;
-    if ((samus->status_id >= nFTCommonStatusDamageFlyHi) &&
-        (samus->status_id <= nFTCommonStatusDamageFlyRoll))
-    {
-        bit = 1u << 0;
-        gNdsSamusTumbleTourDamageFlyMask |=
-            1u << (samus->status_id - nFTCommonStatusDamageFlyHi);
-    }
-    else
-    {
-        switch (samus->status_id)
-        {
-        case nFTCommonStatusDamageFall: bit = 1u << 1; break;
-        case nFTCommonStatusPassive: bit = 1u << 2; break;
-        case nFTCommonStatusPassiveStandF: bit = 1u << 3; break;
-        case nFTCommonStatusPassiveStandB: bit = 1u << 4; break;
-        case nFTCommonStatusDownBounceD: bit = 1u << 5; break;
-        case nFTCommonStatusDownBounceU: bit = 1u << 6; break;
-        case nFTCommonStatusDownWaitD: bit = 1u << 7; break;
-        case nFTCommonStatusDownWaitU: bit = 1u << 8; break;
-        case nFTCommonStatusDownStandD: bit = 1u << 9; break;
-        case nFTCommonStatusDownStandU: bit = 1u << 10; break;
-        case nFTCommonStatusDownForwardD: bit = 1u << 11; break;
-        case nFTCommonStatusDownForwardU: bit = 1u << 12; break;
-        case nFTCommonStatusDownBackD: bit = 1u << 13; break;
-        case nFTCommonStatusDownBackU: bit = 1u << 14; break;
-        case nFTCommonStatusDownAttackD: bit = 1u << 15; break;
-        case nFTCommonStatusDownAttackU: bit = 1u << 16; break;
-        default: break;
-        }
-    }
-    gNdsSamusTumbleTourMask |= bit;
-}
-
-static sb32 ndsSamusTumbleTourScenarioDownD(void)
-{
-    switch (sNdsSamusTumbleTourScenario)
-    {
-    case nNDSSamusTumbleTourDownStandD:
-    case nNDSSamusTumbleTourDownForwardD:
-    case nNDSSamusTumbleTourDownBackD:
-    case nNDSSamusTumbleTourDownAttackD:
-        return TRUE;
-    default:
-        return FALSE;
-    }
-}
-
-static sb32 ndsSamusTumbleTourScenarioIsDown(void)
-{
-    return (sNdsSamusTumbleTourScenario >= nNDSSamusTumbleTourDownStandD) ?
-        TRUE : FALSE;
-}
-
-static s32 ndsSamusTumbleTourExpectedStatus(void)
-{
-    switch (sNdsSamusTumbleTourScenario)
-    {
-    case nNDSSamusTumbleTourPassive: return nFTCommonStatusPassive;
-    case nNDSSamusTumbleTourPassiveStandF: return nFTCommonStatusPassiveStandF;
-    case nNDSSamusTumbleTourPassiveStandB: return nFTCommonStatusPassiveStandB;
-    case nNDSSamusTumbleTourDownStandD: return nFTCommonStatusDownStandD;
-    case nNDSSamusTumbleTourDownStandU: return nFTCommonStatusDownStandU;
-    case nNDSSamusTumbleTourDownForwardD: return nFTCommonStatusDownForwardD;
-    case nNDSSamusTumbleTourDownForwardU: return nFTCommonStatusDownForwardU;
-    case nNDSSamusTumbleTourDownBackD: return nFTCommonStatusDownBackD;
-    case nNDSSamusTumbleTourDownBackU: return nFTCommonStatusDownBackU;
-    case nNDSSamusTumbleTourDownAttackD: return nFTCommonStatusDownAttackD;
-    case nNDSSamusTumbleTourDownAttackU: return nFTCommonStatusDownAttackU;
-    default: return -1;
-    }
-}
-
-static void ndsSamusTumbleTourPlaceGround(FTStruct *fp, f32 x, f32 floor_y,
-                                          u16 floor_flags)
-{
-    DObj *root = fp->joints[nFTPartsJointTopN];
-
-    root->translate.vec.f.x = x;
-    root->translate.vec.f.y = floor_y - fp->coll_data.map_coll.bottom;
-    root->translate.vec.f.z = 0.0F;
-    fp->coll_data.p_translate = &root->translate.vec.f;
-    fp->coll_data.p_lr = &fp->lr;
-    fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
-    fp->coll_data.pos_prev = root->translate.vec.f;
-    fp->coll_data.floor_line_id = sNdsSamusTumbleTourFloorLine;
-    fp->coll_data.floor_flags = floor_flags;
-    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
-    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
-    fp->coll_data.cliff_id = -1;
-    fp->coll_data.ignore_line_id = -1;
-    fp->physics.vel_ground.x = 0.0F;
-    fp->vel_ground.x = 0.0F;
-}
-
-static sb32 ndsSamusTumbleTourPrepareHit(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    Vec3f edge;
-    u16 flags;
-
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox) ||
-        (samus->status_id != nFTCommonStatusWait) ||
-        (fox->status_id != nFTCommonStatusWait) ||
-        (samus->ga != nMPKineticsGround) || (fox->ga != nMPKineticsGround))
-    {
-        return FALSE;
-    }
-    if ((samus->joints[nFTPartsJointTopN] == NULL) ||
-        (fox->joints[nFTPartsJointTopN] == NULL))
-    {
-        return FALSE;
-    }
-
-    sNdsSamusTumbleTourFloorLine = 3;
-    mpCollisionGetFloorEdgeR(sNdsSamusTumbleTourFloorLine, &edge);
-    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusTumbleTourFloorLine);
-    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
-    {
-        return FALSE;
-    }
-
-    /* Scenario precondition only.  Fox's ordinary Up+A input must select
-     * AttackHi4 and the real attack collision must put Samus into DamageFly.
-     * No damage/status routine is called from this proof driver. */
-    fox->lr = +1;
-    samus->lr = -1;
-    samus->percent_damage = 80;
-    /* Preserve the controller-populated Z history for the three tech
-     * scenarios.  The down-state scenarios intentionally arrive without a
-     * tech buffer, so clear only those before BattleShip's DamageFall map
-     * callback chooses Passive/PassiveStand versus DownBounce. */
-    if (ndsSamusTumbleTourScenarioIsDown() != FALSE)
-    {
-        samus->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
-    }
-    ndsSamusTumbleTourPlaceGround(fox, -20.0F, edge.y, flags);
-    ndsSamusTumbleTourPlaceGround(samus, +20.0F, edge.y, flags);
-    sNdsSamusTumbleTourFrames = 0u;
-    sNdsSamusTumbleTourAttackSeen = 0u;
-    sNdsSamusTumbleTourActionSeen = 0u;
-    sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepAttack;
-    NDS_DIAG(gNdsSamusTumbleTourStageCount++);
-    return TRUE;
-}
-
-static sb32 ndsSamusTumbleTourStageLanding(FTStruct *samus)
-{
-    DObj *root;
-    Vec3f edge;
-
-    if ((samus == NULL) || (samus->status_id != nFTCommonStatusDamageFall) ||
-        (samus->ga != nMPKineticsAir))
-    {
-        return FALSE;
-    }
-    root = samus->joints[nFTPartsJointTopN];
-    if ((root == NULL) || (samus->joints[4] == NULL))
-    {
-        return FALSE;
-    }
-    mpCollisionGetFloorEdgeR(sNdsSamusTumbleTourFloorLine, &edge);
-
-    root->translate.vec.f.x = 0.0F;
-    root->translate.vec.f.y = edge.y - samus->coll_data.map_coll.bottom + 2.0F;
-    root->translate.vec.f.z = 0.0F;
-    samus->coll_data.p_translate = &root->translate.vec.f;
-    samus->coll_data.p_lr = &samus->lr;
-    samus->coll_data.pos_prev = root->translate.vec.f;
-    samus->coll_data.floor_line_id = -1;
-    samus->coll_data.mask_curr = 0u;
-    samus->coll_data.mask_stat = 0u;
-    samus->coll_data.cliff_id = -1;
-    samus->coll_data.ignore_line_id = -1;
-    samus->coll_data.update_tic = gMPCollisionUpdateTic;
-    samus->physics.vel_air.x = 0.0F;
-    samus->physics.vel_air.y = -4.0F;
-    samus->physics.vel_air.z = 0.0F;
-    samus->vel_air = samus->physics.vel_air;
-    samus->physics.vel_damage_air.x = 0.0F;
-    samus->physics.vel_damage_air.y = 0.0F;
-    samus->physics.vel_damage_ground = 0.0F;
-    if (ndsSamusTumbleTourScenarioIsDown() != FALSE)
-    {
-        samus->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
-    }
-    if (ndsSamusTumbleTourScenarioIsDown() != FALSE)
-    {
-        samus->joints[4]->rotate.vec.f.x =
-            (ndsSamusTumbleTourScenarioDownD() != FALSE) ?
-            F_CST_DTOR32(90.0F) : 0.0F;
-    }
-    sNdsSamusTumbleTourFrames = 0u;
-    sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepLanding;
-    NDS_DIAG(gNdsSamusTumbleTourStageCount++);
-    return TRUE;
-}
-
-static void ndsSamusTumbleTourPrepareDamageFallMap(FTStruct *samus)
-{
-    if ((sNdsSamusTumbleTourActive == 0u) ||
-        (gNdsSamusTumbleTourDone != 0u) ||
-        (samus == NULL) || (samus->fkind != nFTKindSamus) ||
-        (samus->status_id != nFTCommonStatusDamageFall) ||
-        (sNdsSamusTumbleTourStep != nNDSSamusTumbleTourStepLanding) ||
-        (ndsSamusTumbleTourScenarioIsDown() == FALSE) ||
-        (samus->joints[4] == NULL))
-    {
-        return;
-    }
-
-    /* DamageFall pose evaluation runs before ProcMap and can replace the
-     * scenario's staged joint-4 rotation.  Re-apply only that pose
-     * precondition at the final guest-side seam immediately before the
-     * BattleShip map callback.  ftCommonDownBounceCheckUpOrDown still owns
-     * the U/D branch and ftCommonDownBounceSetStatus still owns the status. */
-    samus->joints[4]->rotate.vec.f.x =
-        (ndsSamusTumbleTourScenarioDownD() != FALSE) ?
-        F_CST_DTOR32(90.0F) : 0.0F;
-}
-
-static sb32 ndsSamusTumbleTourAdvance(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    s32 expected;
-
-    sNdsSamusTumbleTourActive = 1u;
-    if (gNdsSamusTumbleTourDone != 0u)
-    {
-        return TRUE;
-    }
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    ndsSamusTumbleTourRecord(samus);
-    gNdsSamusTumbleTourScenario = sNdsSamusTumbleTourScenario;
-    gNdsSamusTumbleTourStep = sNdsSamusTumbleTourStep;
-    gNdsSamusTumbleTourFrames = ++sNdsSamusTumbleTourFrames;
-    if (sNdsSamusTumbleTourFrames > NDS_SAMUS_TUMBLE_TOUR_TIMEOUT)
-    {
-        NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-        return FALSE;
-    }
-
-    switch (sNdsSamusTumbleTourStep)
-    {
-    case nNDSSamusTumbleTourStepPrepareHit:
-        (void)ndsSamusTumbleTourPrepareHit(fp);
-        break;
-    case nNDSSamusTumbleTourStepAttack:
-        if (fox->status_id == nFTCommonStatusAttackHi4)
-        {
-            sNdsSamusTumbleTourAttackSeen = 1u;
-        }
-        if ((samus->status_id >= nFTCommonStatusDamageFlyHi) &&
-            (samus->status_id <= nFTCommonStatusDamageFlyRoll))
-        {
-            NDS_DIAG(gNdsSamusTumbleTourHitCount++);
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepDamageFly;
-        }
-        else if ((sNdsSamusTumbleTourAttackSeen != 0u) &&
-                 (fox->status_id == nFTCommonStatusWait) &&
-                 (samus->status_id == nFTCommonStatusWait))
-        {
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepPrepareHit;
-        }
-        break;
-    case nNDSSamusTumbleTourStepDamageFly:
-        if (samus->status_id == nFTCommonStatusDamageFall)
-        {
-            /* Tech input must exist in BattleShip's Z history BEFORE the map
-             * callback observes the floor.  Give the controller path one full
-             * DamageFall update to populate tics_since_last_z, then stage the
-             * descending floor crossing on the following update. */
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepDamageFall;
-        }
-        break;
-    case nNDSSamusTumbleTourStepDamageFall:
-        if (sNdsSamusTumbleTourFrames >= 1u)
-        {
-            (void)ndsSamusTumbleTourStageLanding(samus);
-        }
-        break;
-    case nNDSSamusTumbleTourStepLanding:
-        expected = ndsSamusTumbleTourExpectedStatus();
-        if (samus->status_id == expected)
-        {
-            sNdsSamusTumbleTourActionSeen = 1u;
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepRecover;
-        }
-        else if ((ndsSamusTumbleTourScenarioIsDown() != FALSE) &&
-                 ((samus->status_id == nFTCommonStatusDownBounceD) ||
-                  (samus->status_id == nFTCommonStatusDownBounceU)))
-        {
-            sNdsSamusTumbleTourDownWaitObserved = 0u;
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepDownWait;
-        }
-        break;
-    case nNDSSamusTumbleTourStepDownWait:
-        expected = ndsSamusTumbleTourExpectedStatus();
-        if ((samus->status_id == nFTCommonStatusDownWaitD) ||
-            (samus->status_id == nFTCommonStatusDownWaitU))
-        {
-            sNdsSamusTumbleTourDownWaitObserved = 1u;
-        }
-        if (samus->status_id == expected)
-        {
-            sNdsSamusTumbleTourActionSeen = 1u;
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepRecover;
-        }
-        break;
-    case nNDSSamusTumbleTourStepRecover:
-        if ((sNdsSamusTumbleTourActionSeen != 0u) &&
-            (samus->status_id == nFTCommonStatusWait) &&
-            (fox->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround) && (fox->ga == nMPKineticsGround))
-        {
-            sNdsSamusTumbleTourScenario++;
-            sNdsSamusTumbleTourFrames = 0u;
-            sNdsSamusTumbleTourAttackSeen = 0u;
-            sNdsSamusTumbleTourActionSeen = 0u;
-            sNdsSamusTumbleTourDownWaitObserved = 0u;
-            if (sNdsSamusTumbleTourScenario >= nNDSSamusTumbleTourDone)
-            {
-                gNdsSamusTumbleTourScenario = nNDSSamusTumbleTourDone;
-                gNdsSamusTumbleTourDone = 1u;
-                return TRUE;
-            }
-            sNdsSamusTumbleTourStep = nNDSSamusTumbleTourStepPrepareHit;
-        }
-        break;
-    default:
-        break;
-    }
-    return FALSE;
-}
-
-static sb32 ndsSamusTumbleTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                         s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    s8 forward;
-
-    if ((sNdsSamusTumbleTourActive == 0u) ||
-        (gNdsSamusTumbleTourDone != 0u) ||
-        (samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    if (sNdsSamusTumbleTourStep == nNDSSamusTumbleTourStepAttack)
-    {
-        if ((sNdsSamusTumbleTourFrames <= 3u) &&
-            (fox->status_id == nFTCommonStatusWait))
-        {
-            button[1] = A_BUTTON;
-            stick_y[1] = 80;
-        }
-    }
-    else if (sNdsSamusTumbleTourStep == nNDSSamusTumbleTourStepDamageFall)
-    {
-        if ((sNdsSamusTumbleTourScenario == nNDSSamusTumbleTourPassive) ||
-            (sNdsSamusTumbleTourScenario == nNDSSamusTumbleTourPassiveStandF) ||
-            (sNdsSamusTumbleTourScenario == nNDSSamusTumbleTourPassiveStandB))
-        {
-            button[0] = Z_TRIG;
-            forward = (samus->lr >= 0) ? 80 : -80;
-            if (sNdsSamusTumbleTourScenario ==
-                nNDSSamusTumbleTourPassiveStandF)
-            {
-                stick_x[0] = forward;
-            }
-            else if (sNdsSamusTumbleTourScenario ==
-                     nNDSSamusTumbleTourPassiveStandB)
-            {
-                stick_x[0] = -forward;
-            }
-        }
-    }
-    else if (sNdsSamusTumbleTourStep == nNDSSamusTumbleTourStepLanding)
-    {
-        forward = (samus->lr >= 0.0F) ? 80 : -80;
-        switch (sNdsSamusTumbleTourScenario)
-        {
-        case nNDSSamusTumbleTourPassive:
-            break;
-        case nNDSSamusTumbleTourPassiveStandF:
-            stick_x[0] = forward;
-            break;
-        case nNDSSamusTumbleTourPassiveStandB:
-            stick_x[0] = -forward;
-            break;
-        default:
-            break;
-        }
-    }
-    else if ((sNdsSamusTumbleTourStep == nNDSSamusTumbleTourStepDownWait) &&
-             (sNdsSamusTumbleTourDownWaitObserved != 0u) &&
-             ((samus->status_id == nFTCommonStatusDownWaitD) ||
-              (samus->status_id == nFTCommonStatusDownWaitU)))
-    {
-        forward = (samus->lr >= 0.0F) ? 80 : -80;
-        switch (sNdsSamusTumbleTourScenario)
-        {
-        case nNDSSamusTumbleTourDownStandD:
-        case nNDSSamusTumbleTourDownStandU:
-            button[0] = Z_TRIG;
-            break;
-        case nNDSSamusTumbleTourDownForwardD:
-        case nNDSSamusTumbleTourDownForwardU:
-            stick_x[0] = forward;
-            break;
-        case nNDSSamusTumbleTourDownBackD:
-        case nNDSSamusTumbleTourDownBackU:
-            stick_x[0] = -forward;
-            break;
-        case nNDSSamusTumbleTourDownAttackD:
-        case nNDSSamusTumbleTourDownAttackU:
-            button[0] = A_BUTTON;
-            break;
-        default:
-            break;
-        }
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-extern void osWritebackDCacheAll(void);
-
-__attribute__((noinline, used))
-void ndsSamusDamageFlyTourProofStop(void)
-{
-    __asm__ volatile ("" ::: "memory");
-}
-
-static void ndsSamusDamageFlyTourProofTerminal(void)
-{
-    NDS_DIAG(gNdsSamusDamageFlyTourTerminalCount++);
-    osWritebackDCacheAll();
-    ndsSamusDamageFlyTourProofStop();
-}
-
-static s32 ndsSamusDamageFlyTourExpectedStatus(void)
-{
-    switch (sNdsSamusDamageFlyTourScenario)
-    {
-    case nNDSSamusDamageFlyTourHi: return nFTCommonStatusDamageFlyHi;
-    case nNDSSamusDamageFlyTourN: return nFTCommonStatusDamageFlyN;
-    case nNDSSamusDamageFlyTourLw: return nFTCommonStatusDamageFlyLw;
-    case nNDSSamusDamageFlyTourTop: return nFTCommonStatusDamageFlyTop;
-    case nNDSSamusDamageFlyTourRoll: return nFTCommonStatusDamageFlyRoll;
-    default: return -1;
-    }
-}
-
-static s32 ndsSamusDamageFlyTourExpectedPlacement(void)
-{
-    switch (sNdsSamusDamageFlyTourScenario)
-    {
-    /* `dFTCommonDamageStatus*IDs[3][damage_index]` is Lw/N/Hi for source
-     * hurtbox placements 0/1/2 respectively. */
-    case nNDSSamusDamageFlyTourHi: return 2;
-    case nNDSSamusDamageFlyTourN: return 1;
-    case nNDSSamusDamageFlyTourLw: return 0;
-    default: return -1;
-    }
-}
-
-static void ndsSamusDamageFlyTourPlaceGround(FTStruct *fp, f32 x,
-                                              f32 floor_y, u16 floor_flags)
-{
-    DObj *root = fp->joints[nFTPartsJointTopN];
-
-    root->translate.vec.f.x = x;
-    root->translate.vec.f.y = floor_y - fp->coll_data.map_coll.bottom;
-    root->translate.vec.f.z = 0.0F;
-    fp->coll_data.p_translate = &root->translate.vec.f;
-    fp->coll_data.p_lr = &fp->lr;
-    fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
-    fp->coll_data.pos_prev = root->translate.vec.f;
-    fp->coll_data.floor_line_id = sNdsSamusDamageFlyTourFloorLine;
-    fp->coll_data.floor_flags = floor_flags;
-    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
-    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
-    fp->coll_data.cliff_id = -1;
-    fp->coll_data.ignore_line_id = -1;
-    fp->physics.vel_ground.x = 0.0F;
-    fp->vel_ground.x = 0.0F;
-}
-
-static sb32 ndsSamusDamageFlyTourPrepareHit(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    Vec3f edge;
-    u16 flags;
-
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox) ||
-        (samus->status_id != nFTCommonStatusWait) ||
-        (fox->status_id != nFTCommonStatusWait) ||
-        (samus->ga != nMPKineticsGround) || (fox->ga != nMPKineticsGround) ||
-        (samus->joints[nFTPartsJointTopN] == NULL) ||
-        (fox->joints[nFTPartsJointTopN] == NULL))
-    {
-        return FALSE;
-    }
-    sNdsSamusDamageFlyTourFloorLine = 3;
-    mpCollisionGetFloorEdgeR(sNdsSamusDamageFlyTourFloorLine, &edge);
-    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusDamageFlyTourFloorLine);
-    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
-    {
-        return FALSE;
-    }
-
-    /* Proof-only preconditions. The hit itself is an ordinary controller-fed
-     * Fox attack. At 80%, all three 361-degree forward-tilt variants clear the
-     * source level-3 hitstun threshold while remaining below FlyRoll's 100%
-     * gate. The Roll scenario alone starts at 100% and retries real hits until
-     * BattleShip's own 0.5 RNG branch selects it. */
-    fox->lr = +1;
-    samus->lr = -1;
-    samus->percent_damage =
-        (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourRoll) ?
-        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_DAMAGE_MIN : 80;
-    ndsSamusDamageFlyTourPlaceGround(fox, -20.0F, edge.y, flags);
-    ndsSamusDamageFlyTourPlaceGround(samus, +20.0F, edge.y, flags);
-    sNdsSamusDamageFlyTourFrames = 0u;
-    sNdsSamusDamageFlyTourAttackPressed = 0u;
-    sNdsSamusDamageFlyTourHitRecorded = 0u;
-    sNdsSamusDamageFlyTourScenarioAccepted = 0u;
-    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRearm;
-    NDS_DIAG(gNdsSamusDamageFlyTourStageCount++);
-    return TRUE;
-}
-
-static sb32 ndsSamusDamageFlyTourStageLanding(FTStruct *samus)
-{
-    DObj *root;
-    Vec3f edge;
-
-    if ((samus == NULL) || (samus->status_id != nFTCommonStatusDamageFall) ||
-        (samus->ga != nMPKineticsAir))
-    {
-        return FALSE;
-    }
-    root = samus->joints[nFTPartsJointTopN];
-    if (root == NULL)
-    {
-        return FALSE;
-    }
-    mpCollisionGetFloorEdgeR(sNdsSamusDamageFlyTourFloorLine, &edge);
-    root->translate.vec.f.x = 0.0F;
-    root->translate.vec.f.y = edge.y - samus->coll_data.map_coll.bottom + 2.0F;
-    root->translate.vec.f.z = 0.0F;
-    samus->coll_data.p_translate = &root->translate.vec.f;
-    samus->coll_data.p_lr = &samus->lr;
-    samus->coll_data.pos_prev = root->translate.vec.f;
-    samus->coll_data.floor_line_id = -1;
-    samus->coll_data.mask_curr = 0u;
-    samus->coll_data.mask_stat = 0u;
-    samus->coll_data.cliff_id = -1;
-    samus->coll_data.ignore_line_id = -1;
-    samus->coll_data.update_tic = gMPCollisionUpdateTic;
-    samus->physics.vel_air.x = 0.0F;
-    samus->physics.vel_air.y = -4.0F;
-    samus->physics.vel_air.z = 0.0F;
-    samus->vel_air = samus->physics.vel_air;
-    samus->physics.vel_damage_air.x = 0.0F;
-    samus->physics.vel_damage_air.y = 0.0F;
-    samus->physics.vel_damage_ground = 0.0F;
-    sNdsSamusDamageFlyTourFrames = 0u;
-    sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepLanding;
-    NDS_DIAG(gNdsSamusDamageFlyTourStageCount++);
-    return TRUE;
-}
-
-static void ndsSamusDamageFlyTourRecord(FTStruct *samus, FTStruct *fox)
-{
-    u32 shift;
-    s32 expected_status;
-    s32 expected_placement;
-
-    if ((samus == NULL) || (fox == NULL))
-    {
-        return;
-    }
-    gNdsSamusDamageFlyTourStatus = (u32)samus->status_id;
-    gNdsSamusDamageFlyTourMotion = (u32)samus->motion_id;
-    switch (fox->status_id)
-    {
-    case nFTCommonStatusAttackAirN:
-        gNdsSamusDamageFlyTourAttackerMask |= 1u << 0;
-        break;
-    case nFTCommonStatusAttackS3:
-        gNdsSamusDamageFlyTourAttackerMask |= 1u << 1;
-        break;
-    case nFTCommonStatusAttackLw4:
-        gNdsSamusDamageFlyTourAttackerMask |= 1u << 2;
-        break;
-    case nFTCommonStatusAttackHi4:
-        gNdsSamusDamageFlyTourAttackerMask |= 1u << 3;
-        break;
-    default:
-        break;
-    }
-    if ((sNdsSamusDamageFlyTourHitRecorded != 0u) ||
-        (samus->status_id < nFTCommonStatusDamageFlyHi) ||
-        (samus->status_id > nFTCommonStatusDamageFlyRoll))
-    {
-        return;
-    }
-    sNdsSamusDamageFlyTourHitRecorded = 1u;
-    NDS_DIAG(gNdsSamusDamageFlyTourHitCount++);
-    gNdsSamusDamageFlyTourMask |=
-        1u << (samus->status_id - nFTCommonStatusDamageFlyHi);
-    shift = sNdsSamusDamageFlyTourScenario * 3u;
-    gNdsSamusDamageFlyTourPlacementPacked &= ~(7u << shift);
-    gNdsSamusDamageFlyTourPlacementPacked |=
-        ((u32)samus->damage_index & 7u) << shift;
-    if (samus->damage_angle == 361)
-    {
-        NDS_DIAG(gNdsSamusDamageFlyTourSakuraiHitCount++);
-    }
-    if (samus->damage_angle == 80)
-    {
-        NDS_DIAG(gNdsSamusDamageFlyTourTopAngle80Count++);
-    }
-    if (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourRoll)
-    {
-        gNdsSamusDamageFlyTourRollAttempts++;
-        gNdsSamusDamageFlyTourRollPercent = (u32)samus->percent_damage;
-    }
-    expected_status = ndsSamusDamageFlyTourExpectedStatus();
-    expected_placement = ndsSamusDamageFlyTourExpectedPlacement();
-    if ((samus->status_id == expected_status) &&
-        ((expected_placement < 0) || (samus->damage_index == expected_placement)))
-    {
-        sNdsSamusDamageFlyTourScenarioAccepted = 1u;
-    }
-    else if (sNdsSamusDamageFlyTourScenario != nNDSSamusDamageFlyTourRoll)
-    {
-        gNdsSamusDamageFlyTourMismatchCount++;
-    }
-}
-
-static sb32 ndsSamusDamageFlyTourAdvance(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-
-    sNdsSamusDamageFlyTourActive = 1u;
-    if (gNdsSamusDamageFlyTourDone != 0u)
-    {
-        return TRUE;
-    }
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    ndsSamusDamageFlyTourRecord(samus, fox);
-    gNdsSamusDamageFlyTourScenario = sNdsSamusDamageFlyTourScenario;
-    gNdsSamusDamageFlyTourStep = sNdsSamusDamageFlyTourStep;
-    gNdsSamusDamageFlyTourFrames = ++sNdsSamusDamageFlyTourFrames;
-    if ((sNdsSamusDamageFlyTourFrames > NDS_SAMUS_DAMAGEFLY_TOUR_TIMEOUT) ||
-        (gNdsSamusDamageFlyTourRollAttempts >
-             NDS_SAMUS_DAMAGEFLY_TOUR_ROLL_ATTEMPTS_MAX) ||
-        (gNdsSamusDamageFlyTourMismatchCount >
-             NDS_SAMUS_DAMAGEFLY_TOUR_MISMATCH_MAX))
-    {
-        NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-        gNdsSamusDamageFlyTourDone = 2u;
-        ndsSamusDamageFlyTourProofTerminal();
-        return TRUE;
-    }
-
-    switch (sNdsSamusDamageFlyTourStep)
-    {
-    case nNDSSamusDamageFlyTourStepPrepare:
-        (void)ndsSamusDamageFlyTourPrepareHit(fp);
-        break;
-    case nNDSSamusDamageFlyTourStepRearm:
-        if (sNdsSamusDamageFlyTourFrames >= 1u)
-        {
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDrive;
-        }
-        break;
-    case nNDSSamusDamageFlyTourStepDrive:
-        if (sNdsSamusDamageFlyTourHitRecorded != 0u)
-        {
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDamageFly;
-        }
-        else if ((sNdsSamusDamageFlyTourAttackPressed != 0u) &&
-                 (fox->status_id == nFTCommonStatusWait) &&
-                 (samus->status_id == nFTCommonStatusWait))
-        {
-            /* A clean whiff is not a claimed hit. Re-stage and let the source
-             * attack/collision path try again without manufacturing damage. */
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
-        }
-        break;
-    case nNDSSamusDamageFlyTourStepDamageFly:
-        if (samus->status_id == nFTCommonStatusDamageFall)
-        {
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepDamageFall;
-        }
-        else if ((samus->status_id == nFTCommonStatusDownBounceD) ||
-                 (samus->status_id == nFTCommonStatusDownBounceU) ||
-                 (samus->status_id == nFTCommonStatusDownWaitD) ||
-                 (samus->status_id == nFTCommonStatusDownWaitU) ||
-                 (samus->status_id == nFTCommonStatusDownStandD) ||
-                 (samus->status_id == nFTCommonStatusDownStandU) ||
-                 (samus->status_id == nFTCommonStatusPassive) ||
-                 (samus->status_id == nFTCommonStatusPassiveStandF) ||
-                 (samus->status_id == nFTCommonStatusPassiveStandB))
-        {
-            /* A low-angle grounded tumble can enter DamageFall and consume its
-             * floor map callback inside one gcRunAll, before this once-per-frame
-             * proof sampler observes DamageFall itself. Those are all source
-             * descendants of the already-qualified DamageFly hit; join the
-             * existing controller-driven get-up lane rather than demanding a
-             * sampling artifact from BattleShip's transient state. */
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepLanding;
-        }
-        else if ((samus->status_id == nFTCommonStatusWait) &&
-                 (samus->ga == nMPKineticsGround))
-        {
-            /* The same transient DamageFall path can fully settle to Wait in a
-             * single fast-logic update. The claimed state/placement was already
-             * recorded before entering this recovery-only step. */
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRecover;
-        }
-        break;
-    case nNDSSamusDamageFlyTourStepDamageFall:
-        if (sNdsSamusDamageFlyTourFrames >= 1u)
-        {
-            (void)ndsSamusDamageFlyTourStageLanding(samus);
-        }
-        break;
-    case nNDSSamusDamageFlyTourStepLanding:
-        if ((samus->status_id == nFTCommonStatusPassive) ||
-            (samus->status_id == nFTCommonStatusPassiveStandF) ||
-            (samus->status_id == nFTCommonStatusPassiveStandB) ||
-            (samus->status_id == nFTCommonStatusDownStandD) ||
-            (samus->status_id == nFTCommonStatusDownStandU) ||
-            (samus->status_id == nFTCommonStatusWait))
-        {
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepRecover;
-        }
-        break;
-    case nNDSSamusDamageFlyTourStepRecover:
-        if ((samus->status_id == nFTCommonStatusWait) &&
-            (fox->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround) && (fox->ga == nMPKineticsGround))
-        {
-            if (sNdsSamusDamageFlyTourScenarioAccepted != 0u)
-            {
-                sNdsSamusDamageFlyTourScenario++;
-            }
-            sNdsSamusDamageFlyTourFrames = 0u;
-            sNdsSamusDamageFlyTourAttackPressed = 0u;
-            sNdsSamusDamageFlyTourHitRecorded = 0u;
-            sNdsSamusDamageFlyTourScenarioAccepted = 0u;
-            if (sNdsSamusDamageFlyTourScenario >= nNDSSamusDamageFlyTourDone)
-            {
-                gNdsSamusDamageFlyTourScenario = nNDSSamusDamageFlyTourDone;
-                gNdsSamusDamageFlyTourDone = 1u;
-                ndsSamusDamageFlyTourProofTerminal();
-                return TRUE;
-            }
-            sNdsSamusDamageFlyTourStep = nNDSSamusDamageFlyTourStepPrepare;
-        }
-        break;
-    default:
-        break;
-    }
-    return FALSE;
-}
-
-static sb32 ndsSamusDamageFlyTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                             s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-
-    if ((sNdsSamusDamageFlyTourActive == 0u) ||
-        (gNdsSamusDamageFlyTourDone != 0u) ||
-        (samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    if (sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepDrive)
-    {
-        if (sNdsSamusDamageFlyTourScenario == nNDSSamusDamageFlyTourHi)
-        {
-            if ((sNdsSamusDamageFlyTourAttackPressed == 0u) &&
-                (fox->status_id == nFTCommonStatusWait))
-            {
-                /* A source C-button jump is the clean way to reach Samus's
-                 * placement-2 head hurtbox without intersecting the earlier
-                 * placement-1 torso entries. Do not move either fighter after
-                 * the jump starts: the source jump physics owns the approach. */
-                button[1] = U_CBUTTONS;
-                sNdsSamusDamageFlyTourAttackPressed = 1u;
-            }
-            else if ((sNdsSamusDamageFlyTourAttackPressed == 1u) &&
-                     ((fox->status_id == nFTCommonStatusJumpF) ||
-                      (fox->status_id == nFTCommonStatusJumpB) ||
-                      (fox->status_id == nFTCommonStatusFall) ||
-                      (fox->status_id == nFTCommonStatusFallAerial)) &&
-                     (fox->joints[nFTPartsJointTopN] != NULL) &&
-                     (samus->joints[nFTPartsJointTopN] != NULL) &&
-                     ((fox->joints[nFTPartsJointTopN]->translate.vec.f.y -
-                       samus->joints[nFTPartsJointTopN]->translate.vec.f.y) >=
-                      300.0F))
-            {
-                /* Fox N-air is a real 361-degree level-3 hit at the staged
-                 * percent. Starting it above Samus makes the first intersected
-                 * source damage-collision entry the head instead of torso. */
-                button[1] = A_BUTTON;
-                sNdsSamusDamageFlyTourAttackPressed = 2u;
-            }
-        }
-        else if ((sNdsSamusDamageFlyTourAttackPressed == 0u) &&
-                 (fox->status_id == nFTCommonStatusWait))
-        {
-            button[1] = A_BUTTON;
-            switch (sNdsSamusDamageFlyTourScenario)
-            {
-            case nNDSSamusDamageFlyTourN:
-            case nNDSSamusDamageFlyTourRoll:
-                stick_x[1] = 40;
-                break;
-            case nNDSSamusDamageFlyTourLw:
-                /* The source down-smash is the grounded attack whose foot
-                 * hitboxes naturally reach Samus's placement-0 leg chain. */
-                stick_y[1] = -80;
-                break;
-            case nNDSSamusDamageFlyTourTop:
-                stick_y[1] = 80;
-                break;
-            default:
-                break;
-            }
-            sNdsSamusDamageFlyTourAttackPressed = 1u;
-        }
-    }
-    else if (sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepDamageFall)
-    {
-        /* Populate the source Z-history one update before the staged floor
-         * crossing. BattleShip still owns Passive selection. */
-        button[0] = Z_TRIG;
-    }
-    else if ((sNdsSamusDamageFlyTourStep == nNDSSamusDamageFlyTourStepLanding) &&
-             ((samus->status_id == nFTCommonStatusDownWaitD) ||
-              (samus->status_id == nFTCommonStatusDownWaitU)))
-    {
-        button[0] = Z_TRIG;
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_P2_SAMUS_ATTACK_TOUR
-extern void osWritebackDCacheAll(void);
-
-__attribute__((noinline, used))
-void ndsSamusAttackTourProofStop(void)
-{
-    /* GDB reads ARM9 main RAM, not dirty D-cache lines.  The public proof
-     * state is flushed by the caller before entering this otherwise-empty
-     * marker, so a breakpoint here observes the state the guest actually
-     * published. */
-    __asm__ volatile ("" ::: "memory");
-}
-
-__attribute__((noinline, used))
-void ndsSamusAttackTourProofTerminal(void)
-{
-    /* Stable cache-coherent GDB stop for the proof build.  The optimized
-     * attack driver is otherwise fully inlined, so source-line/function
-     * breakpoints are not a reliable verifier surface. */
-    NDS_DIAG(gNdsSamusAttackTourTerminalCount++);
-    osWritebackDCacheAll();
-    ndsSamusAttackTourProofStop();
-}
-
-static u32 ndsSamusAttackTourBitForStatus(s32 status_id)
-{
-    u32 bit = 0u;
-
-    switch (status_id)
-    {
-    case nFTCommonStatusAttack11: bit = 1u << 0; break;
-    case nFTCommonStatusAttack12: bit = 1u << 1; break;
-    case nFTCommonStatusAttackDash: bit = 1u << 2; break;
-    case nFTCommonStatusAttackS3Hi: bit = 1u << 3; break;
-    case nFTCommonStatusAttackS3HiS: bit = 1u << 4; break;
-    case nFTCommonStatusAttackS3: bit = 1u << 5; break;
-    case nFTCommonStatusAttackS3LwS: bit = 1u << 6; break;
-    case nFTCommonStatusAttackS3Lw: bit = 1u << 7; break;
-    case nFTCommonStatusAttackHi3: bit = 1u << 8; break;
-    case nFTCommonStatusAttackLw3: bit = 1u << 9; break;
-    case nFTCommonStatusAttackS4Hi: bit = 1u << 10; break;
-    case nFTCommonStatusAttackS4HiS: bit = 1u << 11; break;
-    case nFTCommonStatusAttackS4: bit = 1u << 12; break;
-    case nFTCommonStatusAttackS4LwS: bit = 1u << 13; break;
-    case nFTCommonStatusAttackS4Lw: bit = 1u << 14; break;
-    case nFTCommonStatusAttackHi4: bit = 1u << 15; break;
-    case nFTCommonStatusAttackLw4: bit = 1u << 16; break;
-    case nFTCommonStatusAttackAirN: bit = 1u << 17; break;
-    case nFTCommonStatusAttackAirF: bit = 1u << 18; break;
-    case nFTCommonStatusAttackAirB: bit = 1u << 19; break;
-    case nFTCommonStatusAttackAirHi: bit = 1u << 20; break;
-    case nFTCommonStatusAttackAirLw: bit = 1u << 21; break;
-    case nFTCommonStatusThrowF: bit = 1u << 22; break;
-    case nFTCommonStatusThrowB: bit = 1u << 23; break;
-    default: break;
-    }
-    return bit;
-}
-
-static void ndsSamusAttackTourRecord(FTStruct *samus, FTStruct *fox)
-{
-    u32 bit;
-
-    if (samus == NULL)
-    {
-        return;
-    }
-    if (fox != NULL)
-    {
-        u32 i;
-
-        for (i = 0u; i < ARRAY_COUNT(fox->damage_colls); i++)
-        {
-            if (fox->damage_colls[i].hitstatus == nGMHitStatusNone)
-            {
-                break;
-            }
-            if (fox->damage_colls[i].is_grabbable != FALSE)
-            {
-                gNdsSamusAttackTourVictimGrabbableMask |= 1u << i;
-            }
-            if (fox->damage_colls[i].hitstatus == nGMHitStatusNormal)
-            {
-                gNdsSamusAttackTourVictimNormalMask |= 1u << i;
-            }
-        }
-    }
-    gNdsSamusAttackTourStatus = (u32)samus->status_id;
-    gNdsSamusAttackTourMotion = (u32)samus->motion_id;
-    if (samus->attr != NULL)
-    {
-        gNdsSamusAttackTourCatchAttr = (u32)samus->attr->is_have_catch;
-    }
-    if ((samus->input.pl.button_hold & samus->input.button_mask_z) &&
-        (samus->input.pl.button_tap & samus->input.button_mask_a))
-    {
-        NDS_DIAG(gNdsSamusAttackTourGrabInputCount++);
-    }
-    switch (samus->status_id)
-    {
-    case nFTCommonStatusCatch:
-        {
-            u32 i;
-            u32 anim_milli = (samus->fighter_gobj != NULL) ?
-                (u32)ndsFloatToMilliSigned(samus->fighter_gobj->anim_frame) : 0u;
-            s32 fox_x_milli = (fox != NULL) ?
-                ndsFloatToMilliSigned(fox->joints[nFTPartsJointTopN]->translate.vec.f.x) : 0;
-
-            NDS_DIAG(gNdsSamusAttackTourCatchFrames++);
-            if (samus->joints[36] != NULL)
-            {
-                NDS_DIAG(gNdsSamusAttackTourJoint36SeenCount++);
-            }
-            if (samus->is_catchstatus != FALSE)
-            {
-                NDS_DIAG(gNdsSamusAttackTourCatchActiveFrames++);
-            }
-            if (samus->search_gobj != NULL)
-            {
-                NDS_DIAG(gNdsSamusAttackTourCatchSearchFrames++);
-            }
-            for (i = 0u; i < ARRAY_COUNT(samus->attack_colls); i++)
-            {
-                if (samus->attack_colls[i].attack_state != nGMAttackStateOff)
-                {
-                    s32 attack_x_milli;
-                    s32 dx_milli;
-
-                    gNdsSamusAttackTourCatchAttackMask |= 1u << i;
-                    if ((samus->attack_colls[i].joint_id == 36) &&
-                        (samus->attack_colls[i].joint != NULL) &&
-                        (samus->attack_colls[i].joint == samus->joints[36]))
-                    {
-                        gNdsSamusAttackTourJoint36AttackMask |= 1u << i;
-                    }
-                    attack_x_milli = ndsFloatToMilliSigned(
-                        samus->attack_colls[i].pos_curr.x);
-                    dx_milli = attack_x_milli - fox_x_milli;
-                    if (dx_milli < 0)
-                    {
-                        dx_milli = -dx_milli;
-                    }
-                    if (dx_milli < gNdsSamusAttackTourMinGrabDXMilli)
-                    {
-                        gNdsSamusAttackTourMinGrabDXMilli = dx_milli;
-                        gNdsSamusAttackTourFoxXMilli = fox_x_milli;
-                        if (i == 0u)
-                        {
-                            gNdsSamusAttackTourGrab0XMilli = attack_x_milli;
-                        }
-                        else if (i == 1u)
-                        {
-                            gNdsSamusAttackTourGrab1XMilli = attack_x_milli;
-                        }
-                    }
-                }
-            }
-            if (anim_milli > gNdsSamusAttackTourCatchAnimFrameMaxMilli)
-            {
-                gNdsSamusAttackTourCatchAnimFrameMaxMilli = anim_milli;
-            }
-        }
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 0;
-        break;
-    case nFTCommonStatusCatchPull:
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 1;
-        break;
-    case nFTCommonStatusCatchWait:
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 2;
-        break;
-    default:
-        break;
-    }
-    bit = ndsSamusAttackTourBitForStatus(samus->status_id);
-    gNdsSamusAttackTourMask |= bit;
-}
-
-void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
-                                               s32 status_id)
-{
-    FTStruct *fp;
-
-    if ((sNdsSamusAttackTourActive == 0u) ||
-        (gNdsSamusAttackTourDone != 0u) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-    fp = ftGetStruct(fighter_gobj);
-    if ((fp == NULL) || (fp->fkind != nFTKindSamus))
-    {
-        return;
-    }
-    gNdsSamusAttackTourStatus = (u32)status_id;
-    gNdsSamusAttackTourMotion = (u32)fp->motion_id;
-    /* CatchPull may begin and end inside one gcRunAll: the source catch
-     * callback installs it immediately on collision, and its animation can
-     * advance to CatchWait before the once-per-update tour sampler runs.  This
-     * transition observer sits after BattleShip's ftMainSetStatus, so include
-     * those transient source-owned catch states in the same cumulative mask. */
-    switch (status_id)
-    {
-    case nFTCommonStatusCatch:
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 0;
-        break;
-    case nFTCommonStatusCatchPull:
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 1;
-        break;
-    case nFTCommonStatusCatchWait:
-        gNdsSamusAttackTourCatchStatusMask |= 1u << 2;
-        break;
-    default:
-        break;
-    }
-    gNdsSamusAttackTourMask |= ndsSamusAttackTourBitForStatus(status_id);
-}
-
-static u32 ndsSamusAttackTourExpectedMask(u32 scenario)
-{
-    if (scenario == nNDSSamusAttackTourJab)
-    {
-        return (1u << 0) | (1u << 1);
-    }
-    if ((scenario >= nNDSSamusAttackTourDash) &&
-        (scenario <= nNDSSamusAttackTourThrowB))
-    {
-        return 1u << (scenario + 1u);
-    }
-    return 0u;
-}
-
-static void ndsSamusAttackTourPlaceGround(FTStruct *fp, f32 x, f32 floor_y,
-                                          u16 floor_flags)
-{
-    DObj *root = fp->joints[nFTPartsJointTopN];
-
-    root->translate.vec.f.x = x;
-    root->translate.vec.f.y = floor_y - fp->coll_data.map_coll.bottom;
-    root->translate.vec.f.z = 0.0F;
-    fp->coll_data.p_translate = &root->translate.vec.f;
-    fp->coll_data.p_lr = &fp->lr;
-    fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
-    fp->coll_data.pos_prev = root->translate.vec.f;
-    fp->coll_data.floor_line_id = sNdsSamusAttackTourFloorLine;
-    fp->coll_data.floor_flags = floor_flags;
-    fp->coll_data.mask_curr = MAP_FLAG_FLOOR;
-    fp->coll_data.mask_stat = MAP_FLAG_FLOOR;
-    fp->coll_data.cliff_id = -1;
-    fp->coll_data.ignore_line_id = -1;
-    fp->physics.vel_ground.x = 0.0F;
-    fp->vel_ground.x = 0.0F;
-}
-
-static sb32 ndsSamusAttackTourPrepare(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    Vec3f edge;
-    u16 flags;
-    f32 samus_x = -500.0F;
-    f32 fox_x = 500.0F;
-
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox) ||
-        (samus->status_id != nFTCommonStatusWait) ||
-        (fox->status_id != nFTCommonStatusWait) ||
-        (samus->ga != nMPKineticsGround) || (fox->ga != nMPKineticsGround) ||
-        (samus->joints[nFTPartsJointTopN] == NULL) ||
-        (fox->joints[nFTPartsJointTopN] == NULL))
-    {
-        return FALSE;
-    }
-
-    sNdsSamusAttackTourFloorLine = 3;
-    mpCollisionGetFloorEdgeR(sNdsSamusAttackTourFloorLine, &edge);
-    flags = mpCollisionGetVertexFlagsLineID(sNdsSamusAttackTourFloorLine);
-    if ((flags & MAP_VERTEX_COLL_CLIFF) == 0u)
-    {
-        return FALSE;
-    }
-    samus->lr = +1;
-    fox->lr = -1;
-    samus->percent_damage = 0;
-    fox->percent_damage = 0;
-    ndsSamusAttackTourPlaceGround(samus, samus_x, edge.y, flags);
-    ndsSamusAttackTourPlaceGround(fox, fox_x, edge.y, flags);
-    sNdsSamusAttackTourExpectedMask =
-        ndsSamusAttackTourExpectedMask(sNdsSamusAttackTourScenario);
-    sNdsSamusAttackTourFrames = 0u;
-    sNdsSamusAttackTourStep = nNDSSamusAttackTourStepRearm;
-    NDS_DIAG(gNdsSamusAttackTourStageCount++);
-    return TRUE;
-}
-
-static sb32 ndsSamusAttackTourAdvance(FTStruct *fp[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-
-    sNdsSamusAttackTourActive = 1u;
-    if (gNdsSamusAttackTourDone != 0u)
-    {
-        return TRUE;
-    }
-    if ((samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    ndsSamusAttackTourRecord(samus, fox);
-    gNdsSamusAttackTourScenario = sNdsSamusAttackTourScenario;
-    gNdsSamusAttackTourStep = sNdsSamusAttackTourStep;
-    gNdsSamusAttackTourFrames = ++sNdsSamusAttackTourFrames;
-    if (sNdsSamusAttackTourFrames == (NDS_SAMUS_ATTACK_TOUR_TIMEOUT + 1u))
-    {
-        ndsSamusAttackTourProofTerminal();
-        NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-    }
-
-    switch (sNdsSamusAttackTourStep)
-    {
-    case nNDSSamusAttackTourStepPrepare:
-        (void)ndsSamusAttackTourPrepare(fp);
-        break;
-    case nNDSSamusAttackTourStepRearm:
-        /* One proof-owned neutral controller update makes BattleShip's
-         * tap_stick_x/tap_stick_y edge detector observe a genuine release
-         * before the next directional attack input. */
-        if (sNdsSamusAttackTourFrames >= 1u)
-        {
-            sNdsSamusAttackTourFrames = 0u;
-            sNdsSamusAttackTourStep = nNDSSamusAttackTourStepDrive;
-        }
-        break;
-    case nNDSSamusAttackTourStepDrive:
-        if ((sNdsSamusAttackTourExpectedMask != 0u) &&
-            ((gNdsSamusAttackTourMask & sNdsSamusAttackTourExpectedMask) ==
-             sNdsSamusAttackTourExpectedMask))
-        {
-            sNdsSamusAttackTourFrames = 0u;
-            sNdsSamusAttackTourStep = nNDSSamusAttackTourStepRecover;
-        }
-        break;
-    case nNDSSamusAttackTourStepRecover:
-        if ((samus->status_id == nFTCommonStatusWait) &&
-            (fox->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround) && (fox->ga == nMPKineticsGround))
-        {
-            sNdsSamusAttackTourScenario++;
-            sNdsSamusAttackTourFrames = 0u;
-            sNdsSamusAttackTourExpectedMask = 0u;
-            if (sNdsSamusAttackTourScenario >= nNDSSamusAttackTourDone)
-            {
-                gNdsSamusAttackTourScenario = nNDSSamusAttackTourDone;
-                gNdsSamusAttackTourDone = 1u;
-                ndsSamusAttackTourProofTerminal();
-                return TRUE;
-            }
-            sNdsSamusAttackTourStep = nNDSSamusAttackTourStepPrepare;
-        }
-        break;
-    default:
-        break;
-    }
-    return FALSE;
-}
-
-static sb32 ndsSamusAttackTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                         s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *samus = fp[0];
-    FTStruct *fox = fp[1];
-    s8 forward;
-
-    if ((sNdsSamusAttackTourActive == 0u) ||
-        (gNdsSamusAttackTourDone != 0u) ||
-        (samus == NULL) || (fox == NULL) ||
-        (samus->fkind != nFTKindSamus) || (fox->fkind != nFTKindFox))
-    {
-        return FALSE;
-    }
-    if (sNdsSamusAttackTourStep != nNDSSamusAttackTourStepDrive)
-    {
-        /* Once armed, this proof owns both controllers until it is done.
-         * Neutral during setup/recovery prevents later proof drivers from
-         * contaminating the source input history between scenarios. */
-        return TRUE;
-    }
-    forward = (samus->lr >= 0.0F) ? 1 : -1;
-
-    switch (sNdsSamusAttackTourScenario)
-    {
-    case nNDSSamusAttackTourJab:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            button[0] = A_BUTTON;
-        }
-        else if ((samus->status_id == nFTCommonStatusAttack11) &&
-                 ((sNdsSamusAttackTourFrames % 3u) == 0u))
-        {
-            button[0] = A_BUTTON;
-        }
-        break;
-    case nNDSSamusAttackTourDash:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            stick_x[0] = (s8)(80 * forward);
-        }
-        else if ((samus->status_id == nFTCommonStatusDash) &&
-                 (samus->fighter_gobj != NULL) &&
-                 (samus->fighter_gobj->anim_frame > 5.0F) &&
-                 (samus->fighter_gobj->anim_frame <= 20.0F))
-        {
-            /* BattleShip ftcommondash.c checks AttackDash only in this exact
-             * countdown window. Tapping A immediately on Dash entry is too
-             * early; holding it until here also fails because button_tap is
-             * no longer fresh. Stay neutral until the source window opens. */
-            button[0] = A_BUTTON;
-        }
-        break;
-    case nNDSSamusAttackTourS3Hi:
-    case nNDSSamusAttackTourS3HiS:
-    case nNDSSamusAttackTourS3:
-    case nNDSSamusAttackTourS3LwS:
-    case nNDSSamusAttackTourS3Lw:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            static const s8 y[5] = { 34, 14, 0, -14, -34 };
-            button[0] = A_BUTTON;
-            stick_x[0] = (s8)(40 * forward);
-            stick_y[0] = y[sNdsSamusAttackTourScenario - nNDSSamusAttackTourS3Hi];
-        }
-        break;
-    case nNDSSamusAttackTourHi3:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            button[0] = A_BUTTON;
-            stick_y[0] = 40;
-        }
-        break;
-    case nNDSSamusAttackTourLw3:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            button[0] = A_BUTTON;
-            stick_y[0] = -40;
-        }
-        break;
-    case nNDSSamusAttackTourS4Hi:
-    case nNDSSamusAttackTourS4HiS:
-    case nNDSSamusAttackTourS4:
-    case nNDSSamusAttackTourS4LwS:
-    case nNDSSamusAttackTourS4Lw:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            static const s8 y[5] = { 40, 20, 0, -20, -40 };
-            button[0] = A_BUTTON;
-            stick_x[0] = (s8)(80 * forward);
-            stick_y[0] = y[sNdsSamusAttackTourScenario - nNDSSamusAttackTourS4Hi];
-        }
-        break;
-    case nNDSSamusAttackTourHi4:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            button[0] = A_BUTTON;
-            stick_y[0] = 80;
-        }
-        break;
-    case nNDSSamusAttackTourLw4:
-        if (samus->status_id == nFTCommonStatusWait)
-        {
-            button[0] = A_BUTTON;
-            stick_y[0] = -80;
-        }
-        break;
-    case nNDSSamusAttackTourAirN:
-    case nNDSSamusAttackTourAirF:
-    case nNDSSamusAttackTourAirB:
-    case nNDSSamusAttackTourAirHi:
-    case nNDSSamusAttackTourAirLw:
-        if ((samus->status_id == nFTCommonStatusWait) &&
-            (samus->ga == nMPKineticsGround))
-        {
-            button[0] = U_CBUTTONS;
-        }
-        else if ((samus->status_id == nFTCommonStatusJumpF) ||
-                 (samus->status_id == nFTCommonStatusJumpB) ||
-                 (samus->status_id == nFTCommonStatusFall) ||
-                 (samus->status_id == nFTCommonStatusFallAerial))
-        {
-            button[0] = A_BUTTON;
-            switch (sNdsSamusAttackTourScenario)
-            {
-            case nNDSSamusAttackTourAirF: stick_x[0] = (s8)(40 * forward); break;
-            case nNDSSamusAttackTourAirB: stick_x[0] = (s8)(-40 * forward); break;
-            case nNDSSamusAttackTourAirHi: stick_y[0] = 40; break;
-            case nNDSSamusAttackTourAirLw: stick_y[0] = -40; break;
-            default: break;
-            }
-        }
-        break;
-    case nNDSSamusAttackTourThrowF:
-    case nNDSSamusAttackTourThrowB:
-        if ((samus->status_id != nFTCommonStatusCatchWait) &&
-            (samus->status_id != nFTCommonStatusCatch) &&
-            (samus->status_id != nFTCommonStatusCatchPull))
-        {
-            f32 dx = ndsFighterNaturalCombatPosX(fox) -
-                ndsFighterNaturalCombatPosX(samus);
-            f32 adx = (dx < 0.0F) ? -dx : dx;
-
-            /* Reuse the source-qualified f23 grab approach. BattleShip's
-             * push/collision path owns the reachable spacing; once inside the
-             * same stop range, feed Catch's real Z-hold + A-tap contract. */
-            if (adx > NDS_FIGHTER_NATURAL_MOVESET_GRAB_STOP_RANGE)
-            {
-                stick_x[0] = (dx >= 0.0F) ? 40 : -40;
-            }
-            else if ((samus->status_id == nFTCommonStatusWait) &&
-                     (fox->status_id == nFTCommonStatusWait) &&
-                     ((sNdsSamusAttackTourFrames % 4u) == 0u))
-            {
-                button[0] = Z_TRIG | A_BUTTON;
-            }
-        }
-        else if (samus->status_id == nFTCommonStatusCatchWait)
-        {
-            if (sNdsSamusAttackTourScenario == nNDSSamusAttackTourThrowF)
-            {
-                button[0] = A_BUTTON;
-            }
-            else
-            {
-                stick_x[0] = (s8)(-80 * forward);
-            }
-        }
-        break;
-    default:
-        break;
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static void ndsFighterNaturalSpecialsSetPhase(u32 phase)
 {
     sNdsNaturalSpecialsPhase = phase;
@@ -9011,7 +6505,6 @@ static void ndsFighterNaturalSpecialsUpdateMask(void)
 static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
 {
     ndsFighterNaturalSpecialsUpdateMask();
-#if NDS_P2_SAMUS
     {
         FTStruct *samus = fp[gNdsFighterSamusSpecialsSlot];
 
@@ -9045,7 +6538,6 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
             }
         }
     }
-#endif
 #if NDS_P2_DONKEY
     {
         FTStruct *donkey = fp[gNdsFighterDonkeySpecialsSlot];
@@ -9112,7 +6604,6 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
         }
     }
 #endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
     if ((ndsFighterNaturalIsMarioSpecialFamily(
              fp[gNdsFighterSpecialsMarioSlot]) != FALSE) &&
         ((gNdsFighterSpecialsProofMask &
@@ -9122,8 +6613,6 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
         ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseMarioLw);
         return FALSE;
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI
     if ((ndsFighterNaturalIsMarioSpecialFamily(
              fp[gNdsFighterSpecialsMarioSlot]) != FALSE) &&
         ((gNdsFighterSpecialsProofMask &
@@ -9133,8 +6622,6 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
         ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseMarioHi);
         return FALSE;
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
     if ((fp[gNdsFighterSpecialsFoxSlot] != NULL) &&
         (fp[gNdsFighterSpecialsFoxSlot]->fkind == nFTKindFox) &&
         ((gNdsFighterSpecialsProofMask &
@@ -9144,7 +6631,6 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
         ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseFoxHi);
         return FALSE;
     }
-#endif
     sNdsNaturalSpecialsDone = 1u;
     ndsFighterNaturalSpecialsSetPhase(nNDSNaturalSpecialsPhaseDone);
     return TRUE;
@@ -9200,9 +6686,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
 #if NDS_P2_DONKEY
     FTStruct *donkey;
 #endif
-#if NDS_P2_SAMUS
     FTStruct *samus;
-#endif
 
     if (ndsFighterNaturalSpecialsProofEnabled() == FALSE)
     {
@@ -9228,8 +6712,6 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
     }
 #endif
 
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
     if (mario != NULL)
     {
         if ((sNdsNaturalSpecialsPhase ==
@@ -9318,8 +6800,6 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
             gNdsFighterSpecialsMarioLwWaitFrames++;
         }
     }
-#endif
-#if NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
     if (fox != NULL)
     {
         if ((sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseFoxHi) ||
@@ -9360,7 +6840,6 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
             gNdsFighterSpecialsFoxHiWaitFrames++;
         }
     }
-#endif
 #if NDS_P2_DONKEY
     if (donkey != NULL)
     {
@@ -9459,7 +6938,6 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
         }
     }
 #endif
-#if NDS_P2_SAMUS
     samus = fp[gNdsFighterSamusSpecialsSlot];
     if (ndsFighterNaturalIsSamus(samus) == FALSE)
     {
@@ -9516,7 +6994,6 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
             gNdsFighterSamusSpecialsLwWaitFrames++;
         }
     }
-#endif
     ndsFighterNaturalSpecialsUpdateMask();
 }
 
@@ -9544,7 +7021,6 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
     }
     switch (sNdsNaturalSpecialsPhase)
     {
-#if NDS_P2_SAMUS
     case nNDSNaturalSpecialsPhaseSamusNFullCharge:
         if ((gNdsFighterSamusSpecialsNChargeMax >=
              NDS_FIGHTER_SAMUS_CHARGE_MAX) &&
@@ -9568,7 +7044,6 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
             return ndsFighterNaturalSpecialsStartNext(fp);
         }
         break;
-#endif
     case nNDSNaturalSpecialsPhaseMarioHi:
         if ((gNdsFighterSpecialsProofMask &
              ((1u << 0) | (1u << 1))) == ((1u << 0) | (1u << 1)))
@@ -9686,7 +7161,6 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
     }
     return FALSE;
 }
-#endif
 
 static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
 {
@@ -10020,7 +7494,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         }
         break;
     case nNDSNaturalCombatPhaseProjectileObserve:
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
         {
             if (gNdsFighterReflectorProofResult ==
@@ -10036,7 +7509,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
             }
             break;
         }
-#endif
         if (gNdsFighterProjectileProofResult ==
             NDS_FIGHTER_PROJECTILE_PROOF_PASS)
         {
@@ -10076,7 +7548,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if (gNdsFighterBattlePlayableWaitAfterRebirthFrames >=
             NDS_FIGHTER_BATTLE_PLAYABLE_WAIT_AFTER_REBIRTH_REQUIRED)
         {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
             if (sNdsNaturalMovesetDone == 0u)
             {
                 if ((sNdsNaturalMovesetPhase != nNDSNaturalMovesetPhaseIdle) ||
@@ -10094,72 +7565,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                     break;
                 }
             }
-#endif
-#if NDS_P2_SAMUS_STATE_TOUR
-            if (sNdsSamusStateTourDone == 0u)
-            {
-                if (ndsSamusStateTourAdvance(fp) == FALSE)
-                {
-                    break;
-                }
-                if ((gNdsSamusStateTourMask &
-                     NDS_SAMUS_STATE_TOUR_MASK_ALL) !=
-                    NDS_SAMUS_STATE_TOUR_MASK_ALL)
-                {
-                    NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-                    break;
-                }
-            }
-#endif
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-            if (gNdsSamusTumbleTourDone == 0u)
-            {
-                if (ndsSamusTumbleTourAdvance(fp) == FALSE)
-                {
-                    break;
-                }
-                if ((gNdsSamusTumbleTourMask & NDS_SAMUS_TUMBLE_TOUR_MASK_ALL) !=
-                    NDS_SAMUS_TUMBLE_TOUR_MASK_ALL)
-                {
-                    NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-                    break;
-                }
-            }
-#endif
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-            if (gNdsSamusDamageFlyTourDone == 0u)
-            {
-                if (ndsSamusDamageFlyTourAdvance(fp) == FALSE)
-                {
-                    break;
-                }
-                if ((gNdsSamusDamageFlyTourMask &
-                     NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL) !=
-                    NDS_SAMUS_DAMAGEFLY_TOUR_MASK_ALL)
-                {
-                    NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-                    break;
-                }
-            }
-#endif
-#if NDS_P2_SAMUS_ATTACK_TOUR
-            if (gNdsSamusAttackTourDone == 0u)
-            {
-                if (ndsSamusAttackTourAdvance(fp) == FALSE)
-                {
-                    break;
-                }
-                if ((gNdsSamusAttackTourMask & NDS_SAMUS_ATTACK_TOUR_MASK_ALL) !=
-                    NDS_SAMUS_ATTACK_TOUR_MASK_ALL)
-                {
-                    NDS_DIAG(gNdsFighterNaturalCombatStallCount++);
-                    break;
-                }
-            }
-#endif
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
             if (sNdsNaturalSpecialsDone == 0u)
             {
                 if ((sNdsNaturalSpecialsPhase !=
@@ -10176,7 +7581,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                     break;
                 }
             }
-#endif
             ndsFighterNaturalCombatSetPhase(
                 nNDSNaturalCombatPhaseBattlePlayableDone);
         }
@@ -10186,7 +7590,6 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     }
 }
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 static sb32 ndsFighterNaturalMovesetKeepSeparated(FTStruct *fp[2],
                                                   s8 stick_x[2])
 {
@@ -10380,16 +7783,7 @@ static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
     }
     return TRUE;
 }
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
-#if NDS_P2_SAMUS && NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-extern volatile u32 gNdsSamusBombMakeSuccessCount;
-extern volatile u32 gNdsRendererAdapterCustom46AppliedCount;
-#endif
 static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
                                                 u16 button[2],
                                                 s8 stick_x[2],
@@ -10400,9 +7794,7 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 #if NDS_P2_DONKEY
     u32 donkey_slot = gNdsFighterDonkeySpecialsSlot;
 #endif
-#if NDS_P2_SAMUS
     u32 samus_slot = gNdsFighterSamusSpecialsSlot;
-#endif
     (void)stick_x;
 
     if ((ndsFighterNaturalSpecialsProofEnabled() == FALSE) ||
@@ -10414,7 +7806,6 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 
     switch (sNdsNaturalSpecialsPhase)
     {
-#if NDS_P2_SAMUS
     case nNDSNaturalSpecialsPhaseSamusNFullCharge:
         if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
@@ -10437,18 +7828,6 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
         }
         break;
     case nNDSNaturalSpecialsPhaseSamusLw:
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-        if ((gNdsSamusBombMakeSuccessCount != 0u) &&
-            (gNdsRendererAdapterCustom46AppliedCount == 0u))
-        {
-            /* The source Bomb already exists. Ask the bounded fast verifier
-             * for one ordinary DS hardware presentation so the descriptor's
-             * custom 0x46 transform is exercised while the Bomb is naturally
-             * live. This changes presentation only; no fighter, weapon,
-             * transform or input state is written here. */
-            ndsHarnessFastPresentRequest();
-        }
-#endif
         if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
         {
@@ -10458,7 +7837,6 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
             gNdsFighterSamusSpecialsLwPressFrames++;
         }
         break;
-#endif
     case nNDSNaturalSpecialsPhaseMarioHi:
         if (((gNdsFighterSpecialsMarioHiFrames > 0u) ||
              (ndsFighterNaturalMarioFamilyStatusIsSpecialHi(
@@ -10601,545 +7979,12 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
     }
     return TRUE;
 }
-#endif
 
-#if NDS_P2_LINK_BOMB_TOUR
-extern void osWritebackDCacheAll(void);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-#endif
 
-__attribute__((noinline, used))
-void ndsLinkBombTourProofStop(void)
-{
-    /* Single cache-coherent verifier stop.  The tour itself is driven entirely
-     * by guest controller playback; GDB only observes this terminal marker. */
-    __asm__ volatile ("" ::: "memory");
-}
-
-static u32 ndsLinkBombTourPackRGBA(const GMColKeys *color)
-{
-    if (color == NULL)
-    {
-        return 0u;
-    }
-    return ((u32)color->r << 24) | ((u32)color->g << 16) |
-           ((u32)color->b << 8) | (u32)color->a;
-}
-
-static void ndsLinkBombTourObserve(FTStruct *link)
-{
-    GObj *item_gobj;
-    ITStruct *ip;
-    DObj *dobj;
-
-    if (link == NULL)
-    {
-        return;
-    }
-    if (link->status_id == nFTLinkStatusSpecialLw)
-    {
-        gNdsLinkBombTourStatusMask |= 1u << 0;
-    }
-    if (link->status_id == nFTCommonStatusLightThrowF4)
-    {
-        gNdsLinkBombTourStatusMask |= 1u << 1;
-    }
-
-    item_gobj = sNdsLinkBombTourItemGObj;
-    if ((item_gobj == NULL) && (link->item_gobj != NULL))
-    {
-        ip = itGetStruct(link->item_gobj);
-        if ((ip != NULL) && (ip->kind == nITKindLinkBomb))
-        {
-            sNdsLinkBombTourItemGObj = link->item_gobj;
-            item_gobj = link->item_gobj;
-        }
-    }
-    if (item_gobj == NULL)
-    {
-        return;
-    }
-    ip = itGetStruct(item_gobj);
-    if ((ip == NULL) || (ip->kind != nITKindLinkBomb))
-    {
-        return;
-    }
-
-    if ((ip->is_hold != FALSE) && (gNdsLinkBombTourHoldObserved == 0u))
-    {
-        gNdsLinkBombTourHoldObserved = 1u;
-        gNdsLinkBombTourHoldKind = (u32)ip->kind;
-        gNdsLinkBombTourHoldLifetime = (u32)ip->lifetime;
-    }
-    if ((ip->is_hold == FALSE) && (ip->is_thrown != FALSE) &&
-        (gNdsLinkBombTourThrowObserved == 0u))
-    {
-        gNdsLinkBombTourThrowObserved = 1u;
-        gNdsLinkBombTourThrowLifetime = (u32)ip->lifetime;
-        gNdsLinkBombTourThrowVelXMilli =
-            (s32)(ip->physics.vel_air.x * 1000.0F);
-        gNdsLinkBombTourThrowVelYMilli =
-            (s32)(ip->physics.vel_air.y * 1000.0F);
-    }
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    if ((gNdsLinkBombTourColAnimObserved == 0u) &&
-        (ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
-        (ip->colanim.color1.a == 140u))
-    {
-        /* The source has entered LinkBomb's final critical-fuse window. Ask
-         * for exactly one ordinary hardware frame, but do not gate gameplay on
-         * item-renderer telemetry: a held item is attached under the fighter's
-         * 0x52 joint and the item-only capture seam is not its lifetime owner. */
-        ndsHarnessFastPresentRequest();
-    }
-#endif
-    if ((ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
-        (ip->colanim.color1.a == 140u))
-    {
-        gNdsLinkBombTourColAnimObserved = 1u;
-        gNdsLinkBombTourColAnimRGBA =
-            ndsLinkBombTourPackRGBA(&ip->colanim.color1);
-        gNdsLinkBombTourRenderEnvRGBA =
-            (((gNdsItemRendererLastColorMask & 2u) != 0u) &&
-             ((gNdsItemRendererLastEnvColor & 0xffu) == 140u)) ?
-                gNdsItemRendererLastEnvColor : 0u;
-    }
-
-    dobj = (DObj *)item_gobj->obj;
-    if ((dobj != NULL) && ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0) &&
-        (ip->attack_coll.damage == 5) &&
-        ((s32)ip->attack_coll.size == 300) &&
-        (ip->attack_coll.angle == 361))
-    {
-        gNdsLinkBombTourExplodeObserved = 1u;
-        gNdsLinkBombTourExplodeDamage = (u32)ip->attack_coll.damage;
-        gNdsLinkBombTourExplodeSize = (u32)ip->attack_coll.size;
-        gNdsLinkBombTourExplodeAngle = ip->attack_coll.angle;
-        gNdsLinkBombTourExplodeElement = (u32)ip->attack_coll.element;
-        gNdsLinkBombTourExplodeEventID = ip->event_id;
-        gNdsLinkBombTourExplodeMulti = ip->multi;
-    }
-}
-
-void ndsLinkBombTourProofItemDestroy(GObj *item_gobj)
-{
-    ITStruct *ip;
-
-    if ((item_gobj == NULL) || (item_gobj != sNdsLinkBombTourItemGObj))
-    {
-        return;
-    }
-    ip = itGetStruct(item_gobj);
-    if ((ip == NULL) || (ip->kind != nITKindLinkBomb))
-    {
-        return;
-    }
-    gNdsLinkBombTourDestroyObserved = 1u;
-    gNdsLinkBombTourDestroyMulti = ip->multi;
-    sNdsLinkBombTourStep = nNDSLinkBombTourDestroy;
-    gNdsLinkBombTourPhase = nNDSLinkBombTourDestroy;
-    osWritebackDCacheAll();
-    ndsLinkBombTourProofStop();
-}
-
-static sb32 ndsLinkBombTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                      s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *link = fp[0];
-    u32 phase_limit;
-
-    (void)stick_x;
-    if ((link == NULL) || (link->fkind != nFTKindLink))
-    {
-        return TRUE;
-    }
-    ndsLinkBombTourObserve(link);
-    gNdsLinkBombTourPhase = sNdsLinkBombTourStep;
-    gNdsLinkBombTourFrames = ++sNdsLinkBombTourFrames;
-
-    /* Fail closed with a cache-coherent terminal instead of making the host
-     * infer a stall from a remote-GDB timeout.  Keep generous phase-specific
-     * bounds: entry/hold/throw transitions are all well under 180 source
-     * updates, while the fuse retains a full 360-update window around its
-     * source 300-tic lifetime. */
-    switch (sNdsLinkBombTourStep)
-    {
-    case nNDSLinkBombTourWaitGround:
-    case nNDSLinkBombTourAwaitHold:
-    case nNDSLinkBombTourAwaitHeldDraw:
-    case nNDSLinkBombTourAwaitThrow:
-        phase_limit = 180u;
-        break;
-    case nNDSLinkBombTourPressThrow:
-    case nNDSLinkBombTourAwaitExplode:
-        phase_limit = 30u;
-        break;
-    case nNDSLinkBombTourAwaitFuse:
-        phase_limit = 360u;
-        break;
-    default:
-        phase_limit = 600u;
-        break;
-    }
-    if ((sNdsLinkBombTourStep != nNDSLinkBombTourDestroy) &&
-        (sNdsLinkBombTourFrames > phase_limit))
-    {
-        osWritebackDCacheAll();
-        ndsLinkBombTourProofStop();
-        return TRUE;
-    }
-
-    switch (sNdsLinkBombTourStep)
-    {
-    case nNDSLinkBombTourWaitGround:
-        if ((link->status_id == nFTCommonStatusWait) &&
-            (link->ga == nMPKineticsGround) && (link->item_gobj == NULL))
-        {
-            button[0] = B_BUTTON;
-            stick_y[0] = -80;
-            NDS_DIAG(gNdsLinkBombTourInputCount++);
-            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitHold;
-            sNdsLinkBombTourFrames = 0u;
-        }
-        break;
-    case nNDSLinkBombTourAwaitHold:
-        if (gNdsLinkBombTourHoldObserved != 0u)
-        {
-            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitHeldDraw;
-            sNdsLinkBombTourFrames = 0u;
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            /* The held item already exists through BattleShip's own SpecialLw
-             * path. Request one real DS draw before the throw input so the
-             * source 0x52 attachment is proved in its natural held state. */
-            ndsHarnessFastPresentRequest();
-#endif
-        }
-        break;
-    case nNDSLinkBombTourAwaitHeldDraw:
-        if ((link->status_id == nFTCommonStatusWait) &&
-            (link->ga == nMPKineticsGround) &&
-            (gNdsItemRendererSubmitCount > 0u) &&
-            (gNdsItemRendererAttach52BuildCount > 0u))
-        {
-            /* Keep holding the source item until its own 96-tic critical-fuse
-             * ColAnim begins. A normal F4 throw is fast enough to explode on
-             * its first stage impact, so requiring the critical fuse *after*
-             * that throw contradicts itlinkbomb.c's map-impact behavior. */
-            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitFuse;
-            sNdsLinkBombTourFrames = 0u;
-        }
-        break;
-    case nNDSLinkBombTourPressThrow:
-        button[0] = B_BUTTON;
-        stick_y[0] = -80;
-        NDS_DIAG(gNdsLinkBombTourInputCount++);
-        sNdsLinkBombTourStep = nNDSLinkBombTourAwaitThrow;
-        sNdsLinkBombTourFrames = 0u;
-        break;
-    case nNDSLinkBombTourAwaitThrow:
-        if (gNdsLinkBombTourThrowObserved != 0u)
-        {
-            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitExplode;
-            sNdsLinkBombTourFrames = 0u;
-        }
-        break;
-    case nNDSLinkBombTourAwaitFuse:
-        if (gNdsLinkBombTourColAnimObserved != 0u)
-        {
-            /* The visual has now been observed while the bomb is naturally
-             * held. Issue the second ordinary Down+B tap on the next proof
-             * tick; BattleShip alone chooses common LightThrowF4. */
-            sNdsLinkBombTourStep = nNDSLinkBombTourPressThrow;
-            sNdsLinkBombTourFrames = 0u;
-        }
-        break;
-    case nNDSLinkBombTourAwaitExplode:
-    case nNDSLinkBombTourDestroy:
-    default:
-        break;
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_P2_LINK_SPECIAL_TOUR
-extern void osWritebackDCacheAll(void);
-extern u32 ndsRendererEntryEffectNativeRootDrawCount(u32 owner_asset_id,
-                                                      u32 root_offset);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-#endif
-
-__attribute__((noinline, used))
-void ndsLinkSpecialTourProofStop(void)
-{
-    __asm__ volatile ("" ::: "memory");
-}
-
-static void ndsLinkSpecialTourSetStep(u32 step)
-{
-    sNdsLinkSpecialTourStep = step;
-    sNdsLinkSpecialTourFrames = 0u;
-    gNdsLinkSpecialTourPhase = step;
-}
-
-static void ndsLinkSpecialTourObserveEntry(void)
-{
-    GObj *effect_gobj;
-    sb32 live[2] = { FALSE, FALSE };
-    u32 i;
-
-    effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect];
-    while (effect_gobj != NULL)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            if (effect_gobj == sNdsLinkSpecialTourEntryGObj[i])
-            {
-                live[i] = TRUE;
-            }
-        }
-        effect_gobj = effect_gobj->link_next;
-    }
-    for (i = 0u; i < 2u; i++)
-    {
-        if (sNdsLinkSpecialTourEntryGObj[i] != NULL)
-        {
-            if (live[i] != FALSE)
-            {
-                NDS_DIAG(gNdsLinkSpecialTourEntryLiveFrames[i]++);
-            }
-            else
-            {
-                gNdsLinkSpecialTourEntryEjectMask |= 1u << i;
-            }
-        }
-    }
-}
-
-static void ndsLinkSpecialTourObserveStatus(const FTStruct *link)
-{
-    if (link == NULL)
-    {
-        return;
-    }
-    if ((link->status_id == nFTLinkStatusAppearR) ||
-        (link->status_id == nFTLinkStatusAppearL))
-    {
-        gNdsLinkSpecialTourEntryStatusMask |= 1u << 0;
-    }
-    if (link->status_id == nFTCommonStatusWait)
-    {
-        gNdsLinkSpecialTourEntryStatusMask |= 1u << 1;
-    }
-    if ((link->status_id == nFTLinkStatusSpecialN) ||
-        (link->status_id == nFTLinkStatusSpecialAirN))
-    {
-        gNdsLinkSpecialTourStatusMask |= 1u << 0;
-    }
-    if ((link->status_id == nFTLinkStatusSpecialNGet) ||
-        (link->status_id == nFTLinkStatusSpecialAirNReturn))
-    {
-        gNdsLinkSpecialTourStatusMask |= 1u << 1;
-    }
-    if ((link->status_id == nFTLinkStatusSpecialHi) ||
-        (link->status_id == nFTLinkStatusSpecialAirHi))
-    {
-        gNdsLinkSpecialTourStatusMask |= 1u << 2;
-    }
-    if (link->status_id == nFTLinkStatusSpecialHiEnd)
-    {
-        gNdsLinkSpecialTourStatusMask |= 1u << 3;
-    }
-}
-
-static sb32 ndsLinkSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
-                                         s8 stick_x[2], s8 stick_y[2])
-{
-    FTStruct *link = fp[0];
-    u32 phase_limit = 240u;
-
-    (void)stick_x;
-    if ((link == NULL) || (link->fkind != nFTKindLink))
-    {
-        return TRUE;
-    }
-
-    ndsLinkSpecialTourObserveStatus(link);
-    ndsLinkSpecialTourObserveEntry();
-    gNdsLinkSpecialTourPhase = sNdsLinkSpecialTourStep;
-    gNdsLinkSpecialTourFrames = ++sNdsLinkSpecialTourFrames;
-
-    if (sNdsLinkSpecialTourStep == nNDSLinkSpecialTourAwaitBoomerangCatch)
-    {
-        phase_limit = 600u;
-    }
-    if ((sNdsLinkSpecialTourStep != nNDSLinkSpecialTourDone) &&
-        (sNdsLinkSpecialTourFrames > phase_limit))
-    {
-        osWritebackDCacheAll();
-        ndsLinkSpecialTourProofStop();
-        return TRUE;
-    }
-
-    switch (sNdsLinkSpecialTourStep)
-    {
-    case nNDSLinkSpecialTourAwaitEntry:
-        if ((gNdsLinkSpecialTourEntrySeenMask & 0x3u) == 0x3u)
-        {
-            sNdsLinkSpecialTourEntryDrawBase[0] =
-                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x02d8u);
-            sNdsLinkSpecialTourEntryDrawBase[1] =
-                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x0698u);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitEntryDraw);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitEntryDraw:
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-        if ((sNdsLinkSpecialTourFrames <= 8u) &&
-            ((gNdsLinkSpecialTourEntryEjectMask & 0x3u) == 0u))
-        {
-            ndsHarnessFastPresentRequest();
-        }
-#endif
-        if ((ndsRendererEntryEffectNativeRootDrawCount(353u, 0x02d8u) >
-             sNdsLinkSpecialTourEntryDrawBase[0]) &&
-            (ndsRendererEntryEffectNativeRootDrawCount(353u, 0x0698u) >
-             sNdsLinkSpecialTourEntryDrawBase[1]))
-        {
-            gNdsLinkSpecialTourEntryDrawMask = 0x3u;
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitEntryEject);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitEntryEject:
-        if ((gNdsLinkSpecialTourEntryEjectMask & 0x3u) == 0x3u)
-        {
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitNeutralWait);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitNeutralWait:
-        if ((link->status_id == nFTCommonStatusWait) &&
-            (link->ga == nMPKineticsGround) &&
-            (link->is_control_disable == FALSE) &&
-            (link->passive_vars.link.boomerang_gobj == NULL))
-        {
-            button[0] = B_BUTTON;
-            NDS_DIAG(gNdsLinkSpecialTourInputCount++);
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerang);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitBoomerang:
-        if (link->passive_vars.link.boomerang_gobj != NULL)
-        {
-            gNdsLinkSpecialTourBoomerangObserved = 1u;
-            sNdsLinkSpecialTourBoomerangDrawBase[0] =
-                ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0458u);
-            sNdsLinkSpecialTourBoomerangDrawBase[1] =
-                ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0580u);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerangDraw);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitBoomerangDraw:
-        if ((ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0458u) >
-             sNdsLinkSpecialTourBoomerangDrawBase[0]) &&
-            (ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0580u) >
-             sNdsLinkSpecialTourBoomerangDrawBase[1]))
-        {
-            gNdsLinkSpecialTourBoomerangDrawObserved = 1u;
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerangCatch);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitBoomerangCatch:
-        if (((link->status_id == nFTLinkStatusSpecialNGet) ||
-             (link->status_id == nFTLinkStatusSpecialAirNReturn)) &&
-            (link->passive_vars.link.boomerang_gobj == NULL))
-        {
-            gNdsLinkSpecialTourBoomerangCatchObserved = 1u;
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitUpBWait);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitUpBWait:
-        if ((link->status_id == nFTCommonStatusWait) &&
-            (link->ga == nMPKineticsGround))
-        {
-            button[0] = B_BUTTON;
-            stick_y[0] = 80;
-            NDS_DIAG(gNdsLinkSpecialTourInputCount++);
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpin);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitSpin:
-        if (((link->status_id == nFTLinkStatusSpecialHi) ||
-             (link->status_id == nFTLinkStatusSpecialAirHi)) &&
-            (link->status_vars.link.specialhi.spin_attack_gobj != NULL))
-        {
-            gNdsLinkSpecialTourSpinObserved = 1u;
-            sNdsLinkSpecialTourSpinDrawBase[0] =
-                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x1100u);
-            sNdsLinkSpecialTourSpinDrawBase[1] =
-                ndsRendererEntryEffectNativeRootDrawCount(324u, 0x11680u);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpinDraw);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitSpinDraw:
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-        /* Unlike Boomerang, grounded Spin creates both its attached effect and
-         * collision weapon from the motion-script flag on the same gameplay
-         * tick. A single present request on that creation boundary can be
-         * consumed before the newly-added display GObjs enter the next camera
-         * traversal. Keep a tiny bounded presentation window while the source
-         * object is live; this changes no fighter/weapon state and proves the
-         * ordinary display-list links on a subsequent real draw. */
-        if ((sNdsLinkSpecialTourFrames <= 8u) &&
-            (link->status_vars.link.specialhi.spin_attack_gobj != NULL))
-        {
-            ndsHarnessFastPresentRequest();
-        }
-#endif
-        if ((ndsRendererEntryEffectNativeRootDrawCount(353u, 0x1100u) >
-             sNdsLinkSpecialTourSpinDrawBase[0]) &&
-            (ndsRendererEntryEffectNativeRootDrawCount(324u, 0x11680u) >
-             sNdsLinkSpecialTourSpinDrawBase[1]))
-        {
-            gNdsLinkSpecialTourSpinDrawObserved = 1u;
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpinEnd);
-        }
-        break;
-    case nNDSLinkSpecialTourAwaitSpinEnd:
-        if ((link->status_id == nFTCommonStatusWait) &&
-            (link->ga == nMPKineticsGround) &&
-            ((gNdsLinkSpecialTourStatusMask & (1u << 3)) != 0u))
-        {
-            gNdsLinkSpecialTourDone = 1u;
-            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourDone);
-            osWritebackDCacheAll();
-            ndsLinkSpecialTourProofStop();
-        }
-        break;
-    case nNDSLinkSpecialTourDone:
-    default:
-        break;
-    }
-    return TRUE;
-}
-#endif
 
 #if NDS_P2_NESS_SPECIAL_TOUR
 extern void osWritebackDCacheAll(void);
 extern void *gFTNessFileMainMotion;
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-#endif
 
 __attribute__((noinline, used))
 void ndsNessSpecialTourProofStop(void)
@@ -11295,9 +8140,6 @@ static void ndsNessSpecialTourObserveArticles(void)
 
 #if NDS_P2_YOSHI_BUG_TOUR
 extern void osWritebackDCacheAll(void);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-extern void ndsHarnessFastPresentRequest(void);
-#endif
 
 __attribute__((noinline, used))
 void ndsYoshiBugTourProofStop(void)
@@ -11505,9 +8347,6 @@ static sb32 ndsYoshiBugTourApplyInput(FTStruct *fp[2], u16 button[2],
             }
             sNdsYoshiBugTourNeutralTriangleBase =
                 gNdsFighterDLAllDrawP0HardwareTriangleCount;
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitNeutralReturn);
         }
         else if ((yoshi->status_id == nFTCommonStatusWait) &&
@@ -11591,9 +8430,6 @@ static sb32 ndsYoshiBugTourApplyInput(FTStruct *fp[2], u16 button[2],
             }
             sNdsYoshiBugTourCatchTriangleBase =
                 gNdsFighterDLAllDrawP0HardwareTriangleCount;
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitCatchDraw);
         }
         else if ((yoshi->status_id == nFTCommonStatusWait) &&
@@ -11638,9 +8474,6 @@ static sb32 ndsYoshiBugTourApplyInput(FTStruct *fp[2], u16 button[2],
             }
             sNdsYoshiBugTourThrowTriangleBase =
                 gNdsFighterDLAllDrawP0HardwareTriangleCount;
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitThrowDraw);
         }
         break;
@@ -11818,21 +8651,10 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
         if ((gNdsNessSpecialTourPKFireWeaponObserved != 0u) ||
             (gNdsNessSpecialTourPKFireItemObserved != 0u))
         {
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitPKFireReturn);
         }
         break;
     case nNDSNessSpecialTourAwaitPKFireReturn:
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-        if ((sNdsNessSpecialTourFrames <= 12u) &&
-            ((gNdsNessSpecialTourPKFireWeaponObserved != 0u) ||
-             (gNdsNessSpecialTourPKFireItemObserved != 0u)))
-        {
-            ndsHarnessFastPresentRequest();
-        }
-#endif
         if ((ness->status_id == nFTCommonStatusWait) &&
             (gNdsNessSpecialTourPKFireItemObserved != 0u) &&
             (gNdsNessSpecialTourPKFireParticleDrawObserved != 0u))
@@ -11882,27 +8704,16 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
             {
                 gNdsNessSpecialTourPKThunderHeadObserved = 1u;
             }
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitUpReturn);
         }
         break;
     case nNDSNessSpecialTourAwaitUpReturn:
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-        if ((sNdsNessSpecialTourFrames <= 12u) &&
-            (gNdsNessSpecialTourPKThunderHeadObserved != 0u))
-        {
-            ndsHarnessFastPresentRequest();
-        }
-#endif
         /* The old proof only waited for PK Thunder to expire.  That never
          * exercised Up-B's defining self-hit / PK Thunder 2 transition, so a
          * crash in Jibaku could pass the verifier.  Steer the live source
          * weapon toward Ness using only the ordinary analog input.  BattleShip
          * still owns turning, collision, the Collide flag and every status
          * transition. */
-#if !NDS_P2_NESS_VFX_PROOF
         if (((ness->status_id == nFTNessStatusSpecialHiHold) ||
              (ness->status_id == nFTNessStatusSpecialAirHiHold)) &&
             (ness->status_vars.ness.specialhi.pkthunder_gobj != NULL))
@@ -11920,7 +8731,6 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
                 stick_y[0] = (s8)(-wp->physics.vel_air.x * (80.0F / 60.0F));
             }
         }
-#endif
         if ((ness->status_id == nFTCommonStatusWait) &&
             (gNdsNessSpecialTourPKThunderJibakuObserved != 0u))
         {
@@ -11960,9 +8770,6 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
                 gNdsNessSpecialTourPsychicMagnetCollOffset =
                     (u32)(coll - base);
             }
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-            ndsHarnessFastPresentRequest();
-#endif
             ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownReturn);
         }
         break;
@@ -12009,8 +8816,7 @@ static sb32 ndsFighterNaturalCombatRecoverTeeter(FTStruct *fp[2], s8 stick[2])
 
 static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 {
-#if NDS_DEV_LIVE_INPUT_PREVIEW && !NDS_P2_NESS_SPECIAL_TOUR && \
-    !NDS_P2_YOSHI_BUG_TOUR
+#if (!NDS_P2_NESS_SPECIAL_TOUR) && (!NDS_P2_YOSHI_BUG_TOUR)
     (void)fp;
     return;
 #else
@@ -12047,29 +8853,8 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     }
 #endif
 
-#if NDS_P2_LINK_BOMB_TOUR
-    if (ndsLinkBombTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_P2_LINK_SPECIAL_TOUR
-    if (ndsLinkSpecialTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (ndsFighterNaturalMovesetApplyInput(fp, button, stick, stick_y) !=
         FALSE)
     {
@@ -12079,55 +8864,11 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         }
         return;
     }
-#endif
 
-#if NDS_P2_SAMUS_STATE_TOUR
-    if (ndsSamusStateTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_P2_SAMUS_TUMBLE_TOUR
-    if (ndsSamusTumbleTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_P2_SAMUS_DAMAGEFLY_TOUR
-    if (ndsSamusDamageFlyTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_P2_SAMUS_ATTACK_TOUR
-    if (ndsSamusAttackTourApplyInput(fp, button, stick, stick_y) != FALSE)
-    {
-        for (i = 0u; i < 2u; i++)
-        {
-            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
-        }
-        return;
-    }
-#endif
 
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     if (ndsFighterNaturalSpecialsApplyInput(fp, button, stick, stick_y) !=
         FALSE)
     {
@@ -12137,7 +8878,6 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         }
         return;
     }
-#endif
 
     switch (sNdsNaturalCombatPhase)
     {
@@ -12371,7 +9111,6 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         {
             break;
         }
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
         {
             button[sNdsNaturalReflectorFoxSlot] = B_BUTTON;
@@ -12386,7 +9125,6 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
                 break;
             }
         }
-#endif
         if (sNdsNaturalProjectileButtonPressed == 0u)
         {
             button[sNdsNaturalProjectileActorSlot] = B_BUTTON;
@@ -12399,12 +9137,10 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         {
             break;
         }
-#if NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR
         if (ndsFighterNaturalReflectorProofEnabled() != FALSE)
         {
             button[sNdsNaturalReflectorFoxSlot] = B_BUTTON;
         }
-#endif
         break;
     case nNDSNaturalCombatPhaseBattlePlayableKOExit:
         stick[sNdsNaturalCombatVictimSlot] = sNdsBattlePlayableKOStickX;
@@ -12465,17 +9201,6 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
         (sNdsNaturalCombatPhase == nNDSNaturalCombatPhaseWalk) ? 1u : 0u;
 
     ndsFighterNaturalCombatApplyInput(fp);
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    {
-        extern u32 ndsHarnessFastPresentConsumeRequestedNow(void);
-
-        /* A proof request raised while observing a transient source status
-         * belongs to that status. Consume it before gcRunAll advances the
-         * fighter again; the outer fast harness remains the fallback for
-         * requests raised later in the source update. */
-        (void)ndsHarnessFastPresentConsumeRequestedNow();
-    }
-#endif
     ndsControllerPlaybackCommitFrame();
     syControllerReadDeviceData();
     syControllerUpdateGlobalData();
@@ -12491,11 +9216,7 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     }
     ndsFighterNaturalCombatRecordPair(fp[sNdsNaturalCombatAttackerSlot],
                                       fp[sNdsNaturalCombatVictimSlot]);
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
-    NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     ndsFighterNaturalSpecialsRecord(fp);
-#endif
     ndsFighterNaturalProjectileRecord(fp);
     ndsFighterNaturalCombatAdvancePhase(fp);
 
@@ -12642,9 +9363,6 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     if ((ndsFighterBattlePlayableProofEnabled() != FALSE) &&
         (gNdsFighterBattlePlayableResult ==
             NDS_FIGHTER_BATTLE_PLAYABLE_PASS)
-#if NDS_P2_LINK_BOMB_TOUR
-        && (gNdsLinkBombTourDestroyObserved != 0u)
-#endif
        )
     {
         gNdsFighterNaturalMotionResult =
@@ -12669,7 +9387,6 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
             NDS_FIGHTER_NATURAL_MOTION_SAFE_PASS;
     }
 }
-#endif
 
 static void ndsFighterGCDrawAllLoopCopyFromPreview(void)
 {
@@ -13246,7 +9963,6 @@ static void ndsStageGCDrawAllLoopRecordItemCapture(GObj *gobj, s32 link_id)
     }
 }
 
-#if NDS_R2_FIREBALL_QUAD
 /* MARIO'S FIREBALL AS ONE CAMERA-FACING QUAD, the shield experiment applied to
  * a projectile. Same shape of change and the same reason it is worth making:
  * the source model is a SINGLE flat quad behind a display list, so both routes
@@ -13391,9 +10107,7 @@ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
         root->rotate.vec.f.x,
         (root->rotate.vec.f.y >= 0.0F) ? TRUE : FALSE);
 }
-#endif /* NDS_R2_FIREBALL_QUAD */
 
-#if NDS_R2_FOX_BLASTER_QUAD
 /* Engagement/fallback pair for the lab arm. A rising draw count with zero
  * fallback proves the exact horizontal source contract reached direct GX;
  * fallback preserves the restored source display after a hop or reflection. */
@@ -13437,7 +10151,6 @@ static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp,
         &root->translate.vec.f, root->scale.vec.f.x,
         root->scale.vec.f.y, facing);
 }
-#endif /* NDS_R2_FOX_BLASTER_QUAD */
 
 static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
                                                   u32 callback_kind)
@@ -13504,7 +10217,6 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         gNdsRendererAdapterCustom47RejectCount;
     custom47_translation_mismatch_before =
         gNdsRendererAdapterCustom47TranslationMismatchCount;
-#if NDS_R2_FOX_BLASTER_QUAD
     {
         WPStruct *blaster_wp = weapon_gobj->user_data.p;
 
@@ -13527,8 +10239,6 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
             NDS_DIAG(gNdsFoxBlasterQuadFallbackCount++);
         }
     }
-#endif
-#if NDS_R2_FIREBALL_QUAD
     /* Before the tree walk, not inside it: the whole point is to spend neither
      * the walk nor the display list. Falls through to the generic route on any
      * refusal -- a missing texture name or a camera the quad path will not
@@ -13550,7 +10260,6 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
             NDS_DIAG(gNdsFireballQuadFallbackCount++);
         }
     }
-#endif
     initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode();
     if ((initial_geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u)
     {
@@ -13674,19 +10383,15 @@ u32 ndsStageGCDrawAllLoopNdlWeaponKind(void *display_gobj_ptr)
     {
         return NDS_P2_NDL_KIND_COUNT;
     }
-#if NDS_R2_FIREBALL_QUAD
     if ((wp->kind == nWPKindFireball) &&
         (weapon_gobj->proc_display == wpDisplayDLHead1))
     {
         return NDS_P2_NDL_KIND_WP_FIREBALL;
     }
-#endif
-#if NDS_R2_FOX_BLASTER_QUAD
     if (ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE)
     {
         return NDS_P2_NDL_KIND_WP_BLASTER;
     }
-#endif
     return NDS_P2_NDL_KIND_COUNT;
 }
 
@@ -13731,7 +10436,6 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
 
     switch (kind)
     {
-#if NDS_R2_FIREBALL_QUAD
     case NDS_P2_NDL_KIND_WP_FIREBALL:
         if ((wp->kind == nWPKindFireball) &&
             (weapon_gobj->proc_display == wpDisplayDLHead1) &&
@@ -13744,8 +10448,6 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
             handled = TRUE;
         }
         break;
-#endif
-#if NDS_R2_FOX_BLASTER_QUAD
     case NDS_P2_NDL_KIND_WP_BLASTER:
         if ((ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE) &&
             (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(
@@ -13762,7 +10464,6 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
             handled = TRUE;
         }
         break;
-#endif
     default:
         break;
     }
@@ -13864,23 +10565,12 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
      * do so; items are the opposite and opt it back in here. */
     initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode() |
                             NDS_RENDERER_GEOM_ZBUFFER;
-#if NDS_P2_ITEM_CORE
     /* The stage traversal, the tree submit and their replay
      * (ndsRendererAdapterSubmitItemDObjTreeReplay). */
     ndsRendererAdapterSubmitItemDObjTreeReplay(
         root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
         initial_geometry_mode, (u32)ip->kind);
     NDS_LAB_ITEM_SPLIT(2);
-#else
-    ndsRendererAdapterBeginStageTraversal();
-    NDS_LAB_ITEM_SPLIT(3);
-    ndsRendererAdapterSubmitItemDObjTree(
-        root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
-        initial_geometry_mode);
-    NDS_LAB_ITEM_SPLIT(2);
-    ndsRendererAdapterEndStageTraversal();
-    NDS_LAB_ITEM_SPLIT(3);
-#endif
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     NDS_DIAG(gNdsLabItemAcc[0] += lab_item_mark - lab_item_start);
     NDS_DIAG(gNdsLabItemAcc[15]++);
@@ -14056,15 +10746,7 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
     /* Consume the colour this effect's own proc_display just emitted, before
      * the tree submit inherits the previous list's persistent RDP state. */
-#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
-    {
-        u32 phase_mark = cpuGetTiming();
-        ndsRendererAdapterCaptureDisplayProcColors();
-        gNdsEffectPhaseColorTicks += cpuGetTiming() - phase_mark;
-    }
-#else
     ndsRendererAdapterCaptureDisplayProcColors();
-#endif
     ndsRendererAdapterBeginStageTraversal();
     /* The effect path, and the only caller that walks the tree. An effect
      * EFDesc is a model -- shield, rebirth halo, Fox reflector, impact wave are
@@ -14086,25 +10768,12 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * still emits nothing from it. texready and texreject are both 0, so it
      * does not even reach texture handling. That is the next seam and it is
      * inside SubmitStageDL, not here. */
-#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
-    {
-        u32 phase_mark = cpuGetTiming();
-        ndsRendererAdapterSubmitEffectDObjTree(
-            root,
-            callback_kind,
-            sNdsStageGCDrawAllLoopCurrentCameraGObj,
-            ndsStageGCDrawAllLoopInitialGeometryMode() |
-                NDS_RENDERER_GEOM_ZBUFFER);
-        gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;
-    }
-#else
     ndsRendererAdapterSubmitEffectDObjTree(
         root,
         callback_kind,
         sNdsStageGCDrawAllLoopCurrentCameraGObj,
         ndsStageGCDrawAllLoopInitialGeometryMode() |
             NDS_RENDERER_GEOM_ZBUFFER);
-#endif
     ndsRendererAdapterEndStageTraversal();
     triangle_delta =
         gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
@@ -15001,29 +11670,6 @@ void ndsStageGCDrawAllLoopRecordCameraCallback(void)
     gNdsStageGCDrawAllLoopCameraCallbackCount++;
 }
 
-#if NDS_TASK103_STAGE_RUN_PHASE
-/* Task 103 E3. E2 accounted for only 39% of the STG bucket; the other 238,254
- * ticks/frame are outside ndsRendererCommitNativeStageSegment entirely, and no
- * task has ever profiled them. gNdsTickHudStageTicks is accumulated at exactly
- * four sites in this file, so tapping each one partitions the whole bucket.
- *
- * These add no timer reads at all -- every site already computes the timestamp
- * it needs for the tick HUD, and this only forks the value it already has. That
- * matters here: E0-E2 cost ~18,100 ticks/frame of instrument, and this span is
- * the one being measured.
- *
- * The four are not known to be disjoint. If display-commit spans nest inside
- * the traversal span, the bucket itself double-counts, and the sum exceeding
- * STG is how that shows up. Lab only, default off. */
-volatile u32 gNdsTask103PrepareTicks;
-volatile u32 gNdsTask103PrepareCount;
-volatile u32 gNdsTask103TraversalTicks;
-volatile u32 gNdsTask103TraversalCount;
-volatile u32 gNdsTask103DisplayTicks;
-volatile u32 gNdsTask103DisplayCount;
-volatile u32 gNdsTask103FinishTicks;
-volatile u32 gNdsTask103FinishCount;
-#endif
 
 #if NDS_P2_1P_GAME
 /* Board the Platforms: the platforms hung under a layer the native packet just
@@ -15196,36 +11842,6 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
          * only the stage's own segments commit. The tick HUD's STG span is
          * taken inside ndsRendererAdapterCommitNativeStageDisplay, on the
          * matched segment only, instead of two clock reads per display. */
-#if (NDS_TICK_HUD && NDS_TASK103_STAGE_RUN_PHASE) || \
-    (NDS_RENDERER_PROFILE_LEVEL == 1)
-        u32 owner_start = NDS_TICK_HUD_SPAN_CLOCK();
-        s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
-            display, link_id);
-
-#if NDS_TICK_HUD
-        {
-            u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
-
-            gNdsTickHudStageTicks += stage_ticks;
-#if NDS_TASK103_STAGE_RUN_PHASE
-            NDS_DIAG(gNdsTask103DisplayTicks += stage_ticks);
-            NDS_DIAG(gNdsTask103DisplayCount++);
-#endif
-        }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-            cpuGetTiming() - owner_start;
-#endif
-#if NDS_P2_1P_GAME
-        if (handled != FALSE)
-        {
-            ndsStageGCDrawAllLoopSubmitForeignSubtrees(display);
-        }
-#endif
-        return handled;
-#else
 #if NDS_P2_1P_GAME
         {
             s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
@@ -15240,12 +11856,10 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #else
         return ndsRendererAdapterCommitNativeStageDisplay(display, link_id);
 #endif
-#endif
     }
     return FALSE;
 }
 
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
 /* R01-B. THE RESULTS WINNER-SERIES EMBLEM OWNER.
  *
  * `mnVSResultsMakeEmblem` (decomp mnvsresults.c:615) registers the emblem's
@@ -15384,7 +11998,6 @@ sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
     NDS_DIAG(gNdsVSResultsEmblemSubmitCount++);
     return TRUE;
 }
-#endif /* NDS_IMPORT_BATTLESHIP_VS_RESULTS */
 
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 {
@@ -15392,7 +12005,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     u32 mask;
     sb32 is_layer;
     u32 callback_kind = kind;
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
     u32 owner_start = 0u;
 #endif
 
@@ -15498,7 +12111,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     gNdsStageGCDrawAllLoopDObjDrawCallbackCount++;
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
         owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
         ndsRendererAdapterBeginStageTraversal();
@@ -15508,30 +12121,17 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
         ndsRendererAdapterEndStageTraversal();
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_TICK_HUD
         if (owner_start != 0u)
         {
             u32 owner_ticks = NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
 
 #if NDS_TICK_HUD
             gNdsTickHudStageTicks += owner_ticks;
-#if NDS_TASK103_STAGE_RUN_PHASE
-            NDS_DIAG(gNdsTask103TraversalTicks += owner_ticks);
-            NDS_DIAG(gNdsTask103TraversalCount++);
-#endif
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-            gNdsRendererProfileOwners[
-                NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-                owner_ticks;
-            if ((is_layer != FALSE) && (mask == 1u))
-            {
-                NDS_DIAG(gNdsRendererProfileStageLayer0Ticks += owner_ticks);
-            }
 #endif
         }
 #endif
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         ndsRendererBenchmarkSinkEndOwner(
             NDS_RENDERER_PROFILE_OWNER_STAGE);
 #endif
@@ -15550,148 +12150,14 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 }
 
-#if NDS_SCENE_MIP_CACHE_LAB
-#define NDS_SCENE_MIP_COUNT 1u
-
-static const f32 sNdsSceneMipSeedDistances[NDS_SCENE_MIP_COUNT] = {
-    14000.0F
-};
-extern Mtx44f gGMCameraMatrix;
-
-volatile u32 gNdsSceneMipCacheSeedDrawCount;
-volatile u32 gNdsSceneMipCacheDrawCount;
-volatile u32 gNdsSceneMipCacheFallbackCount;
-volatile u32 gNdsSceneMipCacheSelectedMip;
-volatile u32 gNdsSceneMipCacheSelectedMipMask;
-volatile u32 gNdsSceneMipCacheTargetDistanceBits;
-
-static sb32 ndsSceneMipCachePresentSeedFrame(void)
-{
-    CObj *cobj;
-    SObj *wallpaper_sobj;
-    CObjVec saved_vec;
-    Mtx44f saved_matrix;
-    Vec2f saved_wallpaper_pos;
-    f32 saved_target_dist;
-    f32 saved_wallpaper_scale_x;
-    f32 saved_wallpaper_scale_y;
-    f32 seed_dist;
-    u32 mip_index;
-
-    if ((ndsPlatformSceneMipCacheReady() != FALSE) ||
-        (ndsPlatformSceneMipCacheFailed() != FALSE))
-    {
-        return FALSE;
-    }
-    mip_index = ndsPlatformSceneMipCaptureCompletedCount();
-    if ((mip_index >= NDS_SCENE_MIP_COUNT) ||
-        (gGMCameraGObj == NULL) ||
-        ((cobj = CObjGetStruct(gGMCameraGObj)) == NULL) ||
-        (sGRWallpaperGObj == NULL) ||
-        ((wallpaper_sobj = SObjGetStruct(sGRWallpaperGObj)) == NULL))
-    {
-        ndsPlatformSceneMipCacheAbort();
-        return FALSE;
-    }
-
-    saved_vec = cobj->vec;
-    saved_target_dist = gGMCameraStruct.target_dist;
-    saved_wallpaper_pos = wallpaper_sobj->pos;
-    saved_wallpaper_scale_x = wallpaper_sobj->sprite.scalex;
-    saved_wallpaper_scale_y = wallpaper_sobj->sprite.scaley;
-    memcpy(saved_matrix, gGMCameraMatrix, sizeof(saved_matrix));
-    seed_dist = sNdsSceneMipSeedDistances[mip_index];
-    cobj->vec.eye.x = cobj->vec.at.x;
-    cobj->vec.eye.y = cobj->vec.at.y;
-    cobj->vec.eye.z = cobj->vec.at.z + seed_dist;
-    gGMCameraStruct.target_dist = seed_dist;
-    grWallpaperCalcPersp(wallpaper_sobj);
-
-    /* Request before gcDrawAll so the deferred SObj compositor snapshots the
-     * affine seed transform as part of this exact held presentation frame. */
-    if (ndsPlatformSceneMipCaptureRequest(mip_index) == FALSE)
-    {
-        cobj->vec = saved_vec;
-        gGMCameraStruct.target_dist = saved_target_dist;
-        wallpaper_sobj->pos = saved_wallpaper_pos;
-        wallpaper_sobj->sprite.scalex = saved_wallpaper_scale_x;
-        wallpaper_sobj->sprite.scaley = saved_wallpaper_scale_y;
-        memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
-        ndsPlatformSceneMipCacheAbort();
-        return FALSE;
-    }
-
-    ndsStageGCDrawAllLoopBeginHardwareFrame();
-    sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
-    ndsRendererAdapterResetDepthDiagnostics();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareSetNoOracle(TRUE);
-#endif
-    gcDrawAll();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareSetNoOracle(FALSE);
-#endif
-    sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
-    cobj->vec = saved_vec;
-    gGMCameraStruct.target_dist = saved_target_dist;
-    wallpaper_sobj->pos = saved_wallpaper_pos;
-    wallpaper_sobj->sprite.scalex = saved_wallpaper_scale_x;
-    wallpaper_sobj->sprite.scaley = saved_wallpaper_scale_y;
-    memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
-    NDS_DIAG(gNdsSceneMipCacheSeedDrawCount++);
-    return TRUE;
-}
-
-static sb32 ndsSceneMipCachePresentFrame(void)
-{
-    u32 mip_index = 0u;
-
-    if (ndsPlatformSceneMipCacheReady() == FALSE)
-    {
-        return FALSE;
-    }
-    gNdsSceneMipCacheTargetDistanceBits =
-        ndsFloatBits(gGMCameraStruct.target_dist);
-
-    ndsStageGCDrawAllLoopBeginHardwareFrame();
-    sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
-    ndsRendererAdapterResetDepthDiagnostics();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareSetNoOracle(TRUE);
-#endif
-    /* BG2 owns only BattleShip's retained wallpaper. Keep the original display
-     * graph live for stage geometry, stage animation, fighters, effects, and
-     * interface ordering; the SObj seam skips only the wallpaper CPU raster. */
-    gcDrawAll();
-    ndsFighterDisplayContractSubmitStageFighters();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareSetNoOracle(FALSE);
-#endif
-    sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
-
-    gNdsSceneMipCacheSelectedMipMask |= (1u << mip_index);
-    gNdsSceneMipCacheSelectedMip = mip_index;
-    NDS_DIAG(gNdsSceneMipCacheDrawCount++);
-    return TRUE;
-}
-#endif
 
 u32 ndsSceneMipCacheHoldLogic(void)
 {
-#if NDS_SCENE_MIP_CACHE_LAB
-    return ((ndsPlatformSceneMipCacheReady() == FALSE) &&
-            (ndsPlatformSceneMipCacheFailed() == FALSE)) ? TRUE : FALSE;
-#else
     return FALSE;
-#endif
 }
 
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    u32 owner_start;
-    u32 profile_m3;
-#endif
 
     if ((sNdsStageGCDrawAllLoopHardwareSubmitCount != 0u) ||
         (gSCManagerSceneData.scene_curr != nSCKindVSBattle))
@@ -15702,37 +12168,13 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    profile_m3 = (gNdsRendererFastRunMode ==
-        NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ? TRUE : FALSE;
-    if (profile_m3 != FALSE)
-    {
-        owner_start = cpuGetTiming();
-    }
-#endif
     sNdsStageGCDrawAllLoopNativeStageArmed =
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    if (profile_m3 != FALSE)
-    {
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-                cpuGetTiming() - owner_start;
-    }
-#endif
     gcDrawAll();
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        owner_start = cpuGetTiming();
-#endif
         ndsRendererAdapterFinishNativeStageOwner();
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-                cpuGetTiming() - owner_start;
-#endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
     ndsFighterDisplayContractSubmitStageFighters();
@@ -15744,15 +12186,6 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #if NDS_TICK_HUD
     u32 tickhud_owner_start;
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    u32 owner_start;
-    u32 profile_m3;
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 owner_ticks;
-    u32 phase05_present_start;
-    u32 phase05_start;
-#endif
 
     if (gNdsSceneManagerCurrIsBattle == 0u)
     {
@@ -15760,43 +12193,11 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     }
 
 
-#if NDS_SCENE_MIP_CACHE_LAB
-    if (ndsSceneMipCachePresentSeedFrame() != FALSE)
-    {
-        return;
-    }
-    if ((ndsPlatformSceneMipCacheReady() != FALSE) &&
-        (ndsPlatformSceneMipCacheFailed() == FALSE))
-    {
-        if (ndsSceneMipCachePresentFrame() != FALSE)
-        {
-            return;
-        }
-        /* One uncovered view falsifies Cut G. Restore the complete source
-         * renderer rather than oscillating between cache and generic state. */
-        NDS_DIAG(gNdsSceneMipCacheFallbackCount++);
-        ndsPlatformSceneMipCacheAbort();
-        ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
-    }
-#endif
 
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_present_start = NDS_RENDERER_PHASE05_TICK();
-#endif
     ndsStageGCDrawAllLoopBeginHardwareFrame();
     sNdsStageGCDrawAllLoopHardwareSubmitActive = TRUE;
     ndsRendererAdapterResetDepthDiagnostics();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(TRUE);
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    profile_m3 = (gNdsRendererFastRunMode ==
-        NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ? TRUE : FALSE;
-    if (profile_m3 != FALSE)
-    {
-        owner_start = cpuGetTiming();
-    }
-#endif
 #if NDS_TICK_HUD
     tickhud_owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
@@ -15808,42 +12209,13 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - tickhud_owner_start;
 
         gNdsTickHudStageTicks += stage_ticks;
-#if NDS_TASK103_STAGE_RUN_PHASE
-        NDS_DIAG(gNdsTask103PrepareTicks += stage_ticks);
-        NDS_DIAG(gNdsTask103PrepareCount++);
-#endif
     }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    if (profile_m3 != FALSE)
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        owner_ticks = cpuGetTiming() - owner_start;
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks += owner_ticks;
-        NDS_DIAG(gNdsRendererPhase05StageTransitionTicks += owner_ticks);
-#else
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-                cpuGetTiming() - owner_start;
-#endif
-    }
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
     gcDrawAll();
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05GCDrawAllTicks, phase05_start);
-#endif
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
 #if NDS_TICK_HUD
         tickhud_owner_start = NDS_TICK_HUD_SPAN_CLOCK();
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        owner_start = cpuGetTiming();
 #endif
         ndsRendererAdapterFinishNativeStageOwner();
 #if NDS_TICK_HUD
@@ -15851,49 +12223,17 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
             u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - tickhud_owner_start;
 
             gNdsTickHudStageTicks += stage_ticks;
-#if NDS_TASK103_STAGE_RUN_PHASE
-            NDS_DIAG(gNdsTask103FinishTicks += stage_ticks);
-            NDS_DIAG(gNdsTask103FinishCount++);
-#endif
         }
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        owner_ticks = cpuGetTiming() - owner_start;
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks += owner_ticks;
-        NDS_DIAG(gNdsRendererPhase05StageTransitionTicks += owner_ticks);
-#else
-        gNdsRendererProfileOwners[
-            NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
-                cpuGetTiming() - owner_start;
-#endif
 #endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
     ndsFighterDisplayContractSubmitStageFighters();
-#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(FALSE);
-#endif
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05PresentHardwareTicks, phase05_present_start);
-#endif
 }
 
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
-#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
-    /* The legacy fast proof called this once, so its internal submit-count
-     * latch doubled as a whole-run one-shot. Renderer-coupled proofs now make
-     * several explicit presentation requests while preserving source logic.
-     * Each public call is a distinct rendered frame; re-arm only this frame
-     * latch here so the next requested presentation is not discarded because
-     * an earlier frame happened to submit a weapon/effect/item. */
-    sNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
-    gNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
-#endif
     ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
     ndsStageGCDrawAllLoopSubmitHardwareFrame();
 }

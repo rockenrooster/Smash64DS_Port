@@ -79,7 +79,6 @@
  * a SELECTION: an original's fkind, or NDS_P4_SEL_BASE + content for a Remix
  * selection, committed as its setup parent's kind plus the content. The
  * kind-indexed tables below stay the twelve originals'. */
-#if NDS_P4
 #include "nds_p4_css.generated.inc"
 #define NDS_CSS_CELLS NDS_P4_CSS_CELLS
 /* The token's centre at PORTRAIT_SCALE (adjust_created_token_), and its box. */
@@ -101,38 +100,23 @@
      ((((s32)(sy)) - 126) * NDS_P4_CSS_CARD_KN) / NDS_P4_CSS_CARD_KD)
 #define NDS_CSS_CARD_LEN(v) (((v) * NDS_P4_CSS_CARD_KN) / NDS_P4_CSS_CARD_KD)
 #define NDS_CSS_PRESS_Y NDS_P4_CSS_PRESS_Y
-#else
-#define NDS_CSS_CELLS NDS_CSS_PORTRAITS
-#define NDS_CSS_HEADER_DY 0
-#define NDS_CSS_CARD_X(panel, sx) ((panel) + (sx))
-#define NDS_CSS_CARD_Y(sy) (sy)
-#define NDS_CSS_CARD_LEN(v) (v)
-#define NDS_CSS_PRESS_Y 219
-#endif
 
 /* A selection's battle identity: its kind (a Remix selection's setup parent)
  * and its P4 content (0 for the original cast). */
 static u32 ndsMenuShellCssSelFkind(u32 sel)
 {
-#if NDS_P4
     const NDSP4Fighter *p4 = ndsP4Fighter(ndsP4SelContent(sel));
 
     if (p4 != NULL)
     {
         return (u32)p4->parent_kind;
     }
-#endif
     return sel;
 }
 
 static u32 ndsMenuShellCssSelContent(u32 sel)
 {
-#if NDS_P4
     return ndsP4SelContent(sel);
-#else
-    (void)sel;
-    return 0u;
-#endif
 }
 
 /* mnPlayersVSAdjustCursor's clamps and its full-deflection step. The P4
@@ -140,11 +124,7 @@ static u32 ndsMenuShellCssSelContent(u32 sel)
  * (x 3-24) lay left of the hand's grab point at the source's minimum (cursor
  * x + 25): MRGAW's CP badge could not be picked up (owner BUGS.md
  * 2026-10-12). The hand may run 20 units past the left edge there. */
-#if NDS_P4
 #define NDS_CSS_CURSOR_X_MIN (-20)
-#else
-#define NDS_CSS_CURSOR_X_MIN 0
-#endif
 #define NDS_CSS_CURSOR_X_MAX 280
 #define NDS_CSS_CURSOR_Y_MIN (10 + NDS_CSS_HEADER_DY)
 #define NDS_CSS_CURSOR_Y_MAX NDS_CSS_CARD_Y(205)
@@ -162,11 +142,7 @@ static u32 ndsMenuShellCssSelContent(u32 sel)
 /* mnPlayersVSMakePuck's parking spot for a slot with no fighter yet. */
 #define NDS_CSS_PUCK_HOME_X NDS_CSS_CARD_X(0, 51)
 #define NDS_CSS_PUCK_HOME_Y NDS_CSS_CARD_Y(161)
-#if NDS_P4
 #define NDS_CSS_PUCK_HOME_SLOT_X(i) NDS_CSS_CARD_X(69 * (s32)(i), 51)
-#else
-#define NDS_CSS_PUCK_HOME_SLOT_X(i) (NDS_CSS_PUCK_HOME_X + 68 * (s32)(i))
-#endif
 /* The offset a carried token keeps from the cursor, mnplayersvs.c:3529. */
 #define NDS_CSS_PUCK_CARRY_DX 11
 #define NDS_CSS_PUCK_CARRY_DY (-14)
@@ -237,7 +213,6 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
  * production fighter is admitted here only after its renderer/CSS/audio seams
  * all exist in the same configuration. */
-#if NDS_P2_KIRBY
 /* Kirby lands behind his own flag; every earlier opt-in fighter rides its own
  * flag in this arm (admit_fighter.py). */
 #define NDS_CSS_FIGHTER_MASK \
@@ -252,90 +227,6 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
      (NDS_P2_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
      (NDS_P2_PURIN ? LBBACKUP_MASK_FIGHTER(nFTKindPurin) : 0u) | \
      LBBACKUP_MASK_FIGHTER(nFTKindKirby))
-#elif NDS_P2_PURIN
-/* Purin lands behind his own flag; every earlier opt-in fighter rides its own
- * flag in this arm (admit_fighter.py). */
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
-     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
-     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
-     (NDS_P2_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindPurin))
-#elif NDS_P2_NESS
-/* Ness lands behind his own flag; every earlier opt-in fighter rides its own
- * flag in this arm (admit_fighter.py). */
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
-     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
-     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindNess))
-#elif NDS_P2_YOSHI
-/* Yoshi lands behind his own flag; Link and Pikachu ride their own flags in
- * this arm for the same reason Pikachu's arm below carries Link. */
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
-     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindYoshi))
-#elif NDS_P2_PIKACHU
-/* Pikachu lands behind his own flag while Link's CSS admission is still in
- * flight, so this arm carries Link only when that flag is also set. */
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindPikachu))
-#elif NDS_P2_LINK
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLink))
-#elif NDS_P2_SAMUS
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus))
-#elif NDS_P2_CAPTAIN
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain))
-#elif NDS_P2_DONKEY
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey))
-#elif NDS_P2_LUIGI
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi))
-#else
-#define NDS_CSS_FIGHTER_MASK \
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox))
-#endif
 
 static u8 sCssPkind[NDS_CSS_SLOTS];
 static u8 sCssFkind[NDS_CSS_SLOTS];
@@ -364,7 +255,6 @@ static u8 sCssIsTeamBattle;
  * 1P menu, and the commit writes the scene's training_man/com pair
  * (mnPlayers1PTrainingSetSceneData) and each one's content. */
 static u8 sCssTraining;
-#if NDS_P4
 /* P7 C1 (owner, 2026-10-18: "1p all chars allowed in campaign"). With Remix
  * contents compiled this screen is also the 1P game's select
  * (mnplayers1pgame.c): one human card in that select's own lower half over
@@ -401,10 +291,6 @@ static u32 sCssBonusTotal[3];
 static u32 sCssBonusTotalKey;
 #define NDS_CSS_ONEP (sCssOneP != 0u)
 #define NDS_CSS_BONUS (sCssOneP == NDS_CSS_ONEP_BONUS)
-#else
-#define NDS_CSS_ONEP 0
-#define NDS_CSS_BONUS 0
-#endif
 /* 1 + the mode label surface ndsMenuShellCssPopulate last blitted with BACK
  * over this entry's base surfaces; 0 until it has. */
 static u32 sCssEntryStatesShown;
@@ -485,7 +371,6 @@ static void ndsMenuShellCssCheer(void)
  * mode-toggle handler — FREE FOR ALL (512) or TEAM BATTLE (526). */
 static void ndsMenuShellCssAnnounceMode(void)
 {
-#if NDS_P4
     if (sCssOneP != 0u)
     {
         /* mnPlayers1PGameFuncStart's tail (:3478). A bonus select announces
@@ -509,7 +394,6 @@ static void ndsMenuShellCssAnnounceMode(void)
         }
         return;
     }
-#endif
     if (sCssTraining != 0u)
     {
         /* nSYAudioVoiceAnnounceTrainingMode, mnplayers1ptraining.c:3209. */
@@ -524,7 +408,6 @@ static void ndsMenuShellCssAnnounce(u32 slot)
 {
     u32 fkind = (u32)sCssFkind[slot];
 
-#if NDS_P4
     if (ndsMenuShellCssSelContent(fkind) != 0u)
     {
         /* add_to_css's own announcer FGM for a Remix selection. */
@@ -534,7 +417,6 @@ static void ndsMenuShellCssAnnounce(u32 slot)
         gNdsMenuShellCssAnnounceCount++;
         return;
     }
-#endif
 #ifdef NDS_P4_CSS_ANNOUNCE_KIND_13
     if (fkind == (u32)nFTKindMMario)
     {
@@ -619,13 +501,11 @@ static u32 ndsMenuShellCssSaveLocked(u32 fkind)
  * (by selection id; in a wireless room the host's, A1). */
 static u32 ndsMenuShellCssProgressLocked(u32 sel)
 {
-#if NDS_P4
     if (ndsMenuShellCssSelContent(sel) != 0u)
     {
         return (ndsMenuShellCssP7FighterOpen(NDS_P7_SEL_CONTENT(ndsMenuShellCssSelContent(sel))) != FALSE) ?
             FALSE : TRUE;
     }
-#endif
     if (sel == (u32)nFTKindMMario)
     {
         return (ndsMenuShellCssP7FighterOpen(NDS_P7_SEL_METAL) != FALSE) ? FALSE : TRUE;
@@ -635,7 +515,6 @@ static u32 ndsMenuShellCssProgressLocked(u32 sel)
 
 static u32 ndsMenuShellCssFighterLocked(u32 fkind)
 {
-#if NDS_P4
     /* A Remix selection exists when this build compiles its content, and is
      * open when the save has unlocked it (P7). */
     if (ndsMenuShellCssSelContent(fkind) != 0u)
@@ -643,7 +522,6 @@ static u32 ndsMenuShellCssFighterLocked(u32 fkind)
         return ((ndsP4Fighter(ndsMenuShellCssSelContent(fkind)) == NULL) ||
                 (ndsMenuShellCssProgressLocked(fkind) != FALSE)) ? TRUE : FALSE;
     }
-#endif
 #ifdef NDS_P4_CSS_GATE_KIND_13
     /* Metal Mario: the source kind P4 makes selectable (p4_css.py KINDS); no
      * save bit unlocks him in the source, the P7 block does. */
@@ -701,7 +579,6 @@ static s32 ndsMenuShellCssPortraitY(u32 portrait)
     return (s32)(((portrait >= 6u) ? 1u : 0u) * 43u) + 36;
 }
 
-#if NDS_P4
 /* The P4 grid cell holding a selection, or -1. */
 static s32 ndsMenuShellCssP4Cell(u32 sel)
 {
@@ -751,14 +628,12 @@ static u32 ndsMenuShellCssP4RandomSel(void)
     }
     return (u32)nFTKindMario;
 }
-#endif
 
 /* mnPlayersVSCenterPuckInPortrait, mnplayersvs.c:3454. */
 static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
 {
     u32 portrait;
 
-#if NDS_P4
     {
         /* token_autoposition_: the token's centre on its cell's centre. */
         s32 cell = ndsMenuShellCssP4Cell(fkind);
@@ -779,7 +654,6 @@ static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
                                 (NDS_P4_CSS_PITCH / 2) - NDS_CSS_P4_PUCK_CY);
         return;
     }
-#endif
 
     if (fkind >= NDS_CSS_PORTRAITS)
     {
@@ -800,7 +674,6 @@ static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
     }
 }
 
-#if NDS_P4
 /* The P4 grid cell under the (scaled) token's centre, or -1 off the grid
  * (Remix's get_character_id_). */
 static s32 ndsMenuShellCssPuckP4Cell(u32 slot)
@@ -816,7 +689,6 @@ static s32 ndsMenuShellCssPuckP4Cell(u32 slot)
     }
     return ((cy / NDS_P4_CSS_PITCH) * NDS_P4_CSS_COLUMNS) + (cx / NDS_P4_CSS_PITCH);
 }
-#endif
 
 /* mnPlayersVSGetPuckFighterKind, mnplayersvs.c:3001 -- which fighter the
  * token's CENTRE is over, or nFTKindNull. */
@@ -826,7 +698,6 @@ static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
     s32 y = (s32)sCssPuckY[slot] + 12;
     u32 fkind;
 
-#if NDS_P4
     {
         /* get_character_id_: the cell under the (scaled) token's centre. Over
          * the random chooser it is no fighter until the token drops. */
@@ -840,7 +711,6 @@ static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
         return (ndsMenuShellCssFighterLocked(fkind) != FALSE) ?
             (u32)nFTKindNull : fkind;
     }
-#endif
 
     if ((x <= 24) || (x >= 295))
     {
@@ -868,13 +738,8 @@ static u32 ndsMenuShellCssPuckInRange(u32 slot)
 {
     s32 x = sCssCursorX + 25;
     s32 y = sCssCursorY + 3;
-#if NDS_P4
     const s32 w = NDS_CSS_P4_PUCK_W;
     const s32 h = NDS_CSS_P4_PUCK_H;
-#else
-    const s32 w = 26;
-    const s32 h = 24;
-#endif
 
     if ((x < (s32)sCssPuckX[slot]) || (x > ((s32)sCssPuckX[slot] + w)))
     {
@@ -1162,12 +1027,8 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#if NDS_P4
 /* The twelve originals, then each compiled Remix selection in bake order. */
 #define NDS_CSS_GATE_FIGHTERS (12u + NDS_P4_CSS_GATE_FIGHTERS)
-#else
-#define NDS_CSS_GATE_FIGHTERS 12u
-#endif
 #define NDS_CSS_GATE_MAN_F0 3u
 #define NDS_CSS_GATE_COM_F0 (NDS_CSS_GATE_MAN_F0 + NDS_CSS_GATE_FIGHTERS)
 #define NDS_CSS_GATE_HOLD_F0 (NDS_CSS_GATE_COM_F0 + NDS_CSS_GATE_FIGHTERS)
@@ -1180,14 +1041,8 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA + NDS_CSS_GATE_STATES,
                "FFA gate surfaces must stay contiguous by player");
-#if NDS_P4
 #define NDS_CSS_GATE_LAST_FFA NDS_P4_CSS_GATE_LAST_FFA
 #define NDS_CSS_GATE_LAST_TEAM NDS_P4_CSS_GATE_LAST_TEAM
-#else
-#define NDS_CSS_GATE_LAST_FFA NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_KIRBY
-#define NDS_CSS_GATE_LAST_TEAM \
-    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_KIRBY
-#endif
 _Static_assert(NDS_CSS_GATE_LAST_FFA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
                        (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES) - 1u,
@@ -1326,7 +1181,6 @@ static void ndsMenuShellCssSyncTeamSelectAll(void)
  * (mnmessage.c:284-301) -- so entry is the only seam that must place them.
  * One blit for all four keeps it a single NitroFS open on a load frame, the
  * same budget the four gate panels already pay. */
-#if NDS_P4
 /* P7 U7: a cell the save locks draws Remix's NONE plate (the bake's
  * CSS_LOCKED_CELL<n>_READY<r>, READY-aware as the flashes are); a selection
  * this build does not compile is baked so already. Appends READY state
@@ -1350,7 +1204,6 @@ static u32 ndsMenuShellCssLockedCellCovers(NdsUiKitSurfaceId *list, u32 n,
     }
     return n;
 }
-#endif
 
 static void ndsMenuShellCssSyncLockedCells(void)
 {
@@ -1358,7 +1211,6 @@ static void ndsMenuShellCssSyncLockedCells(void)
     u32 count = 0u;
     u32 portrait;
 
-#if NDS_P4
     {
         NdsUiKitSurfaceId cells[NDS_P4_CSS_CELLS];
         u32 n = ndsMenuShellCssLockedCellCovers(
@@ -1373,7 +1225,6 @@ static void ndsMenuShellCssSyncLockedCells(void)
         }
         return;
     }
-#endif
 
     for (portrait = 0u; portrait < (u32)NDS_CSS_PORTRAITS; portrait++)
     {
@@ -1460,49 +1311,36 @@ static u32 ndsMenuShellCssGateState(u32 slot)
         fighter = 4u;
     }
 #endif
-#if NDS_P2_SAMUS
     else if (fkind == (u32)nFTKindSamus)
     {
         fighter = 5u;
     }
-#endif
 #if NDS_P2_LINK
     else if (fkind == (u32)nFTKindLink)
     {
         fighter = 6u;
     }
 #endif
-#if NDS_P2_PIKACHU
     else if (fkind == (u32)nFTKindPikachu)
     {
         fighter = 7u;
     }
-#endif
-#if NDS_P2_YOSHI
     else if (fkind == (u32)nFTKindYoshi)
     {
         fighter = 8u;
     }
-#endif
-#if NDS_P2_NESS
     else if (fkind == (u32)nFTKindNess)
     {
         fighter = 9u;
     }
-#endif
-#if NDS_P2_PURIN
     else if (fkind == (u32)nFTKindPurin)
     {
         fighter = 10u;
     }
-#endif
-#if NDS_P2_KIRBY
     else if (fkind == (u32)nFTKindKirby)
     {
         fighter = 11u;
     }
-#endif
-#if NDS_P4
     else if ((ndsMenuShellCssSelContent(fkind) != 0u) &&
              (kNdsP4CssGateIndex[ndsMenuShellCssSelContent(fkind)] !=
               0xffu) &&
@@ -1511,7 +1349,6 @@ static u32 ndsMenuShellCssGateState(u32 slot)
         fighter = 12u +
             (u32)kNdsP4CssGateIndex[ndsMenuShellCssSelContent(fkind)];
     }
-#endif
 #ifdef NDS_P4_CSS_GATE_KIND_13
     else if (fkind == (u32)nFTKindMMario)
     {
@@ -1531,7 +1368,6 @@ static u32 ndsMenuShellCssGateState(u32 slot)
                                          NDS_CSS_GATE_HOLD_F0) + fighter;
 }
 
-#if NDS_P4
 /* The 1P card: the fighter the token is on (or over, carried) by its gate
  * index, which is the VS card's (CSS_FIGHTER_TOKEN order), else empty. */
 _Static_assert(NDS_MN_UI_KIT_SURFACE_ONEP_P4_READY_ON ==
@@ -1967,7 +1803,6 @@ static void ndsMenuShellCssOnePDrawArrows(void)
                       NDS_MN_UI_KIT_IMAGE_DIGIT_0 + (u32)sCssOnePStock + 1u,
                       NDS_CSS_DS(207), NDS_CSS_DS(178));
 }
-#endif
 
 /* P2-1N (3): mnPlayersVSShutterProcUpdate + mnPlayersVSUpdateShutter,
  * transcribed. door_offset walks 2/tic toward 41 (shut) for an empty slot and
@@ -2341,7 +2176,6 @@ static void ndsMenuShellCssSyncPanels(u32 budget)
     u32 count = 0u;
     u32 i;
 
-#if NDS_P4
     if (sCssOneP != 0u)
     {
         NdsUiKitSurfaceId card = ndsMenuShellCssOnePGateSurface();
@@ -2366,7 +2200,6 @@ static void ndsMenuShellCssSyncPanels(u32 budget)
         }
         return;
     }
-#endif
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
         wanted[i] = ndsMenuShellCssGateSurface(i);
@@ -2412,7 +2245,6 @@ static void ndsMenuShellCssDrawArrows(void)
 {
     u32 i;
 
-#if NDS_P4
     if (NDS_CSS_BONUS)
     {
         /* The bonus selects have no LEVEL or STOCK row. */
@@ -2429,7 +2261,6 @@ static void ndsMenuShellCssDrawArrows(void)
         ndsMenuShellCssOnePDrawArrows();
         return;
     }
-#endif
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
         s32 panel = (s32)(i * 69u);
@@ -2487,7 +2318,6 @@ static void ndsMenuShellCssPopulate(void)
      * FFA/Team toggle is a swap; BACK is static and blits once here. The 1P
      * select's title and BACK are in its base; its time and level are
      * states. */
-#if NDS_P4
     if (NDS_CSS_BONUS)
     {
         ndsMenuShellCssBonusShowRows();
@@ -2497,7 +2327,6 @@ static void ndsMenuShellCssPopulate(void)
         ndsMenuShellCssOnePShowOptions();
     }
     else
-#endif
     {
         NdsUiKitSurfaceId entry_states[2];
 
@@ -2755,24 +2584,18 @@ static void ndsMenuShellCssMove(void)
 #define NDS_CSS_FLASH_KIND_FOX 1u
 #define NDS_CSS_FLASH_KIND_LUIGI 2u
 #define NDS_CSS_FLASH_KIND_LINK 3u
-#if NDS_P4
 /* The P4 grid flashes every cell: the kind IS the cell, and the bake emits
  * CSS_FLASH_CELL<n>_{OFF,ON}_READY{0,1} contiguously, four per cell. */
 #define NDS_CSS_FLASH_KIND_COUNT NDS_P4_CSS_CELLS
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_FLASH_CELL01_OFF_READY0 ==
                    NDS_MN_UI_KIT_SURFACE_CSS_FLASH_CELL00_OFF_READY0 + 4u,
                "P4 flash surfaces must stay four per cell");
-#else
-#define NDS_CSS_FLASH_KIND_COUNT 4u
-#endif
 
 static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
 {
-#if NDS_P4
     s32 cell = ndsMenuShellCssP4Cell(fkind);
 
     return (cell < 0) ? NDS_CSS_FLASH_KIND_NONE : (u32)cell;
-#endif
     if (fkind == (u32)nFTKindMario)
     {
         return NDS_CSS_FLASH_KIND_MARIO;
@@ -2800,57 +2623,9 @@ static NdsUiKitSurfaceId ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
 {
     u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
 
-#if NDS_P4
     return (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_FLASH_CELL00_OFF_READY0 +
                                (kind * 4u) + (ready * 2u) +
                                ((visible != FALSE) ? 1u : 0u));
-#else
-    if (kind == NDS_CSS_FLASH_KIND_MARIO)
-    {
-        if (ready != 0u)
-        {
-            return (visible != FALSE) ?
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY1 :
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY1;
-        }
-        return (visible != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_ON_READY0 :
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_MARIO_OFF_READY0;
-    }
-    if (kind == NDS_CSS_FLASH_KIND_FOX)
-    {
-        if (ready != 0u)
-        {
-            return (visible != FALSE) ?
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY1 :
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY1;
-        }
-        return (visible != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY0 :
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY0;
-    }
-    if (kind == NDS_CSS_FLASH_KIND_LUIGI)
-    {
-        if (ready != 0u)
-        {
-            return (visible != FALSE) ?
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY1 :
-                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY1;
-        }
-        return (visible != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY0 :
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY0;
-    }
-    if (ready != 0u)
-    {
-        return (visible != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_ON_READY1 :
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_OFF_READY1;
-    }
-    return (visible != FALSE) ?
-        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_ON_READY0 :
-        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_OFF_READY0;
-#endif
 }
 
 static u32 ndsMenuShellCssFlashAggregate(u32 kind)
@@ -3064,7 +2839,6 @@ static void ndsMenuShellCssShowReady(u32 lit)
     NdsUiKitSurfaceId state = (lit != FALSE) ?
         NDS_MN_UI_KIT_SURFACE_CSS_READY_ON :
         NDS_MN_UI_KIT_SURFACE_CSS_READY_OFF;
-#if NDS_P4
     /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
      * state surface restores the unlocked base there: the covers of what the
      * save locks ride the same blit, and the band draws around them
@@ -3090,12 +2864,6 @@ static void ndsMenuShellCssShowReady(u32 lit)
     {
         gNdsMenuShellCssPanelBlitCount += band_count;
     }
-#else
-    if (ndsUiKitBlitSurfaces(&state, 1u) != FALSE)
-    {
-        gNdsMenuShellCssPanelBlitCount++;
-    }
-#endif
     ndsUiKitClearForegroundRect(NDS_CSS_DS(0), NDS_CSS_DS(71),
                                 (u32)NDS_CSS_DS(320),
                                 18u); /* baked 22-source-row box -> 18 DS rows */
@@ -3134,12 +2902,6 @@ static void ndsMenuShellCssShowReady(u32 lit)
      * flash.  Its state surface overwrites the overlap, so re-apply only live
      * flash rectangles using the matching READY-aware baked variant. */
     ndsMenuShellCssRedrawVisibleFlashes();
-#if !NDS_P4
-    /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
-     * state surface restores the unlocked base there -- so a blink edge would
-     * erase rows 71..93 of a save-locked cell. Re-cover what the save locks. */
-    ndsMenuShellCssSyncLockedCells();
-#endif
 }
 
 /* --- Actions -------------------------------------------------------------- */
@@ -3188,7 +2950,6 @@ static u32 ndsMenuShellCssSelectFighter(void)
         ndsMenuShellCssDrop((u32)sCssHeld);
         return TRUE;
     }
-#if NDS_P4
     {
         /* The random chooser (owner 2026-10-17, "like SSS has"): a token
          * dropped on it takes a random unlocked selection, moves to that
@@ -3213,7 +2974,6 @@ static u32 ndsMenuShellCssSelectFighter(void)
             return TRUE;
         }
     }
-#endif
     /* The token is over a locked cell or off the grid: the source refuses with
      * the cue it spends on every refusal, and the token stays in hand. */
     ndsMenuShellCssCue(NDS_CSS_FGM_DENIED);
@@ -3304,17 +3064,8 @@ static void ndsMenuShellCssApplyKind(u32 slot)
              * FALSE; this build's EXISTENCE mask is the locked predicate. Do
              * not substitute frame parity: it is distribution-equivalent for
              * two choices but not the source RNG state/sequence. */
-#if NDS_P4
             /* P4: Remix's random draws among every available selection. */
             fkind = ndsMenuShellCssP4RandomSel();
-#else
-            do
-            {
-                fkind = (u32)syUtilsRandTimeUCharRange(
-                    (s32)nFTKindPlayableEnd + 1);
-            }
-            while (ndsMenuShellCssFighterLocked(fkind) != FALSE);
-#endif
             sCssFkind[slot] = (u8)fkind;
         }
         ndsMenuShellCssCenterPuck(slot, (u32)sCssFkind[slot]);
@@ -3551,14 +3302,11 @@ static void ndsMenuShellCssCommitTraining(void)
         (u8)ndsMenuShellCssSelFkind((u32)sCssFkind[com]);
     gSCManagerSceneData.training_com_costume =
         (u8)(ndsMNPlayersVSPreviewGetAppearance(com) & 0xffu);
-#if NDS_P4
     gNdsP4TrainingContent[0] = (u8)ndsMenuShellCssSelContent((u32)sCssFkind[man]);
     gNdsP4TrainingContent[1] = (u8)ndsMenuShellCssSelContent((u32)sCssFkind[com]);
-#endif
     gNdsMenuShellCssCommitCount++;
 }
 
-#if NDS_P4
 /* mnPlayers1PGameSetSceneData (:3262), on START and on the way back alike:
  * the time, level and stocks and the placed fighter -- a Remix selection's
  * setup parent with its content beside it -- then the source's save write. */
@@ -3631,7 +3379,6 @@ static void ndsMenuShellCssBonusCommit(void)
         (u8)nSCKind1PBonus1Players : (u8)nSCKind1PBonus2Players;
     gNdsMenuShellCssCommitCount++;
 }
-#endif
 
 static void ndsMenuShellCssCommit(void)
 {
@@ -3642,7 +3389,6 @@ static void ndsMenuShellCssCommit(void)
         ndsMenuShellCssCommitTraining();
         return;
     }
-#if NDS_P4
     if (NDS_CSS_BONUS)
     {
         ndsMenuShellCssBonusCommit();
@@ -3653,7 +3399,6 @@ static void ndsMenuShellCssCommit(void)
         ndsMenuShellCssOnePCommit();
         return;
     }
-#endif
     for (i = 0u; i < (u32)NDS_MATCH_FIGHTERS_MAX; i++)
     {
         NdsMatchFighterConfig *slot = &gNdsMatchConfig.fighters[i];
@@ -3821,7 +3566,6 @@ static void ndsMenuShellCssBack(void)
                          (u32)nSCKind1PMode : (u32)nSCKindVSMode);
 }
 
-#if NDS_P4
 #define NDS_CSS_ONEP_LEFT 2u
 /* mnPlayers1PGameCursorProcUpdate's furniture (:2672-2693), in its order:
  * the time arrows, BACK, then LEVEL and STOCK (right arrow first). TRUE when
@@ -3908,7 +3652,6 @@ static u32 ndsMenuShellCssOnePCheckOptions(void)
     }
     return TRUE;
 }
-#endif
 
 /* mnPlayersVSUpdateCursorNoRecall, mnplayersvs.c:3128. The band is 38..124 --
  * NOT the 36..122 the grid itself uses, which is the source's own two-pixel
@@ -3931,7 +3674,6 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
 {
     u32 slot;
 
-#if NDS_P4
     if (sCssOneP != 0u)
     {
         s32 costume;
@@ -3951,7 +3693,6 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
                                            NDS_CSS_FGM_SCROLL2);
         return TRUE;
     }
-#endif
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
         s32 panel = (s32)(slot * 69u);
@@ -4032,9 +3773,7 @@ static void ndsMenuShellCssUpdateStatus(void)
      * than transcribed-and-dead. */
 }
 
-#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
-      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+#if NDS_P2_MENU_WALK
 /* THE WALK'S CANONICAL SNAPSHOT (2026-09-04 rung-7 catch). The CSS cursor moves
  * in PIXELS (4 px a held frame), not cells, so the tour's travel distances are
  * roster-independent -- but its A presses are NOT: A over a portrait DROPS the
@@ -4061,7 +3800,6 @@ static void ndsMenuShellCssUpdateStatus(void)
  * legitimately commit other fighters. Runs only while the walk is driving
  * (gNdsMenuShellWalkLoops < gNdsMenuShellWalkBudget); never after the walk
  * parks and the player owns the pad. */
-#if NDS_P4
 /* The 1P walk's fighter: a poked content (gNdsP4OnePlayerContent), else the
  * campaign walk's portrait (gNdsMenuShellWalk1PPortrait, the source's cell
  * order), else the VS walk's slot-0 kind. */
@@ -4089,14 +3827,12 @@ static u32 ndsMenuShellCssWalkOnePTarget(void)
     }
     return ndsMenuShellCssWalkTargetKind((u32)0);
 }
-#endif
 
 static void ndsMenuShellCssWalkRestoreGate(void)
 {
     u32 walk_kind0 = ndsMenuShellCssWalkTargetKind((u32)0);
     u32 walk_kind1 = ndsMenuShellCssWalkTargetKind((u32)1);
 
-#if NDS_P4
     if (sCssOneP != 0u)
     {
         walk_kind0 = ndsMenuShellCssWalkOnePTarget();
@@ -4108,7 +3844,6 @@ static void ndsMenuShellCssWalkRestoreGate(void)
         ndsMenuShellCssPopulate();
         return;
     }
-#endif
 
     sCssFkind[(u32)0] = (u8)walk_kind0;
     sCssSelected[(u32)0] = 1u;
@@ -4242,7 +3977,6 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     {
         sCssWalkTourFinished = 1u;
         gNdsMenuShellCssWalkTourDoneCount++;
-#if NDS_P4
         /* The random chooser, once a lap (owner 2026-10-17): slot 0's token
          * dropped on its cell takes a random unlocked selection
          * (gNdsMenuShellCssWalkChooserSel; the gate restore below puts the
@@ -4257,7 +3991,6 @@ static u32 ndsMenuShellCssWalkTourStep(void)
             (void)ndsMenuShellCssSelectFighter();
             gNdsMenuShellCssWalkChooserSel = (u32)sCssFkind[(u32)0];
         }
-#endif
         /* The roster tour consumed the walk's input while it owned the
          * screen. Replay that input from the unchanged initial cursor after
          * restoring the pair: its CPU-arrow leg proves that CSS, not the
@@ -4287,7 +4020,6 @@ static void ndsMenuShellCssWalkTourReset(void)
     sCssWalkTourHold = 0u;
     sCssWalkTourTriBase = 0u;
 }
-#endif
 #endif
 
 /* --- P3: the character select as the wireless lobby ------------------------
@@ -4410,7 +4142,6 @@ static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
     sCssIsTeamBattle = (team_battle != 0u) ? 1u : 0u;
     label = (sCssIsTeamBattle != FALSE) ? NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
                                           NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
-#if NDS_P4
     {
         /* The host's toggle (the box over the top portrait row): the locked
          * covers ride the same blit and the box draws around them. */
@@ -4429,21 +4160,8 @@ static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
             }
         }
     }
-#else
-    if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
-    {
-        gNdsMenuShellCssPanelBlitCount++;
-        if (sCssEntryStatesShown != 0u)
-        {
-            sCssEntryStatesShown = (u32)label + 1u;
-        }
-    }
-#endif
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssSyncTeamSelectAll();
-#if !NDS_P4
-    ndsMenuShellCssSyncLockedCells();
-#endif
 }
 
 static void ndsMenuShellCssNetLeave(void)
@@ -4678,9 +4396,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         return;
     }
 
-#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
-      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+#if NDS_P2_MENU_WALK
     /* The roster tour owns the screen while it runs, which also swallows the
      * walk's START tap -- see the tour's own comment. Everything below is the
      * player's input path and has nothing to drive. */
@@ -4692,7 +4408,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         gNdsMenuShellCssCursorStatus = sCssStatus;
         return;
     }
-#endif
 #endif
 
     /* 1. The cursor. */
@@ -4767,7 +4482,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
      * furniture. Each returns TRUE only if it consumed the press. */
     if ((taps & NDS_INPUT_A) != 0u)
     {
-#if NDS_P4
         if (sCssOneP != 0u)
         {
             /* mnPlayers1PGameCursorProcUpdate (:2662): a drop, a grab, then
@@ -4789,7 +4503,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             }
         }
         else
-#endif
         if (ndsMenuShellCssCheckKindButton() == FALSE)
         {
             if (ndsMenuShellCssSelectFighter() == FALSE)
@@ -4815,7 +4528,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                         label = (sCssIsTeamBattle != FALSE) ?
                             NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
                             NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
-#if NDS_P4
                         {
                             /* The mode label box (27,24,113,22) crosses the
                              * top portrait row and its state surface
@@ -4839,16 +4551,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                                 }
                             }
                         }
-#else
-                        if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
-                        {
-                            gNdsMenuShellCssPanelBlitCount++;
-                            if (sCssEntryStatesShown != 0u)
-                            {
-                                sCssEntryStatesShown = (u32)label + 1u;
-                            }
-                        }
-#endif
                         /* mnPlayersVSUpdateGameMode:1918 stops every current FGM
                          * before the scroll and new mode announcement. */
                         ndsAudioFgmStopAll();
@@ -4859,12 +4561,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                          * source DL-34 selectors are foreground BG3. */
                         ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
                         ndsMenuShellCssSyncTeamSelectAll();
-#if !NDS_P4
-                        /* The mode label box (27,24,113,22) crosses the top
-                         * portrait row, and its state surface restores the
-                         * unlocked base there -- re-cover what the save locks. */
-                        ndsMenuShellCssSyncLockedCells();
-#endif
                         gNdsMenuShellCssModeToggleCount++;
                         return;
                     }
@@ -4950,9 +4646,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         u32 lit;
         /* The walk's START placed its fighter this frame (below). */
         u32 walk_placed = FALSE;
-#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
-      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+#if NDS_P2_MENU_WALK
         /* Walk-only canonical snapshot: wander first, restore, then run the
          * ordinary ready/START path below on the restored state. See the
          * snapshot's own comment for why this is roster-independent.
@@ -4968,7 +4662,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             ndsMenuShellCssWalkRestoreGate();
             walk_placed = TRUE;
         }
-#endif
 #endif
         (void)walk_placed;
         ready = ndsMenuShellCssCheckReady();
@@ -4992,7 +4685,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             ndsMenuShellCssShowReady(lit);
         }
 
-#if NDS_P4
         if (NDS_CSS_BONUS)
         {
             /* mnPlayers1PBonusFuncRun (:2711-2723): a pick arms a 140-tic
@@ -5025,7 +4717,6 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             }
         }
         else
-#endif
         if (((taps & NDS_INPUT_START) != 0u) &&
             (sMenuTics > (u32)NDS_CSS_START_ARM_TICS) &&
             (ndsMenuShellCssNetGuest() == FALSE))
@@ -5080,15 +4771,11 @@ static void ndsMenuShellCssInitTraining(void)
         sCssPkind[i] = (i == man) ? (u8)nFTPlayerKindMan : (u8)nFTPlayerKindCom;
         fkind = (i == man) ? (u32)gSCManagerSceneData.training_man_fkind :
                              (u32)gSCManagerSceneData.training_com_fkind;
-#if NDS_P4
         if ((fkind != (u32)nFTKindNull) &&
             (ndsP4Fighter(gNdsP4TrainingContent[slot_index]) != NULL))
         {
             fkind = NDS_P4_SEL_BASE + (u32)gNdsP4TrainingContent[slot_index];
         }
-#else
-        (void)slot_index;
-#endif
         if ((fkind != (u32)nFTKindNull) &&
             (ndsMenuShellCssFighterLocked(fkind) != FALSE))
         {
@@ -5096,16 +4783,7 @@ static void ndsMenuShellCssInitTraining(void)
         }
         if ((i == com) && (fkind == (u32)nFTKindNull))
         {
-#if NDS_P4
             fkind = ndsMenuShellCssP4RandomSel();
-#else
-            do
-            {
-                fkind = (u32)syUtilsRandTimeUCharRange(
-                    (s32)nFTKindPlayableEnd + 1);
-            }
-            while (ndsMenuShellCssFighterLocked(fkind) != FALSE);
-#endif
         }
         sCssFkind[i] = (u8)fkind;
         sCssLevel[i] = 3u;
@@ -5115,7 +4793,6 @@ static void ndsMenuShellCssInitTraining(void)
     }
 }
 
-#if NDS_P4
 /* mnPlayers1PGameInitVars / InitPlayer (:3387/:3351): the man keeps the
  * scene's fighter -- a Remix selection when the content beside that kind is
  * one -- or, with none (a first visit), opens with the token in the hand;
@@ -5195,7 +4872,6 @@ static void ndsMenuShellCssInitBonus(void)
         ndsMenuShellCssCenterPuck(i, (u32)nFTKindNull);
     }
 }
-#endif
 
 /* mnPlayersVSInitVars + mnPlayersVSInitPlayer + mnPlayersVSInitSlot,
  * mnplayersvs.c:4670/:4579/:4698, reading the P2-1a descriptor instead of
@@ -5205,13 +4881,10 @@ static void ndsMenuShellCssInit(void)
 {
     u32 i;
 
-#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
-      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+#if NDS_P2_MENU_WALK
     /* Per entry, not per boot: a second visit tours again, and the masks are
      * cumulative so a kind that drew on either visit reads as drawn. */
     ndsMenuShellCssWalkTourReset();
-#endif
 #endif
     sCssNet = ndsNetInSession();
     sCssNetArt = 0u;
@@ -5239,7 +4912,6 @@ static void ndsMenuShellCssInit(void)
     /* mnPlayersVSMakeCursor seats player p at x 40 + 68p. */
     sCssCursorX = NDS_CSS_CURSOR_HOME_X + 68 * (s32)sCssCursorSlot;
     sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
-#if NDS_P4
     sCssOneP = 0u;
     if (sCssNet == 0u)
     {
@@ -5262,7 +4934,6 @@ static void ndsMenuShellCssInit(void)
         sCssCursorX = NDS_CSS_BONUS ? 80 : 60;
         sCssCursorY = 170;
     }
-#endif
     sCssStatus = NDS_CSS_STATUS_POINTER;
     sCssHeld = -1;
     sCssRegrabTic = 0u;
@@ -5299,12 +4970,10 @@ static void ndsMenuShellCssInit(void)
 
         sCssPkind[i] = cfg->pkind;
         sCssFkind[i] = cfg->fkind;
-#if NDS_P4
         if (ndsP4Fighter(cfg->p4_content) != NULL)
         {
             sCssFkind[i] = (u8)(NDS_P4_SEL_BASE + cfg->p4_content);
         }
-#endif
         sCssLevel[i] = (cfg->level < 1u) ? 1u : ((cfg->level > 9u) ? 9u :
                                                  cfg->level);
         sCssHandicap[i] = ndsMatchConfigClampPublishedHandicap(cfg->handicap);
@@ -5337,7 +5006,6 @@ static void ndsMenuShellCssInit(void)
     {
         ndsMenuShellCssInitTraining();
     }
-#if NDS_P4
     if (NDS_CSS_BONUS)
     {
         ndsMenuShellCssInitBonus();
@@ -5349,7 +5017,6 @@ static void ndsMenuShellCssInit(void)
     /* The 1P card stands its fighter where the 1P select does (the bonus
      * selects' where theirs do). */
     ndsMNPlayersVSPreviewSetOnePlayerLayout((u32)sCssOneP);
-#endif
     /* P3: this console's own port is always a human in a room. */
     if ((sCssNet != 0u) &&
         (sCssPkind[NDS_CSS_CURSOR_SLOT] != (u8)nFTPlayerKindMan))
@@ -5479,9 +5146,7 @@ static void ndsMenuShellPopulateCssScreen(void)
      * rule bar. */
     sCssEntryStatesShown = 0u;
     sCssRuleShown = 0u;
-#if NDS_P4
     sCssOnePShown = 0u;
-#endif
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssPopulate();
     ndsMenuShellCssSyncTeamSelectAll();

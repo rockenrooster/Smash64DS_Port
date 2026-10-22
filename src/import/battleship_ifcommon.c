@@ -1,4 +1,3 @@
-#if NDS_IMPORT_BATTLESHIP_IFCOMMON
 #include <ef/effect.h>
 #include <ft/fighter.h>
 #include <gm/generic.h>
@@ -463,20 +462,9 @@ static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
 
 static sb32 ndsIFCommonFastIterationIsEnabled(void)
 {
-#if NDS_P2_LINK_SPECIAL_TOUR || \
-    (NDS_P2_YOSHI_BUG_PROOF && !NDS_HARNESS_FAST_LOGIC) || \
-    (NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && NDS_HARNESS_FAST_LOGIC)
-    /* These proofs use NDS_R2_FOX_CPU_DEFAULT=0 only to isolate the focused
-     * fighter from Fox's CPU decisions/input. Keep BattleShip's ordinary
-     * countdown/timer cadence; the historical "Fox off" fast-iteration policy
-     * is unrelated to the move being qualified and freezes the entry-focus
-     * thread before it can hand common Entry to the fighter's Appear status. */
-    return FALSE;
-#else
     return (gNdsSceneHarnessMode ==
             NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
            (gNdsBattlePlayableFoxCpuEnabled == 0u);
-#endif
 }
 
 static u32 ndsIFCommonGetTicCount(void)
@@ -1443,4 +1431,3 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
     }
     return FALSE;
 }
-#endif

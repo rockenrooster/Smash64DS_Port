@@ -25,7 +25,6 @@
  * referenced verbatim and listed in the task report -- no values invented
  * here.
  */
-#if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
 #include <ef/effect.h>
@@ -482,4 +481,3 @@ void itStarRodMakeStar(GObj *fighter_gobj, Vec3f *pos, ub8 is_smash)
     ip->multi--;
 }
 
-#endif /* NDS_P2_ITEM_CORE */

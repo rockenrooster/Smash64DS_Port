@@ -174,9 +174,6 @@ volatile u32 gNdsSyMallocOverflowRequest;
 volatile u32 gNdsSyMallocOverflowAlignment;
 volatile u32 gNdsSyMallocOverflowHeadroom;
 volatile u32 gNdsSyMallocOverflowCallerLR;
-#if NDS_R2_SECOND_ENTRY_DIAG
-void ndsAllocLedgerPublishTop(void);
-#endif
 
 /* R2-06 E4 REFUTED this function's call overhead as a cost, so it stays one plain
  * out-of-line function. Forcing the fit test inline at syMallocSet's call site
@@ -252,12 +249,6 @@ void *syMallocSet(SYMallocRegion *bp, size_t size, u32 alignment)
          * published state mean what it says, including the caller address,
          * which is the field the corrupt backtrace past frame 1 cannot
          * supply. It costs one flush on a path that never returns. */
-#if NDS_R2_SECOND_ENTRY_DIAG
-        /* And if the allocation ledger is compiled in, rank it here: knowing
-         * WHICH request failed is half the answer, and the other half is what
-         * had already taken the arena. */
-        ndsAllocLedgerPublishTop();
-#endif
         DC_FlushAll();
         ndsSyMallocOverflowHalt();
     }

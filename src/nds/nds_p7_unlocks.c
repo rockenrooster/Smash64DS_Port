@@ -269,12 +269,7 @@ u32 ndsP7ChallengerContent(s32 player)
 
 u32 ndsP7UnlockContentCompiled(u32 content)
 {
-#if NDS_P4
     return (ndsP4Fighter(content) != NULL) ? TRUE : FALSE;
-#else
-    (void)content;
-    return FALSE;
-#endif
 }
 
 u32 ndsP7UnlockStageCompiled(u32 gkind)
