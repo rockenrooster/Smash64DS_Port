@@ -166,19 +166,23 @@ def test_compiled_corners_patch_coverage_and_stack(name):
 
 def test_live_near_bounds_are_conservative():
     sys.path.insert(0, str(gx.stage._paths.REPO_ROOT / 'scripts/menus'))
-    from source_test_helpers import function
+    from source_test_helpers import braced, function
     source = (gx.stage._paths.REPO_ROOT / 'src/nds/nds_stage_gx.exec.inc').read_text()
+    # The box test the run wrapper calls: its head carries
+    # __attribute__((always_inline)), which function() does not match.
+    box = braced(source, r'^[\w *]*(?:__attribute__\(\([^()]*\)\)\s*)*[\w *]*'
+                         r'\bndsStageGxInsideNearBox\([^;]*?\)\s*\{')
     code = r'''
 #include <stdint.h>
 #include <limits.h>
 #include <stdio.h>
 #include <nds/nds_stage_gx.h>
-typedef int32_t s32; typedef int64_t s64; typedef uint32_t u32; typedef int sb32;
+typedef int16_t s16; typedef int32_t s32; typedef int64_t s64; typedef uint32_t u32; typedef int sb32;
 typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
 static s32 ndsRendererClampS64ToS32(s64 n) {
     return n < INT32_MIN ? INT32_MIN : n > INT32_MAX ? INT32_MAX : (s32)n;
 }
-''' + function(source, 'ndsStageGxInsideNear') + r'''
+''' + box + '\n' + function(source, 'ndsStageGxInsideNear') + r'''
 int main(void) {
     NDSStageGxRun r = {0}; NDSRendererMatrix20p12 m;
     while (scanf("%hd", &r.minimum[0]) == 1) {
@@ -303,10 +307,13 @@ def test_material_words_and_submission_boundaries():
 #include <stdint.h>
 #include <assert.h>
 #include <stddef.h>
+#include <string.h>
 #include <nds/nds_stage_gx.h>
 typedef uint32_t u32; typedef int sb32;
 #define FALSE 0
 #define TRUE 1
+#define NDS_DIAG(x) ((void)(x))
+#define NDS_LAB_STAGE_GX_HASH 0
 #define NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK 0xc00f0000u
 #define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z 3u
 #define NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT 4u
@@ -322,29 +329,47 @@ static struct { u32 gkind; } packet = {6}, *sNdsNativeStagePacketActive = &packe
 typedef struct { void **data; u32 cur_size; } DynamicArray;
 typedef struct { u32 texFormat; int palIndex; } gl_texture_data;
 typedef struct { uint16_t addr; } gl_palette_data;
-static struct { DynamicArray texturePtrs, palettePtrs; } glGlobalData;
+static struct { DynamicArray texturePtrs, palettePtrs; int activeTexture, activePalette; } glGlobalData;
 typedef struct { u32 poly_fmt, textured, texture_name, texture_params, alpha_test, alpha_ref; } NDSNativeStagePreparedRun;
+static struct { sb32 task36_segment_active; } sNdsNativeStageOwnerExecution;
 static u32 storage[100], *sNdsStageGxWords = storage;
 static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
+static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
 static u32 sNdsFighterPacketDmaPending, gNdsP2StageProgDmas;
 static u32 sNdsRendererHardwareBoundTextureName, sNdsRendererHardwareMatrixLoaded, sNdsRendererHardwareTriangleBatchOpen;
 static void *sNdsRendererHardwareActiveTextureEntry, *sNdsR2GxLastProjection;
 static u32 regs[3], GFX_FIFO, spans[8][2], waits, alphas;
+/* The call order: S a span's state, W a wait on the DMA, D a DMA armed,
+ * E the Task 36 segment end, B the batch end. */
+static char order[64];
+static u32 order_len;
+static void mark(char c) { assert(order_len + 1 < sizeof order); order[order_len++] = c; }
 #define DMA_SRC(i) regs[0]
 #define DMA_DEST(i) regs[1]
 #define DMA_CR(i) regs[2]
-#define NDS_FIGHTER_PACKET_DMA_WAIT() do { if (sNdsFighterPacketDmaPending) waits++; sNdsFighterPacketDmaPending=0; } while (0)
+#define NDS_FIGHTER_PACKET_DMA_WAIT() do { if (sNdsFighterPacketDmaPending) { waits++; mark('W'); } sNdsFighterPacketDmaPending=0; } while (0)
 static void DC_FlushRange(const u32 *p, u32 bytes) {
+    assert(!sNdsFighterPacketDmaPending); /* never two transfers at once */
     spans[gNdsP2StageProgDmas][0] = (u32)(p-storage);
     spans[gNdsP2StageProgDmas][1] = bytes/4;
+    mark('D');
 }
 static void ndsRendererHardwareInvalidateGXState(u32 mask) { assert(mask==7); }
-static void ndsRendererNativeStageTask36EndSegment(void) { assert(!sNdsFighterPacketDmaPending); }
-static void ndsRendererHardwareEndBatch(void) { assert(!sNdsFighterPacketDmaPending); }
-static void glEnable(u32 mode) { assert(!sNdsFighterPacketDmaPending); }
-static void glDisable(u32 mode) { assert(!sNdsFighterPacketDmaPending); }
-static void glAlphaFunc(u32 ref) { assert(!sNdsFighterPacketDmaPending); alphas++; }
-''' + '\n'.join(function(source, name) for name in ('ndsStageGxMaterial', 'ndsStageGxFlush', 'ndsStageGxAppend')) + r'''
+/* Ending an open Task 36 segment writes the FIFO, so it must follow the
+ * previous span's DMA; with no segment (or batch) open these write nothing. */
+static void ndsRendererNativeStageTask36EndSegment(void) {
+    if (sNdsNativeStageOwnerExecution.task36_segment_active) {
+        assert(!sNdsFighterPacketDmaPending);
+        sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+    }
+    mark('E');
+}
+static void ndsRendererHardwareEndBatch(void) { mark('B'); }
+static void glEnable(u32 mode) { if (mode == GL_TEXTURE_2D) mark('S'); }
+static void glDisable(u32 mode) { (void)mode; }
+static void glAlphaFunc(u32 ref) { (void)ref; alphas++; }
+''' + '\n'.join(function(source, name) for name in ('ndsStageGxMaterial', 'ndsStageGxFlush',
+                                                     'ndsStageGxSetSpanState', 'ndsStageGxAppend')) + r'''
 int main(void) {
     gl_texture_data texture = {0x12345678u,1}; gl_palette_data palette = {0x321};
     void *textures[] = {0,&texture,0}, *palettes[] = {0,&palette,0};
@@ -365,17 +390,28 @@ int main(void) {
     p.textured=0; assert(ndsStageGxMaterial(w,&p,3,0) && w[1]==0 && w[2]==0);
     NDSStageGxRun a = {.first_word=0,.word_count=10};
     NDSStageGxRun b = {.first_word=10,.word_count=20};
-    ndsStageGxAppend(&a,&p); ndsStageGxAppend(&b,&p);
-    assert(gNdsP2StageProgDmas==0 && sNdsStageGxWordCount==30);
+    ndsStageGxAppend(&a,&p); ndsStageGxAppend(&b,&p); /* Contiguous, one state: one span. */
+    assert(gNdsP2StageProgDmas==0 && sNdsStageGxWordCount==30 && !strcmp(order,"EBS"));
     a.first_word=40; /* A hidden run leaves a gap: do not submit its words. */
+    glGlobalData.activeTexture = glGlobalData.activePalette = 5;
     ndsStageGxAppend(&a,&p);
-    assert(gNdsP2StageProgDmas==1 && spans[0][0]==0 && spans[0][1]==30 && waits==1);
-    a.first_word=50; p.alpha_ref=7; ndsStageGxAppend(&a,&p);
-    assert(gNdsP2StageProgDmas==2 && spans[1][0]==40 && spans[1][1]==10 && waits==2);
+    /* The next span's state goes out before the flush arms the DMA (P2-2p8). */
+    assert(gNdsP2StageProgDmas==1 && spans[0][0]==0 && spans[0][1]==30 && waits==0);
+    assert(sNdsStageGxDmaFirst==0 && sNdsStageGxDmaEnd==30 && !strcmp(order,"EBSSDEB"));
+    /* libnds forgets the names the packet's registers replaced. */
+    assert(glGlobalData.activeTexture==0 && glGlobalData.activePalette==0);
+    a.first_word=50; p.alpha_ref=7; ndsStageGxAppend(&a,&p); /* Contiguous, an alpha edge. */
+    assert(gNdsP2StageProgDmas==2 && spans[1][0]==40 && spans[1][1]==10 && waits==1);
+    assert(!strcmp(order,"EBSSDEBSWDEB"));
     ndsStageGxFlush(); /* Segment/cold-clip boundary must drain the queued span. */
-    assert(gNdsP2StageProgDmas==3 && spans[2][0]==50 && spans[2][1]==10);
+    assert(gNdsP2StageProgDmas==3 && spans[2][0]==50 && spans[2][1]==10 && waits==2);
     assert(sNdsFighterPacketDmaPending && !sNdsStageGxWordCount && alphas==3);
-    ndsStageGxFlush(); assert(gNdsP2StageProgDmas==3);
+    ndsStageGxFlush(); assert(gNdsP2StageProgDmas==3); /* Nothing queued, nothing sent. */
+    /* An open Task 36 segment ends only after the previous span's DMA. */
+    sNdsNativeStageOwnerExecution.task36_segment_active = TRUE;
+    a.first_word=60; ndsStageGxAppend(&a,&p);
+    assert(waits==3 && !sNdsNativeStageOwnerExecution.task36_segment_active && alphas==4);
+    assert(!strcmp(order,"EBSSDEBSWDEBWDWEBS"));
 }
 '''
     with tempfile.TemporaryDirectory() as directory:
