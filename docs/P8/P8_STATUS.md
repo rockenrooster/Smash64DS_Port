@@ -43,7 +43,7 @@ commit with explicit paths only.
 | F history names | open | |
 | G Makefile cleanup and split | open | proof: `make -n` identity |
 | H-2 the rest of the tools, `quick_check.ps1` | open | |
-| I docs routing, P7 close-out, archive | in progress | `AGENTS.md` and `HANDOFF.md` route to P8 (2026-10-22); next `docs/README.md`'s table (dirty: merge) and `P7_STATUS.md`'s rows against their evidence |
+| I docs routing, P7 close-out, archive | in progress | `AGENTS.md`, `HANDOFF.md` and `docs/README.md` route to P8 (the owner's pending README rows kept); next `P7_STATUS.md`'s rows against their evidence, then the `BUG_NOTES.md` / `PERF_LEDGER.md` archive |
 | S2 fault injection (squeeze, slow storage, long soak, laps, fuzz) | open | lab flags only |
 | S4 stalls (load ledger, storage waits, menu spikes) | open | |
 | S5 freeze report gaps | open | menus, loads, before the first frame; identity fields |

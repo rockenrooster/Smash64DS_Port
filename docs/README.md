@@ -1,11 +1,11 @@
 # Documentation Index
 
-One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptance. Current implementation state, blockers, artifact identity and next action live in `P2_EXECUTION_BOARD.md`. Static plans describe required outcomes and dependencies, not duplicate live completion counts.
+One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptance. Current implementation state, blockers, artifact identity and next action live in `P8/P8_STATUS.md`, the cursor of the live plan `P8/P8_PLAN.md` (`P2_EXECUTION_BOARD.md` is P2's history). Static plans describe required outcomes and dependencies, not duplicate live completion counts.
 
 ## Continuation reading path
 
-The goal points to the destination; the **Execution cursor** in
-`P2_EXECUTION_BOARD.md` points to the next unfinished action. Use it directly in
+The goal points to the destination; the **Cursor** in
+`P8/P8_STATUS.md` points to the next unfinished action. Use it directly in
 an intact context. After context loss, read `HANDOFF.md`, the cursor and its receipt
 once; inspect only relevant changes before continuing that phase. Read applicable
 contracts/skills before relying on them, not all linked history on every turn.
@@ -21,7 +21,8 @@ in the existing batch receipt rather than reapplying unchanged patches.
 
 | Document | Responsibility |
 |---|---|
-| `P2_EXECUTION_BOARD.md` | Only dynamic queue, current owner decisions, blockers, states and artifact identity |
+| `P8/` | The live plan (stability, readability, RAM and CPU loops) and its cursor, `P8_STATUS.md`: the only dynamic queue |
+| `P2_EXECUTION_BOARD.md` | P2's queue, owner decisions and artifact identity, kept as history |
 | `HANDOFF.md` | Short restart route and immediate package pointer; no second live measurement table |
 | `P2_PLAN.md` + `p2/` | Seven phases, shared dependencies, bounded outcome packages and source-backed unit contracts |
 | `p2/native-optimization/` | Static P2-2p8 native-runtime implementation breakdown; the execution board remains the only live queue |
@@ -31,6 +32,7 @@ in the existing batch receipt rather than reapplying unchanged patches.
 | `BUG_FIXING_PROCESS.md` | Bug diagnosis, native-only rule, observable proof and closure |
 | `p2/BUG_NOTES.md` | Append-only investigation evidence, eliminated hypotheses and scoped measurements |
 | `ARCHITECTURE.md` | Stable component/backend/source boundaries |
+| `N64_vs_Nintendo_DS_Hardware_Reference.md` | Owner-provided hardware reference; supporting material for DS architecture work |
 | `RAM_RECOVERY_PLAN.md` | RAM recovery/resource work; current P2 capacity contract is linked to the semantic estimator |
 | `KNOWN_ISSUES.md` | Durable unresolved gaps |
 | `BACKLOG.md` | Owner-deferred minor bugs |
@@ -44,8 +46,12 @@ in the existing batch receipt rather than reapplying unchanged patches.
 | `../.agents/skills/nds-coding-practices/` | Project-specific DS hardware/API recipes; not scheduling, verification cadence or closure policy |
 | `P3_Multiplayer/` | P3 wireless plans; outside P2 |
 | `P4/` | Later new-character plans; outside original-content P2 |
+| `P5/` | Smash Remix stages: owner brief, implementation plan (seven stages, the 6x3 stage select), live status |
+| `P6/` | Ike and Palutena: fighters converted from the owner's 3DS models onto the P4 content pipeline (`P6_PLAN.md`, `P6_STATUS.md`, cards) |
+| `P7/` | Unlocks, saves, cheats and fighter balance: owner brief, implementation plan, live status |
 | `balance/` | Fighter and stage balance: the balance sheet (local, rebuilt by `scripts/p7/build-balance-table.ps1`) and the owner's changes in force |
 | `../scripts/README.md` | Repository script layout/path convention |
+| `../scripts/tools/README.md` | The live build, probe, audit and measurement tools |
 
 ## P2 owners
 
