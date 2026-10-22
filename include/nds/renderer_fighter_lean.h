@@ -54,7 +54,6 @@
  * admission runs while the battle loads, before the first frame marker. */
 
 #include <nds/nds_renderer.h>
-#include <nds/nds_ftr_lean_live.h>
 
 /* Slice 2b BSS diet: the lean counters (engagement, kernel, oracle, census,
  * texture witnesses: gNdsFtrLean below) are the lab instrument. A build
@@ -81,11 +80,7 @@
  * loop and the four-CPU stress target alike (the lab-only
  * NDS_FTR_LEAN_ADMIT_DEFAULT / NDS_FTR_LEAN_ADMIT_LAB boot values are gone).
  * An image without the lean path keeps both words 0: nothing reads them. */
-#if NDS_FTR_LEAN_LIVE
 #define NDS_FTR_LEAN_ADMIT_BOOT NDS_FTR_LEAN_ADMIT_REGIONS
-#else
-#define NDS_FTR_LEAN_ADMIT_BOOT 0u
-#endif
 
 extern volatile u32 gNdsFtrLeanAdmit;
 /* Slice 3 cost A/B (DTCM runtime word, default 0 = every slice 3 cut on).
@@ -407,30 +402,12 @@ typedef struct NDSFtrLeanCounters
 extern NDSFtrLeanCounters gNdsFtrLean;
 #endif
 
-/* Slice 5 attribution, lab ROM only (a tick-HUD build made with
- * NDS_FTR_LEAN_KTIME=1, own build dir): every per-draw phase split per kind,
- * the head's own parts, the event path's steps, and the kernel's stall share.
- * Two more gNdsFtrLeanSlow bits select the kernel experiments there:
- *   32  after each lock-free kernel pass, run the same pass again at once
- *       (code and data warm) and once more after DC_FlushAll (data cold, code
- *       warm); the passes write the same words, so the list is unchanged
- *   64  drain DMA0 (the previous fighter's list) before the kernel, so its
- *       loads never wait behind a GXFIFO burst
- * Neither bit, nor any of this block, exists outside that ROM. */
-#define NDS_FTR_LEAN_SLOW_KERNEL_RERUN 32u
-#define NDS_FTR_LEAN_SLOW_KERNEL_QUIET 64u
 /* Slice 5 cost A/B (any tick-HUD ROM, like bits 1/2/4): each bit puts one
  * slice 5 cut back to its slice 4 form on the same ROM.
  *   128  the head's camera LookAt runs for every fighter (no reuse)
  *   256  the per-draw patch refreshes the shared production inputs first */
 #define NDS_FTR_LEAN_SLOW_HEAD_LOOKAT 128u
 #define NDS_FTR_LEAN_SLOW_REFRESH 256u
-/* A build whose roster compiles in a lean kind (P2: Donkey, Samus, Link or
- * Kirby). P1's Mario/Fox build never engages the lean path, so the slice 5
- * placement and head changes stay out of it. */
-#define NDS_FTR_LEAN_KINDS_BUILD 1
-#define NDS_FTR_LEAN_ATTR_LIVE 0
-#define NDS_FTR_LEAN_ATTR(...) ((void)0)
 
 /* A9: the per-draw phase clocks (head, guard and its parts, kernel, patch and
  * its parts, book, submit and its parts: ~30 clock reads per frame per
@@ -441,15 +418,9 @@ extern NDSFtrLeanCounters gNdsFtrLean;
  * the materializer's per-part clocks (materialize_part_ticks) are phase ticks.
  * Same-ROM A/B (clocks off vs on, counters written in both): WORK-H paired
  * median -4.9K, FTR -4.6K. */
-#if NDS_FTR_LEAN_LAB && NDS_FTR_LEAN_ATTR_LIVE
-#define NDS_FTR_LEAN_TIMED 1
-#define NDS_FTR_LEAN_CLOCK() cpuGetTiming()
-#define NDS_FTR_LEAN_TCTR(...) do { __VA_ARGS__; } while (0)
-#else
 #define NDS_FTR_LEAN_TIMED 0
 #define NDS_FTR_LEAN_CLOCK() 0u
 #define NDS_FTR_LEAN_TCTR(...) ((void)0)
-#endif
 
 /* Route-2 handshake: set by the old path's matrix prep when the forced
  * Q43.20 source compose produced this draw's matrices. */

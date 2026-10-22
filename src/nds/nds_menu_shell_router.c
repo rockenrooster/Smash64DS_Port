@@ -508,7 +508,6 @@ static void ndsMenuShellRun(u32 screen)
 
         ndsPlatformRenderDebugHud();
         ndsMenuShellRecordFrame();
-#if NDS_TRANSITION_HOLD
         /* The leaving frame is presented whole and then held: the exit below
          * (the CSS hides its previews' BG0 first) records its teardown
          * instead of showing it, and the next screen's first display write
@@ -525,13 +524,6 @@ static void ndsMenuShellRun(u32 screen)
         {
             ndsPlatformTransitionHoldBegin();
         }
-#else
-        /* The leaving frame commits the loading cover, so the exit below (the
-         * CSS hides its previews' BG0 first) is never on screen (r62 css-sss
-         * 0038). */
-        ndsVideoSetTransitionBlackout((sMenuLeaving != FALSE) ? TRUE : FALSE);
-        ndsPlatformEndFrame();
-#endif
         ndsMenuShellRecordPresent();
     }
 

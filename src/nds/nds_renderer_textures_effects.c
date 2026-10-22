@@ -1781,14 +1781,6 @@ ndsRendererHardwareFindStageSourceFrameTexture(
             (ident->tlut_image == key->tlut_image) &&
             (ident->texel1_image == key->texel1_image))
         {
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-            if ((gNdsTexIdentShadowOn != 0u) &&
-                (ndsRendererHardwareTextureShadowVerify(entry, key, 1u, 2u) ==
-                 FALSE))
-            {
-                continue;
-            }
-#endif
             return entry;
         }
     }
@@ -1825,22 +1817,6 @@ ndsRendererHardwareFindTexel1RefreshTexture(
              (sNdsRendererHardwareFrameSerial + 1u)) &&
             (resident->refresh == refresh))
         {
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-            if (gNdsTexIdentShadowOn != 0u)
-            {
-                NDSRendererHardwareTextureKey exact;
-
-                ndsRendererHardwareEntryCopyKey(entry, &exact);
-                gNdsTexIdentLab.checks++;
-                if (ndsRendererHardwareTexel1RefreshCompatible(
-                        &exact, key) == FALSE)
-                {
-                    ndsRendererHardwareTextureIdentCollision(
-                        3u, i, resident->id_a, resident->id_b);
-                    continue;
-                }
-            }
-#endif
             return entry;
         }
     }
@@ -3937,9 +3913,6 @@ void ndsVramCensusFrame(void)
     u32 i;
 
     /* Slice 2c lab blocks: the sampler reads memory, not the D-cache. */
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-    DC_FlushRange(&gNdsTexIdentLab, sizeof(gNdsTexIdentLab));
-#endif
     ndsFtrCarveLabPublish();
     if (gNdsVramCensusEnable == 0u)
     {
@@ -4067,41 +4040,6 @@ static void ndsVramCensusNoteCacheKey(
         (((entry->params >> 20) & 7u) << 8) |
         (((entry->params >> 23) & 7u) << 11) | (pal_code << 14) |
         (((entry->params >> 16) & 0xfu) << 16);
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-    /* The admitted keys this compares against exist whole only where a
-     * shadow keeps them (slice 2c: the NDS_TEX_IDENT_SHADOW lab build). */
-    if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.diag_state[slot] == 0u))
-    {
-        u32 j;
-
-        memcpy(gNdsFtrAdmitLab.diag_outside_key[slot], key,
-               sizeof(gNdsFtrAdmitLab.diag_outside_key[slot]));
-        gNdsFtrAdmitLab.diag_state[slot] = 2u;
-        for (j = 0u; j < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; j++)
-        {
-            const NDSRendererHardwareTextureCacheEntry *other =
-                &sNdsRendererHardwareTextureCache[j];
-            NDSRendererHardwareTextureKey other_key;
-
-            if ((other->admitted == 0u) || (other->ready == 0u))
-            {
-                continue;
-            }
-            ndsRendererHardwareEntryCopyKey(other, &other_key);
-            if (other_key.image != key->image)
-            {
-                continue;
-            }
-            gNdsFtrAdmitLab.diag_same_image[slot]++;
-            if (gNdsFtrAdmitLab.diag_state[slot] == 2u)
-            {
-                gNdsFtrAdmitLab.diag_state[slot] = 1u;
-                memcpy(gNdsFtrAdmitLab.diag_admit_key[slot], &other_key,
-                       sizeof(gNdsFtrAdmitLab.diag_admit_key[slot]));
-            }
-        }
-    }
-#endif
     if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.outside_count < 8u))
     {
         /* Slice 2c (lab): who uploaded it -- the return address of the
@@ -11259,7 +11197,6 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
 /* P2-2p8 Phase 1 slice 2c: while the fighter admission runs, a new cache entry
  * is carved (ndsFtrCarveUpload, with the admission below) instead of taking a
  * libnds name and glTexImage2D. */
-#define NDS_FTR_CARVE_LIVE 1
 static u32 sNdsFtrCarveActive;
 #if defined(NDS_LAB_TEXMISS) && NDS_LAB_TEXMISS
 #include <nds/arm9/cache.h>
@@ -11956,7 +11893,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
 
     key_hash = ndsRendererHardwareTextureKeyHash(&key);
-#if NDS_FTR_CARVE_LIVE && NDS_VRAM_CENSUS_LIVE
+#if NDS_VRAM_CENSUS_LIVE
     if (sNdsFtrAdmitKeyProbe != NULL)
     {
         *sNdsFtrAdmitKeyProbe = key;
@@ -12683,7 +12620,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 stats, format, size, NDS_RENDERER_HW_TEXREJECT_ALLOC);
             return FALSE;
         }
-#if NDS_FTR_CARVE_LIVE
         /* Slice 2c: the admission carves -- its own VRAM, no libnds name or
          * record, no libc -- and names the entry NDS_FTR_CARVE_NAME_BASE |
          * slot. The bind below then goes through the carved words. */
@@ -12702,7 +12638,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             }
         }
         else
-#endif
         {
         if (entry->name == 0)
         {

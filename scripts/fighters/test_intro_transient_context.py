@@ -7,8 +7,8 @@ verbatim and runs the 21-actor ownership protocol against stub GObjs: every
 distinct source GObj forces scratch invalidation, repeats of the bound GObj
 do not, and NULL never invalidates. String pins keep the four battle-cache
 arrays at four entries and pin the transient integration seams (contract
-fallback, memo disarm, plan force-miss plus no-bake, scratch reset, and the
-Intro draw wrapper) so drift fails loudly instead of silently aliasing.
+fallback, memo disarm, scratch reset, and the Intro draw wrapper) so drift
+fails loudly instead of silently aliasing.
 
 Scope actually proven here:
   * extracted, unmodified via source_test_helpers.function:
@@ -68,10 +68,6 @@ pin(r"\(void\)ndsFighterIntroTransientSubmit\(fighter_gobj\);", ADAPTER,
     "contract fallback")
 pin(r"\(sNdsIntroTransientActive == FALSE\) &&\s*\(fp->camera_mode",
     ADAPTER, "memo disarm")
-pin(r"native_owner_plan_hit = \(\(sNdsIntroTransientActive != FALSE\)",
-    ADAPTER, "plan force-miss")
-pin(r"\(sNdsIntroTransientActive == FALSE\) &&\s*\(slot < GMCOMMON_PLAYERS_MAX\)",
-    ADAPTER, "plan no-bake")
 pin(r"sNdsIntroTransientBoundGObj = NULL;", ADAPTER, "reset clears bound")
 pin(r"NDS_INTRO_TRANSIENT_SCRATCH_SLOT\]\.valid = 0u;", ADAPTER,
     "reset clears scratch")

@@ -447,11 +447,11 @@ class KirbyTrioLegacyResolveTests(unittest.TestCase):
         # The adapter publishes through this setter every kirby draw.
         assert ("void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)"
                 in src)
-        adapter = (repo / "src" / "port" /
-                   "renderer_adapter_fighter.c").read_text()
-        assert "ndsRendererNativeKirbyTrioSetHeadKey(" in adapter
-        assert "ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head)" in adapter
-        assert "ndsFighterKirbyTrioBodyActive(fp)" in adapter
+        lean = (repo / "src" / "port" /
+                "renderer_fighter_lean.c").read_text()
+        assert "ndsRendererNativeKirbyTrioSetHeadKey(" in lean
+        assert "ndsFighterKirbyTrioHeadKey(fp, &head_key)" in lean
+        assert "ndsFighterKirbyTrioBodyActive(fp)" in lean
         # The shared resolve routes binding-2/0x40A0 through the keyed
         # function BEFORE the generic variant loop, for validator and
         # preflight alike.
@@ -558,6 +558,8 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
                       "nds_renderer_native_common.c").read_text()
         cls.adapter = (repo / "src" / "port" /
                        "renderer_adapter_fighter.c").read_text()
+        cls.lean = (repo / "src" / "port" /
+                    "renderer_fighter_lean.c").read_text()
         cls.shims = (repo / "src" / "port" /
                      "reloc_backend_compat_shims.c").read_text()
         cls.header = (repo / "include" / "nds" / "nds_renderer.h").read_text()
@@ -640,10 +642,10 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
             self.assets)
         self.assertIn("sNdsKirbyTrioHeadMp !=", self.assets)
         self.assertIn("sNdsKirbyTrioProgramHead[program - 1u]", self.assets)
-        self.assertIn("ndsRendererNativeKirbyTrioSetHeadKey(", self.adapter)
-        self.assertIn(
-            "ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head)", self.adapter)
-        self.assertIn("ndsFighterKirbyTrioBodyActive(fp)", self.adapter)
+        # The lean draw publishes the live head key (the only fighter path).
+        self.assertIn("ndsRendererNativeKirbyTrioSetHeadKey(", self.lean)
+        self.assertIn("ndsFighterKirbyTrioHeadKey(fp, &head_key)", self.lean)
+        self.assertIn("ndsFighterKirbyTrioBodyActive(fp)", self.lean)
         self.assertIn("NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY", self.assets)
         self.assertNotIn(
             "NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u", self.assets)

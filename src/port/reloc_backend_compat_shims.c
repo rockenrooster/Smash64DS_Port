@@ -2947,23 +2947,12 @@ sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
  * over all 65,536 x 8 inputs by `scripts/check_ftanim_target_exact.py`, the
  * reciprocal table is compile-time-folded and therefore bit-identical to the
  * runtime divide, and the one divide that would have changed rounding was left
- * a divide on purpose.
- *
- * NDS_R2_ANIM_PARSER defaults to 1 because the replacement is strictly cheaper
- * at equal output. The route arm exists only under NDS_R2_ANIM_CUT_ROUTE, which
- * a published build never sets. */
-#ifndef NDS_R2_ANIM_PARSER
-#define NDS_R2_ANIM_PARSER 1
-#endif
+ * a divide on purpose. */
 void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj);
 
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
-#if NDS_R2_ANIM_PARSER
     ndsR2FtAnimParseDObjFigatree(root_dobj);
-#else
-    battleship_ftAnimParseDObjFigatree(root_dobj);
-#endif
 }
 
 static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)

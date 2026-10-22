@@ -24,18 +24,7 @@ def compact_shared_pins() -> set[int]:
     if match is None:
         raise AssertionError("shared CSS resident pin list was not found")
 
-    pins: set[int] = set()
-    include = True
-    for raw in match.group(1).splitlines():
-        line = raw.strip()
-        if line == "#if !NDS_PLAYERS_VS_COMPACT_PREVIEW":
-            include = False
-            continue
-        if line == "#endif":
-            include = True
-            continue
-        if include:
-            pins.update(int(value, 16) for value in re.findall(r"0x([0-9a-fA-F]+)u", line))
+    pins = {int(value, 16) for value in re.findall(r"0x([0-9a-fA-F]+)u", match.group(1))}
     if not pins:
         raise AssertionError("compact CSS resident pin list is empty")
     return pins

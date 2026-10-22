@@ -52,9 +52,6 @@ volatile u32 gNdsFtrLeanAdmit = NDS_FTR_LEAN_ADMIT_BOOT;
 #if NDS_FTR_LEAN_LAB
 NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
 #endif
-#if NDS_FTR_LEAN_ATTR_LIVE
-NDSFtrLeanAttr gNdsFtrLeanAttr __attribute__((used, aligned(32)));
-#endif
 #if NDS_VRAM_CENSUS_LIVE
 /* Slice 2a (lab): 1 = walk the texture/palette VRAM at every frame end.
  * DTCM like the route words, so a gdb poke is never hidden by the cache. */
@@ -111,7 +108,6 @@ static void ndsFtrLeanAdmitSync(void)
     }
 }
 
-#if NDS_FTR_LEAN_LIVE
 
 /* The loaded files of the fighters present, as asset id -> loaded data: each
  * kind's FTData file pointers, named by the reloc backend's own provenance
@@ -182,11 +178,9 @@ static u32 ndsFtrLeanAdmitCollectBases(void)
     }
     return n;
 }
-#endif
 
 static void ndsFtrLeanAdmitMaybeRun(u32 word)
 {
-#if NDS_FTR_LEAN_LIVE
     /* Slice 5: the admission's renderer-state scratch lives on the stack for
      * the call (each record re-initializes it), not in a static. */
     NDSRendererStats scratch;
@@ -206,9 +200,6 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
                              sNdsFtrAdmitCount,
                              sNdsFtrAdmitBaseAsset, sNdsFtrAdmitBaseData,
                              bases, word);
-#else
-    (void)word;
-#endif
 }
 
 /* (Slices 2c-6 had a lab-only boot value here, NDS_FTR_LEAN_ADMIT_DEFAULT,
@@ -278,7 +269,6 @@ void ndsFtrLeanNoteTexturePart(u32 slot)
     }
 }
 
-#if NDS_FTR_LEAN_LIVE
 
 /* Material identity without hashing every MObj every draw. Within one status
  * generation a fighter MObj's animated words (colours, texture ids, lfrac,
@@ -383,26 +373,12 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
     {                                                                      \
         u32 part_now_ = NDS_FTR_LEAN_CLOCK();                              \
         gNdsFtrLean.guard_part_ticks[index] += part_now_ - (mark);         \
-        NDS_FTR_LEAN_ATTR(if (row < NDS_FTR_LEAN_KINDS)                    \
-            gNdsFtrLeanAttr.guard_part_ticks[row][index] +=                \
-                part_now_ - (mark));                                       \
         (mark) = part_now_;                                                \
     } while (0)
 #else
 #define NDS_FTR_LEAN_GUARD_PART(index, mark) ((void)0)
 #endif
-#if NDS_FTR_LEAN_ATTR_LIVE
-#define NDS_FTR_LEAN_EVENT_PART(index, mark)                               \
-    do                                                                     \
-    {                                                                      \
-        u32 part_now_ = cpuGetTiming();                                    \
-        gNdsFtrLeanAttr.event_part_ticks[index] += part_now_ - (mark);     \
-        gNdsFtrLeanAttr.event_part_count[index]++;                         \
-        (mark) = part_now_;                                                \
-    } while (0)
-#else
 #define NDS_FTR_LEAN_EVENT_PART(index, mark) ((void)0)
-#endif
 
 /* `row`: the counter row, the battle slot (slice 6; NDS_FTR_LEAN_KINDS). */
 /* 2026-10-05 (owner: delete the old machinery): every build records which
@@ -1541,9 +1517,6 @@ ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
     u32 row = slot & 3u;        /* counter row (NDS_FTR_LEAN_KINDS) */
     u32 materialized = 0u;
     u32 t0 = cpuGetTiming();
-#if NDS_FTR_LEAN_ATTR_LIVE
-    u32 ev_mark = t0;
-#endif
 #if NDS_FTR_LEAN_LAB
     u32 reuse_check = ((reuse_plan != FALSE) &&
                        ((NDS_FTR_LEAN_SLOW_WORD() &
@@ -2085,9 +2058,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 row = slot & 3u;        /* counter row (NDS_FTR_LEAN_KINDS) */
-#if NDS_FTR_LEAN_ATTR_LIVE
-    u32 retried = FALSE;
-#endif
 
     if (gNdsFtrLeanAlphaPending != 0u)
     {
@@ -2209,18 +2179,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         shuffle_x = sNdsR2ShuffleWorldX;
         shuffle_y = sNdsR2ShuffleWorldY;
         NDS_FTR_LEAN_GUARD_PART(6u, mark);
-#if NDS_FTR_LEAN_ATTR_LIVE
-        if ((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL_QUIET) != 0u)
-        {
-            /* Attribution arm: the previous fighter's list has finished
-             * streaming before this kernel reads a DObj. */
-            u32 q0 = cpuGetTiming();
-
-            NDS_GX_DMA0_WAIT(9u);
-            gNdsFtrLeanAttr.quiet_wait_ticks[row] += cpuGetTiming() - q0;
-            gNdsFtrLeanAttr.quiet_draws[row]++;
-        }
-#endif
         t1 = NDS_FTR_LEAN_CLOCK();
         NDS_FTR_LEAN_TCTR(gNdsFtrLean.guard_ticks += t1 - t0);
         NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_guard_ticks[row] += t1 - t0);
@@ -2233,9 +2191,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
                  NDS_FTR_LEAN_KERNEL_NO_FAST : 0u);
         /* The LOAD4x3 parameters go straight into the list; only a texgen
          * group's root also needs its Q20.12 world (PatchTexgen reads it). */
-#if NDS_FTR_LEAN_ATTR_LIVE
-        retried = FALSE;
-#endif
         sites = ndsFtrLeanPacketModelviewSites(slot, mv_sites,
                                                inst->root_count);
         if ((sites == NDS_FTR_LEAN_SITES_NONE) ||
@@ -2265,9 +2220,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
                 return FALSE;
             }
             NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_rebuilds++);
-#if NDS_FTR_LEAN_ATTR_LIVE
-            retried = TRUE;
-#endif
         }
         if (inst->alias_dst != 0xffu)
         {
@@ -2279,53 +2231,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += inst->joint_count);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[row] +=
                              inst->joint_count);
-#if NDS_FTR_LEAN_ATTR_LIVE
-        if (((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL_RERUN) != 0u) &&
-            (retried == FALSE) &&
-            ((kernel_flags & NDS_FTR_LEAN_KERNEL_LOCKS) == 0u))
-        {
-            /* Attribution arm: the draw's own pass was cold (t0 - t1). The
-             * first eight joints (a preorder prefix, so every parent
-             * precedes its child; their data fits the 4 KB data cache) run
-             * twice more at once -- the second of those is code and data
-             * warm -- and once after DC_FlushAll: data cold, code warm.
-             * Every pass writes the same words into the same sites. */
-            u32 n = (inst->joint_count < 8u) ? inst->joint_count : 8u;
-            u32 a0;
-            u32 a1;
-            u32 a2;
-            u32 a3;
 
-            (void)ndsFtrLeanKernelCompose(
-                inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
-                ndsFtrLeanSlowLocal, NULL, NULL);
-            a0 = cpuGetTiming();
-            (void)ndsFtrLeanKernelCompose(
-                inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
-                ndsFtrLeanSlowLocal, NULL, NULL);
-            a1 = cpuGetTiming();
-            DC_FlushAll();
-            a2 = cpuGetTiming();
-            (void)ndsFtrLeanKernelCompose(
-                inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
-                ndsFtrLeanSlowLocal, NULL, NULL);
-            a3 = cpuGetTiming();
-            gNdsFtrLeanAttr.kernel_cold_ticks[row] += t0 - t1;
-            gNdsFtrLeanAttr.kernel_warm_ticks[row] += a1 - a0;
-            gNdsFtrLeanAttr.kernel_dcold_ticks[row] += a3 - a2;
-            gNdsFtrLeanAttr.kernel_attr_draws[row]++;
-            gNdsFtrLeanAttr.kernel_attr_joints[row] += n;
-            t0 = cpuGetTiming();
-        }
-#endif
-
-#if NDS_FTR_LEAN_ATTR_LIVE
-        {
-            u32 r0 = cpuGetTiming();
-#endif
         /* Slice 5: the patch reads the view, not the shared production
          * inputs, so they are refreshed per draw only for a texgen list
          * without a site map (the generic texgen patch reads them:
@@ -2342,19 +2248,11 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         {
             ndsFtrLeanView(&view, inst, color_modulate, NULL, fp);
         }
-#if NDS_FTR_LEAN_ATTR_LIVE
-            u32 r1 = cpuGetTiming();
-#endif
         /* The global state the old path's draw leaves behind: the owner's
          * root program (Link's texgen tables are selected from it) and the
          * Kirby trio head key it publishes for every fighter. */
         ndsRendererNativeFighterSetRootProgram(owner_slot, inst->program);
         ndsRendererNativeKirbyTrioSetHeadKey(inst->head_key);
-#if NDS_FTR_LEAN_ATTR_LIVE
-            gNdsFtrLeanAttr.patch_part_ticks[row][5] += r1 - r0;
-            gNdsFtrLeanAttr.patch_part_ticks[row][6] += cpuGetTiming() - r1;
-        }
-#endif
         /* pre_same: this draw's preambles are the same memo fill the last
          * patch read, so their prim and light words cannot have moved. */
         reason = ndsFtrLeanPacketPatch(
@@ -2410,7 +2308,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t0 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += t0 - t1);
-    NDS_FTR_LEAN_ATTR(gNdsFtrLeanAttr.book_ticks[row] += t0 - t1);
     hardware_triangles = ndsFtrLeanPacketSubmit(slot);
     t1 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.submit_ticks += t1 - t0);
@@ -2449,9 +2346,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         NDS_DIAG(gNdsFighterDLAllDrawSlotTriangleMask |= 1u << (slot & 3u));
     }
     gNdsFighterMarioFoxDLAllDrawCount++;
-#if NDS_FTR_LEAN_ATTR_LIVE
-    gNdsFtrLeanAttr.book_ticks[row] += cpuGetTiming() - t1;
-#endif
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += NDS_FTR_LEAN_CLOCK() - t1);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.draws++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[row]++);
@@ -2559,11 +2453,3 @@ static void ndsFtrLeanFrameEnd(void)
 #endif
 }
 
-#else
-
-void ndsFtrLeanNoteRebind(u32 player_slot)
-{
-    (void)player_slot;
-}
-
-#endif

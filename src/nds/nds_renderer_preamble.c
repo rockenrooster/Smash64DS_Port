@@ -40,22 +40,13 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * never engages the lean path and keeps production resident
  * (scripts/check-renderer-itcm-placement.ps1 pins it there). 0 restores the
  * old placement everywhere. */
-#ifndef NDS_FTR_LEAN_EVICT_PRODUCTION
-#define NDS_FTR_LEAN_EVICT_PRODUCTION 1
-#endif
 #if defined(__arm__)
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3"), target("arm")))
-#if NDS_FTR_LEAN_EVICT_PRODUCTION
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm")))
-#else
-#define NDS_RENDERER_NATIVE_FIGHTER_CODE \
-    __attribute__((noinline, hot, optimize("O3"), target("arm"), \
-                   section(".itcm.native_fighter")))
-#endif
 #define NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm")))
 #else
@@ -467,35 +458,18 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     GFX_VERTEX16 = z;
 }
 
-/* Fighter-owned GX writers omit effect capture, which is armed only
- * around an effect display list. Keep the GX census and differ hooks. */
-#define NDS_RENDERER_GX_RECORD_FIGHTER \
-    (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-     NDS_TASK49_GX_DIFFER)
-
 static inline void ndsRendererHardwareWriteFighterColorWord(u32 value)
 {
-#if NDS_RENDERER_GX_RECORD_FIGHTER
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
-#endif
     GFX_COLOR = value;
 }
 
 static inline void ndsRendererHardwareWriteFighterTexCoordWord(u32 value)
 {
-#if NDS_RENDERER_GX_RECORD_FIGHTER
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
-#endif
     GFX_TEX_COORD = value;
 }
 
 static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 {
-#if NDS_RENDERER_GX_RECORD_FIGHTER
-    u32 words[2] = {xy, z};
-
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
-#endif
     GFX_VERTEX16 = xy;
     GFX_VERTEX16 = z;
 }
@@ -712,11 +686,10 @@ static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
  * reaches the lookup table's u8 ceiling (254 slots) at ~15 KB, well under the
  * old 24.8 KB: the whole four-CPU admission (<= 153 entries, the partition
  * minus NDS_FTR_ADMIT_SLOT_RESERVE) plus the draws' measured same-frame set.
- * The identity is collision-checked, not assumed: a lab build (Makefile
- * NDS_TEX_IDENT_SHADOW=1) keeps an exact shadow of every dynamic key and counts
- * any identity hit whose exact key differs (gNdsTexIdentLab), and the admission's lab
- * census proves the admission tables collision-free
- * (artifacts/performance/2026-09-23_p2-2p8-phase1-slice2c). */
+ * The identity was collision-checked, not assumed: a lab build kept an exact
+ * shadow of every dynamic key and counted any identity hit whose exact key
+ * differed, and the admission's lab census proved the admission tables
+ * collision-free (artifacts/performance/2026-09-23_p2-2p8-phase1-slice2c). */
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 254u
 #define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
@@ -856,30 +829,6 @@ volatile u32 gNdsRendererFastTriangleCount;
 volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 volatile u32 gNdsRendererFastFallbackCount[3];
-/* R2-07 E2. The two reject-reason encodings already name every way the stage
- * owner can refuse -- for the owner: 1/2 early bails, 100 the generated segment
- * 0, 200+run an ApplyStateSpan refusal, 300+run a PrepareRun refusal,
- * 400+binding, 3/4 the post-loop checks; and inside PrepareRun a further 1..6.
- * Both were gated on NDS_RENDERER_PROFILE_LEVEL == 1 and the tick-HUD lane is
- * level 0, so every writer compiled out and --gc-sections dropped the words
- * entirely (absent from the ELF, which is why the first read printed nothing).
- *
- * Let the route probe enable just this encoding rather than raising the profile
- * level, which would compile in a great deal of unrelated instrumentation and
- * change what is being measured. Defined HERE, above both writers:
- * ndsRendererNativeStagePrepareRun precedes the owner by ~2,000 lines, and an
- * undefined macro in #if evaluates to 0 silently -- those seven sites would
- * have compiled out with no diagnostic. */
-#define NDS_TASK36_REJECT_TRACE \
-    (NDS_TASK36_HW_COMPOSE && \
-     ((NDS_RENDERER_PROFILE_LEVEL == 1) || NDS_R2_STAGE_ROUTE_PROBE))
-
-/* Counting form of the reject latch, live only with the route probe. The latch
- * is reset per prepare and therefore cannot answer "how many, and which"; this
- * can. Compiles to nothing at profile level 1 alone, so the level-1 counter
- * block keeps its existing cost. */
-#define NDS_R2_STAGE_REJECT_COUNT(reason) ((void)0)
-
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;
 static u32 sNdsRendererFastOwnerEnabled;
@@ -1110,6 +1059,9 @@ static inline void ndsRendererHardwareBindTextureState(int name)
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
 }
 
+/* Production preflight's source-root capacity; the fighter packet's per-root
+ * patch table reuses it. */
+#define NDS_NATIVE_FIGHTER_ROOT_MAX 32u
 /* P2-2 fighter packet. The four-CPU stress arm measured the four fighter draws
  * at 607,040 ticks of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK
  * =15 A/B, 2026-08-23), almost all of it CPU work re-deriving and re-pushing a
@@ -1122,16 +1074,6 @@ static inline void ndsRendererHardwareBindTextureState(int name)
  * words the hardware receives. The words live in gSYFramebufferSets, which
  * nothing touches during a battle (include/sys/video.h), and the Results entry
  * restores that buffer's clear through ndsRendererFighterPacketRelease. */
-#define NDS_FIGHTER_PACKET_LIVE \
-    (NDS_R2_FIGHTER_PACKET && NDS_RENDERER_HW_TRIANGLES && \
-     (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-     NDS_R2_FIGHTER_GX_COMPOSE && NDS_R2_FIGHTER_HW_MTX && \
-     NDS_R2_FIGHTER_HW_LIGHT)
-/* Production preflight needs the same source-root capacity whether packet
- * replay is compiled in or not.  Keep that ownership limit outside the packet
- * gate; packet builds merely reuse it for their per-root patch table. */
-#define NDS_NATIVE_FIGHTER_ROOT_MAX 32u
-#if NDS_FIGHTER_PACKET_LIVE
 #define NDS_FIGHTER_PACKET_SLOTS 4u
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
  * pointer that sys/video.h documents as aliased into the buffer's tail. */
@@ -1448,10 +1390,6 @@ static inline void ndsFighterPacketDmaWait(void)
  * made). */
 volatile u32 gNdsFighterPacketHwTexgen __attribute__((used, section(".data"))) =
     1u;
-#else
-#define NDS_FIGHTER_PACKET_EVICT(attr) attr
-#define NDS_FIGHTER_PACKET_DMA_WAIT() ((void)0)
-#endif
 
 static inline void ndsRendererHardwareSetMatrixMode(int mode)
 {
@@ -2389,52 +2327,43 @@ static inline void ndsRendererProfileRecordTexel1Refresh(void)
     sNdsRendererRuntimeTexel1FractionRefreshCount++;
 }
 
-/* NDS_RENDERER_FRAME_SUMMARY_COUNTERS gates the PROFILE_LEVEL 0 arm of the
- * six per-call recorders below. They are pure diagnostics -- nothing in the
- * Latest or Boundary registry reads them -- and at level 0 each was still a
- * read-modify-write on a global struct on every matrix load, every hardware
- * batch, and every texture prepare. See the flag's comment in
- * include/nds/nds_renderer.h for who has to build with it at 1. */
+/* The six per-call frame-summary recorders below (matrix loads, batch
+ * begin/reuse/end, texture prepare/reuse) are diagnostics: each is a
+ * read-modify-write on sNdsRendererRuntimeFrameSummary, published once a frame
+ * into the gNdsRendererProfile* globals, which the P1 harness verifier
+ * (verify-battle-mariofox-gcrunall-loop-harness.ps1) and
+ * probe-task56-fighter-path.ps1 read. In the fighter path alone: matrix load
+ * 564, texture prepare 583 + 92 reuse, batch begin 68 ticks a frame. The
+ * behaviour-bearing counters (hardware_triangles, hardware_vertices,
+ * hardware_over_limit) are separate. */
 static inline void ndsRendererProfileRecordMatrixLoad(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.matrix_load_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordBatchBegin(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordBatchReuse(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordBatchEnd(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordTexturePrepare(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.texture_prepare_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordTexturePrepareReuse(void)
 {
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count++;
-#endif
 }
 
 static inline void ndsRendererProfileRecordVertexSaturate(void)
@@ -2642,9 +2571,7 @@ typedef struct NDSRendererHardwareTextureKey
  * NDS_RENDERER_HW_TEXTURE_CACHE_COUNT note, and ndsRendererHardwareEntryKeyEqual
  * for the one place that has to know which. Read a pointer word or the texel1
  * fraction through ndsRendererHardwareEntryKeyWord; there is no `entry->key` to
- * reach for, and a dynamic slot's whole key exists only where
- * NDS_RENDERER_HW_TEXTURE_KEY_SHADOW keeps a copy (profile-2 and the shadow
- * lab build).
+ * reach for, and no copy of a dynamic slot's whole key anywhere.
  *
  * The remaining fields are packed rather than one-u32-each because at 254
  * slots every four bytes spent here is 1,016 bytes. Widths are the source's
@@ -2652,8 +2579,8 @@ typedef struct NDSRendererHardwareTextureKey
  * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded by
  * NDS_RENDERER_HW_TEXTURE_STATIC_COUNT in
  * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
- * booleans. The texel census and the upload dimensions are read only by the
- * profile-2 texture profiler, so they exist only there (slice 2c). */
+ * booleans. The texel census and the upload dimensions went with the profile-2
+ * texture profiler, their only reader (slice 2c). */
 typedef struct NDSRendererHardwareTextureCacheEntry
 {
     int name;
@@ -2704,18 +2631,6 @@ typedef struct NDSRendererHardwareTextureIdent
     u32 refresh;
     u32 prim_lod_fraction;
 } NDSRendererHardwareTextureIdent;
-
-/* Which exact copy of a dynamic slot's key exists beside its identity:
- *   2  the whole key -- profile-2 and the CPU-prep benchmark, whose oracles
- *      read keys back (legacy-alias census, benchmark sink hashes)
- *   1  the lab's exact varint shadow and whole-match identity journal: with
- *      gNdsTexIdentShadowOn set, every identity hit is re-checked against it
- *      and a mismatch counts in gNdsTexIdentLab.collisions (and misses).
- *      About 29.5 KB, so only the tick-HUD build made for it
- *      (Makefile NDS_TEX_IDENT_SHADOW=1, own build dir); the default tick-HUD
- *      ROM keeps the shipping ROM's heap
- *   0  none (shipping and the default tick-HUD ROM) */
-#define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 0
 
 typedef struct NDSRendererHardwareResolvedTexture
 {
@@ -2777,46 +2692,6 @@ static NDSRendererHardwareTextureCacheEntry
  * index, which is why no entry carries one. */
 static NDSRendererHardwareTextureIdent
     sNdsRendererHardwareTextureIdentPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
-static NDSRendererHardwareTextureKey
-    sNdsRendererHardwareTextureKeyShadow[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
-#elif NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
-/* bytes[0] is the encoded length (0 = no shadow: an overflow, counted), then
- * key words 1..58 but the TLUT and texel1 pointers (exact in the identity)
- * as little-endian base-128 varints. 112 bytes held every key the slice 2c
- * lab runs met (gNdsTexIdentLab.shadow_overflow). */
-#define NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES 112u
-static u8 sNdsRendererHardwareTextureKeyShadow[
-    NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT][NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES];
-#endif
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-/* The identity's collision check. A lab runtime word, default off: the
- * encode and compare cost is the lab's, not the gate's. DTCM like the route
- * words, so a gdb poke is never hidden by the D-cache. */
-#if defined(__arm__)
-volatile u32 gNdsTexIdentShadowOn
-    __attribute__((used, section(".dtcm.bss"), aligned(4)));
-#else
-volatile u32 gNdsTexIdentShadowOn;
-#endif
-typedef struct NDSTexIdentLab
-{
-    u32 checks;              /* identity hits re-checked exactly */
-    u32 collisions;          /* ... whose exact key differed */
-    u32 collision_first[4];  /* site, slot, id_a, id_b */
-    u32 shadow_overflow;     /* keys too long for the shadow (unverifiable) */
-    u32 journal_count;       /* distinct identities the cache took */
-    u32 journal_overflow;
-    u32 journal_collisions;  /* one identity, two fingerprints */
-} NDSTexIdentLab;
-NDSTexIdentLab gNdsTexIdentLab __attribute__((used, aligned(32)));
-/* The whole-match key set: every identity the cache ever took, with an
- * exact-key fingerprint. Two keys with one identity and different
- * fingerprints are a collision whether or not they were ever resident
- * together. */
-#define NDS_TEX_IDENT_JOURNAL 384u
-static u32 sNdsTexIdentJournal[NDS_TEX_IDENT_JOURNAL][4];
-#endif
 #if NDS_TICK_HUD
 /* P2-2 capacity witnesses. These are request/use high-waters rather than
  * inferred dimensions so the stress ROM can prove the real live maxima before
@@ -3028,192 +2903,7 @@ static u32 ndsRendererHardwareTextureRefreshClass(
     return h;
 }
 
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
-/* Exact encoding of key words 1..58 but 4 (TLUT) and 32 (texel1): 0 when it
- * does not fit (counted; that slot is then unverifiable, never "equal"). */
-static u32 ndsRendererHardwareTextureShadowEncode(
-    const NDSRendererHardwareTextureKey *key, u8 *out)
-{
-    const u32 *w = (const u32 *)(const void *)key;
-    u32 n = 1u;
-    u32 i;
 
-    for (i = 1u; i < 59u; i++)
-    {
-        u32 v = w[i];
-
-        if ((i == 4u) || (i == 32u))
-        {
-            continue;
-        }
-        do
-        {
-            if (n >= NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES)
-            {
-                return 0u;
-            }
-            out[n++] = (u8)((v & 0x7fu) | ((v > 0x7fu) ? 0x80u : 0u));
-            v >>= 7;
-        } while (v != 0u);
-    }
-    out[0] = (u8)n;
-    return n;
-}
-
-static s32 ndsRendererHardwareTextureShadowDecode(
-    const u8 *in, const NDSRendererHardwareTextureIdent *ident,
-    NDSRendererHardwareTextureKey *key)
-{
-    u32 *w = (u32 *)(void *)key;
-    u32 n = 1u;
-    u32 len = in[0];
-    u32 i;
-
-    if (len == 0u)
-    {
-        return FALSE;
-    }
-    for (i = 1u; i < 59u; i++)
-    {
-        u32 v = 0u;
-        u32 shift = 0u;
-        u32 byte;
-
-        if ((i == 4u) || (i == 32u))
-        {
-            continue;
-        }
-        do
-        {
-            if ((n >= len) || (shift > 28u))
-            {
-                return FALSE;
-            }
-            byte = in[n++];
-            v |= (byte & 0x7fu) << shift;
-            shift += 7u;
-        } while ((byte & 0x80u) != 0u);
-        w[i] = v;
-    }
-    key->image = ident->image;
-    key->tlut_image = ident->tlut_image;
-    key->texel1_image = ident->texel1_image;
-    return TRUE;
-}
-#endif
-
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-/* An exact-key fingerprint for the journal (FNV-1a over all 59 words). */
-static u32 ndsRendererHardwareTextureKeyFingerprint(
-    const NDSRendererHardwareTextureKey *key)
-{
-    const u32 *w = (const u32 *)(const void *)key;
-    u32 h = 2166136261u;
-    u32 i;
-
-    for (i = 0u; i < 59u; i++)
-    {
-        h = (h ^ w[i]) * 16777619u;
-    }
-    return h;
-}
-
-static void ndsRendererHardwareTextureIdentCollision(u32 site, u32 slot,
-                                                     u32 id_a, u32 id_b)
-{
-    if (gNdsTexIdentLab.collisions == 0u)
-    {
-        gNdsTexIdentLab.collision_first[0] = site;
-        gNdsTexIdentLab.collision_first[1] = slot;
-        gNdsTexIdentLab.collision_first[2] = id_a;
-        gNdsTexIdentLab.collision_first[3] = id_b;
-    }
-    gNdsTexIdentLab.collisions++;
-}
-
-/* One identity the cache (or the admission census) met: a second key with
- * the same identity and another fingerprint is a collision. */
-static void ndsRendererHardwareTextureIdentJournal(
-    const NDSRendererHardwareTextureKey *key, u32 id_a, u32 id_b)
-{
-    u32 fingerprint = ndsRendererHardwareTextureKeyFingerprint(key);
-    u32 count = gNdsTexIdentLab.journal_count;
-    u32 i;
-
-    if (count > NDS_TEX_IDENT_JOURNAL)
-    {
-        count = NDS_TEX_IDENT_JOURNAL;
-    }
-    for (i = 0u; i < count; i++)
-    {
-        const u32 *row = sNdsTexIdentJournal[i];
-
-        if ((row[0] == id_a) && (row[1] == id_b) && (row[2] == key->image))
-        {
-            if (row[3] != fingerprint)
-            {
-                gNdsTexIdentLab.journal_collisions++;
-            }
-            return;
-        }
-    }
-    if (count >= NDS_TEX_IDENT_JOURNAL)
-    {
-        gNdsTexIdentLab.journal_overflow++;
-        return;
-    }
-    sNdsTexIdentJournal[count][0] = id_a;
-    sNdsTexIdentJournal[count][1] = id_b;
-    sNdsTexIdentJournal[count][2] = key->image;
-    sNdsTexIdentJournal[count][3] = fingerprint;
-    gNdsTexIdentLab.journal_count = count + 1u;
-}
-
-/* An identity hit, re-checked against the slot's exact key. `any_image`: the
- * stage source-frame search, which matches every word but the image. */
-static s32 ndsRendererHardwareTextureShadowVerify(
-    const NDSRendererHardwareTextureCacheEntry *entry,
-    const NDSRendererHardwareTextureKey *key, u32 any_image, u32 site)
-{
-    u32 slot = ndsRendererHardwareEntrySlot(entry);
-    u32 pool = slot - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
-    const NDSRendererHardwareTextureIdent *ident =
-        &sNdsRendererHardwareTextureIdentPool[pool];
-    s32 equal;
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
-    NDSRendererHardwareTextureKey probe = *key;
-
-    if (any_image != 0u)
-    {
-        probe.image = sNdsRendererHardwareTextureKeyShadow[pool].image;
-    }
-    equal = (memcmp(&sNdsRendererHardwareTextureKeyShadow[pool], &probe,
-                    sizeof(probe)) == 0) ? TRUE : FALSE;
-#else
-    u8 encoded[NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES];
-    const u8 *stored = sNdsRendererHardwareTextureKeyShadow[pool];
-    u32 len = ndsRendererHardwareTextureShadowEncode(key, encoded);
-
-    (void)any_image;
-    if ((len == 0u) || (stored[0] == 0u))
-    {
-        /* Unverifiable, not a collision: the overflow counter says how many. */
-        return TRUE;
-    }
-    equal = ((len == stored[0]) &&
-             (memcmp(encoded, stored, len) == 0) &&
-             (key->tlut_image == ident->tlut_image) &&
-             (key->texel1_image == ident->texel1_image)) ? TRUE : FALSE;
-#endif
-    gNdsTexIdentLab.checks++;
-    if (equal == FALSE)
-    {
-        ndsRendererHardwareTextureIdentCollision(site, slot, ident->id_a,
-                                                 ident->id_b);
-    }
-    return equal;
-}
-#endif
 
 static u32 ndsRendererHardwareEntryKeyWord(
     const NDSRendererHardwareTextureCacheEntry *entry, u32 word)
@@ -3243,13 +2933,7 @@ static u32 ndsRendererHardwareEntryKeyWord(
         default:
             break;
         }
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
-        return ((const u32 *)&sNdsRendererHardwareTextureKeyShadow[
-            ndsRendererHardwareEntrySlot(entry) -
-            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT])[word];
-#else
         return 0u;
-#endif
     }
     record = ndsRendererHardwareEntryStaticRecord(entry);
     if (record == NULL)
@@ -3297,39 +2981,6 @@ static void ndsRendererHardwareEntryCopyStaticKey(
     out->texel1_image = pointers[2];
 }
 
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-/* Materialise a whole key -- only where a shadow keeps dynamic keys (the lab
- * and profile-2 oracles). Shipping code reads words, never whole keys. */
-static void ndsRendererHardwareEntryCopyKey(
-    const NDSRendererHardwareTextureCacheEntry *entry,
-    NDSRendererHardwareTextureKey *out)
-{
-    const NDSRendererHardwareTextureIdent *ident;
-
-    if (out == NULL)
-    {
-        return;
-    }
-    ident = ndsRendererHardwareEntryIdent(entry);
-    if (ident == NULL)
-    {
-        ndsRendererHardwareEntryCopyStaticKey(entry, out);
-        return;
-    }
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
-    *out = sNdsRendererHardwareTextureKeyShadow[
-        ndsRendererHardwareEntrySlot(entry) -
-        NDS_RENDERER_HW_TEXTURE_STATIC_COUNT];
-#else
-    memset(out, 0, sizeof(*out));
-    (void)ndsRendererHardwareTextureShadowDecode(
-        sNdsRendererHardwareTextureKeyShadow[
-            ndsRendererHardwareEntrySlot(entry) -
-            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT],
-        ident, out);
-#endif
-}
-#endif
 
 /* THE ONE PLACE THAT KNOWS A SLOT MAY NOT OWN ITS KEY.
  *
@@ -3370,14 +3021,6 @@ static s32 ndsRendererHardwareEntryKeyEqual(
         {
             return FALSE;
         }
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-        if ((gNdsTexIdentShadowOn != 0u) &&
-            (ndsRendererHardwareTextureShadowVerify(entry, key, 0u, 1u) ==
-             FALSE))
-        {
-            return FALSE;
-        }
-#endif
         return TRUE;
     }
     record = ndsRendererHardwareEntryStaticRecord(entry);
@@ -3423,28 +3066,6 @@ static void ndsRendererHardwareEntrySetKey(
     ident->texel1_image = key->texel1_image;
     ident->refresh = ndsRendererHardwareTextureRefreshClass(key);
     ident->prim_lod_fraction = key->prim_lod_fraction;
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
-    sNdsRendererHardwareTextureKeyShadow[
-        ndsRendererHardwareEntrySlot(entry) -
-        NDS_RENDERER_HW_TEXTURE_STATIC_COUNT] = *key;
-#elif NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
-    if (ndsRendererHardwareTextureShadowEncode(
-            key, sNdsRendererHardwareTextureKeyShadow[
-                     ndsRendererHardwareEntrySlot(entry) -
-                     NDS_RENDERER_HW_TEXTURE_STATIC_COUNT]) == 0u)
-    {
-        sNdsRendererHardwareTextureKeyShadow[
-            ndsRendererHardwareEntrySlot(entry) -
-            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT][0] = 0u;
-        gNdsTexIdentLab.shadow_overflow++;
-    }
-#endif
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-    if (gNdsTexIdentShadowOn != 0u)
-    {
-        ndsRendererHardwareTextureIdentJournal(key, ident->id_a, ident->id_b);
-    }
-#endif
 }
 
 /* A static slot keeps only the three pointer words; the rest is its record. */
@@ -3475,12 +3096,6 @@ static void ndsRendererHardwareEntryClearKey(
     if (ident != NULL)
     {
         memset(ident, 0, sizeof(*ident));
-#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
-        memset(&sNdsRendererHardwareTextureKeyShadow[
-                   ndsRendererHardwareEntrySlot(entry) -
-                   NDS_RENDERER_HW_TEXTURE_STATIC_COUNT],
-               0, sizeof(sNdsRendererHardwareTextureKeyShadow[0]));
-#endif
         return;
     }
     slot = ndsRendererHardwareEntrySlot(entry);

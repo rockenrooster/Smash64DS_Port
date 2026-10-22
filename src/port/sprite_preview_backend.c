@@ -315,87 +315,6 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
  * site. Intentional hidden/offscreen SObjs never reach here (callers skip
  * them silently); everything reaching here is a loud failure, never a
  * successful empty draw. */
-/* The census is 9,216 B of BSS, and the walk ROM is the owner's playtest ROM:
- * left on, it came out of every scene's taskman arena there (2026-10-02, with
- * VS Results short of heap). Opt in with NDS_P2_SOBJ_FAIL_CENSUS=1. */
-#ifndef NDS_P2_SOBJ_FAIL_CENSUS
-#define NDS_P2_SOBJ_FAIL_CENSUS 0
-#endif
-#if NDS_P2_MENU_WALK && NDS_P2_SOBJ_FAIL_CENSUS
-/* Walk builds only: one row per (scene, bitmap) the native path refused, so a
- * campaign walk names every source sprite a scene still lacks a presentation
- * for -- its shape, position, scale and how often it was asked for. */
-typedef struct NDSSObjFailCensus
-{
-    u32 bitmap;
-    u32 count;
-    u8 scene;
-    u8 fmt;
-    u8 siz;
-    u8 frame_scene_order;
-    u16 width;
-    u16 height;
-    u16 nbitmaps;
-    u16 attr;
-    u16 gobj_id;
-    u16 dl_link;
-    s16 x;
-    s16 y;
-    s16 scalex100;
-    s16 scaley100;
-    u32 rgba;
-} NDSSObjFailCensus;
-
-#define NDS_SOBJ_FAIL_CENSUS_ROWS 256u
-__attribute__((used)) volatile u32 gNdsSObjFailCensusCount;
-__attribute__((used)) volatile u32 gNdsSObjFailCensusDropped;
-__attribute__((used)) NDSSObjFailCensus
-    gNdsSObjFailCensus[NDS_SOBJ_FAIL_CENSUS_ROWS];
-
-static void ndsSObjFailCensusRecord(const GObj *gobj, const SObj *sobj,
-                                    u32 scene)
-{
-    u32 bitmap = (u32)(uintptr_t)sobj->sprite.bitmap;
-    u32 n = gNdsSObjFailCensusCount;
-    u32 i;
-
-    for (i = 0u; i < n; i++)
-    {
-        if ((gNdsSObjFailCensus[i].bitmap == bitmap) &&
-            (gNdsSObjFailCensus[i].scene == (u8)scene))
-        {
-            gNdsSObjFailCensus[i].count++;
-            return;
-        }
-    }
-    if (n >= NDS_SOBJ_FAIL_CENSUS_ROWS)
-    {
-        NDS_DIAG(gNdsSObjFailCensusDropped++);
-        return;
-    }
-    gNdsSObjFailCensus[n].bitmap = bitmap;
-    gNdsSObjFailCensus[n].count = 1u;
-    gNdsSObjFailCensus[n].scene = (u8)scene;
-    gNdsSObjFailCensus[n].fmt = (u8)sobj->sprite.bmfmt;
-    gNdsSObjFailCensus[n].siz = (u8)sobj->sprite.bmsiz;
-    gNdsSObjFailCensus[n].width = (u16)sobj->sprite.width;
-    gNdsSObjFailCensus[n].height = (u16)sobj->sprite.height;
-    gNdsSObjFailCensus[n].nbitmaps = (u16)sobj->sprite.nbitmaps;
-    gNdsSObjFailCensus[n].attr = (u16)sobj->sprite.attr;
-    gNdsSObjFailCensus[n].gobj_id = (gobj != NULL) ? (u16)gobj->id : 0xffffu;
-    gNdsSObjFailCensus[n].dl_link =
-        (gobj != NULL) ? (u16)gobj->dl_link_id : 0xffffu;
-    gNdsSObjFailCensus[n].x = (s16)sobj->pos.x;
-    gNdsSObjFailCensus[n].y = (s16)sobj->pos.y;
-    gNdsSObjFailCensus[n].scalex100 = (s16)(sobj->sprite.scalex * 100.0F);
-    gNdsSObjFailCensus[n].scaley100 = (s16)(sobj->sprite.scaley * 100.0F);
-    gNdsSObjFailCensus[n].rgba = ((u32)sobj->sprite.red << 24) |
-        ((u32)sobj->sprite.green << 16) | ((u32)sobj->sprite.blue << 8) |
-        (u32)sobj->sprite.alpha;
-    gNdsSObjFailCensusCount = n + 1u;
-}
-#endif
-
 static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
                                        u32 reason)
 {
@@ -413,9 +332,6 @@ static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
                   (u32)sobj->sprite.bmsiz);
         root = (u32)(uintptr_t)sobj->sprite.bitmap;
         material = (u32)(uintptr_t)sobj->sprite.LUT;
-#if NDS_P2_MENU_WALK && NDS_P2_SOBJ_FAIL_CENSUS
-        ndsSObjFailCensusRecord(gobj, sobj, scene);
-#endif
     }
     ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, scene, identity,
                                    status, root, material, reason);

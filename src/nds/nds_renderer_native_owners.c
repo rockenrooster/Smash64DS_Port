@@ -1392,9 +1392,6 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 dense_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
-#if NDS_TASK36_REJECT_TRACE
-    gNdsRendererTask36PrepareRunRejectReason = 0u;
-#endif
 
     /* R2-07 leg A. THE write seam for runs[]: this function is its only writer,
      * so dropping the certificate here removes the class rather than an
@@ -1414,10 +1411,6 @@ static s32 ndsRendererNativeStagePrepareRun(
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
     if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
     {
-#if NDS_TASK36_REJECT_TRACE
-        gNdsRendererTask36PrepareRunRejectReason = 1u;
-        NDS_R2_STAGE_REJECT_COUNT(1);
-#endif
         gNdsNativeStagePrepareRunFailStep = 1u;
         gNdsNativeStagePrepareRunFailRun = run_index;
         gNdsNativeStagePrepareRunPolicy[0] = stats->texture_combine_w0;
@@ -1515,10 +1508,6 @@ static s32 ndsRendererNativeStagePrepareRun(
          (ndsRendererHardwareResolveStageSourceFrameTexture(
               stats, frame->config, state, &resolved) == FALSE)))
     {
-#if NDS_TASK36_REJECT_TRACE
-        gNdsRendererTask36PrepareRunRejectReason = 2u;
-        NDS_R2_STAGE_REJECT_COUNT(2);
-#endif
         gNdsNativeStagePrepareRunFailStep = 2u;
         gNdsNativeStagePrepareRunFailRun = run_index;
         gNdsNativeStagePrepareRunTexture[0] = stats->texture_image;
@@ -1596,10 +1585,6 @@ static s32 ndsRendererNativeStagePrepareRun(
     if ((first_visit_offset > first_visit_end) ||
         (first_visit_end > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
     {
-#if NDS_TASK36_REJECT_TRACE
-        gNdsRendererTask36PrepareRunRejectReason = 3u;
-        NDS_R2_STAGE_REJECT_COUNT(3);
-#endif
         gNdsNativeStagePrepareRunFailStep = 3u;
         gNdsNativeStagePrepareRunFailRun = run_index;
         return FALSE;
@@ -1616,10 +1601,6 @@ static s32 ndsRendererNativeStagePrepareRun(
 
         if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
         {
-#if NDS_TASK36_REJECT_TRACE
-            gNdsRendererTask36PrepareRunRejectReason = 4u;
-            NDS_R2_STAGE_REJECT_COUNT(4);
-#endif
             gNdsNativeStagePrepareRunFailStep = 4u;
             gNdsNativeStagePrepareRunFailRun = run_index;
             return FALSE;
@@ -1695,10 +1676,6 @@ static s32 ndsRendererNativeStagePrepareRun(
                 &input, &clip);
             if (clip.w == 0)
             {
-#if NDS_TASK36_REJECT_TRACE
-                gNdsRendererTask36PrepareRunRejectReason = 5u;
-                NDS_R2_STAGE_REJECT_COUNT(5);
-#endif
                 gNdsNativeStagePrepareRunFailStep = 5u;
                 gNdsNativeStagePrepareRunFailRun = run_index;
                 return FALSE;
@@ -1717,10 +1694,6 @@ static s32 ndsRendererNativeStagePrepareRun(
     }
     if (alpha == UINT_MAX)
     {
-#if NDS_TASK36_REJECT_TRACE
-        gNdsRendererTask36PrepareRunRejectReason = 6u;
-        NDS_R2_STAGE_REJECT_COUNT(6);
-#endif
         gNdsNativeStagePrepareRunFailStep = 6u;
         gNdsNativeStagePrepareRunFailRun = run_index;
         return FALSE;
@@ -3052,11 +3025,6 @@ s32 ndsRendererPrepareNativeStageOwner(
          * predecessor's certificate. The next consult re-sweeps and re-stamps. */
         ndsRendererNativeStagePreparedTextureProofDrop();
     }
-#if NDS_TASK36_REJECT_TRACE
-    u32 task36_reject_reason = 1u;
-
-    gNdsRendererTask36RendererRejectReason = 0u;
-#endif
 
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
@@ -3107,9 +3075,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
-#if NDS_TASK36_REJECT_TRACE
-    task36_reject_reason = 2u;
-#endif
 
 
     for (segment_index = 0u;
@@ -3145,9 +3110,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                     &sNdsNativeStageOwnerExecution.preflight_stats,
                     state, &epoch_mask) == FALSE)
             {
-#if NDS_TASK36_REJECT_TRACE
-                task36_reject_reason = 100u;
-#endif
                 gNdsNativeStageOwnerPrepareFailStep = 3u;
                 gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
@@ -3209,9 +3171,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                          &sNdsNativeStageOwnerExecution.preflight_stats,
                          state) == FALSE)
                 {
-#if NDS_TASK36_REJECT_TRACE
-                    task36_reject_reason = 200u + run_index;
-#endif
                     gNdsNativeStageOwnerPrepareFailStep = 4u;
                     gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
@@ -3222,9 +3181,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                         &sNdsNativeStageOwnerExecution.preflight_stats,
                         state, &epoch_mask) == FALSE)
                 {
-#if NDS_TASK36_REJECT_TRACE
-                    task36_reject_reason = 300u + run_index;
-#endif
                     gNdsNativeStageOwnerPrepareFailStep = 6u;
                     gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
@@ -3236,18 +3192,12 @@ s32 ndsRendererPrepareNativeStageOwner(
                     frame, &sNdsNativeStageOwnerExecution.preflight_stats,
                     state) == FALSE)
             {
-#if NDS_TASK36_REJECT_TRACE
-                task36_reject_reason = 400u + binding_index;
-#endif
                 gNdsNativeStageOwnerPrepareFailStep = 7u;
                 gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
         }
     }
-#if NDS_TASK36_REJECT_TRACE
-    task36_reject_reason = 3u;
-#endif
     if ((epoch_mask != (((u64)1u <<
                          NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
         (topology.raw_triangles != NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) ||
@@ -3263,9 +3213,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
-#if NDS_TASK36_REJECT_TRACE
-    task36_reject_reason = 4u;
-#endif
 
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
     sNdsNativeStageOwnerExecution.hidden_binding_mask = frame->hidden_binding_mask;
@@ -3308,9 +3255,6 @@ s32 ndsRendererPrepareNativeStageOwner(
 done:
     if (accepted == FALSE)
     {
-#if NDS_TASK36_REJECT_TRACE
-        gNdsRendererTask36RendererRejectReason = task36_reject_reason;
-#endif
         sNdsNativeStageOwnerExecution.stats = NULL;
         sNdsNativeStageOwnerExecution.binding_composed = NULL;
         sNdsNativeStageOwnerExecution.projection = NULL;

@@ -50,8 +50,8 @@
  * production execute, which a lean draw never runs: route 0's record path),
  * with the three angle conversions inline. A half-period ITCM copy of
  * gSYSinTable for its six sine lookups a joint (gNdsFtrLeanSinHalf below;
- * the 4 KB table is the whole data cache) was measured and left off
- * (NDS_FTR_LEAN_SIN_ITCM): the same ITCM holds per-draw list code for more. */
+ * the 4 KB table is the whole data cache) was measured and left out of ITCM:
+ * the same ITCM holds per-draw list code for more. The copy lives in DTCM. */
 
 #include <sys/obj.h>
 #include <ft/fighter.h>
@@ -60,26 +60,11 @@
 
 extern u16 gSYSinTable[0x800];
 
-/* ITCM only where the production execute left it (a roster with a lean kind:
- * NDS_FTR_LEAN_EVICT_PRODUCTION, src/nds/nds_renderer_preamble.c); P1 keeps
- * the kernel in main RAM, where it never runs. */
-#define NDS_FTR_LEAN_KERNEL_ITCM NDS_FTR_LEAN_KINDS_BUILD
-
 #if defined(__arm__)
-#if NDS_FTR_LEAN_KERNEL_ITCM
 #define NDS_FTR_LEAN_KERNEL_CODE \
     __attribute__((noinline, target("arm"), section(".itcm.ftr_lean")))
-#if defined(NDS_FTR_LEAN_SIN_ITCM) && NDS_FTR_LEAN_SIN_ITCM
-#define NDS_FTR_LEAN_SIN_SECTION __attribute__((section(".itcm.ftr_lean_sin")))
-#else
-/* P2-2p8: DTCM, where it evicts no code (see NDS_FTR_LEAN_SIN_DTCM). */
+/* P2-2p8: DTCM, where it evicts no code. */
 #define NDS_FTR_LEAN_SIN_SECTION __attribute__((section(".dtcm")))
-#endif
-#else
-#define NDS_FTR_LEAN_KERNEL_CODE \
-    __attribute__((noinline, target("arm")))
-#define NDS_FTR_LEAN_SIN_SECTION
-#endif
 /* Helpers are ARM too, so they inline into the ARM kernel (a Thumb helper
  * cannot be inlined into an ARM caller and became a main-RAM call). */
 #define NDS_FTR_LEAN_KERNEL_INLINE \
@@ -176,36 +161,18 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bit
  * period) is symmetric about 0x3ff.5 -- entry i equals entry 0x7ff - i for
  * every i (decomp/.../sys/sintable.c; checked on the host over all 2,048
  * entries, and again on the device at fill time in the lab ROM) -- so its first
- * 0x400 entries reproduce it exactly. That half lives in ITCM (2 KB, no main
- * RAM: the ITCM load image is overwritten when .main is relocated at boot),
- * filled from gSYSinTable at the kernel's first call; entry 0x3ff (32,768) is
- * never 0, so it doubles as the "filled" flag. Gameplay keeps reading
- * gSYSinTable itself. A build without the ITCM kernel (P1) reads gSYSinTable
- * as before and carries no copy. */
+ * 0x400 entries reproduce it exactly. That half lives in DTCM (2 KB, no main
+ * RAM), filled from gSYSinTable at the kernel's first call; entry 0x3ff
+ * (32,768) is never 0, so it doubles as the "filled" flag. Gameplay keeps
+ * reading gSYSinTable itself.
+ *
+ * Measured on the four-CPU match (slice 5, a2 against a2nosin, same sources),
+ * an ITCM half saved 38-50 ticks/joint, ~4.2K ticks a frame of FTR, for 2 KB
+ * of ITCM -- about half of what the same ITCM buys holding the per-draw list
+ * code. P2-2p8 put the half in DTCM instead: DTCM holds data only, so it
+ * evicts no code, and the D-cache fill census put the 4 KB gSYSinTable at 288
+ * line fills a frame, the kernel's six lookups a joint most of them. */
 #define NDS_FTR_LEAN_SIN_HALF 0x400u
-/* Off by default: measured on the four-CPU match (slice 5, a2 against
- * a2nosin, same sources), the ITCM half saved 38-50 ticks/joint, ~4.2K ticks
- * a frame of FTR, for 2 KB of ITCM -- about half of what the same ITCM buys
- * holding the per-draw list code (which also leaves main RAM; the half-table
- * is new bytes). 1 puts it back, where the kernel is in ITCM. */
-#ifndef NDS_FTR_LEAN_SIN_ITCM
-#define NDS_FTR_LEAN_SIN_ITCM 0
-#endif
-/* P2-2p8: the same half in DTCM (default). The ITCM copy lost because of the
- * code it evicted; DTCM holds data only, and the D-cache fill census put the
- * 4 KB gSYSinTable at 288 line fills a frame, the kernel's six lookups a
- * joint most of them. NDS_FTR_LEAN_SIN_HALF_ON is "either copy". */
-#ifndef NDS_FTR_LEAN_SIN_DTCM
-#define NDS_FTR_LEAN_SIN_DTCM 1
-#endif
-#if (NDS_FTR_LEAN_SIN_ITCM || NDS_FTR_LEAN_SIN_DTCM) && NDS_FTR_LEAN_KERNEL_ITCM
-#define NDS_FTR_LEAN_SIN_HALF_ON 1
-#else
-#define NDS_FTR_LEAN_SIN_HALF_ON 0
-#endif
-#undef NDS_FTR_LEAN_SIN_ITCM
-#define NDS_FTR_LEAN_SIN_ITCM NDS_FTR_LEAN_SIN_HALF_ON
-#if NDS_FTR_LEAN_SIN_ITCM
 /* Not static: the fighter joint worlds' fixed local builder
  * (src/port/nds_p2_hurtbox_reject.c) reads it too, once filled. */
 u16 gNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
@@ -248,16 +215,6 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
 
     return ((id & 0x800u) != 0u) ? -value : value;
 }
-#else
-/* ndsRendererAdapterFighterSinFromIndex, verbatim. */
-NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
-{
-    u32 id = (u32)index & 0xfffu;
-    s32 value = (s32)gSYSinTable[id & 0x7ffu];
-
-    return ((id & 0x800u) != 0u) ? -value : value;
-}
-#endif
 
 /* truncf(angle * 651.8986f) without the float multiply's rounding step: the
  * multiplier is 0xa2f983 * 2^-14, so the product is mantissa * 0xa2f983 *
@@ -546,12 +503,10 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
     {
         return FALSE;
     }
-#if NDS_FTR_LEAN_SIN_ITCM
     if (gNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF - 1u] == 0u)
     {
         ndsFtrLeanSinHalfFill();
     }
-#endif
     for (j = 0u; j < nNDSFtrLeanJointClassCount; j++)
     {
         counts[j] = 0u;

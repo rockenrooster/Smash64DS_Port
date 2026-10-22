@@ -64,28 +64,6 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_BATTLE_FPS_HUD_SAMPLE_TICKS (BUS_CLOCK / 2u)
 #define NDS_MENU_FPS_HUD_SAMPLE_VBLANKS 30u
 #define NDS_BATTLE_SOURCE_TICKS_PER_SECOND 60u
-#define NDS_BATTLE_FPS_HUD_ENABLED \
-    ((NDS_HARNESS_FAST_LOGIC == 0) && \
-     (NDS_RENDERER_HW_TRIANGLES != 0) && \
-     (NDS_DEV_LIVE_INPUT_PREVIEW != 0) && \
-     (NDS_DEBUG_HUD == 0))
-/* The lower-screen battle HUD is GAME CONTENT -- the owner moved the battle
- * HUD to the bottom screen -- while NDS_BATTLE_FPS_HUD_ENABLED above gates the
- * developer FPS/tick TEXT console beside it. They were the same flag, so a
- * harness ROM built with NDS_HARNESS_FAST_LOGIC=1 lost the HUD entirely: with
- * gNdsIFCommonHUDLowerTextMode 0, ifCommonPlayerStockSingleProcDisplay is no
- * longer redirected to the bottom screen and its CI4 stock icon is offered to
- * the top-screen OAM asset table, which holds no fighter bitmap -- ten
- * NDS_NATIVE_FAILURE_NO_PROGRAM records per lap of p2_shell_loop, on a sprite
- * the shipping ROM draws natively as a 4bpp OAM object
- * (nds_battle_hud.c:261-266). Fast logic is a logic-rate decision and has
- * nothing to say about which screen the HUD lives on. */
-#define NDS_BATTLE_LOWER_HUD_ENABLED \
-    ((NDS_RENDERER_HW_TRIANGLES != 0) && (NDS_DEBUG_HUD == 0))
-#define NDS_BATTLE_PHASE_HUD_ENABLED \
-    (NDS_BATTLE_FPS_HUD_ENABLED && (NDS_RENDERER_PROFILE_LEVEL >= 1))
-#define NDS_BATTLE_TICK_HUD_ENABLED \
-    (NDS_BATTLE_FPS_HUD_ENABLED && NDS_TICK_HUD)
 /* R2-03 E30. The tick HUD's on-screen block re-sorts eleven 128-entry rings and
  * pushes thirteen vsnprintf/iprintf lines through the libnds text console about
  * twice a second, and it measured 345,024 ticks each time against a 960-tick
@@ -96,7 +74,7 @@ extern volatile u32 gNdsFrameCounter;
  * Set NDS_TICK_HUD_DRAW=0 for a measurement run; leave it 1 to read the HUD on
  * a device or in a screenshot. */
 #define NDS_BATTLE_TICK_HUD_DRAW_ENABLED \
-    (NDS_BATTLE_TICK_HUD_ENABLED && NDS_TICK_HUD_DRAW)
+    (NDS_TICK_HUD && NDS_TICK_HUD_DRAW)
 /* P2-2p8 (2026-10-04): the developer FPS console's periodic text (the FPS/UP,
  * SLIP, VBI and GIT rows: about five iprintf lines through the libnds console
  * every half second, +25-40K ticks on one presented frame in fifteen) is A9
@@ -122,7 +100,6 @@ static u32 sEarliestPresentVBlank;
 #define NDS_TRANSITION_HOLD_EXIT 1u
 #define NDS_TRANSITION_HOLD_LOAD 2u
 static u32 sNdsTransitionHold;
-#if NDS_TRANSITION_HOLD
 #define NDS_TRANSITION_HOLD_PENDING_TITLE_FIRE_OFF 1u
 #define NDS_TRANSITION_HOLD_PENDING_LAYER_MASK 2u
 #define NDS_TRANSITION_HOLD_PENDING_BACKDROP 4u
@@ -136,8 +113,6 @@ static s32 sNdsTransitionHoldWants3D;
  * seconds; SSS -> battle, the longest load, measured 170). */
 static u32 sNdsTransitionHoldPresents;
 #define NDS_TRANSITION_HOLD_MAX_PRESENTS 600u
-#endif
-#if NDS_TRANSITION_HOLD
 /* The transition snapshot (ndsPlatformTransitionSnapshotBegin, below): 0, or
  * 1 + the bank (0 = A, 1 = B: captured into; 2 = C: moved into, see
  * ndsPlatformTransitionSnapshotMoveToC; 3 = D: a battle exit's, see
@@ -173,7 +148,6 @@ static void ndsPlatformTransitionSnapshotLeaveBg3(void)
         ndsPlatformTransitionSnapshotAbort();
     }
 }
-#endif
 /* BG2's affine as last written (PA, PD, X, Y; PB = PC = 0 at every write
  * here): a battle exit's held frame redraws the wallpaper through it. */
 static s32 sNdsBg2AffineShown[4] = { 1 << 8, 1 << 8, 0, 0 };
@@ -201,7 +175,6 @@ volatile u32 gNdsPlatformHeldKeys;
  * guards. Declared here rather than in a header because this file must stay
  * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
 extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
-#if NDS_BATTLE_FPS_HUD_ENABLED
 static u32 sBattleFpsHudSampleReady;
 static u32 sBattleFpsHudLastTick;
 static u32 sBattleFpsHudLastPresentedFrames;
@@ -219,7 +192,7 @@ static u32 sBattleFpsHudPrintedGx3dFaults = 0xffffffffu;
 volatile u32 gNdsGx3dUnderflowFrames;
 volatile u32 gNdsGx3dRamOverflowFrames;
 volatile u32 gNdsGx3dRdlinesMin = 46u;
-#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
 static u32 sMenuFpsHudScreen = 0xffffffffu;
 static u32 sMenuFpsHudEnterCount = 0xffffffffu;
 static u32 sMenuFpsHudLastVBlank;
@@ -235,10 +208,6 @@ static const char *const sMenuFpsHudNames[NDS_MENU_SHELL_SCREEN_COUNT] = {
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
-#if NDS_BATTLE_PHASE_HUD_ENABLED
-static u32 sBattlePhaseHudLastSlipCount;
-#endif
-#endif
 /* The native shell does not rasterize source SObjs. Keep this 150 KiB scratch
  * in the scene that actually uses it, rather than permanently shrinking every
  * scene arena. Hardware commits copy its pixels into BG VRAM immediately. */
@@ -355,7 +324,7 @@ volatile u32 gNdsBattlePlayableHudFpsX10;
 volatile u32 gNdsBattlePlayableHudFpsSampleCount;
 volatile u32 gNdsBattlePlayableHudFpsFrameWindow;
 volatile u32 gNdsBattlePlayableHudFpsTickWindow;
-#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
 volatile u32 gNdsMenuFpsHudRefreshCount __attribute__((used));
 #endif
 volatile u32 gNdsBattleTextHudRenderCount;
@@ -549,11 +518,7 @@ void ndsPlatformInit(void)
     irqSet(IRQ_VBLANK, ndsPlatformVBlankInterrupt);
     irqEnable(IRQ_VBLANK);
 
-#if NDS_BATTLE_LOWER_HUD_ENABLED
     gNdsIFCommonHUDLowerTextMode = 1u;
-#else
-    gNdsIFCommonHUDLowerTextMode = 0u;
-#endif
 
     videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
     vramSetBankA(VRAM_A_TEXTURE);
@@ -813,12 +778,10 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         int bg = (layer != 0u) ?
             sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
-#if NDS_TRANSITION_HOLD
         if (layer != 0u)
         {
             ndsPlatformTransitionSnapshotLeaveBg3();
         }
-#endif
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
         {
             if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
@@ -833,12 +796,10 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         {
             return NULL;
         }
-#if NDS_TRANSITION_HOLD
         if (layer == 0u)
         {
             ndsPlatformTransitionSnapshotLeaveBg2();
         }
-#endif
         if (out_pitch != NULL) { *out_pitch = 256u; }
         if (out_width != NULL) { *out_width = SCREEN_WIDTH; }
         if (out_height != NULL) { *out_height = SCREEN_HEIGHT; }
@@ -858,12 +819,10 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
     u32 bytes;
 
-#if NDS_TRANSITION_HOLD
     if (layer != 0u)
     {
         ndsPlatformTransitionSnapshotLeaveBg3();
     }
-#endif
     if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
     {
         if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
@@ -1015,7 +974,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
 
         /* A visible overlay write: the held frame ends here. */
         ndsPlatformTransitionThaw();
-#if NDS_TRANSITION_HOLD
         if (layer == 0u)
         {
             ndsPlatformTransitionSnapshotLeaveBg2();
@@ -1024,7 +982,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         {
             ndsPlatformTransitionSnapshotLeaveBg3();
         }
-#endif
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u) &&
             (sOriginalSpriteOverlayBg3ReturnPending != 0u))
         {
@@ -1117,7 +1074,6 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
         u32 clear_bytes =
             ndsPlatformOriginalSpriteOverlayClearPixels() * sizeof(u16);
 
-#if NDS_TRANSITION_HOLD
         /* Bank C holds the snapshot: its release clears the whole bank. */
         if ((is_foreground == FALSE) &&
             (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C))
@@ -1125,7 +1081,6 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
             clear_bytes = 0u;
         }
         else
-#endif
         dmaFillHalfWords(0, bgGetGfxPtr(bg), clear_bytes);
         if (is_foreground != FALSE)
         {
@@ -1188,7 +1143,6 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
 {
     u32 previous_mask;
 
-#if NDS_TRANSITION_HOLD
     /* An exit's mask (the source menus turn the overlay off) is applied by
      * the Thaw, after its cover; the next scene's ends the hold. */
     if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
@@ -1197,7 +1151,6 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
         sNdsTransitionHoldLayerMask = layer_mask;
         return;
     }
-#endif
     ndsPlatformTransitionThaw();
     previous_mask = sOriginalSpriteOverlayLayerMask;
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
@@ -1310,7 +1263,6 @@ u32 ndsPlatformVramBg3Empty(void)
  * withheld until ndsPlatformVramReturnBankD. */
 s32 ndsPlatformVramTakeBankD(void)
 {
-#if NDS_TRANSITION_HOLD
     /* A battle exit's held frame in D (a battle straight after it) moves to
      * C first, or ends. */
     if ((sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_D) &&
@@ -1318,7 +1270,6 @@ s32 ndsPlatformVramTakeBankD(void)
     {
         ndsPlatformTransitionSnapshotAbort();
     }
-#endif
     if (sOriginalSpriteOverlayBg3Lent != 0u)
     {
         /* A battle straight after a battle: D never left the texture slot. */
@@ -1365,14 +1316,12 @@ void ndsPlatformVramReturnBankD(void)
  * an image), and show the foreground again if the scene still wants it. */
 static void ndsPlatformVramReturnBankDNow(void)
 {
-#if NDS_TRANSITION_HOLD
     /* A battle exit's held frame is in D: the return waits for its release
      * (BG3 stays hidden meanwhile; a BG3 write ends the frame first). */
     if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_D)
     {
         return;
     }
-#endif
     sOriginalSpriteOverlayBg3ReturnPending = 0u;
     if (sOriginalSpriteOverlayBg3Lent == 0u)
     {
@@ -1450,7 +1399,6 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
      * frame was submitted and flushed, means every enable shows that scene's
      * own first frame or nothing at all. A scene that never presents keeps the
      * layer hidden, which is also the safer failure. */
-#if NDS_TRANSITION_HOLD
     /* While a frame is held, BG0 is that frame's: the request is recorded and
      * the Thaw, which hides the old list, applies it. */
     if (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE)
@@ -1458,7 +1406,6 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
         sNdsTransitionHoldWants3D = (is_enabled != FALSE) ? TRUE : FALSE;
         return;
     }
-#endif
     if (is_enabled != FALSE)
     {
         if ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) == 0u)
@@ -1502,7 +1449,6 @@ static void ndsPlatformTransitionCover(s32 retire_list)
     ndsSource2DExit();
 }
 
-#if NDS_TRANSITION_HOLD
 /* Whether libnds's texture allocator holds any live block inside bank
  * `bank` (0 = A, 1 = B; LCD addresses). */
 static u32 ndsPlatformTextureBankInUse(u32 bank)
@@ -1849,16 +1795,11 @@ static void ndsPlatformTransitionSnapshotBegin(void)
     ndsVideoSetTransitionMainHeld(TRUE);
     NDS_DIAG(gNdsTransitionSnapshotCount++);
 }
-#endif
 
 s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
 {
-#if NDS_TRANSITION_HOLD
     return (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C) ?
         TRUE : FALSE;
-#else
-    return FALSE;
-#endif
 }
 
 /* The held frame as the N64 colour framebuffer a source photo reader copies
@@ -1872,7 +1813,6 @@ s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
 s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
                                             u32 height)
 {
-#if NDS_TRANSITION_HOLD
     const u16 *held;
     u8 column[300];
     u32 x;
@@ -1905,12 +1845,6 @@ s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
     }
     NDS_DIAG(gNdsTransitionSnapshotPhotoCount++);
     return TRUE;
-#else
-    (void)frame;
-    (void)width;
-    (void)height;
-    return FALSE;
-#endif
 }
 
 /* A texture upload, or the battle's texture VRAM reset, while the snapshot
@@ -1918,7 +1852,6 @@ s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
  * goes back to its texture slot before the upload plans around it. */
 void ndsPlatformTransitionSnapshotAbort(void)
 {
-#if NDS_TRANSITION_HOLD
     if (sNdsTransitionSnapshotBank == 0u)
     {
         return;
@@ -1929,7 +1862,6 @@ void ndsPlatformTransitionSnapshotAbort(void)
     swiWaitForVBlank();
     ndsVideoBlackoutCommit();
     ndsPlatformTransitionSnapshotRestore();
-#endif
 }
 
 /* SCENE TRANSITION HOLD (owner, r64, 2026-09-30: "keep what's currently on
@@ -1958,7 +1890,6 @@ void ndsPlatformTransitionSnapshotAbort(void)
  * Measured on r64 (trace, VBlanks): SSS -> battle held 147 of 170. */
 void ndsPlatformTransitionHoldBegin(void)
 {
-#if NDS_TRANSITION_HOLD
     if (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE)
     {
         return;
@@ -1970,7 +1901,6 @@ void ndsPlatformTransitionHoldBegin(void)
     NDS_DIAG(gNdsTransitionHoldCount++);
     gNdsTransitionHoldVBlank = sVBlankCount;
     ndsPlatformTransitionSnapshotBegin();
-#endif
 }
 
 u32 ndsPlatformTransitionHolding(void)
@@ -1980,18 +1910,15 @@ u32 ndsPlatformTransitionHolding(void)
 
 u32 ndsPlatformSceneLoading(void)
 {
-#if NDS_TRANSITION_HOLD
     if (sNdsTransitionHold == NDS_TRANSITION_HOLD_LOAD)
     {
         return TRUE;
     }
-#endif
     return (ndsVideoGetTransitionBlackout() != FALSE) ? TRUE : FALSE;
 }
 
 void ndsPlatformTransitionThaw(void)
 {
-#if NDS_TRANSITION_HOLD
     u32 pending;
 
     if (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE)
@@ -2037,12 +1964,10 @@ void ndsPlatformTransitionThaw(void)
      * frame (nds_results_oam.c). */
     ndsResultsOamEnterPending();
     ndsSource2DEnterPending();
-#endif
 }
 
 void ndsPlatformTransitionThawIf3DShown(void)
 {
-#if NDS_TRANSITION_HOLD
     /* No texture lives in C, and none is placed in D while a battle exit's
      * frame keeps it LCD-mapped (libnds allocates only in banks mapped as
      * texture; a battle's take of D moves or ends it first,
@@ -2060,45 +1985,34 @@ void ndsPlatformTransitionThawIf3DShown(void)
     {
         ndsPlatformTransitionThaw();
     }
-#endif
 }
 
 void ndsPlatformTransitionHoldPendOamUpdate(u32 engine)
 {
-#if NDS_TRANSITION_HOLD
     sNdsTransitionHoldPending |= (engine != 0u) ?
         NDS_TRANSITION_HOLD_PENDING_OAM_SUB :
         NDS_TRANSITION_HOLD_PENDING_OAM_MAIN;
-#else
-    (void)engine;
-#endif
 }
 
 void ndsPlatformSetBackdropColor(u16 color)
 {
-#if NDS_TRANSITION_HOLD
     if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
     {
         sNdsTransitionHoldPending |= NDS_TRANSITION_HOLD_PENDING_BACKDROP;
         sNdsTransitionHoldBackdrop = color;
         return;
     }
-#endif
     ndsPlatformTransitionThaw();
     BG_PALETTE[0] = color;
 }
 
 void ndsPlatformBeginSceneTransition(void)
 {
-#if NDS_TRANSITION_HOLD
     ndsRendererFighterPacketDmaWait();
     /* A battle's exit has no leaving-frame call: its hold starts here. */
     ndsPlatformTransitionHoldBegin();
     /* The old scene has exited; what runs from now is the next one. */
     sNdsTransitionHold = NDS_TRANSITION_HOLD_LOAD;
-#else
-    ndsPlatformTransitionCover(TRUE);
-#endif
 }
 
 /* Texture writes the next scene makes while a frame with 3D is held would
@@ -2302,7 +2216,6 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
     {
         return;
     }
-#if NDS_TRANSITION_HOLD
     /* The title's exit hands BG3 back after the Thaw's cover. */
     if ((is_enabled == FALSE) &&
         (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT))
@@ -2310,7 +2223,6 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
         sNdsTransitionHoldPending |= NDS_TRANSITION_HOLD_PENDING_TITLE_FIRE_OFF;
         return;
     }
-#endif
     ndsPlatformTransitionThaw();
     if (is_enabled != FALSE)
     {
@@ -2463,15 +2375,7 @@ static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
     iprintf("\x1b[%lu;0H%-31s", (unsigned long)row, line);
 }
 
-#if NDS_BATTLE_FPS_HUD_ENABLED
-#if NDS_BATTLE_PHASE_HUD_ENABLED
-static u64 sBattlePhaseHudUpdTickSum;
-static u64 sBattlePhaseHudDrawTickSum;
-static u64 sBattlePhaseHudActiveTickSum;
-static u64 sBattlePhaseHudLoopTickSum;
-static u32 sBattlePhaseHudAvgSampleCount;
-#endif
-#if NDS_BATTLE_TICK_HUD_ENABLED
+#if NDS_TICK_HUD
 /* The tick HUD reports P50 and P95, not latest-and-mean. Per-frame buckets here
  * are heavily skewed: audio refill and HUD text redraw fire on a minority of
  * frames, so a mean measures how many bursts a window happened to contain
@@ -2565,12 +2469,10 @@ static u32 ndsPlatformTickHudPercentile(const u32 *sorted, u32 count,
 /* Emitted only when the tick HUD is compiled in. An empty external-linkage
  * function still occupies text and shifts layout, which changed the published
  * lean ROM's SHA-256 for a diagnostic it does not contain; the only caller is
- * likewise under NDS_TICK_HUD. The inner guard keeps the symbol resolvable when
- * NDS_TICK_HUD is set but the FPS HUD it draws into is not enabled. */
+ * likewise under NDS_TICK_HUD. */
 #if NDS_TICK_HUD
 void ndsPlatformTickHudReset(void)
 {
-#if NDS_BATTLE_TICK_HUD_ENABLED
     /* The sampling epoch starts in ndsBattlePlayablePacingStart(), before the
      * first presented iteration.  This used to be cleared lazily by the first
      * FPS-HUD refresh instead, after ndsPlatformTickHudSample() had already
@@ -2582,12 +2484,10 @@ void ndsPlatformTickHudReset(void)
     sBattleTickHudRingCount = 0u;
     memset(sBattleTickHudP50, 0, sizeof(sBattleTickHudP50));
     memset(sBattleTickHudP95, 0, sizeof(sBattleTickHudP95));
-#endif
 }
 
 void ndsPlatformTickHudSample(void)
 {
-#if NDS_BATTLE_TICK_HUD_ENABLED
     u32 bucket;
     u32 head = sBattleTickHudRingHead;
 
@@ -2600,7 +2500,6 @@ void ndsPlatformTickHudSample(void)
     {
         sBattleTickHudRingCount++;
     }
-#endif
 }
 #else
 void ndsPlatformTickHudReset(void)
@@ -2644,7 +2543,7 @@ static void ndsPlatformPublishBattleFpsHudGroup(void)
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP);
 }
 
-#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL
 /* The menu shell already owns the cadence measurement. This HUD only turns its
  * published counters into two readable lower-screen rows: no per-frame ring,
  * sorting, or second presentation recorder. FPS is the recent presented-frame
@@ -2791,30 +2690,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPublishBattleFpsHudGroup();
         consoleClear();
         NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS --.-  UP --.-");
-#if NDS_BATTLE_PHASE_HUD_ENABLED
-        sBattlePhaseHudLastSlipCount =
-            gNdsBattlePlayablePacingCadenceViolationCount;
-        sBattlePhaseHudUpdTickSum = 0u;
-        sBattlePhaseHudDrawTickSum = 0u;
-        sBattlePhaseHudActiveTickSum = 0u;
-        sBattlePhaseHudLoopTickSum = 0u;
-        sBattlePhaseHudAvgSampleCount = 0u;
-        NDS_BATTLE_FPS_HUD_PRINT(12u, "UPD        --");
-        NDS_BATTLE_FPS_HUD_PRINT(13u, "DRW        --");
-        NDS_BATTLE_FPS_HUD_PRINT(14u, "ACT        --");
-        NDS_BATTLE_FPS_HUD_PRINT(15u, "LOOP       --");
-        NDS_BATTLE_FPS_HUD_PRINT(19u, "SLIP        0");
-        NDS_BATTLE_FPS_HUD_PRINT(21u, "VBI  --  --  --");
-        NDS_BATTLE_FPS_HUD_PRINT(22u, "5+  --  max --  BGM --/--");
-        NDS_BATTLE_FPS_HUD_PRINT(
-            23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
-            (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
-            (unsigned long)(gNdsRendererTask36AdapterRejectReason |
-                            gNdsRendererTask36RendererRejectReason |
-                            gNdsRendererTask36PrepareRunRejectReason),
-            (unsigned long)gNdsRendererM3PostArmFailureCount);
-#endif
-#if NDS_BATTLE_TICK_HUD_ENABLED
+#if NDS_TICK_HUD
         /* Ring lifetime is owned by ndsBattlePlayablePacingStart(), before the
          * first sample can be written.  Do not clear it here: this HUD path is
          * lazy and may first run several presented frames into the match. */
@@ -2891,66 +2767,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
     sBattleFpsHudLastPresentedFrames = presented_frames;
     sBattleFpsHudLastLogicFrames = logic_frames;
 
-#if NDS_BATTLE_PHASE_HUD_ENABLED
-    /* Left column = latest snapshot; right column = running mean of these
-     * once-per-sample-window snapshots since HUD reset (not per-frame). */
-    {
-        u32 upd_ticks = gNdsRendererProfileSourceUpdateTicks;
-        u32 drw_ticks = gNdsRendererProfileDrawTicks;
-        u32 act_ticks = gNdsRendererProfilePresentActiveTicks;
-        u32 loop_ticks = gNdsRendererProfileLoopWallTicks;
-        u32 avg_count;
-
-        sBattlePhaseHudUpdTickSum += upd_ticks;
-        sBattlePhaseHudDrawTickSum += drw_ticks;
-        sBattlePhaseHudActiveTickSum += act_ticks;
-        sBattlePhaseHudLoopTickSum += loop_ticks;
-        sBattlePhaseHudAvgSampleCount++;
-        avg_count = sBattlePhaseHudAvgSampleCount;
-
-        NDS_BATTLE_FPS_HUD_PRINT(
-            12u, "UPD %8lu %8lu", (unsigned long)upd_ticks,
-            (unsigned long)(sBattlePhaseHudUpdTickSum / avg_count));
-        NDS_BATTLE_FPS_HUD_PRINT(
-            13u, "DRW %8lu %8lu", (unsigned long)drw_ticks,
-            (unsigned long)(sBattlePhaseHudDrawTickSum / avg_count));
-        NDS_BATTLE_FPS_HUD_PRINT(
-            14u, "ACT %8lu %8lu", (unsigned long)act_ticks,
-            (unsigned long)(sBattlePhaseHudActiveTickSum / avg_count));
-        NDS_BATTLE_FPS_HUD_PRINT(
-            15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
-            (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
-    }
-    NDS_BATTLE_FPS_HUD_PRINT(
-        19u, "SLIP%10lu",
-        (unsigned long)(gNdsBattlePlayablePacingCadenceViolationCount -
-                        sBattlePhaseHudLastSlipCount));
-    sBattlePhaseHudLastSlipCount =
-        gNdsBattlePlayablePacingCadenceViolationCount;
-    /* Presentation-interval histogram, cumulative since HUD reset. Device A/B
-     * reports read this, never min FPS, because one frame crossing the 4->5
-     * VBlank boundary reads as 12 FPS while the histogram stays continuous. */
-    NDS_BATTLE_FPS_HUD_PRINT(
-        21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
-        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
-        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
-        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
-    NDS_BATTLE_FPS_HUD_PRINT(
-        22u, "5+:%-5lu max:%lu BGM %lu/%lu",
-        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
-            NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
-        (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax,
-        0ul,
-        0ul
-        );
-    NDS_BATTLE_FPS_HUD_PRINT(
-        23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
-        (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
-        (unsigned long)(gNdsRendererTask36AdapterRejectReason |
-                        gNdsRendererTask36RendererRejectReason |
-                        gNdsRendererTask36PrepareRunRejectReason),
-        (unsigned long)gNdsRendererM3PostArmFailureCount);
-#endif
 #if NDS_BATTLE_TICK_HUD_DRAW_ENABLED
     {
         u32 bucket;
@@ -3055,7 +2871,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
         }
     }
 }
-#endif
 
 /* The frame-complete stop's groups, published for the debugger exactly as the
  * FPS-HUD group above is. Unconditional: the realtime harness reads these
@@ -3084,7 +2899,6 @@ static u32 ndsPlatformMixDebugValue(u32 hash, u32 value)
     return hash * 16777619u;
 }
 
-#if NDS_BATTLE_FPS_HUD_ENABLED
 static u32 ndsPlatformBattleHudDisplayDamage(u32 damage)
 {
     return (damage > 999u) ? 999u : damage;
@@ -3267,7 +3081,6 @@ static void ndsPlatformRenderBattleTextHud(void)
     gNdsBattleTextHudActiveMask = gNdsIFCommonHUDActivePlayerMask;
     gNdsBattleTextHudShowDamageMask = gNdsIFCommonHUDShowDamageMask;
 }
-#endif
 
 void ndsPlatformClearBattleTextHud(void)
 {
@@ -3280,7 +3093,6 @@ void ndsPlatformClearBattleTextHud(void)
     ndsPlatformTransitionThaw();
     gNdsBattleTextHudClearCount++;
     ndsBattleHudClear();
-#if NDS_BATTLE_FPS_HUD_ENABLED
     if ((sBattleFpsHudSampleReady != 0u) ||
         (sBattleTextHudReady != FALSE))
     {
@@ -3294,13 +3106,11 @@ void ndsPlatformClearBattleTextHud(void)
     gNdsGx3dRdlinesMin = 46u;
     sBattleTextHudReady = FALSE;
     sBattleTextHudFingerprint = 0xffffffffu;
-#endif
 }
 
 
 void ndsPlatformRenderDebugHud(void)
 {
-#if NDS_BATTLE_FPS_HUD_ENABLED
 #if NDS_P2_MENU_SHELL
     if (gNdsMenuShellScreen < NDS_MENU_SHELL_SCREEN_COUNT)
     {
@@ -3313,25 +3123,6 @@ void ndsPlatformRenderDebugHud(void)
         ndsPlatformRenderBattleFpsHud();
         ndsPlatformRenderBattleTextHud();
     }
-#elif NDS_BATTLE_LOWER_HUD_ENABLED
-    /* Same OAM HUD, without the developer text console that
-     * ndsPlatformRenderBattleTextHud draws beside it. Same visibility
-     * predicate and the same clear-on-every-other-frame rule as there, for the
-     * same reason: hidden interface GObjs stop feeding the mirror masks, so an
-     * unconditional render would keep the last battle frame through the
-     * victory window and then redraw it over Results. */
-    if (gNdsBattlePlayablePacingDrawCalls != 0u)
-    {
-        if (ndsIFCommonBattleHudInterfaceVisible() != FALSE)
-        {
-            ndsBattleHudRender();
-        }
-        else
-        {
-            ndsBattleHudClear();
-        }
-    }
-#endif
 }
 
 u32 ndsPlatformVBlankCount(void)
@@ -3416,7 +3207,6 @@ static void ndsPlatformPostSwapCommit(void)
 #endif
     /* A layer written this frame shows with the OBJ planes committed above. */
     ndsPlatformRevealOriginalSpriteOverlay();
-#if NDS_TRANSITION_HOLD
     /* The next scene's first complete frame replaces the snapshot. */
     if ((sNdsTransitionSnapshotBank != 0u) &&
         (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE) &&
@@ -3425,7 +3215,6 @@ static void ndsPlatformPostSwapCommit(void)
         ndsPlatformTransitionSnapshotRestore();
         NDS_DIAG(gNdsTransitionSnapshotReleaseCount++);
     }
-#endif
     /* Release brightness only after this frame's BG/OAM owners committed. */
     ndsVideoBlackoutCommit();
     sTicks++;
@@ -3575,13 +3364,11 @@ static u32 ndsPlatformPresentLeadThisFrame(u32 submitted)
     {
         return FALSE;
     }
-#if NDS_TRANSITION_HOLD
     if ((sNdsTransitionSnapshotBank != 0u) ||
         (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE))
     {
         return FALSE;
     }
-#endif
     return TRUE;
 }
 #endif
@@ -3673,7 +3460,6 @@ void ndsPlatformEndFrame(void)
     u32 lead_flush_vblank = 0u;
 #endif
 
-#if NDS_TRANSITION_HOLD
     /* A present while a frame is held is a loading service present -- every
      * scene's own frame Thaws before its EndFrame. It keeps the pacing and
      * commits nothing: no frame consume (its cloud emit and tint-tile
@@ -3691,7 +3477,6 @@ void ndsPlatformEndFrame(void)
         }
         ndsPlatformTransitionThaw();
     }
-#endif
     /* A present path that releases its cover without the explicit call
      * still starts the music its scene asked for during the load. */
     if (ndsPlatformSceneLoading() == FALSE)

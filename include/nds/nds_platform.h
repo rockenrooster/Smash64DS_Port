@@ -62,11 +62,6 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
  * own no 3D content hide it so a retained previous 3D frame cannot bleed
  * through; CSS/battle/Results show it when they own 3D again. */
 void ndsPlatformSet3DLayerEnabled(s32 is_enabled);
-/* 1 (default): scene transitions hold the old frame (below); 0: the r63
- * black loading cover from the leaving frame to the next scene's first. */
-#ifndef NDS_TRANSITION_HOLD
-#define NDS_TRANSITION_HOLD 1
-#endif
 /* The scene exit: the old frame stays on screen (the transition hold below)
  * while the next scene loads. */
 void ndsPlatformBeginSceneTransition(void);

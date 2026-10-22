@@ -129,15 +129,6 @@ void scManagerRunPrintGObjStatus(void);
  * without capturing a call site (the trap battleship_lbparticle.c documents for
  * lbParticleMakeGenerator), and decomp/ stays untouched. */
 
-/* The ring wrapper exists for two independent reasons and either one turns it
- * on: the law-1 engagement counter (NDS_TICK_HUD) and the wired fixed-point
- * cluster (NDS_R2_COLLISION_FIXED). They share one pair of wrappers because
- * they hook the same two entry points, and hooking them twice would mean two
- * renames of one definition. */
-#define NDS_R2_CFX_RING_WRAP 1
-
-
-#if NDS_R2_CFX_RING_WRAP
 /* R2-07 slice 52 law-1 counter: the ENGAGEMENT of the fighter narrow phase.
  *
  * `plan.md` §9 law 1 requires a per-frame counter on the SPIKING quantity, on
@@ -185,7 +176,6 @@ sb32 ndsBaseGmCollisionCheckFighterAttackShieldCollide(
     ndsBaseGmCollisionCheckFighterAttackDamageCollide
 #define gmCollisionCheckFighterAttackShieldCollide \
     ndsBaseGmCollisionCheckFighterAttackShieldCollide
-#endif /* NDS_R2_CFX_RING_WRAP */
 
 
 /* The weapon/item attack paths against fighter hurtboxes: same joint frame,
@@ -430,7 +420,6 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
 }
 
 
-#if NDS_R2_CFX_RING_WRAP
 #undef gmCollisionCheckFighterAttackDamageCollide
 #undef gmCollisionCheckFighterAttackShieldCollide
 
@@ -500,5 +489,4 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
 #endif
     return hit;
 }
-#endif /* NDS_R2_CFX_RING_WRAP */
 

@@ -420,15 +420,6 @@ static s32 ndsRendererNativePrepareDirectRun(
     return ndsRendererFastRawStateEligible(state);
 }
 
-/* R2-03 E43. The per-delta census inside ndsRendererNativeApplyStateDelta sits
- * inside E38's span bracket and runs 134.5 times a frame on the before-span
- * alone, so the bracket prices the instrument as well as the replay. This arm
- * keeps the brackets and drops the per-delta block, which is what E26 must be
- * sized against. */
-#define NDS_R2_DELTA_CENSUS \
-    (NDS_TASK91_DRAW_PHASE_CENSUS && !NDS_R2_SPAN_LEAN_TIMING)
-
-
 /* P2-2 placement-only reclaim: this 72-byte root preamble is the companion to
  * the 152-byte production preamble moved out above.  Both execute at root
  * granularity; keeping the per-run prepare/emit loops resident is the higher
@@ -472,47 +463,6 @@ ndsRendererNativeApplyStateDelta(
     {
         return;
     }
-#if NDS_R2_DELTA_CENSUS
-    /* R2-03 E20 falsifier. E20 counted applications that repeat a delta index
-     * within a frame; that is an upper bound, because a repeat is only elidable
-     * if it writes what is already there. Every case below writes stats purely
-     * from delta->w0/w1, so identical operands to the previous application of
-     * the same effect means identical writes -- with the one exception noted
-     * for GEOMETRY, whose result also depends on the prior geometry_mode.
-     *
-     * Validity is cleared whenever a material is applied, because materials
-     * write the same stats fields and would make a stale operand match unsafe.
-     * That makes this count conservative, which is the right direction. */
-    if ((u32)delta->effect < NDS_R2_DELTA_EFFECT_MAX)
-    {
-        u32 e = (u32)delta->effect;
-
-        if ((sNdsR2DeltaLastValid[e] != 0u) &&
-            (sNdsR2DeltaLastW0[e] == delta->w0) &&
-            (sNdsR2DeltaLastW1[e] == delta->w1))
-        {
-            NDS_DIAG(gNdsR2SpanIdenticalOperands++);
-            if (delta->effect == NDS_NATIVE_STATE_GEOMETRY)
-            {
-                NDS_DIAG(gNdsR2SpanIdenticalGeometry++);
-            }
-        }
-        sNdsR2DeltaLastW0[e] = delta->w0;
-        sNdsR2DeltaLastW1[e] = delta->w1;
-        sNdsR2DeltaLastValid[e] = 1u;
-    }
-    /* R2-03 E25c. E25b showed the replay's cost is the texture-prepare
-     * invalidation it triggers, not the write. Whether that can be replaced by
-     * a cheap value check depends on WHICH effects dominate: OTHERMODE,
-     * COMBINE, GEOMETRY and PRIM are a handful of scalars a run can compare,
-     * but TILE, IMAGE and TEXTURE move the 20-word tile state, which is too
-     * expensive to compare per run. This splits the 194.4 applications by
-     * effect so the validity key can be designed against the data. */
-    if (delta->effect < 16u)
-    {
-        NDS_DIAG(gNdsR2DeltaEffectCounts[delta->effect]++);
-    }
-#endif
     switch (delta->effect)
     {
     case NDS_NATIVE_STATE_OTHERMODE:
@@ -639,24 +589,6 @@ ndsRendererNativeApplyStateSpan(
         u32 delta_index =
             sNdsNativeFighterActiveTables->state_sequence[first + i];
 
-#if NDS_R2_DELTA_CENSUS
-        {
-            /* +1 so an untouched entry (0) can never alias frame serial 0. */
-            u32 stamp = sNdsRendererHardwareFrameSerial + 1u;
-
-            NDS_DIAG(gNdsR2SpanDeltasApplied++);
-            if (delta_index <
-                (sizeof(sNdsR2DeltaLastFrame) /
-                 sizeof(sNdsR2DeltaLastFrame[0])))
-            {
-                if (sNdsR2DeltaLastFrame[delta_index] == stamp)
-                {
-                    NDS_DIAG(gNdsR2SpanDeltaRepeats++);
-                }
-                sNdsR2DeltaLastFrame[delta_index] = stamp;
-            }
-        }
-#endif
         ndsRendererNativeApplyStateDelta(
             &sNdsNativeFighterActiveTables->state_deltas[delta_index],
             asset_base, stats, state);
@@ -2833,19 +2765,6 @@ static void ndsRendererNativeApplyProductionPreamble(
     }
 }
 
-/* Hoisted from the shade block below so BindProductionRoot can test it: with the
- * skip active the fighter path never prepares a software light direction, which
- * is what removes the last reader of the traversal state's own modelview. */
-#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 1
-
-#if !NDS_R2_SHADE_SKIP_SOFT_LIGHT
-/* Slice 43's other half of the assertion at the GX compose loader. Without the
- * skip, BindProductionRoot below copies `input->modelview_matrix` into the
- * traversal state for the software light -- and under GX compose that pointer is
- * the seed, not this root's world. */
-#error "NDS_R2_FIGHTER_GX_COMPOSE requires NDS_R2_SHADE_SKIP_SOFT_LIGHT"
-#endif
-
 static void ndsRendererNativeBindProductionRoot(
     NDSRendererTraversalState *state,
     const NDSRendererNativeFighterRoot *input,
@@ -2864,14 +2783,13 @@ static void ndsRendererNativeBindProductionRoot(
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
     state->projection_valid = 0u;
-#if NDS_R2_SHADE_SKIP_SOFT_LIGHT
     /* E16b traced every consumer of the composed matrix and found only the
      * hardware load, which the split loader replaces. Finishing that trace for
      * the two halves: on this path the split loader takes them from `input`
      * directly (its call site is the next statement after this one, with
      * `input` in scope), and the only other readers of the traversal state's
-     * modelview are the software light preparation -- compiled out whenever
-     * NDS_R2_SHADE_SKIP_SOFT_LIGHT -- plus the generic command executor's
+     * modelview are the software light preparation -- which the fighter path
+     * never runs -- plus the generic command executor's
      * matrix stack and ComposeMatrix, none of which the production owner
      * enters. So these were two 64-byte struct copies per root with nothing
      * downstream to read them: 12,422 executions at 416 cycles a call, 5,958
@@ -2896,12 +2814,6 @@ static void ndsRendererNativeBindProductionRoot(
         state->modelview_valid = FALSE;
     }
     state->projection_valid = FALSE;
-#else
-    state->modelview = *input->modelview_matrix;
-    state->modelview_valid = TRUE;
-    state->projection = *input->projection_matrix;
-    state->projection_valid = TRUE;
-#endif
     state->matrix_valid = TRUE;
     state->matrix_word_valid = FALSE;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
@@ -4869,13 +4781,6 @@ __attribute__((used)) volatile u32 gNdsEntryEffectPacketReplays;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketFaults;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketArenaWords;
 
-#if NDS_FIGHTER_PACKET_LIVE
-#define NDS_ENTRY_PACKET_LIVE 1
-#else
-#define NDS_ENTRY_PACKET_LIVE 0
-#endif
-
-#if NDS_ENTRY_PACKET_LIVE
 #define NDS_ENTRY_PACKET_COUNTERS 13u
 
 typedef struct NDSEntryEffectPacket
@@ -4937,7 +4842,6 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
     const NDSEntryEffectPacket *packet, NDSRendererStats *stats,
     const NDSRendererMatrix20p12 *modelview,
     NDSRendererHardwareLightDirection *direction, u32 direction_ready);
-#endif
 
 /* DS-native landed entry-prop immutable presentation owner.
  *
@@ -5356,7 +5260,7 @@ u32 ndsRendererEntryEffectStartupIdleFrames(void)
            sNdsEntryEffectStartupDrawSerial;
 }
 
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && NDS_ENTRY_PACKET_LIVE
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY: what each FoxSpecial3 packet replay hands the GX -- the root, both
  * matrices, the packet's words and the stats it reads -- folded per frame by
  * both the executor's branch and the replay submit, so the two can be compared
@@ -6041,16 +5945,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
     if (state_replayed != FALSE)
     {
         u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
-#if NDS_ENTRY_PACKET_LIVE
         const u32 packet_first = (state_fox != FALSE) ?
             (u32)(state_groups - &sNdsEntryEffectStateGroups[0]) : 0u;
         NDSEntryEffectPacket *packet = NULL;
         NDSEntryEffectPacketRecorder packet_rec;
         u32 packet_recording = FALSE;
         u32 packet_sent = FALSE;
-#else
-        const u32 packet_sent = FALSE;
-#endif
 
         /* Ramp palettes first: a lookup may upload, and a failed one leaves
          * the ordinary loop a clean start. */
@@ -6080,7 +5980,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 }
             }
         }
-#if NDS_ENTRY_PACKET_LIVE
         if ((state_replayed != FALSE) && (state_fox != FALSE))
         {
             packet = ndsRendererEntryEffectPacketFor(
@@ -6110,7 +6009,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 packet_recording = TRUE;
             }
         }
-#endif
         for (group_offset = 0u;
              (state_replayed != FALSE) && (packet_sent == FALSE) &&
              (group_offset < root->group_count);
@@ -6164,24 +6062,20 @@ s32 ndsRendererSubmitNativeEntryEffect(
                         config->initial_modelview,
                         &light_direction_by_slot[root_slot]);
                     hw_light_loaded = TRUE;
-#if NDS_ENTRY_PACKET_LIVE
                     if (packet_recording != FALSE)
                     {
                         ndsEntryPacketSplit(&packet_rec);
                     }
-#endif
                 }
                 if (state->dif_amb != last_dif_amb)
                 {
                     ndsRendererHardwareWriteDiffuseAmbient(state->dif_amb);
                     last_dif_amb = state->dif_amb;
-#if NDS_ENTRY_PACKET_LIVE
                     if (packet_recording != FALSE)
                     {
                         ndsEntryPacketCmd(&packet_rec, FIFO_DIFFUSE_AMBIENT, 1u,
                                           state->dif_amb, 0u);
                     }
-#endif
                 }
                 gNdsEntryEffectHwLitGroups++;
             }
@@ -6194,13 +6088,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 stats, textured, texture_name, state->poly_fmt,
                 sNdsRendererHardwareMatrixMode,
                 sNdsRendererHardwareMatrixGeneration);
-#if NDS_ENTRY_PACKET_LIVE
             if (packet_recording != FALSE)
             {
                 ndsEntryPacketRecordGroup(&packet_rec, group, state, textured,
                                           texture_name, hw_lit);
             }
-#endif
             if (hw_lit == FALSE)
             {
                 glColor(0x7fffu);
@@ -6217,13 +6109,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
             stats->hardware_zbuffer_triangle_count += group->triangle_count;
             ndsRendererHardwareEndBatch();
         }
-#if NDS_ENTRY_PACKET_LIVE
         if (packet_recording != FALSE)
         {
             ndsRendererEntryEffectPacketEnd(&packet_rec, root, packet_first,
                                             ramp_names, stats);
         }
-#endif
         if (state_replayed != FALSE)
         {
             NDS_DIAG(gNdsEntryEffectStateReplays++);
@@ -6809,7 +6699,6 @@ __attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDeclines;
 s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
-#if NDS_ENTRY_PACKET_LIVE
     const NDSEntryEffectRoot *root;
     NDSEntryEffectStateRoot *state_root;
     const NDSEntryEffectGroupState *state_groups;
@@ -6997,12 +6886,6 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     gNdsEntryEffectNativeRootDraws[root_index]++;
     NDS_DIAG(gNdsEntryEffectFoxReplayDraws++);
     return TRUE;
-#else
-    (void)root_offset;
-    (void)config;
-    (void)stats;
-    return FALSE;
-#endif
 }
 
 /* Setup-only, with the texture set below: compact, not fast. */
@@ -7453,7 +7336,6 @@ static void __attribute__((noinline)) ndsRendererEntryEffectEmitFastCorners(
 }
 
 /* The Arwing packet's bodies; described above ndsRendererSubmitNativeEntryEffect. */
-#if NDS_ENTRY_PACKET_LIVE
 /* The most words a root's record takes: per group TEX_FORMAT, PAL_FORMAT,
  * DIF_AMB, POLY_FORMAT, BEGIN and COLOR; per corner NORMAL, TEX_COORD and
  * VERTEX16's two words; a header per four commands, and one more for the
@@ -7476,11 +7358,9 @@ static u32 ndsRendererEntryEffectPacketBound(u32 slot)
     }
     return (params + (commands + 3u) / 4u + 1u + 7u) & ~7u;
 }
-#endif
 
 u32 ndsRendererEntryEffectPacketArenaWords(void)
 {
-#if NDS_ENTRY_PACKET_LIVE
     u32 words = 0u;
     u32 slot;
 
@@ -7489,16 +7369,12 @@ u32 ndsRendererEntryEffectPacketArenaWords(void)
         words += ndsRendererEntryEffectPacketBound(slot);
     }
     return words;
-#else
-    return 0u;
-#endif
 }
 
 /* Sector Z's stage setup hands over an arena from the scene heap, or NULL; it
  * is used while the heap generation it was set in lasts. */
 void ndsRendererEntryEffectPacketArenaSet(u32 *arena, u32 words)
 {
-#if NDS_ENTRY_PACKET_LIVE
     u32 used = 0u;
     u32 slot;
 
@@ -7521,13 +7397,8 @@ void ndsRendererEntryEffectPacketArenaSet(u32 *arena, u32 words)
         sNdsEntryEffectPackets[slot].capacity = bound;
         used += bound;
     }
-#else
-    (void)arena;
-    (void)words;
-#endif
 }
 
-#if NDS_ENTRY_PACKET_LIVE
 static NDSEntryEffectPacket *ndsRendererEntryEffectPacketFor(u32 slot)
 {
     NDSEntryEffectPacket *packet;
@@ -7830,7 +7701,6 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
     gNdsEntryRampPaletteDraws += delta[12];
     NDS_DIAG(gNdsEntryEffectPacketReplays++);
 }
-#endif
 
 static void ndsRendererNativeBuildDenseShadeWords(
     const NDSNativeDenseVertex *vertices, u32 vertex_count,
@@ -8656,37 +8526,6 @@ ndsRendererNativeShadeProductionActions(
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
         epoch_lit = TRUE;
-#if !NDS_R2_SHADE_SKIP_SOFT_LIGHT
-        if (state->prepared_light_direction_valid == 0u)
-        {
-            ndsRendererHardwarePrepareLitDirection(
-                stats, &state->modelview,
-                &state->prepared_light_direction);
-            state->prepared_light_direction_valid = TRUE;
-        }
-        prepared_direction = &state->prepared_light_direction;
-        if ((stats->light_color_mask &
-             (NDS_RENDERER_LIGHT_COLOR_1_MASK |
-              NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
-            (NDS_RENDERER_LIGHT_COLOR_1_MASK |
-             NDS_RENDERER_LIGHT_COLOR_2_MASK))
-        {
-            if (packet_mode != 0u)
-            {
-                shade_lut = ndsRendererHardwareFindLightShadeLut(
-                    stats->light_color_1, stats->light_color_2);
-                if (shade_lut == NULL)
-                {
-                    return FALSE;
-                }
-            }
-            else
-            {
-                shade_lut = ndsRendererHardwareGetLightShadeLut(
-                    stats->light_color_1, stats->light_color_2);
-            }
-        }
-#endif
     }
 
     ndsRendererR2RecordShadeWitness(
@@ -10200,17 +10039,16 @@ static inline void ndsRendererNativeAccountGXCrossTriangles(
 }
 
 
-#if NDS_FIGHTER_PACKET_LIVE
 extern u16 gSYFramebufferSets[1][231][320];
 
 /* Slice 5: the list code every lean draw runs (the active entry, its guard,
  * the kernel's modelview sites, the dirty-line flush, the submit, and the
  * shade re-derive the replay shares) lives in ITCM beside the joint kernel,
- * in the production execute's former ITCM (a lean draw never runs it:
- * NDS_FTR_LEAN_EVICT_PRODUCTION). Placement only. The slice 5 attribution
+ * in the production execute's former ITCM (a lean draw never runs it).
+ * Placement only. The slice 5 attribution
  * priced this code's instruction fetch at roughly one tick per byte per draw:
  * each draw runs it once, cold, after the head. */
-#if defined(__arm__) && NDS_FTR_LEAN_KINDS_BUILD
+#if defined(__arm__)
 #define NDS_FTR_LEAN_DRAW_CODE __attribute__((section(".itcm.ftr_lean_draw")))
 #else
 #define NDS_FTR_LEAN_DRAW_CODE
@@ -16323,18 +16161,7 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
 #if NDS_FTR_LEAN_TIMED
 /* `part_kind_` (the function's own local) names the kind for the slice 5
  * per-kind split, which only the attribution ROM carries. */
-#if NDS_FTR_LEAN_ATTR_LIVE
-#define NDS_FTR_LEAN_PART_KIND(array, index, delta)                        \
-    do                                                                     \
-    {                                                                      \
-        if (part_kind_ < NDS_FTR_LEAN_KINDS)                               \
-        {                                                                  \
-            gNdsFtrLeanAttr.array[part_kind_][index] += (delta);           \
-        }                                                                  \
-    } while (0)
-#else
 #define NDS_FTR_LEAN_PART_KIND(array, index, delta) ((void)0)
-#endif
 #define NDS_FTR_LEAN_PART(array, index, mark)                              \
     do                                                                     \
     {                                                                      \
@@ -16358,10 +16185,6 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
     u32 i;
 #if NDS_FTR_LEAN_TIMED
     u32 mark = NDS_FTR_LEAN_CLOCK();
-#endif
-#if NDS_FTR_LEAN_ATTR_LIVE
-    u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
-        sNdsFtrLeanSlots[battle_slot].kind : NDS_FTR_LEAN_KIND_NONE;
 #endif
 
     packet = ndsFtrLeanActive(battle_slot, &state);
@@ -16583,10 +16406,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
 #if NDS_FTR_LEAN_TIMED
     u32 mark = NDS_FTR_LEAN_CLOCK();
 #endif
-#if NDS_FTR_LEAN_ATTR_LIVE
-    u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
-        sNdsFtrLeanSlots[battle_slot].kind : NDS_FTR_LEAN_KIND_NONE;
-#endif
 
     packet = ndsFtrLeanActive(battle_slot, &state);
     if (packet == NULL)
@@ -16663,7 +16482,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         }
         sNdsRendererHardwareSubmitted = TRUE;
     }
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
         packet->batch_begin;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
@@ -16678,7 +16496,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         packet->matrix_loads;
     sNdsRendererRuntimeFrameSummary.texture_binds +=
         packet->texture_binds;
-#endif
     sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
     sNdsRendererFastRunCount += packet->run_count;
     sNdsRendererFastTriangleCount += packet->triangle_count;
@@ -17035,9 +16852,6 @@ void ndsFtrLeanCountersPublish(void)
 #if NDS_FTR_LEAN_LAB
     DC_FlushRange(&gNdsFtrLean, sizeof(gNdsFtrLean));
 #endif
-#if NDS_FTR_LEAN_ATTR_LIVE
-    DC_FlushRange(&gNdsFtrLeanAttr, sizeof(gNdsFtrLeanAttr));
-#endif
 #if NDS_VRAM_CENSUS_LIVE
     /* Slice 2b: the admission lab and the words the sampler reads once at
      * the end -- flushed every frame so a GDB read is never a stale line. */
@@ -17055,242 +16869,6 @@ void ndsFtrLeanCountersPublish(void)
     DC_FlushRange((const void *)&gNdsVramBankDReturns, sizeof(u32));
 #endif
 }
-#else
-u32 ndsFtrLeanEntryFind(u32 battle_slot, const u32 *key)
-{
-    (void)battle_slot;
-    (void)key;
-    return NDS_FTR_LEAN_ENTRY_NONE;
-}
-
-u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
-{
-    (void)battle_slot;
-    (void)victim;
-    (void)key;
-    return NDS_FTR_LEAN_ENTRY_NONE;
-}
-
-u32 ndsFtrLeanEntryVictim(u32 battle_slot)
-{
-    (void)battle_slot;
-    return NDS_FTR_LEAN_ENTRY_NONE;
-}
-
-void ndsFtrLeanNoteKeyMiss(u32 battle_slot, const u32 *key)
-{
-    (void)battle_slot;
-    (void)key;
-}
-
-u32 ndsFtrLeanEntryActivate(u32 battle_slot, u32 code)
-{
-    (void)battle_slot;
-    (void)code;
-    return FALSE;
-}
-
-void ndsFtrLeanEntryResetShade(u32 battle_slot,
-                               const NDSFtrLeanPatchView *view)
-{
-    (void)battle_slot;
-    (void)view;
-}
-
-u32 ndsFtrLeanLastVtxFail(void)
-{
-    return 0u;
-}
-
-u32 ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count, u32 owner_slot,
-                          u32 use_low_detail, const void *asset_base,
-                          NDSRendererStats *stats)
-{
-    (void)battle_slot;
-    (void)entry;
-    (void)key;
-    (void)inputs;
-    (void)input_count;
-    (void)owner_slot;
-    (void)use_low_detail;
-    (void)asset_base;
-    (void)stats;
-    return nNDSFtrLeanDeclineTables;
-}
-
-void ndsFtrLeanPacketDrop(u32 battle_slot)
-{
-    (void)battle_slot;
-}
-
-u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count)
-{
-    (void)ident;
-    (void)key;
-    (void)inputs;
-    (void)input_count;
-    return 0u;
-}
-
-u32 ndsFtrLeanEntryActiveIndex(u32 battle_slot)
-{
-    (void)battle_slot;
-    return NDS_FTR_LEAN_ENTRY_NONE;
-}
-
-void ndsFtrLeanEntryDropActive(u32 battle_slot)
-{
-    (void)battle_slot;
-}
-
-u32 ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
-{
-    (void)battle_slot;
-    (void)fresh;
-    return NDS_FTR_LEAN_ENTRY_NONE;
-}
-
-u32 ndsFtrLeanWideHoldBegin(u32 battle_slot)
-{
-    (void)battle_slot;
-    return FALSE;
-}
-
-void ndsFtrLeanWideLearn(u32 battle_slot)
-{
-    (void)battle_slot;
-}
-
-void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
-{
-    (void)battle_slot;
-    (void)held;
-    (void)fresh;
-}
-
-void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
-{
-    (void)battle_slot;
-    (void)kind;
-}
-
-u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
-                                   u32 root_count)
-{
-    (void)battle_slot;
-    (void)sites;
-    (void)root_count;
-    return NDS_FTR_LEAN_SITES_NONE;
-}
-
-u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
-{
-    (void)battle_slot;
-    (void)touch;
-    return nNDSFtrLeanEventFirst;
-}
-
-u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
-                          u32 owner_slot, u32 use_low_detail, u32 pre_same)
-{
-    (void)battle_slot;
-    (void)view;
-    (void)owner_slot;
-    (void)use_low_detail;
-    (void)pre_same;
-    return nNDSFtrLeanDeclineStale;
-}
-
-u32 ndsFtrLeanPacketSubmit(u32 battle_slot)
-{
-    (void)battle_slot;
-    return 0u;
-}
-
-u32 gNdsFtrLeanAlphaPending;
-
-void ndsFtrLeanPacketAlphaRestore(void)
-{
-}
-
-void ndsFtrLeanPacketSetAlpha(u32 battle_slot, u32 alpha)
-{
-    (void)battle_slot;
-    (void)alpha;
-}
-
-void ndsFtrLeanTextureCensus(void)
-{
-}
-
-void ndsFtrLeanNoteGo(u32 frame)
-{
-    (void)frame;
-}
-
-void ndsFtrLeanNoteTextureReject(u32 reason, u32 format, u32 size)
-{
-    (void)reason;
-    (void)format;
-    (void)size;
-}
-
-void ndsFtrLeanNoteTextureUpload(u32 bytes)
-{
-    (void)bytes;
-}
-
-void ndsFtrLeanCountersPublish(void)
-{
-}
-
-void ndsRendererFighterPacketDmaWait(void)
-{
-}
-
-void ndsRendererFighterPacketInvalidateAll(void)
-{
-}
-
-void ndsRendererFighterPacketInvalidateSlot(u32 slot)
-{
-    (void)slot;
-}
-
-u8 *ndsFighterPacketArenaTail(u32 *out_bytes)
-{
-    if (out_bytes != NULL)
-    {
-        *out_bytes = 0u;
-    }
-    return NULL;
-}
-
-void ndsRendererFighterPacketRelease(void)
-{
-}
-
-s32 ndsRendererFighterPacketPrecheck(
-    u32 slot,
-    u32 use_low_detail,
-    u32 texture_memo_owner_key,
-    u32 packet_key,
-    const NDSRendererNativeFighterRoot *inputs,
-    u32 input_count)
-{
-    (void)slot;
-    (void)use_low_detail;
-    (void)texture_memo_owner_key;
-    (void)packet_key;
-    (void)inputs;
-    (void)input_count;
-    return FALSE;
-}
-#endif
 
 static s32 ndsRendererNativeSubmitProductionRun(
     const NDSNativeRun *run,

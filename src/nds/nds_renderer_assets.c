@@ -153,17 +153,13 @@ typedef struct NDSRendererTraversalState
  * tells the header this translation unit provides its own, so the two can
  * never collide here. */
 #include <nds/nds_native_fighter_tables.h>
-/* Mario/Fox electric bodies also use scene-resident images. */
-#define NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS 1
 
-#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
 #define NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER 1
 /* The image types AND the owner-slot ids: one generated ABI, so the
  * renderer and the fighter manager cannot number owners differently. */
-#endif
 
 
 /* R2-03 E29. Under NDS_R2_FIGHTER_HW_LIGHT the geometry engine lights the
@@ -3007,41 +3003,7 @@ s32 ndsRendererNativeKirbyTrioHeadSupported(u32 head_mp)
  * two helpers. Keep the base-owner identity available even when that entire
  * block compiles out; otherwise the documented NDS_P2_FOUR_CPU_ROSTER=0
  * control fails at compile time before it can validate renderer changes. */
-#if !NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
-static const NDSNativeFighterRuntimeTables *
-ndsRendererNativeFighterTablesForResolvedRoot(
-    const NDSNativeRoot *root,
-    const NDSNativeFighterOwnerRuntime *owner,
-    u32 battle_slot,
-    u32 binding)
-{
-    (void)root;
-    (void)battle_slot;
-    (void)binding;
-    return (owner != NULL) ? owner->tables : NULL;
-}
 
-static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
-    const NDSNativeRoot *root,
-    const NDSNativeFighterOwnerRuntime *owner,
-    u32 battle_slot,
-    u32 binding,
-    u32 *count))[2]
-{
-    (void)root;
-    (void)battle_slot;
-    (void)binding;
-    if (owner == NULL)
-    {
-        *count = 0u;
-        return NULL;
-    }
-    *count = owner->root_light_preamble_count;
-    return owner->root_light_preambles;
-}
-#endif
-
-#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -5160,11 +5122,9 @@ static void ndsRendererNativeBuildDenseShadeWords(
     const u16 *run_unique_dense, u32 *dense_words);
 
 
-#endif /* P2-3 image-backed owners */
 
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
 {
-#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
     uintptr_t start;
     uintptr_t end;
     u32 owner_slot;
@@ -5208,10 +5168,6 @@ void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
     {
         sNdsNativePolygonPool.base = NULL;
     }
-#endif
-#else
-    (void)base;
-    (void)size;
 #endif
 }
 

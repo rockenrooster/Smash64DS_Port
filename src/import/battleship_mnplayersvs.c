@@ -481,9 +481,7 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * FPC1 packs. Each compact block also owns that preview's two native owner
  * images, so browsing a new fighter cannot permanently raise the scene heap's
  * high-water. Link is the largest current combination at < 70 KiB on disk;
- * 80 KiB leaves bounded loader/alignment headroom. Source/oracle profiles still
- * consume full Gfx/Vtx closures and keep the measured 156 KiB raw-tree slot. */
-#define NDS_PLAYERS_VS_COMPACT_PREVIEW 1
+ * 80 KiB leaves bounded loader/alignment headroom. */
 /* The shared closure is the fixed tree list in sNdsPlayersVSSharedResidentAssetIDs,
  * so its arena is sized to what those trees measure, not to a round number. The
  * compact-preview list (seven trees) pins 15,232 B, identically on the VS-only
@@ -499,11 +497,7 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * 2026-09-22 ROM had cleared it by 5,296 B. Too small a value cannot hide the
  * same way: a shared tree that does not fit halts in ndsSyMallocOverflowHalt
  * naming this arena ('CSS\0'). */
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
 #define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (24u * 1024u)
-#else
-#define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (64u * 1024u)
-#endif
 #define NDS_PLAYERS_VS_RESIDENT_BLOCKS GMCOMMON_PLAYERS_MAX
 #define NDS_PLAYERS_VS_LOAD_CHUNK_BYTES (8u * 1024u)
 #define NDS_PLAYERS_VS_LOAD_CHUNK_NODES 4u
@@ -610,12 +604,6 @@ typedef struct NDSPlayersVSPreviewPending {
 static const u32 sNdsPlayersVSSharedResidentAssetIDs[] = {
     0x0c9u, 0x129u, 0x12au, 0x12bu,
     0x13bu, 0x146u,
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
-    /* Raw extern-tree residency shares YoshiModel with Kirby. Compact CSS
-     * gives asset 0x152 to Yoshi's FPC1 Model section instead; pinning the
-     * raw file here would occupy that unique registry key before Yoshi loads. */
-    0x152u,
-#endif
     0x164u
 };
 static SYMallocRegion sNdsPlayersVSSharedResidentArena;
@@ -624,7 +612,6 @@ static NDSPlayersVSResidentBlock
     sNdsPlayersVSResidentBlocks[NDS_PLAYERS_VS_RESIDENT_BLOCKS];
 static u32 sNdsPlayersVSResidentPoolGeneration;
 static sb32 sNdsPlayersVSResidentPoolsReady;
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
 /* S15: the compact select carves its four blocks and the four slots' figatree
  * heaps from one region when they are needed, each sized for the kind it
  * holds: a P4 content's low-detail closure is 40-120 KB against the original
@@ -663,7 +650,6 @@ volatile u32 gNdsPlayersVSPreviewRegionBytes;
 volatile u32 gNdsPlayersVSPreviewRegionShortCount;
 volatile u32 gNdsPlayersVSPreviewHeapShortCount;
 volatile u32 gNdsPlayersVSPreviewBlockSlackMin;
-#endif
 static f32 sNdsPlayersVSReleasedRotationY[GMCOMMON_PLAYERS_MAX];
 static NDSPlayersVSPreviewPending
     sNdsPlayersVSPreviewPending[GMCOMMON_PLAYERS_MAX];
@@ -928,24 +914,20 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     }
     if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_HIGH)
     {
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
         /* Only the detail the preview draws (ndsCssPreviewKindDetail). */
         if (ndsCssPreviewKindDetail(fkind) != 0u)
         {
             return TRUE;
         }
-#endif
         return ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 0u);
     }
     if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_LOW)
     {
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
         if (ndsCssPreviewKindDetail(fkind) != 1u)
         {
             gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
             return TRUE;
         }
-#endif
         if (ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 1u) == FALSE)
         {
             return FALSE;
@@ -1028,28 +1010,7 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     return TRUE;
 }
 
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
-/* The source/oracle profiles still want the whole preparation in one call; the
- * stages are the same stages and run in the same order. */
-static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
-    s32 fkind, SYMallocRegion *anim_region)
-{
-    u32 stage;
 
-    for (stage = NDS_PLAYERS_VS_PREPARE_ANIM_IDLE;
-         stage < NDS_PLAYERS_VS_PREPARE_READY; stage++)
-    {
-        if (ndsMNPlayersVSPreviewPrepareResidentStage(fkind, anim_region,
-                                                       stage) == FALSE)
-        {
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-#endif
-
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
 static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
 {
 #if NDS_P2_LUIGI
@@ -1614,7 +1575,6 @@ static void ndsMNPlayersVSPreviewUpdateFighter(u32 slot)
     }
     mnPlayersVSUpdateFighter((s32)slot);
 }
-#endif
 
 static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 {
@@ -1711,7 +1671,6 @@ static sb32 ndsMNPlayersVSPreviewPoolFail(u32 stage)
 static void ndsMNPlayersVSPreviewResetResidentLoadState(
     NDSPlayersVSResidentBlock *block);
 
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
 /* S15: the shared tree's arena, the reserved row-0 clips, then the preview
  * region: everything the heap has left but NDS_PLAYERS_VS_REGION_KEEP_FREE.
  * Blocks and slot heaps take their spans from it as kinds arrive. */
@@ -1824,100 +1783,6 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     gNdsPlayersVSPreviewBlockSlackMin = 0xFFFFFFFFu;
     return TRUE;
 }
-#else
-static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
-{
-    SYMallocRegion *previous;
-    u32 i;
-
-    if ((sNdsPlayersVSResidentPoolGeneration != gNdsTaskmanHeapGeneration) ||
-        (sNdsPlayersVSSharedResidentBase == NULL))
-    {
-        /* The whole set or none of it, asked first: syTaskmanMalloc halts on
-         * overflow, so the NULL checks below never see a short heap. The
-         * all-content image with every P4 fighter reached this point with
-         * room for the shared arena and two slot arenas (2026-10-08: the
-         * third halted with 56,544 B left) and the select never appeared. A
-         * short heap now switches the previews off (stage 1) and the select
-         * loads without them. */
-        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                                NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES +
-                                (NDS_PLAYERS_VS_RESIDENT_BLOCKS *
-                                 NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES) + 0x10u,
-                                0x10u) == FALSE)
-        {
-            sNdsPlayersVSSharedResidentBase = NULL;
-            for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
-            {
-                sNdsPlayersVSResidentBlocks[i].base = NULL;
-            }
-            sNdsPlayersVSResidentPoolGeneration = gNdsTaskmanHeapGeneration;
-            return ndsMNPlayersVSPreviewPoolFail(1u);
-        }
-        sNdsPlayersVSSharedResidentBase =
-            syTaskmanMalloc(NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES, 0x10u);
-        for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
-        {
-            sNdsPlayersVSResidentBlocks[i].base =
-                syTaskmanMalloc(NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES, 0x10u);
-        }
-        sNdsPlayersVSResidentPoolGeneration = gNdsTaskmanHeapGeneration;
-    }
-    if (sNdsPlayersVSSharedResidentBase == NULL)
-    {
-        return ndsMNPlayersVSPreviewPoolFail(1u);
-    }
-
-    syMallocInit(&sNdsPlayersVSSharedResidentArena, 0x43535300u,
-                 sNdsPlayersVSSharedResidentBase,
-                 NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES);
-    for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
-    {
-        if (sNdsPlayersVSResidentBlocks[i].base == NULL)
-        {
-            return ndsMNPlayersVSPreviewPoolFail(2u);
-        }
-        syMallocInit(&sNdsPlayersVSResidentBlocks[i].arena, 0x43535310u + i,
-                     sNdsPlayersVSResidentBlocks[i].base,
-                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-        sNdsPlayersVSResidentBlocks[i].bytes = NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES;
-        sNdsPlayersVSResidentBlocks[i].fkind = nFTKindNull;
-        sNdsPlayersVSResidentBlocks[i].refs = 0u;
-        sNdsPlayersVSResidentBlocks[i].load_cursor = NULL;
-        sNdsPlayersVSResidentBlocks[i].load_root = NULL;
-        sNdsPlayersVSResidentBlocks[i].loading_fkind = nFTKindNull;
-        sNdsPlayersVSResidentBlocks[i].load_tree_done = FALSE;
-        sNdsPlayersVSResidentBlocks[i].cancel_requested = FALSE;
-        sNdsPlayersVSResidentBlocks[i].load_stage =
-            NDS_PLAYERS_VS_PREPARE_COMMIT;
-        sNdsPlayersVSResidentBlocks[i].load_generation = 0u;
-    }
-
-    previous = ndsTaskmanSwapMallocRegion(&sNdsPlayersVSSharedResidentArena);
-    for (i = 0u; i < ARRAY_COUNT(sNdsPlayersVSSharedResidentAssetIDs); i++)
-    {
-        if (ndsRelocLoadExternTreeAssetID(
-                sNdsPlayersVSSharedResidentAssetIDs[i]) == FALSE)
-        {
-            ndsTaskmanSwapMallocRegion(previous);
-            ndsRelocReleaseHeapRange(sNdsPlayersVSSharedResidentBase,
-                                     NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES);
-            syMallocReset(&sNdsPlayersVSSharedResidentArena);
-            return ndsMNPlayersVSPreviewPoolFail(3u);
-        }
-    }
-    ndsTaskmanSwapMallocRegion(previous);
-    /* The four closure blocks now have their fixed space and the shared tree is
-     * pinned. Reserve every CSS row-0 animation before the first lazy per-kind
-     * acquisition can run; the cache sizer uses immutable source descriptors
-     * and the same payload provider as the actual warm loader. */
-    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
-    {
-        return ndsMNPlayersVSPreviewPoolFail(4u);
-    }
-    return TRUE;
-}
-#endif
 
 static void ndsMNPlayersVSPreviewResetResidentLoadState(
     NDSPlayersVSResidentBlock *block)
@@ -1951,11 +1816,7 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
      * Everything after this line -- temporary registrations, native owner
      * staging, the heap range and the block arena -- is released identically
      * for a cancelled load and a retired one. */
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     ndsRelocPreviewFighterLoadCancel(block->load_cursor, fkind);
-#else
-    ndsRelocExternTreeSliceCancel(block->load_cursor);
-#endif
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
@@ -1973,9 +1834,7 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
         block->base, block->bytes);
     ndsRelocReleaseHeapRange(block->base, block->bytes);
     syMallocReset(&block->arena);
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     ndsMNPlayersVSPreviewBlockGive(block);
-#endif
     ndsMNPlayersVSPreviewResetResidentLoadState(block);
     gNdsPlayersVSPreviewAcquireLoadFinishCount++;
     return TRUE;
@@ -2050,42 +1909,6 @@ static void ndsMNPlayersVSPreviewServiceLoadCancel(void)
     }
 }
 
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
-static sb32 ndsMNPlayersVSPreviewBindResidentKindMain(s32 fkind,
-                                                       void *main_file)
-{
-    FTData *data;
-
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
-        (main_file == NULL))
-    {
-        return FALSE;
-    }
-    data = dFTManagerDataFiles[fkind];
-    if ((data == NULL) || (data->p_file_main == NULL))
-    {
-        return FALSE;
-    }
-
-    /* This is the source MainKind tail after lbRelocGetExternHeapFile. The
-     * sliced backend already produced that root and its complete extern tree,
-     * so publishing it here avoids allocating/loading the closure a second
-     * time while preserving the particle-bank and Kind bindings. */
-    *data->p_file_main = main_file;
-    if (data->particles_script_lo != 0x0)
-    {
-        *data->p_particle = efParticleGetLoadBankID(
-            data->particles_script_lo, data->particles_script_hi,
-            data->particles_texture_lo, data->particles_texture_hi);
-    }
-    ftManagerSetupFilesKind(fkind);
-
-    /* Preserve the DS wrapper's post-setup work. Its BattleShip base sees the
-     * now-published Main pointer and therefore does not perform another load. */
-    ftManagerSetupFilesAllKind(fkind);
-    return (*data->p_file_main != NULL) ? TRUE : FALSE;
-}
-#endif
 
 static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     NDSPlayersVSResidentBlock *block, NDSPlayersVSResidentRetireReason reason)
@@ -2116,9 +1939,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
         block->base, block->bytes);
     ndsRelocReleaseHeapRange(block->base, block->bytes);
     syMallocReset(&block->arena);
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     ndsMNPlayersVSPreviewBlockGive(block);
-#endif
     block->fkind = nFTKindNull;
     gNdsPlayersVSPreviewResidentReadyMask &= ~ndsCssPreviewKindBit(fkind);
     gNdsPlayersVSPreviewReleaseRetireCount++;
@@ -2133,7 +1954,6 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     return TRUE;
 }
 
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
 /* Release everything a partially built transaction owns. This is the same
  * sequence the successful path never runs and the cancel path always runs; it
  * is written out here rather than shared with CancelResidentLoad because that
@@ -2423,29 +2243,15 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
     gNdsPlayersVSPreviewAcquireLoadFinishCount++;
     return nNDSPlayersVSResidentAcquireReady;
 }
-#endif
 
 static NDSPlayersVSResidentAcquireResult
 ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 {
     NDSPlayersVSResidentBlock *block = NULL;
     NDSPlayersVSResidentBlock *victim = NULL;
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
-    FTData *data;
-    SYMallocRegion *previous;
-    u32 payload_before;
-    u32 payload_delta;
-    u32 payload_bytes = 0u;
-    s32 slice_result;
-    sb32 prepared;
-#endif
     u32 i;
 
     if ((ndsCssPreviewKindValid(fkind) == FALSE) ||
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
-        /* The raw-tree form loads source closures: originals only. */
-        (ndsCssPreviewKindContent(fkind) != 0u) ||
-#endif
         (sNdsPlayersVSResidentPoolsReady == FALSE))
     {
         gNdsPlayersVSPreviewAcquireFailCount++;
@@ -2531,7 +2337,6 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         gNdsPlayersVSPreviewAcquireRetryCount++;
         return nNDSPlayersVSResidentAcquireRetry;
     }
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     /* Native CSS only needs Main/Model plus the row-0/Selected animations that
      * the preparation stages warm explicitly. Keep the compact pack and its
      * owner image in this resettable block; the animation cache has its own
@@ -2556,119 +2361,6 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         return nNDSPlayersVSResidentAcquireRetry;
     }
     return ndsMNPlayersVSPreviewServiceCompactLoad(block, fkind);
-#else
-    if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
-    {
-        gNdsPlayersVSPreviewAcquireRetryCount++;
-        return nNDSPlayersVSResidentAcquireRetry;
-    }
-
-    sNdsPlayersVSPreviewResidencyActionBudget--;
-    if (block->load_cursor == NULL)
-    {
-        /* Starting a miss is deliberately a cursor-only action. The first
-         * NitroFS payload byte cannot move until a later CSS tic. */
-        data = dFTManagerDataFiles[fkind];
-        gNdsPlayersVSPreviewAcquireLoadCount++;
-        syMallocReset(&block->arena);
-        previous = ndsTaskmanSwapMallocRegion(&block->arena);
-        block->load_cursor = ((data != NULL) && (data->file_main_id != 0u)) ?
-            ndsRelocExternTreeSliceBegin(
-                (const void *)(uintptr_t)data->file_main_id) : NULL;
-        ndsTaskmanSwapMallocRegion(previous);
-        if (block->load_cursor == NULL)
-        {
-            ndsRelocReleaseHeapRange(block->base,
-                                     block->bytes);
-            syMallocReset(&block->arena);
-            ndsMNPlayersVSPreviewResetResidentLoadState(block);
-            ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
-            gNdsPlayersVSPreviewAcquireFailCount++;
-            gNdsPlayersVSPreviewAcquireLoadFinishCount++;
-            return nNDSPlayersVSResidentAcquireFail;
-        }
-        block->loading_fkind = fkind;
-        block->load_root = NULL;
-        block->load_tree_done = FALSE;
-        block->cancel_requested = FALSE;
-        gNdsPlayersVSPreviewAcquireRetryCount++;
-        return nNDSPlayersVSResidentAcquireRetry;
-    }
-
-    if (block->load_tree_done == FALSE)
-    {
-        payload_before = gNdsRelocAssetPayloadReadCount;
-        previous = ndsTaskmanSwapMallocRegion(&block->arena);
-        slice_result = ndsRelocExternTreeSliceStep(
-            block->load_cursor, NDS_PLAYERS_VS_LOAD_CHUNK_BYTES,
-            NDS_PLAYERS_VS_LOAD_CHUNK_NODES, &block->load_root,
-            &payload_bytes);
-        ndsTaskmanSwapMallocRegion(previous);
-        payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
-        gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
-        if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
-        {
-            gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
-        }
-        gNdsPlayersVSPreviewAcquireTreePayloadByteCount += payload_bytes;
-        if (payload_bytes > gNdsPlayersVSPreviewAcquireTreePayloadByteMax)
-        {
-            gNdsPlayersVSPreviewAcquireTreePayloadByteMax = payload_bytes;
-        }
-        if (slice_result == NDS_RELOC_EXTERN_TREE_SLICE_FAIL)
-        {
-            (void)ndsMNPlayersVSPreviewCancelResidentLoad(block);
-            ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
-            gNdsPlayersVSPreviewAcquireFailCount++;
-            return nNDSPlayersVSResidentAcquireFail;
-        }
-        if (slice_result == NDS_RELOC_EXTERN_TREE_SLICE_DONE)
-        {
-            if (block->load_root == NULL)
-            {
-                (void)ndsMNPlayersVSPreviewCancelResidentLoad(block);
-                ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
-                gNdsPlayersVSPreviewAcquireFailCount++;
-                return nNDSPlayersVSResidentAcquireFail;
-            }
-            block->load_tree_done = TRUE;
-        }
-        gNdsPlayersVSPreviewAcquireRetryCount++;
-        return nNDSPlayersVSResidentAcquireRetry;
-    }
-
-    /* The completed tree becomes visible to BattleShip only on its own final
-     * residency action. This keeps Main/Kind binding + prepare off the last
-     * payload tic and preserves the source setup side effects. */
-    payload_before = gNdsRelocAssetPayloadReadCount;
-    previous = ndsTaskmanSwapMallocRegion(&block->arena);
-    prepared = ndsMNPlayersVSPreviewBindResidentKindMain(fkind,
-                                                         block->load_root);
-    if (prepared != FALSE)
-    {
-        prepared = ndsMNPlayersVSPreviewPrepareResidentKind(fkind, previous);
-    }
-    ndsTaskmanSwapMallocRegion(previous);
-    payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
-    gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
-    if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
-    {
-        gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
-    }
-    if (prepared == FALSE)
-    {
-        (void)ndsMNPlayersVSPreviewCancelResidentLoad(block);
-        ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
-        gNdsPlayersVSPreviewAcquireFailCount++;
-        return nNDSPlayersVSResidentAcquireFail;
-    }
-
-    block->fkind = fkind;
-    block->refs = 1u;
-    ndsMNPlayersVSPreviewResetResidentLoadState(block);
-    gNdsPlayersVSPreviewAcquireLoadFinishCount++;
-    return nNDSPlayersVSResidentAcquireReady;
-#endif
 }
 
 /* M04: "warm" means this kind commits without moving a byte -- a block already
@@ -2959,14 +2651,9 @@ void ndsMNPlayersVSPreviewInit(void)
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
         sMNPlayersVSSlots[i].player = NULL;
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
         /* From the preview region, sized for the kind the slot shows, before
          * its fighter is made (ndsMNPlayersVSPreviewEnsureSlotHeap). */
         sMNPlayersVSSlots[i].figatree_heap = NULL;
-#else
-        sMNPlayersVSSlots[i].figatree_heap =
-            syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
-#endif
         sMNPlayersVSSlots[i].pkind = nFTPlayerKindNot;
         sMNPlayersVSSlots[i].fkind = nFTKindNull;
         sMNPlayersVSSlots[i].costume = 0;
@@ -3123,11 +2810,7 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
     sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
 
     payload_before = gNdsRelocAssetPayloadReadCount;
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     ndsMNPlayersVSPreviewUpdateFighter(slot);
-#else
-    mnPlayersVSUpdateFighter((s32)slot);
-#endif
     payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
     gNdsPlayersVSPreviewRebuildCount++;
     gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
@@ -3292,23 +2975,19 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     {
         if (fkind == pending->fkind)
         {
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
             if (ndsMNPlayersVSPreviewReserveSlotHeap(slot, fkind) == FALSE)
             {
                 return;
             }
-#endif
             acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
             if (acquire_result == nNDSPlayersVSResidentAcquireRetry)
             {
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
                 /* A slot whose block found no room holds no heap while it
                  * waits, so the slots after it can still fit theirs. */
                 if (ndsMNPlayersVSPreviewKindHasBlock(fkind) == FALSE)
                 {
                     ndsMNPlayersVSPreviewDropSlotHeap(slot);
                 }
-#endif
                 return;
             }
             pending->acquire_pending = FALSE;
@@ -3376,11 +3055,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                 u32 payload_before = gNdsRelocAssetPayloadReadCount;
                 u32 payload_delta;
 
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
                 ndsMNPlayersVSPreviewUpdateFighter(slot);
-#else
-                mnPlayersVSUpdateFighter((s32)slot);
-#endif
                 payload_delta =
                     gNdsRelocAssetPayloadReadCount - payload_before;
                 gNdsPlayersVSPreviewRebuildCount++;
@@ -3455,9 +3130,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         ftManagerDestroyFighter(fighter_gobj);
         sMNPlayersVSSlots[slot].player = NULL;
     }
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     ndsMNPlayersVSPreviewDropSlotHeap(slot);
-#endif
     if (ndsCssPreviewKindValid(old_fkind) != FALSE)
     {
         gNdsPlayersVSPreviewReleaseCount++;
@@ -3487,9 +3160,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
      * its previous behavior; live kind changes always take the staged return
      * above and resume here on a later tic. */
     if ((initial_request != FALSE)
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
         && (ndsMNPlayersVSPreviewReserveSlotHeap(slot, fkind) != FALSE)
-#endif
         )
     {
         acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
@@ -3505,12 +3176,10 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             pending->acquire_pending = FALSE;
             return;
         }
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
         if (ndsMNPlayersVSPreviewKindHasBlock(fkind) == FALSE)
         {
             ndsMNPlayersVSPreviewDropSlotHeap(slot);
         }
-#endif
     }
     pending->acquire_pending = TRUE;
 }
@@ -3798,7 +3467,6 @@ void ndsMNPlayersVSPreviewExit(void)
         (void)ndsMNPlayersVSPreviewRetireResidentBlock(
             block, nNDSPlayersVSResidentRetireExit);
     }
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
     /* The fighters that played from the slot heaps are destroyed above. */
     for (slot = 0u; slot < GMCOMMON_PLAYERS_MAX; slot++)
     {
@@ -3818,7 +3486,6 @@ void ndsMNPlayersVSPreviewExit(void)
     /* The overlay's lent range: the next scene dispatch reloads it. */
     sNdsPlayersVSRegionBase[2] = NULL;
     sNdsPlayersVSRegionBytes[2] = 0u;
-#endif
     if ((sNdsPlayersVSResidentPoolsReady != FALSE) &&
         (sNdsPlayersVSSharedResidentBase != NULL))
     {
