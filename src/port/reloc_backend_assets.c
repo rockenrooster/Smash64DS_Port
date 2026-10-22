@@ -808,18 +808,10 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH 320u
 #define NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT 240u
 #define NDS_OPENING_ACTION_PREVIEW_CACHE_PIXELS 1u
-#if NDS_DEV_SCENE_HARNESS != 0
 #define NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE \
     (NDS_RELOC_STAGE_CASTLE_STATIC_SIZE + \
      NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE)
-#else
-#define NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE 270000u
-#endif
-#if (NDS_DEV_SCENE_HARNESS >= 11)
 #define NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT 1u
-#else
-#define NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT 3u
-#endif
 #define NDS_OPENING_ACTION_PREVIEW_FRAME_HOLD 36u
 
 #define NDS_RELOC_G_IM_FMT_MAX 4u
@@ -9566,7 +9558,6 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
 
 static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
 {
-#if NDS_DEV_SCENE_HARNESS != 0
     u8 *store;
 
     if ((asset_id == NDS_RELOC_ASSET_STAGE_CASTLE) &&
@@ -9584,10 +9575,6 @@ static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
         return (store != NULL) ?
             &store[NDS_RELOC_STAGE_CASTLE_STATIC_SIZE] : NULL;
     }
-#else
-    (void)asset_id;
-    (void)asset_size;
-#endif
     return ndsFrontendOverlayTryAlloc(asset_size, NDS_RELOC_ALIGN_BYTES);
 }
 

@@ -4257,9 +4257,6 @@ static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
      * per-frame presentation remain unchanged while the input is reproducible. */
     return TRUE;
 #else
-#if NDS_MARIOFOX_DASH_RUN_HARNESS
-    return TRUE;
-#else
     if (ndsFighterBattlePlayableProofEnabled() != FALSE)
     {
         return TRUE;
@@ -4267,45 +4264,21 @@ static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
     return (ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) ? TRUE :
                                                                     FALSE;
 #endif
-#endif
 }
 
 static sb32 ndsFighterNaturalCombatMovementOnlyProofEnabled(void)
 {
-#if (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_DASH_RUN) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_DASH_RUN)
-    return TRUE;
-#else
     return FALSE;
-#endif
 }
 
 static sb32 ndsFighterNaturalCombatLiveHitProofEnabled(void)
 {
-#if (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_GCRUNALL_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_GCRUNALL_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP)
-    return TRUE;
-#else
     return FALSE;
-#endif
 }
 
 static sb32 ndsFighterNaturalCombatStageSideProofEnabled(void)
 {
-#if NDS_MARIOFOX_STAGE_GCDRAWALL_LOOP_HARNESS && \
-    !NDS_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP_HARNESS
-    return TRUE;
-#else
     return FALSE;
-#endif
 }
 
 static sb32 ndsFighterNaturalMotionStatusIsWalk(s32 status_id)
@@ -9378,14 +9351,6 @@ static void ndsFighterGCDrawAllLoopCopyFromPreview(void)
         gNdsFighterPreviewLoopP0FloorOK;
     gNdsFighterGCDrawAllLoopP1FloorOK =
         gNdsFighterPreviewLoopP1FloorOK;
-#if NDS_MARIOFOX_STAGE_MPPASSIVE_LOOP_HARNESS
-    if ((NDS_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP_HARNESS == 0) &&
-        (gNdsFighterGCDrawAllLoopP0FloorOK != 0u))
-    {
-        gNdsFighterGCDrawAllLoopP0RootYFinalMilli =
-            gNdsFighterGCDrawAllLoopP0FloorYMilli;
-    }
-#endif
     gNdsFighterGCDrawAllLoopP0InterruptCount =
         gNdsFighterPreviewLoopP0InterruptCount;
     gNdsFighterGCDrawAllLoopP1InterruptCount =

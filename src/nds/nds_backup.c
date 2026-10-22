@@ -26,13 +26,9 @@ __attribute__((used)) volatile u32 gNdsBackupSoundMode;
 /* Explicit device prefixes on purpose: nitroFSInit makes `nitro:` the default
  * device, so a bare relative path would resolve into the read-only ROM
  * filesystem. A flashcart mounts through DLDI as `fat:`; a DSi's SD as `sd:`. */
-#if ((NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL) || NDS_P2_MENU_WALK) || NDS_P2_FOUR_CPU_STRESS
 /* Harnesses force unlocks and accumulate scripted records. Exercise the same
  * storage path while keeping that data out of the player's save. */
 #define NDS_BACKUP_FILENAME "smash64ds-diagnostic.sav"
-#else
-#define NDS_BACKUP_FILENAME "smash64ds.sav"
-#endif
 static const char *const sNdsBackupPaths[] = {
     "fat:/" NDS_BACKUP_FILENAME,
     "sd:/" NDS_BACKUP_FILENAME,
@@ -279,13 +275,8 @@ s32 ndsBackupFlush(void)
 
 /* Siblings: P7 U2's VS records (nds_p7_records.c), named after the save the
  * same way (a harness build's are diagnostic too). */
-#if ((NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL) || NDS_P2_MENU_WALK) || NDS_P2_FOUR_CPU_STRESS
 #define NDS_BACKUP_RECORDS_FILENAME "smash64ds-diagnostic-vs.sav"
 #define NDS_BACKUP_1P_RECORDS_FILENAME "smash64ds-diagnostic-1p.sav"
-#else
-#define NDS_BACKUP_RECORDS_FILENAME "smash64ds-vs.sav"
-#define NDS_BACKUP_1P_RECORDS_FILENAME "smash64ds-1p.sav"
-#endif
 #define NDS_BACKUP_SIBLING_NAMES(volume, name)     { volume name, volume name ".bak", volume name ".tmp" }
 /* [sibling][volume]: the VS records (U2), the 1P records (C3). */
 static const char *const sNdsBackupSiblingNames[][2][NDS_BACKUP_RECOVERY_NAMES] = {

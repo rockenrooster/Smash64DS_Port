@@ -132,6 +132,20 @@ other builds compile, by comments or by scripts, and stay. The compiler had drop
 already: both changed translation units (the `scene_backend.c` unity build and
 `nds_platform.c`) are byte-identical before and after, section for section.
 
+## The P1 proof harnesses' conditions (3,433 lines) -- Phase B, fourth batch (2026-10-22)
+
+Every build directory selects scene harness 163 (`NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE`: the
+gate sweep, walk, play, net and profile builds) or 164 (the Results lab). The Mario/Fox proof
+harnesses (walk, dash, jump, landing, the scheduler, controller and preview loops, the stage
+collision and cliff tours, ...) were only selected by the P1 targets deleted in `5da3bb2599b`, and
+the 64 `NDS_MARIOFOX_*_HARNESS` gates derived from them are 0 for both values. Every `#if` that
+decides the same way for 163 and 164 is resolved (a partial unifdef with a two-valued flag), in 8
+files: `reloc_backend_cliff_ledge.c` 2,387 lines, `taskman_seam_harness.c` 499,
+`reloc_backend_fighter_model.c` 414 (its proof predicates now plain `return FALSE;`), and small
+parts of the movement, compat-shim, asset, backup and scene-harness files. Proof: all 483
+translation units preprocess byte-identically before and after in the five live configs.
+The code those predicates still guard at run time goes in the next batch.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,

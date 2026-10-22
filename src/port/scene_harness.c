@@ -62,10 +62,8 @@ static void ndsSceneHarnessSeedVSDefaults(void)
  * battle_playable_realtime (Makefile:2893, :3095), so the override holds
  * there. Unlocks are then earned only through mnMessageApplyUnlock
  * (mnmessage.c:284-301). */
-#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.unlock_mask = 0;
-#endif
 
     for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
     {
@@ -128,10 +126,8 @@ static void ndsSceneHarnessSeedBattleFDDefaults(void)
     /* Same dev-open gate as ndsSceneHarnessSeedVSDefaults: direct-battle
      * harnesses create fighters without passing the CSS, so they keep the
      * open cart; published keeps the save. */
-#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
-#endif
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
@@ -186,10 +182,8 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
     gSCManagerBackupData.error_flags = 0;
     gSCManagerBackupData.boot = 0;
     /* Same dev-open gate as ndsSceneHarnessSeedVSDefaults. */
-#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
-#endif
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
@@ -213,10 +207,8 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 
     gSCManagerBackupData.error_flags = 0;
     gSCManagerBackupData.boot = 0;
-#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
-#endif
 }
 
 /* Seed the transfer state as if the canonical one-minute Time match had just
