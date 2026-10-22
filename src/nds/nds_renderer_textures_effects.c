@@ -6972,25 +6972,6 @@ static v16 ndsRendererParticleWorldToV16(f32 value, u32 shift)
     return (v16)scaled;
 }
 
-/* The smallest shift that keeps `extent` (a world magnitude) off the rail. */
-static u32 ndsRendererParticleScaleShiftFor(f32 extent)
-{
-    u32 shift = 0u;
-    s32 scaled;
-
-    if (!(extent > 0.0F))
-    {
-        return 0u;
-    }
-    scaled = ndsRendererParticleWorldFixed(extent);
-    while ((shift < NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT) &&
-           ((scaled / (s32)(1 << shift)) > 32767))
-    {
-        shift++;
-    }
-    return shift;
-}
-
 static u32 sNdsRendererParticleQuadOpen;
 /* The POLY_ALPHA currently latched into the open group, so a quad only pays for
  * a new group when its alpha actually differs. Reset with the batch. */
@@ -7130,67 +7111,6 @@ static s32 ndsRendererParticleTransformCenter(s32 center[3], u32 fraction_bits)
         return FALSE;
     }
     NDS_DIAG(gNdsParticleViewCenters++);
-    return TRUE;
-}
-
-/* Load the already-normalized world camera into GX. The generic particle
- * opener uses this directly; the Fox blaster's projected no-Z variant below
- * mirrors its modelview normalization while replacing only clip Z. */
-static s32 ndsRendererLoadParticleCameraMatrices(void)
-{
-    NDSRendererMatrix20p12 projection = sNdsRendererParticleProjection;
-    NDSRendererMatrix20p12 scaled_modelview;
-    m4x4 projection_hw;
-    m4x4 modelview_hw;
-    u32 col;
-
-    if (sNdsRendererParticleCameraValid == FALSE)
-    {
-        return FALSE;
-    }
-    if (sNdsRendererParticleNoDepth != FALSE)
-    {
-        s16 projected_z;
-        u32 row;
-
-        /* The particle passes draw after the fighters and the stage; a
-         * frame with no source-Z triangle yet still belongs in front. */
-        ndsRendererHardwareEnterProjectedForeground();
-        projected_z = (s16)ndsRendererHardwareNextProjectedDepth();
-        for (row = 0u; row < 4u; row++)
-        {
-            projection.m[row][2] = (s32)ndsRendererRoundShiftS64(
-                (s64)projection.m[row][3] * projected_z, 12u);
-        }
-        NDS_DIAG(gNdsParticleNoDepthLoads++);
-    }
-    if (sNdsRendererParticleViewSpace != FALSE)
-    {
-        ndsRendererMatrixIdentity20p12(&scaled_modelview, 1 << 12);
-    }
-    else
-    {
-        ndsRendererMatrixCopy20p12(&scaled_modelview,
-                                   &sNdsRendererParticleModelview);
-    }
-    for (col = 0u; col < 4u; col++)
-    {
-        scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
-            scaled_modelview.m[3][col],
-            NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-    }
-    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hw);
-    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(&projection_hw);
-    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
-    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadMatrix4x4(&modelview_hw);
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
-    gNdsParticleCameraLoads++;
-    gNdsParticleCamTx = scaled_modelview.m[3][0];
-    gNdsParticleCamTy = scaled_modelview.m[3][1];
-    gNdsParticleCamTz = scaled_modelview.m[3][2];
     return TRUE;
 }
 

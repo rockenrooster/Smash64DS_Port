@@ -1839,29 +1839,6 @@ static const NDSRebirthHaloBounds sNdsRebirthHaloRootBounds[3] = {
     { -310, -59, -310, 310, 0, 310 },
 };
 
-static void ndsRendererRebirthHaloLoadNoZMatrix(
-    const NDSRendererMatrix20p12 *raw_matrix,
-    s16 projected_z)
-{
-    NDSRendererMatrix20p12 matrix = *raw_matrix;
-    m4x4 hardware;
-    u32 row;
-
-    /* Same source-no-Z contract used by the native Dream Land owner: retain
-     * GX-owned X/Y/W transform and replace only clip Z with painter_z * W.
-     * This is why the vertex can stay in model space without changing overlap
-     * against fighters or the stage. */
-    for (row = 0u; row < 4u; row++)
-    {
-        matrix.m[row][2] = (s32)ndsRendererRoundShiftS64(
-            (s64)matrix.m[row][3] * projected_z, 12u);
-    }
-    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
-    glLoadMatrix4x4(&hardware);
-    ndsRendererProfileRecordMatrixLoad();
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-}
-
 
 #define NDS_REBIRTH_HALO_NORMAL_PACK(x, y, z) \
     ((((u32)(x)) & 0x3ffu) | \

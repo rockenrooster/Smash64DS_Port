@@ -1377,11 +1377,6 @@ static void ndsMenuShellGoto(u32 next_kind)
  * and `...MinTextSprite` baked into the button plate they sit on. Nothing else
  * in this shell composes a label around a number sprite. */
 
-static s32 ndsMenuShellCentre(const char *text)
-{
-    return (s32)((256u - ndsUiKitTextWidth(text)) / 2u);
-}
-
 static void ndsMenuShellHideRows(void)
 {
     u32 slot;

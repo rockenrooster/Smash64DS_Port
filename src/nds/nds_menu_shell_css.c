@@ -568,17 +568,6 @@ u32 ndsMenuShellCssWalkTargetKind(u32 slot)
     return (slot == (u32)1) ? (u32)nFTKindFox : (u32)nFTKindMario;
 }
 
-/* mnPlayersVSMakePortraitShadow's own placement, mnplayersvs.c:2412. */
-static s32 ndsMenuShellCssPortraitX(u32 portrait)
-{
-    return (s32)(((portrait >= 6u) ? (portrait - 6u) : portrait) * 45u) + 25;
-}
-
-static s32 ndsMenuShellCssPortraitY(u32 portrait)
-{
-    return (s32)(((portrait >= 6u) ? 1u : 0u) * 43u) + 36;
-}
-
 /* The P4 grid cell holding a selection, or -1. */
 static s32 ndsMenuShellCssP4Cell(u32 sel)
 {

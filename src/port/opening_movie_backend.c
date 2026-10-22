@@ -1121,14 +1121,6 @@ static void ndsOpeningRoomStoreCandidateMaterial(
     gNdsOpeningRoomDrawMaterialCandidateMObjPalettePtr = probe->palette_ptr;
 }
 
-static void ndsOpeningRoomRecordDLPreviewMaterial(DObj *dobj)
-{
-    NDSOpeningRoomMaterialProbe probe;
-
-    ndsOpeningRoomProbeDObjMaterial(dobj, &probe);
-    ndsOpeningRoomStoreDLPreviewMaterial(&probe);
-}
-
 
 
 

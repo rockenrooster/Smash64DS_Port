@@ -3375,53 +3375,6 @@ static u32 ndsPlatformPreviewCommitCount(void)
            gNdsOriginalDLPreviewCommitCount;
 }
 
-static void ndsPlatformUpdatePerfCounters(void)
-{
-    u32 now_tick = sTicks;
-    u32 logic_tick_count = ndsPlatformOpeningMovieLogicTickCount();
-    u32 preview_commit_count = ndsPlatformPreviewCommitCount();
-    u32 elapsed_ticks;
-
-    if (sPerfSampleReady == 0)
-    {
-        sPerfSampleReady = 1;
-        sPerfLastTick = now_tick;
-        sPerfLastFrameCounter = gNdsFrameCounter;
-        sPerfLastLogicTickCount = logic_tick_count;
-        sPerfLastDLPreviewDrawCount = gNdsOriginalDLPreviewDrawCount;
-        sPerfLastPreviewCommitCount = preview_commit_count;
-        return;
-    }
-
-    elapsed_ticks = now_tick - sPerfLastTick;
-    if (elapsed_ticks < NDS_PERF_SAMPLE_TICKS)
-    {
-        return;
-    }
-
-    gNdsPerfPresentFps = ndsPlatformScaleToFps(
-        gNdsFrameCounter - sPerfLastFrameCounter,
-        elapsed_ticks);
-    gNdsPerfLogicFps = ndsPlatformScaleToFps(
-        logic_tick_count - sPerfLastLogicTickCount,
-        elapsed_ticks);
-    gNdsPerfDLDrawFps = ndsPlatformScaleToFps(
-        gNdsOriginalDLPreviewDrawCount - sPerfLastDLPreviewDrawCount,
-        elapsed_ticks);
-    gNdsPerfPreviewCommitFps = ndsPlatformScaleToFps(
-        preview_commit_count - sPerfLastPreviewCommitCount,
-        elapsed_ticks);
-    gNdsPerfPreviewCommitCount = preview_commit_count;
-    gNdsPerfSampleWindowTicks = elapsed_ticks;
-    gNdsPerfSampleCount++;
-
-    sPerfLastTick = now_tick;
-    sPerfLastFrameCounter = gNdsFrameCounter;
-    sPerfLastLogicTickCount = logic_tick_count;
-    sPerfLastDLPreviewDrawCount = gNdsOriginalDLPreviewDrawCount;
-    sPerfLastPreviewCommitCount = preview_commit_count;
-}
-
 
 void ndsPlatformRenderDebugHud(void)
 {

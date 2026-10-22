@@ -1279,66 +1279,6 @@ static u8 *ndsRelocSceneFileBuffer(void)
     return sNdsRelocSceneFileBufferPtr;
 }
 
-static NDSOpeningActionPreviewCache sNdsOpeningActionPreviewCaches[
-    NDS_OPENING_ACTION_PREVIEW_CACHE_COUNT];
-
-static const NDSOpeningActionPreviewDesc sNdsOpeningActionPreviewDescs[] = {
-    {
-        nSCKindOpeningRun, NDS_RELOC_ASSET_OPENING_RUN,
-        &llMVOpeningRunWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_RUN_WALLPAPER,
-        160, 120, 11, G_IM_FMT_CI, G_IM_SIZ_8b, 48, 40
-    },
-    {
-        nSCKindOpeningCliff, NDS_RELOC_ASSET_OPENING_SECTOR,
-        &llMVOpeningSectorCockpitSprite,
-        NDS_RELOC_SYMBOL_OPENING_SECTOR_COCKPIT,
-        320, 240, 48, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-    {
-        nSCKindOpeningYamabuki, NDS_RELOC_ASSET_OPENING_YAMABUKI,
-        &llMVOpeningYamabukiWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_YAMABUKI_WALLPAPER,
-        320, 264, 53, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-    {
-        nSCKindOpeningJungle, NDS_RELOC_ASSET_OPENING_RUN,
-        &llMVOpeningRunWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_RUN_WALLPAPER,
-        160, 120, 11, G_IM_FMT_CI, G_IM_SIZ_8b, 48, 40
-    },
-    {
-        nSCKindOpeningYoster, NDS_RELOC_ASSET_OPENING_YAMABUKI,
-        &llMVOpeningYamabukiWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_YAMABUKI_WALLPAPER,
-        320, 264, 53, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-    {
-        nSCKindOpeningSector, NDS_RELOC_ASSET_OPENING_SECTOR,
-        &llMVOpeningSectorCockpitSprite,
-        NDS_RELOC_SYMBOL_OPENING_SECTOR_COCKPIT,
-        320, 240, 48, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-    {
-        nSCKindOpeningStandoff, NDS_RELOC_ASSET_OPENING_RUN,
-        &llMVOpeningRunWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_RUN_WALLPAPER,
-        160, 120, 11, G_IM_FMT_CI, G_IM_SIZ_8b, 48, 40
-    },
-    {
-        nSCKindOpeningClash, NDS_RELOC_ASSET_OPENING_SECTOR,
-        &llMVOpeningSectorCockpitSprite,
-        NDS_RELOC_SYMBOL_OPENING_SECTOR_COCKPIT,
-        320, 240, 48, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-    {
-        nSCKindOpeningNewcomers, NDS_RELOC_ASSET_OPENING_YAMABUKI,
-        &llMVOpeningYamabukiWallpaperSprite,
-        NDS_RELOC_SYMBOL_OPENING_YAMABUKI_WALLPAPER,
-        320, 264, 53, G_IM_FMT_RGBA, G_IM_SIZ_16b, 0, 0
-    },
-};
-
 static const NDSRelocSymbolProbe sNdsRelocSymbolProbes[] = {
     {
         &llMVCommonRoomBackgroundDObjDesc,
@@ -11280,29 +11220,6 @@ static s32 ndsRelocNormalizeTitleSprite(NDSRelocLoadedFile *loaded,
     return TRUE;
 }
 
-static void ndsRelocNormalizeTitleSprites(NDSRelocLoadedFile *loaded)
-{
-    u32 i;
-
-    if ((loaded == NULL) ||
-        (loaded->asset_id != NDS_RELOC_ASSET_MN_TITLE))
-    {
-        return;
-    }
-
-    for (i = 0; i < ARRAY_COUNT(sNdsTitleSpriteDescs); i++)
-    {
-        (void)ndsRelocNormalizeTitleSprite(loaded,
-                                           &sNdsTitleSpriteDescs[i]);
-    }
-
-    if ((gNdsTitleSpriteNormalizeFailCount == 0) &&
-        (gNdsTitleSpriteNormalizeCount >= ARRAY_COUNT(sNdsTitleSpriteDescs)))
-    {
-        gNdsTitleRelocResult = NDS_TITLE_RELOC_PASS;
-    }
-}
-
 static s32 ndsRelocNormalizeTitleFireSprite(NDSRelocLoadedFile *loaded,
                                             u32 offset)
 {
@@ -11371,52 +11288,6 @@ static void ndsRelocNormalizeTitleFireSprites(NDSRelocLoadedFile *loaded)
             loaded,
             sNdsTitleFireAnimFrameSymbols[i].offset);
     }
-}
-
-static s32 ndsRelocNormalizeOpeningActionPreviewSprite(
-    NDSRelocLoadedFile *loaded,
-    const NDSOpeningActionPreviewDesc *desc)
-{
-    Sprite *sprite;
-
-    if ((loaded == NULL) || (desc == NULL) ||
-        (loaded->asset_id != desc->asset_id) ||
-        (ndsRelocRangeInLoadedFile(loaded, desc->offset,
-                                   sizeof(Sprite)) == FALSE))
-    {
-        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++);
-        return FALSE;
-    }
-
-    sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
-    if (((u32)(u16)sprite->width == desc->width) &&
-        ((u32)(u16)sprite->height == desc->height) &&
-        ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
-        (sprite->bmfmt == desc->bmfmt) &&
-        (sprite->bmsiz == desc->bmsiz))
-    {
-        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeCount++);
-        return TRUE;
-    }
-
-    ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt, desc->bmsiz);
-    if (((u32)(u16)sprite->width != desc->width) ||
-        ((u32)(u16)sprite->height != desc->height) ||
-        ((u32)(u16)sprite->nbitmaps != desc->bitmap_count) ||
-        (desc->width == 0) || (desc->height == 0) ||
-        (desc->width > NDS_OPENING_ACTION_PREVIEW_MAX_WIDTH) ||
-        (desc->height > NDS_OPENING_ACTION_PREVIEW_MAX_HEIGHT) ||
-        (desc->bitmap_count == 0) ||
-        (desc->bitmap_count > 128u) ||
-        (ndsRelocNormalizeSpriteBitmapTable(
-            loaded, sprite, desc->bitmap_count) == FALSE))
-    {
-        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++);
-        return FALSE;
-    }
-
-    NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeCount++);
-    return TRUE;
 }
 
 static void ndsRelocReverseColorPackBytes(SYColorPack *color)

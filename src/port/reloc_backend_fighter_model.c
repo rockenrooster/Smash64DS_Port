@@ -1477,11 +1477,6 @@ static sb32 __attribute__((section(".itcm"))) ndsFighterStructIsTrackedPointer(c
 }
 
 
-static GObj *ndsFighterMarioFoxProofGObjForSlot(u32 slot)
-{
-    return ndsFighterManagerLiveGObj(slot);
-}
-
 static GObj *ndsFighterGetPlayerNumGObj(s32 player_num)
 {
     GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];

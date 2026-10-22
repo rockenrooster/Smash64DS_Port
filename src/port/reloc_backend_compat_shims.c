@@ -4377,30 +4377,6 @@ void ftAnimEndSetFall(GObj *fighter_gobj)
     return;
 }
 
-static void ndsFTCommonCliffClimbQuick2SetStatusBounded(GObj *fighter_gobj)
-{
-    ftCommonCliffCommon2UpdateCollData(fighter_gobj);
-    ftMainSetStatus(fighter_gobj, nFTCommonStatusCliffClimbQuick2, 0.0F, 1.0F,
-        FTSTATUS_PRESERVE_NONE);
-    ftCommonCliffCommon2InitStatusVars(fighter_gobj);
-}
-
-static void ndsFTCommonCliffWaitApplyOriginalPostStatus(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    fp->status_vars.common.cliffwait.is_allow_interrupt = FALSE;
-    fp->status_vars.common.cliffwait.fall_wait =
-        (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
-            FTCOMMON_CLIFF_FALL_WAIT_DAMAGE_LOW :
-            FTCOMMON_CLIFF_FALL_WAIT_DAMAGE_HIGH;
-    fp->is_cliff_hold = TRUE;
-}
-
 sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
 {
     return battleship_ftAnimEndCheckSetStatus(fighter_gobj, proc_status);
@@ -4563,49 +4539,6 @@ void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
 {
     ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x, jump_vel_y, is_shorthop);
     return;
-}
-
-static void ndsFTCommonJumpSyncVelocityAfterStatus(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    FTAttributes *attr;
-    s32 vel_x;
-    s32 vel_y;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    attr = fp->attr;
-    if (attr == NULL)
-    {
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (fp->physics.vel_air.y <= 0.0F))
-    {
-        switch (fp->status_vars.common.kneebend.input_source)
-        {
-        case FTCOMMON_KNEEBEND_INPUT_TYPE_BUTTON:
-            ndsBaseFTCommonJumpGetJumpForceButton(
-                fp->input.pl.stick_range.x, &vel_x, &vel_y,
-                fp->status_vars.common.kneebend.is_shorthop);
-            break;
-        case FTCOMMON_KNEEBEND_INPUT_TYPE_STICK:
-        default:
-            vel_x = fp->input.pl.stick_range.x;
-            vel_y = fp->status_vars.common.kneebend.jump_force;
-            if (vel_y < FTCOMMON_KNEEBEND_STICK_RANGE_MIN)
-            {
-                vel_y = FTCOMMON_KNEEBEND_STICK_RANGE_MIN;
-            }
-            break;
-        }
-        fp->physics.vel_air.y =
-            (vel_y * attr->jump_height_mul) + attr->jump_height_base;
-        fp->physics.vel_air.x = vel_x * attr->jump_vel_x;
-    }
-    ndsFighterSyncPhysicsToLegacyVel(fp);
 }
 
 void ftCommonJumpSetStatus(GObj *fighter_gobj)
@@ -6139,125 +6072,6 @@ void ftCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj)
     return;
 }
 
-static sb32 ndsFTCommonThrownLoseGripCanCallOriginal(GObj *fighter_gobj)
-{
-    FTStruct *this_fp;
-    GObj *interact_gobj;
-
-    if (fighter_gobj == NULL)
-    {
-        return FALSE;
-    }
-    this_fp = ftGetStruct(fighter_gobj);
-    if ((this_fp == NULL) || (DObjGetStruct(fighter_gobj) == NULL))
-    {
-        return FALSE;
-    }
-    interact_gobj = (this_fp->is_catch_or_capture != FALSE) ?
-        this_fp->catch_gobj : this_fp->capture_gobj;
-    if ((interact_gobj == NULL) || (ftGetStruct(interact_gobj) == NULL) ||
-        (DObjGetStruct(interact_gobj) == NULL))
-    {
-        return FALSE;
-    }
-    if ((this_fp->status_id >= nFTCommonStatusThrownStart) &&
-        (this_fp->status_id <= nFTCommonStatusThrownEnd) &&
-        (this_fp->joints[nFTPartsJointCommonStart] == NULL))
-    {
-        return FALSE;
-    }
-    return TRUE;
-}
-
-static void ndsFTCommonThrownLoseGripRecordOriginal(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    NDS_DIAG(gNdsFighterDashRunDamageLoseGripReleaseCount++);
-    gNdsFighterDashRunDamageLoseGripMask |=
-        NDS_DAMAGE_LOSEGRIP_SELECT | NDS_DAMAGE_LOSEGRIP_LINKS |
-        NDS_DAMAGE_LOSEGRIP_ORIGINAL;
-    if ((fp != NULL) &&
-        (fp->status_id >= nFTCommonStatusThrownStart) &&
-        (fp->status_id <= nFTCommonStatusThrownEnd))
-    {
-        gNdsFighterDashRunDamageLoseGripMask |=
-            NDS_DAMAGE_LOSEGRIP_POSITION;
-    }
-}
-
-static void ndsFTCommonThrownReleaseFighterLoseGripBounded(
-    GObj *fighter_gobj, GObj *fallback_gobj)
-{
-    FTStruct *this_fp;
-    GObj *interact_gobj;
-    FTStruct *interact_fp;
-    DObj *fighter_dobj;
-    DObj *interact_dobj;
-    Vec3f pos;
-
-    if (fighter_gobj == NULL)
-    {
-        return;
-    }
-
-    this_fp = ftGetStruct(fighter_gobj);
-    if (this_fp == NULL)
-    {
-        return;
-    }
-
-    interact_gobj = (this_fp->is_catch_or_capture != FALSE) ?
-        this_fp->catch_gobj : this_fp->capture_gobj;
-    if (interact_gobj == NULL)
-    {
-        interact_gobj = fallback_gobj;
-    }
-    if (interact_gobj == NULL)
-    {
-        return;
-    }
-
-    interact_fp = ftGetStruct(interact_gobj);
-    fighter_dobj = DObjGetStruct(fighter_gobj);
-    interact_dobj = DObjGetStruct(interact_gobj);
-    if ((interact_fp == NULL) || (fighter_dobj == NULL) ||
-        (interact_dobj == NULL))
-    {
-        return;
-    }
-
-    NDS_DIAG(gNdsFighterDashRunDamageLoseGripReleaseCount++);
-    gNdsFighterDashRunDamageLoseGripMask |=
-        NDS_DAMAGE_LOSEGRIP_SELECT | NDS_DAMAGE_LOSEGRIP_LINKS;
-
-    if ((this_fp->status_id >= nFTCommonStatusThrownStart) &&
-        (this_fp->status_id <= nFTCommonStatusThrownEnd) &&
-        (this_fp->joints[nFTPartsJointCommonStart] != NULL))
-    {
-        pos.x = 0.0F;
-        pos.y = 0.0F;
-        pos.z = 0.0F;
-        gmCollisionGetFighterPartsWorldPosition(
-            this_fp->joints[nFTPartsJointCommonStart], &pos);
-        pos.y -= 300.0F;
-        fighter_dobj->translate.vec.f = pos;
-        gNdsFighterDashRunDamageLoseGripMask |=
-            NDS_DAMAGE_LOSEGRIP_POSITION;
-    }
-
-    mpCommonRunFighterCollisionDefault(
-        fighter_gobj, &interact_dobj->translate.vec.f,
-        &interact_fp->coll_data);
-
-    if ((this_fp->ga == nMPKineticsGround) &&
-        ((this_fp->coll_data.floor_line_id == -1) ||
-         (this_fp->coll_data.floor_dist != 0.0F)))
-    {
-        mpCommonSetFighterAir(this_fp);
-    }
-}
-
 void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj,
                                          GObj *interact_gobj)
 {
@@ -6776,84 +6590,6 @@ static f32 ndsVectorAngleDiff3D(const Vec3f *a, const Vec3f *b)
     return atan2f(cross_mag, dot);
 }
 
-static f32 ndsFTCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga,
-                                              f32 knockback)
-{
-    f32 angle_f;
-
-    if (angle_i != 361)
-    {
-        return F_CLC_DTOR32((f32)angle_i);
-    }
-    if (ga == nMPKineticsAir)
-    {
-        return F_CLC_DTOR32(43.0F);
-    }
-    if (knockback < 32.0F)
-    {
-        return 0.0F;
-    }
-
-    angle_f = F_CLC_DTOR32((((knockback - 32.0F) / 0.099998474F) *
-                            42.5F) + 1.0F);
-    if (angle_f > F_CLC_DTOR32(42.5F))
-    {
-        angle_f = F_CLC_DTOR32(42.5F);
-    }
-    return angle_f;
-}
-
-static void ndsFTCommonDamageSetDustEffectInterval(FTStruct *fp)
-{
-    f32 vel;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    vel = (fp->ga == nMPKineticsAir) ?
-        sqrtf((fp->physics.vel_damage_air.x * fp->physics.vel_damage_air.x) +
-              (fp->physics.vel_damage_air.y * fp->physics.vel_damage_air.y) +
-              (fp->physics.vel_damage_air.z * fp->physics.vel_damage_air.z)) :
-        ABSF(fp->physics.vel_damage_ground);
-
-    if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_LOW)
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_LOW;
-    }
-    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_LOW)
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_MID_LOW;
-    }
-    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID)
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_MID;
-    }
-    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_MID_HIGH)
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_MID_HIGH;
-    }
-    else if (vel < FTCOMMON_DAMAGE_EFFECT_KNOCKBACK_HIGH)
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_HIGH;
-    }
-    else
-    {
-        fp->status_vars.common.damage.dust_effect_int =
-            FTCOMMON_DAMAGE_EFFECT_WAIT_DEFAULT;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        sNdsFighterDashRunDamageSetupDustCount++;
-    }
-}
-
 /* The dash-run damage proof, split out of the crowd stub that used to be the
  * only body of ftPublicCommonCheck. It records; it never decided anything. The
  * real actor (battleship_ftpublic.c) calls this and then the source check, so
@@ -6956,42 +6692,6 @@ sb32 ftCommonDamageCheckCaptureKeepHold(FTStruct *fp)
     return ndsBaseFTCommonDamageCheckCaptureKeepHold(fp);
 }
 
-static sb32 ndsFTCommonDamageCheckElementSetColAnim(GObj *fighter_gobj,
-                                                    s32 element,
-                                                    s32 damage_level)
-{
-    sb32 result;
-
-    switch (element)
-    {
-    case nGMHitElementFire:
-        result = ftParamCheckSetFighterColAnimID(
-            fighter_gobj,
-            damage_level + nGMColAnimFighterDamageFireStart, 0);
-        break;
-    case nGMHitElementElectric:
-        result = ftParamCheckSetSkeletonColAnimID(fighter_gobj,
-                                                  damage_level);
-        break;
-    case nGMHitElementFreezing:
-        result = ftParamCheckSetFighterColAnimID(
-            fighter_gobj,
-            damage_level + nGMColAnimFighterDamageIceStart, 0);
-        break;
-    default:
-        result = ftParamCheckSetFighterColAnimID(
-            fighter_gobj, nGMColAnimFighterDamageCommon, 0);
-        break;
-    }
-    if ((result != FALSE) &&
-        (ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        sNdsFighterDashRunDamageSetupColAnimCount++;
-    }
-    return result;
-}
-
 sb32 ftCommonDamageCheckElementSetColAnim(GObj *fighter_gobj, s32 element,
                                           s32 damage_level)
 {
@@ -7008,29 +6708,6 @@ void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration)
         sNdsFighterDashRunDamageSetupScreenFlashCount++;
     }
     ndsBattleShipIFScreenFlashSetColAnimID(colanim_id, colanim_duration);
-}
-
-static void ndsFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
-{
-    if (knockback <= FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH)
-    {
-        return;
-    }
-    switch (element)
-    {
-    case nGMHitElementFire:
-        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageFire, 0);
-        break;
-    case nGMHitElementElectric:
-        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageElectric, 0);
-        break;
-    case nGMHitElementFreezing:
-        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageIce, 0);
-        break;
-    default:
-        ifScreenFlashSetColAnimID(nGMColAnimScreenFlashDamageNormal, 0);
-        break;
-    }
 }
 
 void ftCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
@@ -10130,45 +9807,6 @@ static void ndsFTCommonCliffCommon2UpdateCollDataBridge(GObj *fighter_gobj)
     }
 }
 
-static void ndsFTCommonCliffCommon2UpdateCollDataBridgeLive(GObj *fighter_gobj)
-{
-    u32 call_count = gNdsStageMPCliffCommon2BridgeCallCount;
-    u32 guard_pass_count = gNdsStageMPCliffCommon2BridgeGuardPassCount;
-    u32 guard_reject_count = gNdsStageMPCliffCommon2BridgeGuardRejectCount;
-    s32 status_id = gNdsStageMPCliffCommon2BridgeStatusID;
-    s32 lr = gNdsStageMPCliffCommon2BridgeLR;
-    s32 cliff_id = gNdsStageMPCliffCommon2BridgeCliffID;
-    s32 root_x_before = gNdsStageMPCliffCommon2BridgeRootXBeforeMilli;
-    s32 root_y_before = gNdsStageMPCliffCommon2BridgeRootYBeforeMilli;
-    s32 root_x_after = gNdsStageMPCliffCommon2BridgeRootXAfterMilli;
-    s32 root_y_after = gNdsStageMPCliffCommon2BridgeRootYAfterMilli;
-    s32 expected_root_x = gNdsStageMPCliffCommon2BridgeExpectedRootXMilli;
-    s32 expected_root_y = gNdsStageMPCliffCommon2BridgeExpectedRootYMilli;
-    s32 floor_dist = gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli;
-    u32 root_position_ok = gNdsStageMPCliffCommon2BridgeRootPositionOK;
-
-    ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
-    if (gNdsStageMPCliffCommon2BridgeGuardRejectCount > guard_reject_count)
-    {
-        gNdsStageMPCliffLiveLoopUnsafeCount++;
-    }
-
-    gNdsStageMPCliffCommon2BridgeCallCount = call_count;
-    gNdsStageMPCliffCommon2BridgeGuardPassCount = guard_pass_count;
-    gNdsStageMPCliffCommon2BridgeGuardRejectCount = guard_reject_count;
-    gNdsStageMPCliffCommon2BridgeStatusID = status_id;
-    gNdsStageMPCliffCommon2BridgeLR = lr;
-    gNdsStageMPCliffCommon2BridgeCliffID = cliff_id;
-    gNdsStageMPCliffCommon2BridgeRootXBeforeMilli = root_x_before;
-    gNdsStageMPCliffCommon2BridgeRootYBeforeMilli = root_y_before;
-    gNdsStageMPCliffCommon2BridgeRootXAfterMilli = root_x_after;
-    gNdsStageMPCliffCommon2BridgeRootYAfterMilli = root_y_after;
-    gNdsStageMPCliffCommon2BridgeExpectedRootXMilli = expected_root_x;
-    gNdsStageMPCliffCommon2BridgeExpectedRootYMilli = expected_root_y;
-    gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli = floor_dist;
-    gNdsStageMPCliffCommon2BridgeRootPositionOK = root_position_ok;
-}
-
 void ftCommonCliffCommon2UpdateCollData(GObj *fighter_gobj)
 {
     ndsBaseFTCommonCliffCommon2UpdateCollData(fighter_gobj);
@@ -10738,80 +10376,6 @@ static sb32 ndsStageMPCliffCatchFloorLoopSpecialCollisions(
         }
         cliffcatch_gobj = cliffcatch_gobj->link_next;
     }
-    mpCommonSetFighterLandingParams(fighter_gobj);
-    coll_data->is_coll_end = TRUE;
-    return TRUE;
-}
-
-static sb32 ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions(
-    MPCollData *coll_data, GObj *fighter_gobj, u32 flags)
-{
-    FTStruct *this_fp = ftGetStruct(fighter_gobj);
-    GObj *cliffcatch_gobj;
-    sb32 l_hit = FALSE;
-    sb32 r_hit = FALSE;
-
-    if ((coll_data == NULL) || (this_fp == NULL))
-    {
-        gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-        return FALSE;
-    }
-    NDS_DIAG(gNdsStageMPCliffClimbFloorLoopRecatchSpecialCollisionCount++);
-
-    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
-    {
-        mpProcessRunCeilCollisionAdjNew(coll_data);
-    }
-    else
-    {
-        mpProcessSetCollProjectFloorID(coll_data);
-    }
-
-    if (((flags & MAP_PROC_TYPE_CLIFF) == 0u) ||
-        (this_fp->cliffcatch_wait != 0))
-    {
-        return FALSE;
-    }
-
-    NDS_DIAG(gNdsStageMPCliffClimbFloorLoopRecatchLCliffTestCount++);
-    l_hit = mpProcessCheckTestLCliffCollision(coll_data);
-    if (l_hit != FALSE)
-    {
-        NDS_DIAG(gNdsStageMPCliffClimbFloorLoopRecatchLCliffHitCount++);
-    }
-    if (l_hit == FALSE)
-    {
-        NDS_DIAG(gNdsStageMPCliffClimbFloorLoopRecatchRCliffTestCount++);
-        r_hit = mpProcessCheckTestRCliffCollision(coll_data);
-        if (r_hit != FALSE)
-        {
-            NDS_DIAG(gNdsStageMPCliffClimbFloorLoopRecatchRCliffHitCount++);
-        }
-    }
-    if ((l_hit == FALSE) && (r_hit == FALSE))
-    {
-        return FALSE;
-    }
-
-    cliffcatch_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
-    while (cliffcatch_gobj != NULL)
-    {
-        if (cliffcatch_gobj != fighter_gobj)
-        {
-            FTStruct *cliffcatch_fp = ftGetStruct(cliffcatch_gobj);
-
-            if ((cliffcatch_fp != NULL) &&
-                (cliffcatch_fp->is_cliff_hold != FALSE) &&
-                (coll_data->cliff_id == cliffcatch_fp->coll_data.cliff_id) &&
-                (this_fp->lr == cliffcatch_fp->lr))
-            {
-                gNdsStageMPCliffClimbFloorLoopRecatchOccupancyBlockCount++;
-                return FALSE;
-            }
-        }
-        cliffcatch_gobj = cliffcatch_gobj->link_next;
-    }
-
     mpCommonSetFighterLandingParams(fighter_gobj);
     coll_data->is_coll_end = TRUE;
     return TRUE;
