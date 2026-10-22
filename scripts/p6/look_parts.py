@@ -158,25 +158,15 @@ def pillar_light_atlas(core: list, size: int = 64) -> tuple[list, tuple]:
     indices, PILLAR_LIGHT_PALETTE). Columns 0-31: the core, white down its
     middle to cyan at its edges, its top fading and narrowing (`core`, rows
     of 32 palette indices: p6_gate.py core_block, which draws it; the glow
-    around it is p6_gate.py's own image); 32-63, rows 0-15: the
-    flare on the floor at its foot; rows 16-47: a bank of dust puffs rolling
-    out from its foot along the floor (the foot at column 32), shaded from
-    their tops; rows 48-63 clear."""
+    around it is p6_gate.py's own image); 32-63, rows 16-47: a bank of dust
+    puffs rolling out from its foot along the floor (the foot at column 32),
+    shaded from their tops; the rest clear."""
     idx = np.zeros((size, size), dtype=int)
     q = size // 4
     idx[:, 0:2 * q] = np.array(core, dtype=int)
-    # The flare: an ellipse on the floor, white at its middle.
-    fw, fh = size - 2 * q, q
-    for y in range(fh):
-        for x in range(fw):
-            r = math.hypot((x - (fw - 1) / 2.0) / (fw / 2.0), (y - (fh - 1) / 2.0) / (fh / 2.0))
-            for limit, k in ((0.35, 1), (0.55, 2), (0.75, 3), (0.9, 4), (1.0, 5)):
-                if r <= limit:
-                    idx[y, 2 * q + x] = k
-                    break
     # The dust: puffs along the floor, the biggest at the foot (column 32),
     # each lit from above (paler at its top, darker at its foot).
-    top, depth = q, 2 * q
+    top, depth, fw = q, 2 * q, size - 2 * q
     puffs = ((5.0, 21.0, 10.0), (14.0, 19.0, 11.5), (24.0, 22.0, 8.5), (29.0, 25.0, 5.5),
              (9.0, 13.0, 7.0), (19.0, 12.5, 6.0))
     for y in range(depth):

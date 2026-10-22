@@ -886,29 +886,29 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * 0-12, the staff thrust up at the hit and flag0, frame 12, and its frames
  * 23-56 onto hers 12-42; the tic below is the 3DS's frame less about 24).
  *
- * Owner 2026-10-22, against the 3DS's in the owner's quarter-speed clip
- * (game frames after the column first shows; her height the unit): the tree's
- * cards (p6_gate.py PILLAR_CARDS, in draw order, each its PRIM a live
- * material, PAL_PILLAR_MOBJSUBS): the dust either way along the floor, the
- * pool on the floor at its foot (the flare), the core (white down its middle,
- * 0.25 across, to bright cyan, 0.5 across) and the glow (full at the core's
- * edge, faint by 0.7 across and gone by 0.9, coloured by its material: the
- * owner's clip measured; their tops as the clip's: the white fading to cyan
- * up the middle, the cyan narrowing to a soft round top in the glow's haze).
- * The column rises from the floor, its top first, over PAL_PILLAR_RISE tics
- * (its height sNdsP4PalutenaPillarRise), posed for tic 0 when made (it drew
- * one frame at full height first); the pool brightest as it rises, fading out
- * by PAL_PILLAR_FLARE_END; the dust rolls out either way with it, at its full
- * reach by PAL_PILLAR_DUST_FULL, and settles and fades by PAL_PILLAR_DUST_END;
- * the column stands, its glow shimmering, to PAL_PILLAR_THIN_AT, thins
- * (slowly, then quickly: sNdsP4PalutenaPillarThin) to a line by
+ * Owner 2026-10-22, against the 3DS's in the owner's quarter-speed clip (game
+ * frames after the column first shows; her height the unit): the tree's cards
+ * (p6_gate.py PILLAR_CARDS, in draw order, each its PRIM a live material,
+ * PAL_PILLAR_MOBJSUBS): the dust either way along the floor, the core (white
+ * down its middle, 0.25 across, to bright cyan, 0.5 across) and the glow (full
+ * at the core's edge, faint by 0.7 across and gone by 0.9, coloured by its
+ * material: the owner's clip measured; their tops as the clip's: the white
+ * fading to cyan up the middle, the cyan narrowing to a soft round top in the
+ * glow's haze). The column rises from the floor, its top first, over
+ * PAL_PILLAR_RISE tics (its height sNdsP4PalutenaPillarRise), posed for tic 0
+ * when made (it drew one frame at full height first); the dust rolls out
+ * either way with it, at its full reach by PAL_PILLAR_DUST_FULL, and settles
+ * and fades by PAL_PILLAR_DUST_END (its pool on the floor removed, owner
+ * 2026-10-22); the column stands, its glow shimmering, to PAL_PILLAR_THIN_AT,
+ * thins (slowly, then quickly: sNdsP4PalutenaPillarThin) to a line by
  * PAL_PILLAR_LINE_AT as its glow turns violet, and the violet line fades out
  * by PAL_PILLAR_END (its hitboxes, the script's, are up to tic 26). */
 #define PAL_PILLAR_AHEAD 325.0F
-#define PAL_PILLAR_TOWARD_CAMERA 120.0F
-#define PAL_PILLAR_MOBJSUBS 0x620           /* p6_gate.py PILLAR_MOBJSUBS */
+/* Its root toward the camera: its glow, PILLAR_DEPTH_GAP behind the core
+ * (p6_gate.py, 48), stands 120 nearer than her (it did before). */
+#define PAL_PILLAR_TOWARD_CAMERA 168.0F
+#define PAL_PILLAR_MOBJSUBS 0x5F4           /* p6_gate.py PILLAR_MOBJSUBS */
 #define PAL_PILLAR_RISE 3
-#define PAL_PILLAR_FLARE_END 11
 #define PAL_PILLAR_DUST_FULL 6
 #define PAL_PILLAR_DUST_END 13
 #define PAL_PILLAR_THIN_AT 19
@@ -953,10 +953,9 @@ static EFDesc sNdsP4PalutenaPillarDesc = {
 };
 
 /* The glow's colour full and violet (its material's PRIM at full alpha:
- * p6_gate.py PILLAR_CARDS), the pool's and the dust's alpha. */
+ * p6_gate.py PILLAR_CARDS), the dust's alpha. */
 static const u8 sNdsP4PalutenaPillarCyan[4] = { 8, 168, 255, 235 };
 static const u8 sNdsP4PalutenaPillarViolet[3] = { 140, 110, 255 };
-#define PAL_PILLAR_FLARE_ALPHA 240.0F
 #define PAL_PILLAR_DUST_ALPHA 235.0F
 
 static void ndsP4PalutenaPillarPrim(DObj *card, f32 alpha)
@@ -972,14 +971,11 @@ static void ndsP4PalutenaPillarPose(GObj *effect_gobj, s32 tic)
 {
     DObj *dust_l = DObjGetStruct(effect_gobj)->child;
     DObj *dust_r = dust_l->sib_next;
-    DObj *flare = dust_r->sib_next;
-    DObj *core = flare->sib_next;
+    DObj *core = dust_r->sib_next;
     DObj *glow = core->sib_next;
     f32 width;
     f32 core_width;
     f32 height;
-    f32 flare_size;
-    f32 flare_alpha;
     f32 reach;
     f32 rise;
     f32 dust_alpha;
@@ -1032,28 +1028,6 @@ static void ndsP4PalutenaPillarPose(GObj *effect_gobj, s32 tic)
                          (((s32)sNdsP4PalutenaPillarViolet[2] - (s32)sNdsP4PalutenaPillarCyan[2]) * violet));
     }
     ndsP4PalutenaPillarPrim(glow, glow_alpha);
-    /* The pool at its foot: brightest as it rises, fading out by
-     * PAL_PILLAR_FLARE_END. */
-    if (tic < PAL_PILLAR_RISE)
-    {
-        flare_size = 0.6F + (0.4F * (f32)tic / (f32)PAL_PILLAR_RISE);
-        flare_alpha = PAL_PILLAR_FLARE_ALPHA;
-    }
-    else if (tic < PAL_PILLAR_FLARE_END)
-    {
-        f32 p = (f32)(tic - PAL_PILLAR_RISE) / (f32)(PAL_PILLAR_FLARE_END - PAL_PILLAR_RISE);
-
-        flare_size = 1.0F - (0.3F * p);
-        flare_alpha = PAL_PILLAR_FLARE_ALPHA * (1.0F - p);
-    }
-    else
-    {
-        flare_size = 0.0F;
-        flare_alpha = 0.0F;
-    }
-    flare->scale.vec.f.x = flare_size;
-    flare->scale.vec.f.y = flare_size;
-    ndsP4PalutenaPillarPrim(flare, flare_alpha);
     /* The dust: rolling out either way along the floor with the column and
      * rising, then still spreading as it settles and fades. */
     if (tic <= PAL_PILLAR_DUST_FULL)
@@ -1126,8 +1100,8 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
  * mirrored (x translation, y and z turns negated). Outside the table's
  * frames the root is hidden. Angles are s16 binary angles, scales s16 over
  * 4096. */
-#define PAL_WINGS_TREE 0x210                /* p6_gate.py WINGS_TREE */
-#define PAL_WINGS_TABLE_SLOT 0x420          /* p6_gate.py WINGS_TABLE_SLOT */
+#define PAL_WINGS_TREE 0x1E4                /* p6_gate.py WINGS_TREE */
+#define PAL_WINGS_TABLE_SLOT 0x3F4          /* p6_gate.py WINGS_TABLE_SLOT */
 #define PAL_WINGS_MAGIC 0x50574E48u         /* "PWNH" */
 #define PAL_WINGS_BONES 4
 #define PAL_WINGS_NODES (3 + (2 * PAL_WINGS_BONES))
@@ -1362,9 +1336,9 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  * `anchor` frame and held from there (owner p6ac: the down smash's at its
  * full impact; the forward smash's as she stands, frame 0, where the owner
  * placed it). */
-#define PAL_GLOW_TREE 0x424                 /* p6_gate.py GLOW_TREE */
-#define PAL_LIGHT_TREE 0x4D4                /* p6_gate.py LIGHT_TREE */
-#define PAL_LIGHT_MOBJSUBS 0x608            /* p6_gate.py LIGHT_MOBJSUBS */
+#define PAL_GLOW_TREE 0x3F8                 /* p6_gate.py GLOW_TREE */
+#define PAL_LIGHT_TREE 0x4A8                /* p6_gate.py LIGHT_TREE */
+#define PAL_LIGHT_MOBJSUBS 0x5DC            /* p6_gate.py LIGHT_MOBJSUBS */
 #define PAL_STAFF_JOINT (nFTPartsJointCommonStart + 14)
 #define PAL_HEAD_JOINT (nFTPartsJointCommonStart + 8)
 #define PAL_GLOW_TOWARD_CAMERA 150.0F

@@ -137,15 +137,15 @@ ARTICLES = {
         # Her forward and down smash's wings, a third tree (p6_gate.py
         # WINGS_TREE, scripts/p6/p6_wings.py): eight cards, each a bone's,
         # posed by her code every tic.
-        {"name": "wings", "special": 2, "dobjdesc": 0x210},
+        {"name": "wings", "special": 2, "dobjdesc": 0x1E4},
         # Her light effects (p6_gate.py GLOW_TREE, LIGHT_TREE; scripts/p6/
         # p6_light.py; the owner's p6x VFX plan): the gem's glow, and the
         # overhead light wings with the taunt's ring, cards placed by her
         # code every tic. "material": each light card's list calls its
         # DObj's one MObj (segment E) for PRIM, whose alpha her code fades
         # (owner p6ac).
-        {"name": "glow", "special": 2, "dobjdesc": 0x424},
-        {"name": "light", "special": 2, "dobjdesc": 0x4D4, "material": True},
+        {"name": "glow", "special": 2, "dobjdesc": 0x3F8},
+        {"name": "light", "special": 2, "dobjdesc": 0x4A8, "material": True},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

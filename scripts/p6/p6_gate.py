@@ -20,9 +20,9 @@ round 2: one column in front of her, exactly vertical; owner p6j: redone on
 the 3DS's Heavenly Light in the owner's half-speed Strong_Up_A clip): a
 second DObjDesc tree at PILLAR_TREE -- a root (placed by her code ahead of
 her on the ground, src/port/nds_p4_palutena.c) and cards facing the camera:
-the glow (translucent), the core (white down its middle to cyan, cut out),
-the flare on the floor at its foot and the dust rolling out from it either
-way (translucent) -- from one authored atlas (look_parts.py
+the glow (translucent), the core (white down its middle to cyan, cut out)
+and the dust rolling out from its foot either way (translucent) -- from one
+authored atlas (look_parts.py
 pillar_light_atlas) and the glow's own image, unlit. Her code scales the
 cards over the effect's life: the column rises from the floor, its soft top
 first, the dust rolls out and settles, the column thins away.
@@ -84,28 +84,33 @@ PILLAR_HEIGHT = 2240.0
 PILLAR_STRETCH = 2.0
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
 # Each card: atlas region (s0, t0, s1, t1 in texels; s1 < s0 mirrors it; the
-# floor's regions half a texel in from their neighbours, whose edge rows
-# showed as a line; None for the glow's own image), left and right x, bottom, top, z (toward the
-# camera), and its material's PRIM (alpha 255: cut out and opaque, else
-# translucent). Every card's PRIM is its material's (PILLAR_MOBJSUBS), so her
-# code fades and colours it (src/port/nds_p4_palutena.c). The 3DS's column
-# (the owner's quarter-speed Strong_Up_A clip, owner 2026-10-22, against her
-# height, HER_HEIGHT; Ultimate's column as wide): a white core about a quarter
-# of it across, rimmed bright cyan to about 0.4, in a blue glow to about 0.9
-# (GLOW_PROFILE), a cyan pool on the floor about her height
-# across (a flash up its foot here, over a stage's foreground), and dust
-# rolling out either way about her height or more, about 0.3 of it high. The dust
-# cards reach out from the foot (x 0), the flare lies over it. The order is
-# the draw order, and the first card drawn shows where translucent cards
-# overlap (every card draws as its own entry root with the same polygon ID):
-# the dust and the pool first, the glow last (it was first, and hid the
-# dust's and the pool's middles).
+# floor's regions half a texel in from their neighbours, whose edge rows showed
+# as a line, and the core's last column, deep blue, as a line up the dust's
+# foot, owner 2026-10-22; None for the glow's own image), left and right x,
+# bottom, top, z (toward the camera), and its material's PRIM (alpha 255: cut
+# out and opaque, else translucent). Every card's PRIM is its material's
+# (PILLAR_MOBJSUBS), so her code fades and colours it
+# (src/port/nds_p4_palutena.c). The 3DS's column (the owner's quarter-speed
+# Strong_Up_A clip, owner 2026-10-22, against her height, HER_HEIGHT;
+# Ultimate's column as wide): a white core about a quarter of it across, rimmed
+# bright cyan to about 0.4, in a blue glow to about 0.9 (GLOW_PROFILE), and
+# dust rolling out either way about her height or more, about 0.3 of it high
+# (its cards reach out from the foot, x 0; the pool on the floor at its foot is
+# gone, owner 2026-10-22). The order is the draw order, and the first card
+# drawn shows where translucent cards overlap (every card draws as its own
+# entry root with the same polygon ID): the dust first, the glow last (it was
+# first, and hid the dust's middle). Where they overlap a card in front stands
+# PILLAR_DEPTH_GAP nearer the camera than the one behind (the glow, then the
+# core, then the dust): the DS's depth buffer resolves about z^2 / (32,768 x
+# near) at camera distance z (the battle camera's near 256: 3 units at 5,000
+# out, 17 at 12,000), and at 4 apart the glow won through the core in streaks
+# on Sector Z's camera (owner 2026-10-22).
+PILLAR_DEPTH_GAP = 48.0
 PILLAR_CARDS = (
-    ("dust_l", (64, 16.5, 32, 47.5), -760.0, 0.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
-    ("dust_r", (32, 16.5, 64, 47.5), 0.0, 760.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
-    ("flare", (32, 0.5, 64, 15.5), -300.0, 300.0, -80.0, 300.0, 8.0, (255, 255, 255, 240)),
-    ("core", (0, 0, 32, 64), -150.0, 150.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, 4.0, (255, 255, 255, 255)),
-    ("glow", None, -276.0, 276.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, 0.0, (8, 168, 255, 235)),
+    ("dust_l", (64, 16.5, 32.5, 47.5), -760.0, 0.0, -12.0, 520.0, PILLAR_DEPTH_GAP, (255, 255, 255, 235)),
+    ("dust_r", (32.5, 16.5, 64, 47.5), 0.0, 760.0, -12.0, 520.0, PILLAR_DEPTH_GAP, (255, 255, 255, 235)),
+    ("core", (0, 0, 32, 64), -150.0, 150.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, 0.0, (255, 255, 255, 255)),
+    ("glow", None, -276.0, 276.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, -PILLAR_DEPTH_GAP, (8, 168, 255, 235)),
 )
 # The glow's own image: an I4 coverage mask (graded alpha, its colour the
 # material's PRIM), its top faded as the column's (GLOW_TOP, below). Across
