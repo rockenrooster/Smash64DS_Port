@@ -8,6 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -347,7 +350,7 @@ def main() -> int:
     native_owners = native_owners_path.read_text(encoding="utf-8", errors="replace")
     adapter = adapter_path.read_text(encoding="utf-8", errors="replace")
     matrix_adapter = matrix_adapter_path.read_text(encoding="utf-8", errors="replace")
-    movement = movement_path.read_text(encoding="utf-8", errors="replace")
+    movement = read_split(movement_path)
     program_arms = no_program_arms(adapter)
     tracked = tracked_files()
 

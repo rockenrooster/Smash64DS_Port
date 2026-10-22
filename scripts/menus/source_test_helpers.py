@@ -50,6 +50,10 @@ SPLIT_SOURCES = {
         "nds_ifcommon_oam_sobjs.c",
         "nds_ifcommon_oam_pause.c",
     )),
+    "port/reloc_backend_movement.c": ("port/reloc_backend.c", (
+        "reloc_backend_movement_moveset.c",
+        "reloc_backend_stage_draw_loop.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

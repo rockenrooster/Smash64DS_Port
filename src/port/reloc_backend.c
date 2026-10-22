@@ -438,6 +438,8 @@ static void ndsMPCollisionSetGeometry(MPGeometryData *geometry);
 
 /* Movement proofs. */
 #include "reloc_backend_movement.c"
+#include "reloc_backend_movement_moveset.c"
+#include "reloc_backend_stage_draw_loop.c"
 
 /* MP collision proofs. */
 #include "reloc_backend_mp_collision.c"

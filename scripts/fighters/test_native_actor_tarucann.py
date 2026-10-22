@@ -18,6 +18,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
+
 import pytest
 
 _scripts_root = Path(__file__).resolve().parent
@@ -158,7 +161,7 @@ def test_native_state_compiler_rejects_unknown_command():
 
 
 def test_barrel_route_has_no_interpreter_fallback():
-    text = (REPO_ROOT / "src/port/reloc_backend_movement.c").read_text()
+    text = read_split(REPO_ROOT / "src/port/reloc_backend_movement.c")
     start = text.index(
         "static sb32 ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(")
     body = text[start:text.index(

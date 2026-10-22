@@ -19,6 +19,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
+
 import pytest
 
 _p = Path(__file__).resolve().parent
@@ -132,7 +135,7 @@ def test_cloud_adapter_dispatch_wiring():
 
 
 def test_cloud_route_and_executor_wiring():
-    route = ROUTE_PATH.read_text()
+    route = read_split(ROUTE_PATH)
     assert "ndsRendererAdapterSubmitNativeYosterCloud(root, cobj," in route, (
         "DEFECT cloud route bypasses the adapter slot. Exact fix: route the "
         "cloud display callback through ndsRendererAdapterSubmitNativeYosterCloud")

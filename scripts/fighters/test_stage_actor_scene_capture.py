@@ -1,5 +1,9 @@
 """Execute the real display-entry guards against the registered scene flags."""
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 import re
 import shutil
 import subprocess
@@ -8,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_battle_capture_guards_and_scene_lifecycle(tmp_path):
-    movement = (ROOT / "src/port/reloc_backend_movement.c").read_text()
+    movement = read_split(ROOT / "src/port/reloc_backend_movement.c")
     manager = (ROOT / "src/port/nds_scene_manager.c").read_text()
     taskman = (ROOT / "src/import/battleship_sys_taskman.c").read_text()
     header = (ROOT / "include/nds/nds_scene_manager.h").read_text()

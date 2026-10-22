@@ -22,6 +22,8 @@ import re
 import sys
 from pathlib import Path
 
+from source_test_helpers import source as read_split
+
 ROOT = Path(__file__).resolve().parents[2]
 CAPTURE = ROOT / "src" / "port" / "opening_movie_backend.c"
 OWNER = ROOT / "src" / "port" / "reloc_backend_movement.c"
@@ -150,7 +152,7 @@ def main() -> int:
             return 1
 
     check_capture_site(CAPTURE.read_text(encoding="utf-8"))
-    check_owner(OWNER.read_text(encoding="utf-8"))
+    check_owner(read_split(OWNER))
     check_identity_publisher(IMPORT_TU.read_text(encoding="utf-8"))
 
     if failures:
