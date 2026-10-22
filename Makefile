@@ -7284,7 +7284,7 @@ else
 $$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r: $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json \
 		$$(NDS_P4_STAGING)/ssb64asm.z64 $$(PROJECT_ROOT)/scripts/p6/anim.py $$(PROJECT_ROOT)/scripts/p6/pose_ops.py $$(PROJECT_ROOT)/scripts/p6/keyposes.py \
 		$$(PROJECT_ROOT)/scripts/p6/ultimate.py \
-		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/3ds2ds/scene_high/scene.json)
+		$$(wildcard $$(PROJECT_ROOT)/assets/p6-art/$(1)/3ds2ds/scene_high/scene.json)
 	python "$$(PROJECT_ROOT)/scripts/p6/anim.py" --build "$$<" --staging "$$(NDS_P4_STAGING)" --out "$$@"
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(NDS_P4_STAGING)/ssb64asm.z64 \
@@ -7292,11 +7292,11 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(PROJECT_ROOT)/scripts/p6/coverage.py $$(PROJECT_ROOT)/scripts/p6/anim.py \
 		$$(PROJECT_ROOT)/scripts/p6/skirt_keys.py $$(PROJECT_ROOT)/scripts/p6/dress_check.py \
 		$$(PROJECT_ROOT)/scripts/p6/pose_ops.py \
-		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/3ds2ds/scene_high/scene.json) \
+		$$(wildcard $$(PROJECT_ROOT)/assets/p6-art/$(1)/3ds2ds/scene_high/scene.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
 		$$(PROJECT_ROOT)/scripts/p6/p6_audio.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/audio.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \
-		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/look/*) $$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/gate/*) \
+		$$(wildcard $$(PROJECT_ROOT)/assets/p6-art/$(1)/look/*) $$(wildcard $$(PROJECT_ROOT)/assets/p6-art/$(1)/gate/*) \
 		$$(patsubst $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json,$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r,$$(wildcard $$(PROJECT_ROOT)/art/p6/$(1)/anims/*.json))
 	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
 		--staging "$$(NDS_P4_STAGING)" --content $(1) --out "$$(NDS_P4_EXPORT)/$(1)"
@@ -7440,7 +7440,7 @@ $(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
 		$(NDS_P4_STAGING)/ssb64asm.z64 $(PROJECT_ROOT)/scripts/p4/p4_css.py \
 		$(PROJECT_ROOT)/scripts/p4/remix_rom.py $(NDS_BUILD_CONFIG) \
 		$(PROJECT_ROOT)/scripts/p6/p6_present.py $(PROJECT_ROOT)/scripts/p6/p6_audio.py \
-		$(wildcard $(PROJECT_ROOT)/builds/p6-art/*/portrait.png) $(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json)
+		$(wildcard $(PROJECT_ROOT)/assets/p6-art/*/portrait.png) $(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
 		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
 nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc

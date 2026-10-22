@@ -39,12 +39,12 @@ deepest row's own copies of its corners. Textures are resized (TEXTURE_SCALE,
 shared by both details) and turned into CI4 (16 colours; colour 0 clear for
 cut-out sprites).
 
-Everything this reads and writes is kit-derived: local, under builds/ (D10).
+Everything this reads and writes is kit-derived: local, under assets/p6-art/ (D10).
 
-    look_blend.py --dump builds/p6-art/palutena/3ds2ds/work_dump.json \\
+    look_blend.py --dump assets/p6-art/palutena/3ds2ds/work_dump.json \\
         --kit ".../Palutena/palutena_low_n_c00.dae" \\
-        --base builds/p6-art/base/peach/high/scene.json --detail high \\
-        --out builds/p6-art/palutena/3ds2ds/scene_high
+        --base assets/p6-art/base/peach/high/scene.json --detail high \\
+        --out assets/p6-art/palutena/3ds2ds/scene_high
 """
 from __future__ import annotations
 

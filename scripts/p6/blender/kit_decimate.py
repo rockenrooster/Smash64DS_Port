@@ -22,7 +22,7 @@ Runs in the live Blender (MCP) or headless:
     blender -b --factory-startup --python scripts/p6/blender/kit_decimate.py -- \
         --fit <kit_low_fit.json> --kit-dir <kit folder> --ops art/p6/<name>/look/k_dec_<detail>.json \
         [--blend out.local.blend]
-Kit-derived output stays under builds/ (plan D10).
+Kit-derived output stays under assets/p6-art/ (plan D10).
 """
 import argparse
 import json

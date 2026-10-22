@@ -36,7 +36,7 @@ Fourth and fifth, her light effects (owner p6x VFX plan; scripts/p6/
 p6_light.py): the gem's glow at GLOW_TREE and the overhead light wings with
 the taunt's ring at LIGHT_TREE, cards her code places and sizes every tic.
 
-    p6_gate.py --out builds/p6-art/palutena/gate/1b10 [--preview gate.png]
+    p6_gate.py --out assets/p6-art/palutena/gate/1b10 [--preview gate.png]
 
 Kit-derived: the file stays local (D10); this recipe is the committed part.
 """

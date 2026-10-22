@@ -4,7 +4,7 @@
 moves are authored as key poses against them and reviewed as sheets).
 
     {"keyposes": {"skeleton": "roy", "header": "0x...", "length": 51, "first_slot": 0,
-     "scene": "builds/p6-art/<name>/.../scene.json",
+     "scene": "assets/p6-art/<name>/.../scene.json",
      "base": {"clip": "0x...", "frame": 0},
      "keys": [{"frame": 0},
               {"frame": 6, "from": {"clip": ..., "frame": n},

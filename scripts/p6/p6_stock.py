@@ -24,9 +24,9 @@ and odd rows swapped. Two ways:
 The output is model_writer.py --textures input.
 
     p6_stock.py --name palutena --base-export builds/p4-staging/export/peach \\
-        --out builds/p6-art/palutena/costumes/stock.json [--preview stock.png]
+        --out assets/p6-art/palutena/costumes/stock.json [--preview stock.png]
     p6_stock.py --name ike --base-export builds/p4-staging/export/roy \\
-        --out builds/p6-art/ike/costumes/stock.json
+        --out assets/p6-art/ike/costumes/stock.json
 
 Kit-derived and base-derived: local output (D10).
 """

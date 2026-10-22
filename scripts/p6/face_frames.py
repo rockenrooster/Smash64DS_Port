@@ -12,7 +12,7 @@ tile each takes (a box in the atlas: coordinates, not texels) and the skin
 colour; no kit texel is stored (D10).
 
     face_frames.py --export builds/p4-staging/export/peach --kit-face <palutena_face.png>
-        --ops art/p6/palutena/look/face_frames.json --out builds/p6-art/palutena/face
+        --ops art/p6/palutena/look/face_frames.json --out assets/p6-art/palutena/face
 """
 from __future__ import annotations
 

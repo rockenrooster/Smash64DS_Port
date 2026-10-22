@@ -60,7 +60,7 @@ hair's blue, connected to the edge), and `p6_present.py` frames it over the
 select's fire plate (the source's PortraitFireBg, which Remix's portraits
 carry) with an area-average downsample (a Lanczos one rang into coloured
 specks at the hair's edges). The art and the picture are local
-(`builds/p6-art/ike/`).
+(`assets/p6-art/ike/`).
 
 ## Move card (approved 2026-10-13, I1)
 

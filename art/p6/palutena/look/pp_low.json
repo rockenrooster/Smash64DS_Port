@@ -354,9 +354,9 @@
   }
  ],
  "replace": {
-  "8": "builds/p6-art/palutena/face_rc/face_10558.png",
-  "9": "builds/p6-art/palutena/face_rc/face_10f80.png",
-  "10": "builds/p6-art/palutena/face_rc/mouth_112a0.png",
+  "8": "assets/p6-art/palutena/face_rc/face_10558.png",
+  "9": "assets/p6-art/palutena/face_rc/face_10f80.png",
+  "10": "assets/p6-art/palutena/face_rc/mouth_112a0.png",
   "2": "@skirt_hem"
  },
  "rigid": [

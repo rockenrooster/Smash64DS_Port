@@ -3,7 +3,7 @@
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
-  "scene": "builds/p6-art/ike/look/low_v4/scene.json",
+  "scene": "assets/p6-art/ike/look/low_v4/scene.json",
   "header": "0xcce",
   "length": 64,
   "first_slot": 0,

@@ -4,7 +4,7 @@
 palutenas animations for SSB Ultimate which may help immensely").
 
     {"ultimate": {"fighter": "palutena", "motion": "c00attack11",
-     "skeleton": "peach", "scene": "builds/p6-art/<name>/.../scene.json",
+     "skeleton": "peach", "scene": "assets/p6-art/<name>/.../scene.json",
      "header": "0x...", "length": 24, "first_slot": 0, "loop": null,
      "time": [[0, 0], [4, 7], [9, 10], [24, 26]],
      "transn": false, "staff": {"slide": 61.0}}}

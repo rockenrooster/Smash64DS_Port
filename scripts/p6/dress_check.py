@@ -37,7 +37,7 @@ reported apart.
 
     dress_check.py --staging builds/p4-staging/extra-96621af \\
         --export builds/p4-staging/export-x/palutena \\
-        --scene builds/p6-art/palutena/3ds2ds/scene_high/scene.json [--json out.json]
+        --scene assets/p6-art/palutena/3ds2ds/scene_high/scene.json [--json out.json]
 
 Prints, per motion, the frames and the worst distance a leg point reaches
 outside the dress (either leg, and the slit leg's), worst first.

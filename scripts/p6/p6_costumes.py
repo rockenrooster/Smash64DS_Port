@@ -22,9 +22,9 @@ A costume can also recolour the hair, which no kit alternate does
 onto a ramp by its brightness (owner, 2026-10-18: the blue costume blonde).
 p6_stock.py gives the stock icon's hair the same ramp.
 
-    p6_costumes.py --name palutena --corr builds/p6-art/palutena/costumes/corr.npz \\
-        --scene builds/p6-art/palutena/3ds2ds/scene_high/scene.json \\
-        --scene builds/p6-art/palutena/3ds2ds/scene_low/scene.json [--sheet sheet.png]
+    p6_costumes.py --name palutena --corr assets/p6-art/palutena/costumes/corr.npz \\
+        --scene assets/p6-art/palutena/3ds2ds/scene_high/scene.json \\
+        --scene assets/p6-art/palutena/3ds2ds/scene_low/scene.json [--sheet sheet.png]
 
 Kit-derived: local outputs (D10); the costume picks below are the recipe.
 """

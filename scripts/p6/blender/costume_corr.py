@@ -5,7 +5,7 @@ Run headless on the 3DS-to-DS work file (the owner's session: collection
 offset on x by its armature):
 
     blender -b <3DS_to_DS_Palutena.blend> --python scripts/p6/blender/costume_corr.py -- \\
-        --out builds/p6-art/palutena/costumes/corr.npz
+        --out assets/p6-art/palutena/costumes/corr.npz
 
 For every DS object's texture texel this projects the reference along the
 face normal as the bake did (rays from just outside the surface inward,

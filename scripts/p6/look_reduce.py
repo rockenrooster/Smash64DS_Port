@@ -18,7 +18,7 @@ taken only when it keeps
 - a manifold surface (the link condition) and every surviving triangle's
   facing.
 
-    look_reduce.py builds/p6-art/palutena/3ds2ds/work_dump.json \\
+    look_reduce.py assets/p6-art/palutena/3ds2ds/work_dump.json \\
         --targets art/p6/palutena/look/low.json --out .../low_dump.json
 
 The dump is kit-derived (local, D10); the targets are a committed recipe.

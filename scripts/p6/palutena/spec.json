@@ -1,23 +1,23 @@
 {
  "schema": "p6-spec-v1",
  "content": "palutena",
- "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10). Clips are built from art/p6/palutena/anims (anim.py --build) into builds/p6-art/palutena/anims; her specials' routines are in src/port/nds_p4_palutena.c. CPU rows (cpu): Peach's rows measured on her own moves by scripts/p6/coverage.py; Warp makes no hitbox and drops out.",
+ "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under assets/p6-art/palutena/look (D10). Clips are built from art/p6/palutena/anims (anim.py --build) into builds/p6-art/palutena/anims; her specials' routines are in src/port/nds_p4_palutena.c. CPU rows (cpu): Peach's rows measured on her own moves by scripts/p6/coverage.py; Warp makes no hitbox and drops out.",
  "files": {
   "main": {
    "id": "0x1b00",
-   "from": "builds/p6-art/palutena/look/1b00"
+   "from": "assets/p6-art/palutena/look/1b00"
   },
   "special2": {
    "id": "0x1b10",
-   "from": "builds/p6-art/palutena/gate/1b10"
+   "from": "assets/p6-art/palutena/gate/1b10"
   },
   "model": {
    "id": "0x1b03",
-   "from": "builds/p6-art/palutena/look/1b03"
+   "from": "assets/p6-art/palutena/look/1b03"
   }
  },
  "skirt": {
-  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "scene": "assets/p6-art/palutena/3ds2ds/scene_high/scene.json",
   "comment": "Owner playtest 2026-10-14: in every animation the dress surrounds her legs, except at the slit. Her skirt hangs from Peach's dress rows and row 27 (scripts/p6/look_skirt.py: row 25's ring, the mid ring on row 26, the hem on row 27; the grab's and heavy items' hold, Peach's row 27, moved to a new row 28); every clip she plays gets rows 25, 26 and 27 keyed from a cloth model around her legs (scripts/p6/skirt_keys.py; owner p6s: \"heavy, flowy dress\")."
  },
  "menu_motions": {

@@ -8,7 +8,7 @@ material index and its `part` face attribute, and each material's image and
 flags. Run inside Blender 5.2 (headless or live):
 
     blender -b <look.blend> --python scripts/p6/blender/dump_look.py -- \\
-        --out builds/p6-art/palutena/3ds2ds_v2/work_dump.json \\
+        --out assets/p6-art/palutena/3ds2ds_v2/work_dump.json \\
         [--collection 3DS_to_DS_Work] [--local] [--strip L_] [--flags <old dump.json>]
 
 --local reads each object's own coordinates (a copy placed beside the model
@@ -16,7 +16,7 @@ for viewing, as the v2 file's DS_low_work); --strip drops a name prefix;
 --flags takes each material's two_sided/alpha from an earlier dump (else
 two-sided, opaque, and the sprite materials' alpha by their object's
 "sprite"/"billboard" property). Everything it writes is kit-derived: local,
-under builds/ (D10).
+under assets/p6-art/ (D10).
 
 Imports only bpy and the standard library.
 """

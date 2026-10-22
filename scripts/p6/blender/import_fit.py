@@ -2,12 +2,12 @@
 Blender, beside or over a base imported by import_scene.py (P6 A3).
 
     blender -b <base.local.blend> --python scripts/p6/blender/import_fit.py -- \
-        --fit builds/p6-art/<name>/fit/kit_high_fit.json --kit-dir <kit folder> \
+        --fit assets/p6-art/<name>/fit/kit_high_fit.json --kit-dir <kit folder> \
         --name kit_high [--offset 2.2] [--blend out.local.blend] [--render out.png]
 
 One object a kit mesh, in the base's model space (same UNIT and Y-up to Z-up
 as import_scene.py), with the kit's albedo texture. Kit-derived: everything it
-writes stays under builds/ or artifacts/ (plan D10).
+writes stays under assets/p6-art/ or artifacts/ (plan D10).
 """
 import argparse
 import json

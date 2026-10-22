@@ -9,7 +9,7 @@ authored content shows its base's until this appends its own:
 - portrait: a 32x32 RGBA16 sprite block in Remix's layout (texels, bitmap,
   sprite: 0x860 bytes) and its white flash right after it (the select reads
   the flash at the portrait + 0x860). The face is the content's local render
-  (`builds/p6-art/<name>/portrait.png`: the owner's art keyed and graded by
+  (`assets/p6-art/<name>/portrait.png`: the owner's art keyed and graded by
   scripts/p6/portrait_art.py, or a render of the look by
   scripts/p6/blender/portrait.py; local, D10) framed as Remix frames its
   portraits: a 30x30 picture with a one-texel frame over the select's fire
@@ -339,7 +339,7 @@ def apply(name: str, files: dict[str, Path], portraits: dict[str, int], names: d
     """Append `name`'s art to the build's donor copies (files: role -> o2r
     path) and return the offsets its cell and row take (absent: the base's)."""
     out: dict = {}
-    render = REPO / "builds" / "p6-art" / name / "portrait.png"
+    render = REPO / "assets" / "p6-art" / name / "portrait.png"
     if render.exists():
         f = N.RelocFile.read(files["portraits"].read_bytes())
         template = portraits[base_art]

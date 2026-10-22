@@ -5,11 +5,11 @@
  "files": {
   "main": {
    "id": "0x1a00",
-   "from": "builds/p6-art/ike/look/1a00"
+   "from": "assets/p6-art/ike/look/1a00"
   },
   "model": {
    "id": "0x1a03",
-   "from": "builds/p6-art/ike/look/1a03"
+   "from": "assets/p6-art/ike/look/1a03"
   }
  },
  "anim_locks": "rest",

@@ -21,8 +21,8 @@ cache: the parent's list ends with a load of exactly those vertices (slots
 child's own loads start at slot k -- the pattern the base's lists use.
 
     model_writer.py --base-export builds/p4-staging/export/peach \\
-        --scene low=builds/p6-art/palutena/pp/low_v57/scene.json \\
-        --main-id 0x1a00 --model-id 0x1a01 --out builds/p6-art/palutena/files
+        --scene low=assets/p6-art/palutena/pp/low_v57/scene.json \\
+        --main-id 0x1a00 --model-id 0x1a01 --out assets/p6-art/palutena/files
 
 Writes <out>/<main id>, <out>/<model id> (O2R resources) and
 <out>/writer.json (what was written). Build output only: the files carry the

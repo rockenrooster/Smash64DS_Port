@@ -3,22 +3,27 @@
 
 The P6 art pipeline reads local rips (decomp/alt_assets/Fighters/Super Smash
 Bros 3DS|Ultimate|brawl, plan D10) and writes kit-derived outputs under
-builds/p6-art/. Only recipes, generators and authored values are committed.
+assets/p6-art/ (the hand-run chain: look, gate, costumes, portraits) and
+builds/p6-art/<name>/anims/ (make's clips). Only recipes, generators and
+authored values are committed.
 Checks, over `git ls-files` (decomp/ is the read-only third-party tree and is
 left out of the content checks):
 
-1. tracked: no tracked file inside a rip folder or under builds/;
+1. tracked: no tracked file inside a rip folder, under builds/ or under
+   assets/p6-art/;
 2. audio: no tracked audio file (wav, mp3, ogg, flac, aif, aiff) outside
    decomp/;
 3. images: no tracked image (png, bmp, tga, gif, jpg, jpeg) under art/p6,
    scripts/p6 or docs/P6 unless ALLOWED_IMAGES lists it as authored;
 4. copies: no tracked file outside decomp/ byte-identical to a file in a rip
-   folder or in builds/p6-art/ (checked when those folders are present);
+   folder, in assets/p6-art/ or in builds/p6-art/ (checked when those
+   folders are present);
 5. dumps: no array of more than DUMP_NUMBERS numbers, and no string of more
    than DUMP_CHARS characters, in a tracked JSON recipe under art/p6 or
    scripts/p6 (recipes hold anchors, offsets, colours and tile boxes, never
    texels, vertex pools or encoded images);
-6. ignores: .gitignore keeps the three rip folders and builds/ out;
+6. ignores: .gitignore keeps the three rip folders, builds/ and assets/p6-art/
+   out (an /assets/ rule counts);
 7. fresh: each authored content's export (builds/p4-staging/export-x/<name>,
    when built) was written from the current spec, motion and menu scripts
    and audio recipe, and from the current files its spec names (main
@@ -41,7 +46,7 @@ REPO = Path(__file__).resolve().parents[2]
 RIPS = ("decomp/alt_assets/Fighters/Super Smash Bros 3DS",
         "decomp/alt_assets/Fighters/Super Smash Bros Ultimate",
         "decomp/alt_assets/Fighters/Super Smash Bros brawl")
-LOCAL_ART = "builds/p6-art"
+LOCAL_ART = ("assets/p6-art", "builds/p6-art")
 AUDIO = (".wav", ".mp3", ".ogg", ".flac", ".aif", ".aiff")
 IMAGES = (".png", ".bmp", ".tga", ".gif", ".jpg", ".jpeg")
 IMAGE_SCOPES = ("art/p6/", "scripts/p6/", "docs/P6/")
@@ -62,8 +67,8 @@ def tracked(repo: Path) -> list[str]:
 def check_tracked(files: list[str]) -> list[str]:
     bad = []
     for f in files:
-        if f.startswith("builds/") or any(f.startswith(r + "/") for r in RIPS):
-            bad.append(f"tracked: {f} is inside a rip folder or builds/")
+        if f.startswith(("builds/", "assets/p6-art/")) or any(f.startswith(r + "/") for r in RIPS):
+            bad.append(f"tracked: {f} is inside a rip folder, builds/ or assets/p6-art/")
     return bad
 
 
@@ -137,8 +142,9 @@ def check_ignores(repo: Path) -> list[str]:
     for r in RIPS:
         if "/" + r not in rules and r not in rules:
             bad.append(f"ignores: .gitignore does not keep {r} out")
-    if not ({"builds", "/builds"} & rules):
-        bad.append("ignores: .gitignore does not keep builds/ out")
+    for keep in (("builds",), ("assets", "assets/p6-art")):
+        if not ({r for k in keep for r in (k, "/" + k)} & rules):
+            bad.append(f"ignores: .gitignore does not keep {keep[-1]}/ out")
     return bad
 
 
@@ -179,7 +185,7 @@ def run(repo: Path, files: list[str] | None = None, derived: dict[str, str] | No
     files = tracked(repo) if files is None else files
     if derived is None:
         derived = {}
-        for r in RIPS + (LOCAL_ART,):
+        for r in RIPS + LOCAL_ART:
             derived.update(digests(repo / r))
     return (check_tracked(files) + check_audio(files) + check_images(files)
             + check_copies(repo, files, derived) + check_dumps(repo, files) + check_ignores(repo)
@@ -191,7 +197,7 @@ def self_test() -> int:
     failures = []
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
-        (repo / ".gitignore").write_text("/builds/\n" + "\n".join("/" + r + "/" for r in RIPS) + "\n",
+        (repo / ".gitignore").write_text("/builds/\n/assets/\n" + "\n".join("/" + r + "/" for r in RIPS) + "\n",
                                          encoding="utf-8")
         (repo / "art/p6/x").mkdir(parents=True)
         (repo / "art/p6/x/recipe.json").write_text('{"anchors": [1, 2, 3]}', encoding="utf-8")

@@ -14,7 +14,7 @@ under the dress. Each region bakes into the same image (no clear).
     blender -b <scene.blend> --python scripts/p6/blender/bake_atlas.py -- \
         --target k_dec_low --fit <kit_high_fit.json> --kit-dir <kit folder> \
         --ops art/p6/palutena/look/k_dec_low.json --offset 12.6 --size 128 \
-        --out builds/p6-art/palutena/k_dec/k_dec_low_atlas.png
+        --out assets/p6-art/palutena/k_dec/k_dec_low_atlas.png
 Kit-derived output: builds/ only (plan D10).
 """
 import argparse

@@ -3,12 +3,12 @@
 
 The owner supplied a pixel portrait for each P6 fighter (2026-10-14:
 "backgrounds will have to be changed to match the portrait style of the
-existing roster"; local, builds/p6-art/<name>/owner_art/portrait_source.png,
+existing roster"; local, assets/p6-art/<name>/owner_art/portrait_source.png,
 like the kit): a framed square of about 32 pixels, drawn large on black, its
 backdrop dark. This trims the art's frame and the black gap inside it, keys
 the backdrop out (the dark pixels that are not the fighter's hair colour,
 connected to the art's edge) and writes the transparent
-`builds/p6-art/<name>/portrait.png` that p6_present.py frames over the
+`assets/p6-art/<name>/portrait.png` that p6_present.py frames over the
 select's fire plate, as the roster's portraits are.
 
     portrait_art.py --name palutena [--preview out.png]
@@ -120,7 +120,7 @@ def make(name: str) -> np.ndarray:
     from PIL import Image
     if name not in ART:
         raise ArtError(f"no portrait recipe for {name!r}")
-    src = REPO / "builds" / "p6-art" / name / "owner_art" / "portrait_source.png"
+    src = REPO / "assets" / "p6-art" / name / "owner_art" / "portrait_source.png"
     if not src.exists():
         raise ArtError(f"{src}: missing (the owner's art, local)")
     art = art_box(np.asarray(Image.open(src).convert("RGB")))
@@ -135,7 +135,7 @@ def main() -> int:
     ap.add_argument("--name", required=True)
     ap.add_argument("--preview", type=Path, help="the select's portrait and flash, enlarged")
     args = ap.parse_args()
-    out = REPO / "builds" / "p6-art" / args.name / "portrait.png"
+    out = REPO / "assets" / "p6-art" / args.name / "portrait.png"
     Image.fromarray(make(args.name), "RGBA").save(out)
     print(f"portrait art: {args.name} -> {out}")
     if args.preview:

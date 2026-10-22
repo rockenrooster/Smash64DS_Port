@@ -2,7 +2,7 @@
 """A fighter model as a scene for Blender (P6 A3): joints, meshes, materials.
 
 `scene(model, detail, costume, out)` writes `scene.json` and the textures it
-names (PNG) under `out` -- a directory under builds/ (ROM-derived, local:
+names (PNG) under `out` -- a directory under assets/p6-art/ (ROM-derived, local:
 plan D10's rule for kit data holds for the base's too). The JSON is what
 `scripts/p6/blender/import_scene.py` builds a .blend from:
 

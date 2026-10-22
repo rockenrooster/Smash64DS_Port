@@ -19,7 +19,7 @@ hand pose a side and the weapon -- is what the fighter draws at once
 (`neutral_meshes`); its triangle count is the kit row of P6_PLAN.md's table.
 
 Nothing read here is written to a tracked file (plan D10): the readers' users
-keep kit-derived data under builds/.
+keep kit-derived data under assets/p6-art/.
 """
 from __future__ import annotations
 

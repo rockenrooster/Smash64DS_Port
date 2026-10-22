@@ -12,7 +12,7 @@ place in the kit's proportions: the JointTree the look is built on.
 `fit(kit, base_scene, role_map)` returns the kit's joints' new model-space
 frames and the posed position of every pool vertex, in the base's model space
 (Y-up, SSB64 units). Nothing here is written to a tracked file: callers keep
-the fitted mesh under builds/ (plan D10).
+the fitted mesh under assets/p6-art/ (plan D10).
 """
 from __future__ import annotations
 
@@ -259,7 +259,7 @@ def main() -> int:
     ap.add_argument("--kit", type=Path, required=True, help="the kit .dae")
     ap.add_argument("--base", type=Path, required=True, help="the base's scene.json")
     ap.add_argument("--role", required=True, choices=sorted(ROLE_MAPS))
-    ap.add_argument("--out", type=Path, required=True, help="fitted mesh JSON (under builds/)")
+    ap.add_argument("--out", type=Path, required=True, help="fitted mesh JSON (under assets/p6-art/)")
     ap.add_argument("--all", action="store_true", help="every kit mesh, not only the neutral set")
     args = ap.parse_args()
     kit = D.read(args.kit)

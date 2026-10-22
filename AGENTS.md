@@ -70,8 +70,10 @@ Commit/push coherent progress under the active task's rules. Preserve candidates
 `IMPLEMENTED_NOT_ACCEPTED` with checks owed; remove experiment routes and qualify
 the final hard-on build before acceptance. Periodically build `smash64ds.nds`; publish
 only qualified natural-input batches without fast logic. Keep P1 frozen.
-Keep lab outputs in `builds/`, evidence in `artifacts/performance` and
-`artifacts/visibility`; no committed runner configs, lab binaries or raw logs.
+Keep lab outputs in `builds/`, which holds generated output only (hand-run pipeline
+outputs such as `assets/p6-art/` live under the ignored `assets/`), evidence in
+`artifacts/performance` and `artifacts/visibility`; no committed runner configs, lab
+binaries or raw logs.
 Trace deletions; hash-migrate evidence. Obey board limits: `.worktrees/` permits
 at most five with seven-day lifetimes. Never delete active, dirty or ambiguous
 worktrees. No cleanup detours; `docs/PORTING.md` stays append-only.

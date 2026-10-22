@@ -142,7 +142,8 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
     """The spec's own files replace the base's in the descriptor and the
     file closure: each copied into <out>/o2r under its new id, the closure
     row rebuilt from it and every other row's references renamed. The files
-    are build outputs (builds/p6-art/<name>/), never tracked (D10)."""
+    are the local art pipeline's outputs (assets/p6-art/<name>/), never
+    tracked (D10)."""
     if not files:
         return
     desc = resolved["descriptor"]

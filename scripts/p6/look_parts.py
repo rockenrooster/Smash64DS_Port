@@ -22,8 +22,8 @@ an animated part, shown in turn by its script. This adds the parts to the
 look's scenes (`parts`) for model_writer.py.
 
     look_parts.py --recipe art/p6/palutena/look/parts.json \\
-        --scene builds/p6-art/palutena/3ds2ds/scene_high/scene.json \\
-        --scene builds/p6-art/palutena/3ds2ds/scene_low/scene.json [--preview out.png]
+        --scene assets/p6-art/palutena/3ds2ds/scene_high/scene.json \\
+        --scene assets/p6-art/palutena/3ds2ds/scene_low/scene.json [--preview out.png]
 
 Kit-derived textures stay local (D10): the recipe is committed, the scenes
 and files are build outputs.

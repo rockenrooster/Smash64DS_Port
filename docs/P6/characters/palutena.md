@@ -91,12 +91,12 @@ Both candidates must meet every line below.
 **The dress band's normals reach her files (2026-10-20).** The 2026-10-19
 band-normals fix (`look_skirt.py`, `996f5f3c52d`, the owner's "lower half of
 her dress is darker" on Results) rewrote both look scenes but not her model
-files: `model_writer.py` writes `builds/p6-art/palutena/look/1b00` and `1b03`
+files: `model_writer.py` writes `assets/p6-art/palutena/look/1b00` and `1b03`
 from the scenes by hand, outside make, and they were still the 2026-10-18
 write -- decoded from the build's export, the shipped band's normals pointed
 0.43 outward (high) and 0.40 (low) against the scenes' 0.91. Rewritten with
 the same arguments (`--alias 6,8,12,13,14 --textures
-builds/p6-art/palutena/costumes/stock.json --lift-palettes --ambient
+assets/p6-art/palutena/costumes/stock.json --lift-palettes --ambient
 6a6a6a`): only the band vertices' normal bytes change (224 bytes; the main
 file identical), and the export now reads 0.93 outward, 0.75 at the least. A
 change to the look scenes is in the game only once `model_writer.py` has run.
@@ -175,7 +175,7 @@ pose) come and go between the two. Her native owner's census pins were
 learned again (`p4_native_owner.py --learn`: 451/332 triangles, 292/248 GX
 restores).
 
-Chain (local, kit-derived outputs under `builds/p6-art/palutena/`): dump the
+Chain (local, kit-derived outputs under `assets/p6-art/palutena/`): dump the
 v2 file's `3DS_to_DS_Work` (`scripts/p6/blender/dump_look.py`) to
 `3ds2ds_v2/work_dump.json`; `look_reduce.py` it with the recipe to
 `3ds2ds_v2/low_dump.json`; `look_blend.py --no-reaim` for both details into
@@ -292,7 +292,7 @@ the dress's red, which an RGB cost would have dropped. Every other texture
 quantizes as before.
 
 **Portrait (owner, 2026-10-14).** The owner's pixel portrait of her (a
-framed square of about 32 pixels; local, `builds/p6-art/palutena/owner_art/`):
+framed square of about 32 pixels; local, `assets/p6-art/palutena/owner_art/`):
 `scripts/p6/portrait_art.py` trims its frame and the black gap inside it and
 keys its dark teal backdrop out (the dark pixels that are not her hair's
 green, connected to the edge), and `p6_present.py` frames it over the
@@ -312,7 +312,7 @@ animation as the template) on the rows and model-part rows that draw them.
 Picks, in Peach's costume order (VS uses 0-3 on the buttons and 2, 3, 4 for
 the red, blue and green teams): 0 white (c00), 1 black (c06), 2 red (c05),
 3 blue (c04), 4 green (c03), then purple (c07), pink (c01), sky (c02). Palette
-sheet: `builds/p6-art/palutena/costumes/sheet.png` (local; for the owner's
+sheet: `assets/p6-art/palutena/costumes/sheet.png` (local; for the owner's
 approval). Her stock icon is the kit's stock icon row (the sheet's 28th),
 reduced to the HUD's 8x10 CI4 sprite with one LUT a costume
 (`scripts/p6/p6_stock.py`, written in place over Peach's). The victory

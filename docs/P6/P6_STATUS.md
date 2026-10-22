@@ -48,7 +48,7 @@ check and the owner's look at the low, then her moves (P3-P4).
 | A10 effects | started 2026-10-14: parts shown on demand are model-part variants of existing rows (`scripts/p6/look_parts.py`: the row's list plus cut-out cards; `model_writer.py` writes the variant lists and the rows' FTModelPartDesc, variant 0 the tree's list): Palutena's wings (kit godwing image, forward and down smash) and halo (authored ring, up air) in the lab ROM, 0 native failures, 0 lean declines. 2026-10-14: her light pillar (up smash; cards light by an up normal; after the owner's playtest a light burst from one atlas, 1.25x taller, four stacked hitboxes; round 2: one world-aligned effect column ahead of her on her floor, made by the script's flag0 in her code (`NDSP4Overrides.after_proc_map`), its tree in her special file 2 beside the gate's, since hips-row model parts turned behind her with her animation) and her entry gate (the kit's golden double door, `scripts/p6/p6_gate.py`, in her special file 2 in place of Peach's turnip; her own entry case makes it and parts its doors; drawn natively as an entry effect). Ike's blue Eruption (2026-10-14): his charge glow a red-blue swapped copy of Roy's ROY_CHARGE (spec `colanims`, `p4_colanims.py` tinted rows, `ndsP4ColAnimRemap`) and his swing trail blue (spec `sword_trails`); the hit's burn stays orange |
 | A11 Kirby | Palutena done 2026-10-14: her custom power (Explosive Flame on Kirby's PK Fire motions, her bursts and blast made in code at the stick's distance, her sounds) and her hat (her hair over his head, a gold ring, her hair panels down his back; `p4_kirby_custom_hats.py` now reads inline-material spans by order and draws bands of several rows, part of the way round, from other joints' spans; `scripts/p6/hat_preview.py` renders a hat on Kirby); lab: copied, cast on the ground and in the air, 0 native failures, 0 lean declines ([card](characters/palutena.md#kirby)). Ike: Roy's power with his blue tint (A10) and, 2026-10-14, his own hat: his look's hair and headband over Kirby's head (`p4_kirby.py` `AUTHORED_HATS`) |
 | A12 CPU (F5) | Palutena done 2026-10-14. `scripts/p6/coverage.py` measures a move's CPU row from its clip and script (the first active frame; the box its hitbox spheres sweep, in world units: clip slots to the rows FTAttributes.setup_parts makes, scale tracks, translate_scales, the TransN root, FTAttributes.size); its hitbox positions match the lab's in-game ones within 2 units (Palutena's forward tilt, Kirby's jab). F5: `--check-vanilla Kirby,Fox,Mario` measures the original fighters from the original image against the decomp's dFTComputerAttacks rows: Fox 8 of 10 within 60 units and a frame (7 within 4), Kirby 5, Mario 5; the rest are rows the source copied (Kirby's and Fox's AttackS3 are their Attack11's) or hand-set (Fox's AttackS4 reaches 1,020). A spec's `cpu` (`p6_author.py`) measures the base's rows on the content's own moves for the generator. Palutena's rows, her CPU Explosive Flame distance and recovery Warp aim: [card](characters/palutena.md#cpu); lab census clean. Ike done 2026-10-14: his jab 1, slowed forward tilt, up smash and dash attack measured, Roy's hand-tuned rows kept for the moves he plays as Roy (Blazer's for Aether), Shield Breaker's dropped; four-Ike CPU census clean ([card](characters/ike.md#cpu)) |
-| A13 checks | started 2026-10-14: `scripts/p6/check_p6_art.py` checks the tracked tree: no tracked file in a rip folder or under builds/, no tracked audio outside decomp/, no tracked image under art/p6, scripts/p6 or docs/P6 unless listed as authored, no tracked file byte-identical to a rip or builds/p6-art file (every file hashed), no number array or string dump in a JSON recipe, the rip folders and builds/ ignored, each authored export fresh against its spec, scripts, audio recipe and spec files; `--self-test` plants a fault for each of the seven and expects red (7 of 7). Repository: 0 problems. Not yet: F1-F6 as one host test |
+| A13 checks | started 2026-10-14: `scripts/p6/check_p6_art.py` checks the tracked tree: no tracked file in a rip folder, under builds/ or under assets/p6-art/, no tracked audio outside decomp/, no tracked image under art/p6, scripts/p6 or docs/P6 unless listed as authored, no tracked file byte-identical to a rip, assets/p6-art or builds/p6-art file (every file hashed), no number array or string dump in a JSON recipe, the rip folders, builds/ and assets/ ignored, each authored export fresh against its spec, scripts, audio recipe and spec files; `--self-test` plants a fault for each of the seven and expects red (7 of 7). Repository: 0 problems. Not yet: F1-F6 as one host test |
 
 ## Board 2
 
@@ -237,7 +237,7 @@ go. 278 triangles (face 50, dress 36, legs 56, hair 28 and 22, chest 28, arms
 back from the written files: `artifacts/p6/review/` (local).
 
 Files: main 0x1B00 and model 0x1B03 (spec `scripts/p6/palutena/spec.json`
-"files", from `builds/p6-art/palutena/look/`); the native owner's pins
+"files", from `assets/p6-art/palutena/look/`); the native owner's pins
 re-learned (19 drawn rows).
 
 **Lab check (2026-10-13).** Four-CPU lab ROM, Palutena in port 0 on Dream
@@ -270,7 +270,7 @@ and composed textures, then the edits captured in Blender
 and triangles, recolours by colour), then the added parts (`look_k.py`:
 tubes, plates, two-sided sprites, a billboard flag). Ops in
 `art/p6/palutena/look/` hold parameters, anchors, authored positions and
-colours only (D10); scenes, textures and renders are local (`builds/p6-art/`,
+colours only (D10); scenes, textures and renders are local (`assets/p6-art/`,
 `artifacts/p6/review/pp_v*`).
 
 **Low detail, v66 (278 triangles, the plan's cap with the staff and shield;
@@ -370,7 +370,7 @@ hashes), verdict.
   animations). D10: it is the source of both looks, converted onto Roy's and
   Peach's skeletons at their budgets (the body's source later made a pick by
   D12); converted art is a local build output
-  under `builds/p6-art/` and only the recipe and authored layers are
+  under `assets/p6-art/` and only the recipe and authored layers are
   committed. D11: no Smash 4 motion files exist; clip sources unchanged. The
   kit's audio is the same recordings as the chosen Brawl and Ultimate sets
   (cross-correlation), so D5-D8 stand. Plan revision 2.

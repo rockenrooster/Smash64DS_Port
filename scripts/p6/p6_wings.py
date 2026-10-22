@@ -53,7 +53,7 @@ relative to the pair, into a table her code reads every tic
 (src/port/nds_p4_palutena.c) at her animation frame (fighter anim_frame), so
 the wings stay on her through hitlag and leave with the status.
 
-Kit-derived: the image, mesh and table live in builds/ (D10); this module
+Kit-derived: the image, mesh and table live in assets/p6-art/ (D10); this module
 and the motion recipes are the committed part. p6_gate.py writes the tree
 into her special file 2 (write); world_mesh gives a pose's triangles in
 model space (review renders, and her victory poses' static wings:
@@ -80,7 +80,7 @@ sys.path.insert(0, str(HERE))
 import dae_reader  # noqa: E402
 
 KIT = REPO / "decomp" / "alt_assets" / "Fighters" / "Super Smash Bros 3DS" / "Palutena" / "godwing"
-SCENE = REPO / "builds" / "p6-art" / "palutena" / "3ds2ds" / "scene_high" / "scene.json"
+SCENE = REPO / "assets" / "p6-art" / "palutena" / "3ds2ds" / "scene_high" / "scene.json"
 RECIPES = REPO / "art" / "p6" / "palutena" / "wings"
 BONES = ("a", "b", "c", "d")
 TORSO_ROW = 2                 # her torso row (fighter joint 6)
