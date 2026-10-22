@@ -115,13 +115,20 @@ ORB_STYLE = "ultimate"
 WING_W = 358.0
 WING_H = 244.0
 WING_ANCHOR = (0.84, 0.47)
+# The tree's order is the draw order, and the first card drawn shows on top
+# where cards overlap (each draws as its own entry root with the same
+# polygon ID; the DS does not draw a translucent pixel over one of the same
+# ID): the wings, then style B's crisp ring and dot, the orb's glow last, so
+# the glow fills only round them (owner 2026-10-22: the core vanished under
+# the glow once both faded). Her code walks the cards in this order
+# (nds_p4_palutena.c).
 LIGHT_CARDS = (
     # name, image (its colours: card_colours)
-    ("orb", "orb"),
     ("wing_l", "wing"),
     ("wing_r", "wing"),
     ("ring_l", "ring"),
     ("ring_r", "ring"),
+    ("orb", "orb"),
 )
 
 

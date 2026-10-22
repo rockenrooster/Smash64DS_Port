@@ -1226,21 +1226,23 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   point) -- while the jab combo, the tilts that spin the staff
  *   (forward, up, down), neutral air and up air wield it. The spinning
  *   moves also draw the staff's trail (sword trail 24, their scripts).
- * - The overhead light wings (PAL_LIGHT_TREE: a small glowing orb above her
- *   head and two cards of feathered light fanning out from beside it, the
- *   right the left's mirror; the ring's two halves about her head, which
- *   no window shows since owner p7h) in the three smashes, up air and the
- *   taunt. As the 3DS forward
+ * - The overhead light wings (PAL_LIGHT_TREE: two cards of feathered light,
+ *   the right the left's mirror, fanning out from beside the centre above
+ *   her head -- the orb, and in style B the ring's two halves on it, its
+ *   crisp ring and dot, p6_light.py ORB_STYLES) in the three smashes, up
+ *   air and the taunt. As the 3DS forward
  *   smash's wind-up draws them (owner p6ab, 2026-10-17, Strong_Side_A
  *   frames 0-10: "camera facing", "the 2 light wings should be separated by
  *   the small glowing circle", "mostly camera facing with slight rotations
  *   toward the faced direction"): one plane turned to the camera, then
- *   PAL_LIGHT_YAW toward the way she faces; the orb PAL_ORB_UP above her
+ *   PAL_LIGHT_YAW toward the way she faces in the forward and up smash,
+ *   the far wing PAL_WING_FAR as wide; the camera-facing ones -- down
+ *   smash, up air and the taunt -- face the camera (owner 2026-10-22;
+ *   Ultimate's down smash and up air do); the orb PAL_ORB_UP above her
  *   head joint (her head's base), PAL_ORB_BACK toward her back and
  *   PAL_LIGHT_BEHIND behind her; each wing level (PAL_WING_DROOP down at its tip), its
  *   strokes meeting PAL_WING_GAP to the orb's side and PAL_WING_DROP below
- *   its centre, the wing behind her PAL_WING_FAR as wide as the one she
- *   faces. Owner 2026-10-22 (the centre's style B, against Ultimate's own
+ *   its centre. Owner 2026-10-22 (the centre's style B, against Ultimate's own
  *   effect data): the wings placed as Ultimate's are about its centre --
  *   their strokes meet 1.10 ring radii out and 0.49 below the centre, not
  *   drooped -- where the 3DS's sat half a radius lower and drooped 9 deg --
@@ -1286,13 +1288,17 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
 #define PAL_LIGHT_FOLDED 0.55F              /* the wings' size, folded */
 #define PAL_ORB_UP 165.0F                   /* above the head joint: over her crown */
 #define PAL_ORB_BACK 20.0F
-#define PAL_RING_UP 25.0F                   /* the taunt's ring: the base of her head */
 #define PAL_WING_GAP 102.0F
 #define PAL_WING_DROP 46.0F
 #define PAL_WING_DROOP 0.0F                 /* radians */
 #define PAL_WING_FAR 0.72F
 #define PAL_LIGHT_DECAY 0.25F
 #define PAL_LIGHT_SHOWN 0.04F
+/* The orb a little behind the other cards (owner 2026-10-22): style B's
+ * glow is drawn last (sNdsP4PalutenaLightAlpha), and in the plane of the
+ * crisp ring and dot it won the depth test at some of their pixels while
+ * they were opaque, a speckled ring. */
+#define PAL_LIGHT_GLOW_BACK 8.0F
 
 static const Vec3f sNdsP4PalutenaGem = { 23.0F, 150.0F, -160.0F };
 
@@ -1303,7 +1309,7 @@ typedef struct NDSP4PalLightWindow
     u8 full;
     u8 fade;                    /* fades out */
     u8 last;
-    u8 ring;                    /* the light: the taunt's ring too */
+    u8 turn;                    /* the light: turned toward her facing (else to the camera) */
     u8 anchor;                  /* the light: its place taken until here */
 } NDSP4PalLightWindow;
 
@@ -1327,12 +1333,12 @@ static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
  * 2026-10-19: "draw 1 frame sooner ... 1 frame longer overall"). */
 static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
     { 187, 7, 9, 36, 46, 0, 8 },    /* up air: backlight2 at 7, held to 71% (its clip at 0.5) */
-    { 182, 10, 12, 33, 44, 0, 11 }, /* up smash: with the pillar (16) */
-    { 177, 13, 15, 26, 37, 0, 0 },  /* forward smash, angled up: the hit (16) */
-    { 178, 13, 15, 26, 37, 0, 0 },
-    { 179, 13, 15, 26, 37, 0, 0 },  /* forward smash */
-    { 180, 13, 15, 26, 37, 0, 0 },
-    { 181, 13, 15, 26, 37, 0, 0 },  /* forward smash, angled down */
+    { 182, 10, 12, 33, 44, 1, 11 }, /* up smash: with the pillar (16) */
+    { 177, 13, 15, 26, 37, 1, 0 },  /* forward smash, angled up: the hit (16) */
+    { 178, 13, 15, 26, 37, 1, 0 },
+    { 179, 13, 15, 26, 37, 1, 0 },  /* forward smash */
+    { 180, 13, 15, 26, 37, 1, 0 },
+    { 181, 13, 15, 26, 37, 1, 0 },  /* forward smash, angled down */
     { 183, 15, 17, 33, 54, 0, 16 }, /* down smash: the slam (16) */
     /* Taunt: shown from frame 12 with her white sparkle and its sound
      * (motions/appeal.ms), not Ultimate's 54, and without the ring (owner
@@ -1340,10 +1346,15 @@ static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
     { 164, 11, 13, 65, 85, 0, 12 },
 };
 
-/* Each light card's material alpha at full (p6_light.py LIGHT_CARDS):
- * the orb, the wings, the ring's halves -- for a material that carries no
- * colour ramp (ndsP4PalutenaLightCardColour). */
-static const u8 sNdsP4PalutenaLightAlpha[] = { 240, 255, 255, 230, 230 };
+/* Each light card's material alpha at full, in the tree's order (p6_light.py
+ * LIGHT_CARDS): the wings, the ring's halves, the orb -- for a material that
+ * carries no colour ramp (ndsP4PalutenaLightCardColour). The order is the
+ * draw order, and it decides what shows on top: every card draws as its own
+ * entry root with the same polygon ID, and the DS does not draw a
+ * translucent pixel over one of the same ID, so the first card drawn wins
+ * where they overlap (owner 2026-10-22: style B's core vanished under the
+ * orb's glow once both faded, below alpha 31). */
+static const u8 sNdsP4PalutenaLightAlpha[] = { 255, 255, 230, 230, 240 };
 
 /* A light card's colour this tic (owner 2026-10-22: the centre's style B,
  * Ultimate's colour moving as its light fades, p6_light.py ORB_STYLES). Its
@@ -1391,7 +1402,7 @@ typedef struct NDSP4PalLight
     f32 last_frame;
     s32 motion;                 /* the move `offset` was taken in */
     u8 anchored;                /* `offset` held */
-    u8 ring;                    /* the last window's ring */
+    u8 turn;                    /* the last window's turn */
     u8 live[2];                 /* the glow's, the light's effect may exist */
     /* The windows of the move they were found for (motion_id + 1): a move's
      * windows are found once, not twice a tic (perf, 2026-10-18). */
@@ -1702,7 +1713,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             pos.y = at->y + state->offset.y + PAL_ORB_UP;
             pos.z = at->z + state->offset.z - PAL_LIGHT_BEHIND;
             state->last_pos = pos;
-            state->ring = w->ring;
+            state->turn = w->turn;
         }
         else
         {
@@ -1714,23 +1725,23 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
         if (effect_gobj != NULL)
         {
             DObj *root = DObjGetStruct(effect_gobj);
-            DObj *orb = root->child;
-            DObj *wing_l = orb->sib_next;
+            DObj *wing_l = root->child;
             DObj *wing_r = wing_l->sib_next;
             DObj *ring_l = wing_r->sib_next;
             DObj *ring_r = ring_l->sib_next;
+            DObj *orb = ring_r->sib_next;
             DObj *card;
             f32 grown = ((w != NULL) && (frame < (f32)w->full)) ? level : 1.0F;
             f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * grown);
             /* The centre's style B (p6_light.py ORB_STYLES): the ring's halves
-             * are its crisp ring and dot over the orb's glow, shown with the
-             * light -- halves whose material carries a ramp. Otherwise they
-             * are the taunt's ring, which no window shows since owner p7h. */
+             * are its crisp ring and dot on the orb, shown with the light --
+             * halves whose material carries a ramp; otherwise unused. */
             s32 core = ((ring_l->mobj != NULL) && (ring_l->mobj->sub.blendcolor.s.a != 0)) ? TRUE : FALSE;
-            f32 ring_size = ((core != FALSE) || (state->ring != 0u)) ? size : 0.0F;
+            f32 ring_size = (core != FALSE) ? size : 0.0F;
+            f32 far = (state->turn != 0u) ? PAL_WING_FAR : 1.0F;
             u32 i;
 
-            for (card = orb, i = 0u; (card != NULL) && (i < ARRAY_COUNT(sNdsP4PalutenaLightAlpha));
+            for (card = wing_l, i = 0u; (card != NULL) && (i < ARRAY_COUNT(sNdsP4PalutenaLightAlpha));
                  card = card->sib_next, i++)
             {
                 if (card->mobj != NULL)
@@ -1739,27 +1750,17 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
                 }
             }
             ndsP4PalutenaToCamera(&pos, &to);
-            ndsP4PalutenaFace(root, &to, lr * PAL_LIGHT_YAW);
+            ndsP4PalutenaFace(root, &to, (state->turn != 0u) ? (lr * PAL_LIGHT_YAW) : 0.0F);
             orb->scale.vec.f.x = orb->scale.vec.f.y = size;
+            orb->translate.vec.f.z = -PAL_LIGHT_GLOW_BACK;
             wing_l->translate.vec.f.x = -PAL_WING_GAP * size;
             wing_r->translate.vec.f.x = PAL_WING_GAP * size;
             wing_l->translate.vec.f.y = wing_r->translate.vec.f.y = -PAL_WING_DROP * size;
             wing_l->rotate.vec.f.z = PAL_WING_DROOP;
             wing_r->rotate.vec.f.z = -PAL_WING_DROOP;
-            wing_l->scale.vec.f.x = size * ((lr > 0.0F) ? PAL_WING_FAR : 1.0F);
-            wing_r->scale.vec.f.x = size * ((lr > 0.0F) ? 1.0F : PAL_WING_FAR);
+            wing_l->scale.vec.f.x = size * ((lr > 0.0F) ? far : 1.0F);
+            wing_r->scale.vec.f.x = size * ((lr > 0.0F) ? 1.0F : far);
             wing_l->scale.vec.f.y = wing_r->scale.vec.f.y = size;
-            if (core != FALSE)
-            {
-                /* On the orb, its size. */
-                ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = 0.0F;
-                ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = 0.0F;
-            }
-            else
-            {
-                ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = lr * PAL_ORB_BACK;
-                ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = PAL_RING_UP - PAL_ORB_UP;
-            }
             ring_l->scale.vec.f.x = ring_l->scale.vec.f.y = ring_size;
             ring_r->scale.vec.f.x = ring_r->scale.vec.f.y = ring_size;
             /* Not drawn at all when unused (two native cards a frame). */
