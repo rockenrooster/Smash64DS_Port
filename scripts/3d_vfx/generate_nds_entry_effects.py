@@ -164,6 +164,11 @@ FALCON_PUNCH_EXPECTED_TEXTURE_OFFSETS = (0x0490, 0x0288, 0x0080)
 # DObjDesc/MObj/AnimJoint/MatAnimJoint into LinkModel, whose drawable child's
 # DObjDLLink at 0x118F8 submits the immutable Gfx root at 0x11680.
 LINK_ENTRY_ROOTS = (0x02D8, 0x0698)
+# The wave's list loads its own green CI4 image (0x0030, TLUT 0x0008) but
+# leaves the render tile's size to its MObj's segment-E branch (MObjSub flag
+# 0x20): 16x32, decomp relocData/353_LinkSpecial2.c. Its MatAnim never moves
+# the texture (TRAU/TRAV 0, SCAU/SCAV 1), so the size is constant.
+LINK_ENTRY_WAVE_TEXTURE_SIZES = {LINK_ENTRY_ROOTS[0]: {0: (16, 32)}}
 LINK_SPIN_EFFECT_ROOTS = (0x1100,)
 LINK_SPECIAL2_ROOTS = LINK_ENTRY_ROOTS + LINK_SPIN_EFFECT_ROOTS
 LINK_MODEL_SPIN_ROOTS = (0x11680,)
@@ -1011,14 +1016,20 @@ class Compiler:
         t = ((vertex.t * state.texture_scale_t) >> 17) - (state.texture_origin_t << 2) + state.texture_filter_offset
         return Vertex(vertex.x, vertex.y, vertex.z, s, t, vertex.r, vertex.g, vertex.b, vertex.a)
 
-    def compile_roots(self, roots: tuple[int, ...], root_base: int) -> None:
+    def compile_roots(self, roots: tuple[int, ...], root_base: int,
+                      root_texture_sizes: dict[int, dict[int, tuple[int, int]]] | None = None) -> None:
+        """root_texture_sizes: per root offset, material slots whose MObj
+        sets the render tile's size for that root only."""
+        base_sizes = self.material_texture_sizes
         for local_index, root in enumerate(roots):
             # Segment 0xE is rebuilt by gcDrawMObjForDObj for each source DObj.
             # Its branch-slot selection must never leak between independent
             # top-level roots, while recursive file-relative G_DL calls retain
             # ordinary RSP state exactly as before.
             self.material_slot = MATERIAL_NONE
+            self.material_texture_sizes = {**base_sizes, **(root_texture_sizes or {}).get(root, {})}
             self.walk(root, root_base + local_index, ())
+        self.material_texture_sizes = base_sizes
 
     def walk(self, start: int, root_index: int, stack: tuple[int, ...]) -> None:
         if start in stack:
@@ -2446,6 +2457,7 @@ def main() -> None:
         LINK_SPECIAL2_ROOTS,
         len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
         len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS),
+        LINK_ENTRY_WAVE_TEXTURE_SIZES,
     )
     link_model = Compiler(resources[LINK_MODEL.file_id], resources)
     link_model.compile_roots(

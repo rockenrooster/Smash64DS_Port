@@ -16,9 +16,9 @@
 #define NDS_ENTRY_EFFECT_PRIM_COLOR_COUNT 7u
 #define NDS_ENTRY_EFFECT_ENV_COLOR_COUNT 19u
 #define NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT 11u
-#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 66u
-#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_COUNT 41u
-#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_BYTES 18528u
+#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 67u
+#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_COUNT 42u
+#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_BYTES 18784u
 #define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT 2u
 #define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST 2u
 #define NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST 10u
@@ -45,19 +45,19 @@
 #define NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_COUNT 2u
 #define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST 60u
 #define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_COUNT 1u
-#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT 58u
-#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT 59u
+#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT 59u
+#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT 60u
 #define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST 61u
 #define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_COUNT 1u
-#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT 60u
-#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT 61u
+#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT 61u
+#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT 62u
 #define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST 62u
 #define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_COUNT 1u
 #define NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST 63u
 #define NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_COUNT 1u
-#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT 62u
-#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT 63u
-#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT 64u
+#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT 63u
+#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT 64u
+#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT 65u
 
 static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {
     { -169, 0, -98 },
@@ -552,7 +552,7 @@ static const s16 sNdsEntryEffectS[NDS_ENTRY_EFFECT_S_COUNT] = {
     -588, 349, -989, -349, 177, 79, -385, 606, 252, 309, -854, 1023, -840, 1040, 1752, 1774,
     518, 304, -622, 3936, 316, 4095, 759, -248, 129, 381, 395, 337, 197, 174, 500, 11,
     478, 33, 290, 273, 284, 221, 238, 227, 372, 325, 384, 186, 139, 204, 476, 307,
-    101, 35, 59, 111, 8064, 9216, 6912, 5760, 10368, 11520, 12672, 13824, 14976, 68, 954, 95,
+    101, 35, 59, 111, 4031, 4607, 3455, 2879, 5183, 5759, 6335, 6911, 7487, 68, 954, 95,
     415, 126, 125, 338, 276, 660, -108, 1428, 1044, 489, 239, 135, 143, 323, 319,
 };
 
@@ -1064,9 +1064,9 @@ static const u8 sNdsEntryEffectCornerT[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {
     106u, 104u, 1u, 1u, 106u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 17u, 1u, 1u, 17u, 17u, 1u, 17u, 17u, 1u, 1u, 17u, 1u,
     17u, 1u, 1u, 17u, 17u, 1u, 17u, 17u, 1u, 1u, 17u, 1u, 17u, 1u, 1u, 17u, 17u, 1u, 17u, 17u, 1u, 1u, 17u, 1u,
     17u, 1u, 1u, 17u, 17u, 1u, 17u, 17u, 1u, 1u, 17u, 1u, 115u, 1u, 17u, 115u, 115u, 17u, 115u, 17u, 17u, 17u, 1u, 23u,
-    23u, 17u, 17u, 23u, 23u, 17u, 23u, 1u, 17u, 115u, 17u, 1u, 49u, 1u, 1u, 1u, 49u, 49u, 1u, 1u, 49u, 49u, 49u, 1u,
-    1u, 1u, 49u, 49u, 1u, 1u, 49u, 1u, 49u, 49u, 49u, 1u, 49u, 49u, 1u, 1u, 49u, 1u, 49u, 1u, 1u, 49u, 49u, 1u,
-    49u, 1u, 1u, 49u, 49u, 1u, 49u, 1u, 1u, 49u, 49u, 1u, 29u, 1u, 1u, 1u, 1u, 29u, 29u, 29u, 1u, 29u, 1u, 1u,
+    23u, 17u, 17u, 23u, 23u, 17u, 23u, 1u, 17u, 115u, 17u, 1u, 44u, 1u, 1u, 1u, 44u, 44u, 1u, 1u, 44u, 44u, 44u, 1u,
+    1u, 1u, 44u, 44u, 1u, 1u, 44u, 1u, 44u, 44u, 44u, 1u, 44u, 44u, 1u, 1u, 44u, 1u, 44u, 1u, 1u, 44u, 44u, 1u,
+    44u, 1u, 1u, 44u, 44u, 1u, 44u, 1u, 1u, 44u, 44u, 1u, 29u, 1u, 1u, 1u, 1u, 29u, 29u, 29u, 1u, 29u, 1u, 1u,
     29u, 1u, 29u, 1u, 1u, 29u, 29u, 1u, 29u, 29u, 29u, 1u, 29u, 1u, 1u, 29u, 29u, 1u, 29u, 1u, 1u, 29u, 29u, 1u,
     29u, 1u, 1u, 29u, 29u, 1u, 29u, 1u, 1u, 29u, 29u, 1u, 1u, 1u, 44u, 44u, 1u, 44u, 116u, 117u, 44u, 117u, 116u, 44u,
     118u, 116u, 44u, 116u, 118u, 44u, 116u, 118u, 44u, 118u, 116u, 44u, 117u, 116u, 44u, 116u, 117u, 44u, 44u, 117u, 44u, 117u, 44u, 44u,
@@ -1514,43 +1514,43 @@ static const NDSEntryEffectGroup sNdsEntryEffectGroups[NDS_ENTRY_EFFECT_GROUP_CO
     { 1152u, 2u, 18u, 37u, 20u, 7u, 2u, 1u, 0u, 3u, 8u, 3u, 3u, 3u, 3u, 0u, 255u },
     { 1158u, 2u, 18u, 38u, 21u, 6u, 2u, 1u, 0u, 3u, 8u, 3u, 3u, 3u, 3u, 0u, 255u },
     { 1164u, 8u, 18u, 39u, 22u, 8u, 5u, 2u, 3u, 3u, 8u, 2u, 2u, 4u, 4u, 0u, 255u },
-    { 1188u, 16u, 18u, 255u, 23u, 9u, 5u, 3u, 0u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 0u },
-    { 1236u, 16u, 18u, 40u, 24u, 10u, 5u, 3u, 0u, 0u, 9u, 0u, 2u, 4u, 3u, 0u, 0u },
-    { 1284u, 2u, 18u, 41u, 25u, 6u, 6u, 2u, 0u, 4u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
-    { 1290u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 5u, 9u, 2u, 2u, 6u, 6u, 0u, 8u },
-    { 1296u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 6u, 9u, 2u, 2u, 6u, 6u, 0u, 7u },
-    { 1302u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 7u, 9u, 2u, 2u, 6u, 6u, 0u, 6u },
-    { 1308u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 8u, 9u, 2u, 2u, 6u, 6u, 0u, 5u },
-    { 1314u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 9u, 9u, 2u, 2u, 6u, 6u, 0u, 4u },
-    { 1320u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 10u, 9u, 2u, 2u, 6u, 6u, 0u, 3u },
-    { 1326u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 11u, 9u, 2u, 2u, 6u, 6u, 0u, 2u },
-    { 1332u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 12u, 9u, 2u, 2u, 6u, 6u, 0u, 1u },
-    { 1338u, 2u, 18u, 42u, 26u, 11u, 6u, 2u, 0u, 13u, 9u, 2u, 2u, 6u, 6u, 0u, 0u },
-    { 1344u, 2u, 18u, 43u, 27u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 255u },
+    { 1188u, 16u, 18u, 40u, 23u, 9u, 5u, 3u, 0u, 0u, 9u, 2u, 2u, 4u, 5u, 0u, 0u },
+    { 1236u, 16u, 18u, 41u, 24u, 10u, 5u, 3u, 0u, 0u, 9u, 0u, 2u, 4u, 3u, 0u, 0u },
+    { 1284u, 2u, 18u, 42u, 25u, 6u, 6u, 2u, 0u, 4u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
+    { 1290u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 5u, 9u, 2u, 2u, 6u, 6u, 0u, 8u },
+    { 1296u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 6u, 9u, 2u, 2u, 6u, 6u, 0u, 7u },
+    { 1302u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 7u, 9u, 2u, 2u, 6u, 6u, 0u, 6u },
+    { 1308u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 8u, 9u, 2u, 2u, 6u, 6u, 0u, 5u },
+    { 1314u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 9u, 9u, 2u, 2u, 6u, 6u, 0u, 4u },
+    { 1320u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 10u, 9u, 2u, 2u, 6u, 6u, 0u, 3u },
+    { 1326u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 11u, 9u, 2u, 2u, 6u, 6u, 0u, 2u },
+    { 1332u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 12u, 9u, 2u, 2u, 6u, 6u, 0u, 1u },
+    { 1338u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 13u, 9u, 2u, 2u, 6u, 6u, 0u, 0u },
+    { 1344u, 2u, 18u, 44u, 27u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 255u },
     { 1350u, 6u, 18u, 255u, 28u, 12u, 1u, 5u, 0u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
-    { 1368u, 2u, 18u, 44u, 29u, 3u, 6u, 2u, 4u, 0u, 9u, 3u, 2u, 4u, 5u, 0u, 255u },
-    { 1374u, 6u, 18u, 45u, 30u, 12u, 7u, 4u, 0u, 0u, 9u, 2u, 2u, 4u, 4u, 0u, 255u },
-    { 1392u, 1u, 18u, 46u, 31u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1395u, 1u, 18u, 46u, 32u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1398u, 1u, 18u, 46u, 33u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1401u, 1u, 18u, 46u, 34u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1404u, 2u, 18u, 47u, 35u, 5u, 6u, 1u, 0u, 14u, 9u, 3u, 2u, 5u, 6u, 0u, 0u },
-    { 1410u, 2u, 18u, 48u, 36u, 5u, 6u, 1u, 0u, 15u, 9u, 2u, 2u, 5u, 6u, 0u, 0u },
-    { 1416u, 8u, 18u, 49u, 37u, 6u, 6u, 1u, 0u, 16u, 9u, 0u, 2u, 5u, 5u, 0u, 0u },
-    { 1440u, 2u, 18u, 50u, 38u, 12u, 5u, 1u, 0u, 0u, 9u, 3u, 2u, 5u, 5u, 0u, 0u },
-    { 1446u, 2u, 18u, 51u, 39u, 12u, 5u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
-    { 1452u, 2u, 18u, 51u, 40u, 12u, 5u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
-    { 1458u, 2u, 18u, 52u, 41u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 1u },
-    { 1464u, 2u, 18u, 52u, 41u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 0u },
-    { 1470u, 2u, 18u, 52u, 42u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 1u },
-    { 1476u, 2u, 18u, 52u, 42u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 0u },
-    { 1482u, 1u, 18u, 53u, 43u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1485u, 1u, 18u, 53u, 44u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1488u, 1u, 18u, 53u, 45u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1491u, 1u, 18u, 53u, 46u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
-    { 1494u, 2u, 18u, 54u, 47u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 255u },
+    { 1368u, 2u, 18u, 45u, 29u, 3u, 6u, 2u, 4u, 0u, 9u, 3u, 2u, 4u, 5u, 0u, 255u },
+    { 1374u, 6u, 18u, 46u, 30u, 12u, 7u, 4u, 0u, 0u, 9u, 2u, 2u, 4u, 4u, 0u, 255u },
+    { 1392u, 1u, 18u, 47u, 31u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1395u, 1u, 18u, 47u, 32u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1398u, 1u, 18u, 47u, 33u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1401u, 1u, 18u, 47u, 34u, 5u, 8u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1404u, 2u, 18u, 48u, 35u, 5u, 6u, 1u, 0u, 14u, 9u, 3u, 2u, 5u, 6u, 0u, 0u },
+    { 1410u, 2u, 18u, 49u, 36u, 5u, 6u, 1u, 0u, 15u, 9u, 2u, 2u, 5u, 6u, 0u, 0u },
+    { 1416u, 8u, 18u, 50u, 37u, 6u, 6u, 1u, 0u, 16u, 9u, 0u, 2u, 5u, 5u, 0u, 0u },
+    { 1440u, 2u, 18u, 51u, 38u, 12u, 5u, 1u, 0u, 0u, 9u, 3u, 2u, 5u, 5u, 0u, 0u },
+    { 1446u, 2u, 18u, 52u, 39u, 12u, 5u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
+    { 1452u, 2u, 18u, 52u, 40u, 12u, 5u, 1u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
+    { 1458u, 2u, 18u, 53u, 41u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 1u },
+    { 1464u, 2u, 18u, 53u, 41u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 0u },
+    { 1470u, 2u, 18u, 53u, 42u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 1u },
+    { 1476u, 2u, 18u, 53u, 42u, 6u, 6u, 1u, 0u, 17u, 10u, 2u, 2u, 4u, 4u, 0u, 0u },
+    { 1482u, 1u, 18u, 54u, 43u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1485u, 1u, 18u, 54u, 44u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1488u, 1u, 18u, 54u, 45u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1491u, 1u, 18u, 54u, 46u, 7u, 8u, 1u, 0u, 17u, 10u, 2u, 2u, 5u, 4u, 0u, 0u },
+    { 1494u, 2u, 18u, 55u, 47u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 255u },
     { 1500u, 1u, 18u, 255u, 48u, 12u, 3u, 6u, 5u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
-    { 1503u, 2u, 18u, 55u, 49u, 12u, 5u, 4u, 3u, 0u, 9u, 2u, 2u, 4u, 3u, 3u, 255u },
+    { 1503u, 2u, 18u, 56u, 49u, 12u, 5u, 4u, 3u, 0u, 9u, 2u, 2u, 4u, 3u, 3u, 255u },
     { 1509u, 8u, 21u, 255u, 50u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
     { 1533u, 8u, 21u, 255u, 51u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
     { 1557u, 8u, 21u, 255u, 52u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
@@ -1558,13 +1558,13 @@ static const NDSEntryEffectGroup sNdsEntryEffectGroups[NDS_ENTRY_EFFECT_GROUP_CO
     { 1599u, 6u, 21u, 255u, 54u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
     { 1617u, 6u, 21u, 255u, 55u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
     { 1635u, 6u, 21u, 255u, 56u, 12u, 1u, 5u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
-    { 1653u, 2u, 21u, 56u, 57u, 12u, 0u, 6u, 3u, 0u, 9u, 3u, 2u, 4u, 5u, 0u, 255u },
+    { 1653u, 2u, 21u, 57u, 57u, 12u, 0u, 6u, 3u, 0u, 9u, 3u, 2u, 4u, 5u, 0u, 255u },
     { 1659u, 1u, 21u, 255u, 58u, 12u, 3u, 2u, 3u, 0u, 9u, 0u, 0u, 0u, 0u, 0u, 255u },
-    { 1662u, 2u, 21u, 57u, 59u, 12u, 5u, 3u, 3u, 0u, 9u, 3u, 2u, 4u, 3u, 0u, 255u },
-    { 1668u, 2u, 21u, 58u, 60u, 6u, 2u, 1u, 6u, 18u, 9u, 3u, 3u, 4u, 4u, 0u, 0u },
-    { 1674u, 2u, 21u, 60u, 61u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 6u, 6u, 0u, 0u },
-    { 1680u, 2u, 21u, 62u, 62u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
-    { 1686u, 2u, 21u, 65u, 63u, 12u, 9u, 4u, 0u, 0u, 9u, 2u, 2u, 6u, 6u, 0u, 255u },
+    { 1662u, 2u, 21u, 58u, 59u, 12u, 5u, 3u, 3u, 0u, 9u, 3u, 2u, 4u, 3u, 0u, 255u },
+    { 1668u, 2u, 21u, 59u, 60u, 6u, 2u, 1u, 6u, 18u, 9u, 3u, 3u, 4u, 4u, 0u, 0u },
+    { 1674u, 2u, 21u, 61u, 61u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 6u, 6u, 0u, 0u },
+    { 1680u, 2u, 21u, 63u, 62u, 12u, 0u, 4u, 0u, 0u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
+    { 1686u, 2u, 21u, 66u, 63u, 12u, 9u, 4u, 0u, 0u, 9u, 2u, 2u, 6u, 6u, 0u, 255u },
 };
 
 static const NDSEntryEffectRoot sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_ROOT_COUNT] = {
@@ -2213,12 +2213,29 @@ static const u8 sNdsEntryEffectTexels37[56] __attribute__((aligned(4))) = {
     0x40u, 0x00u, 0xeeu, 0x40u, 0x00u, 0xffu, 0x40u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels38[22] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels38[224] __attribute__((aligned(4))) = {
+    0x10u, 0x00u, 0x01u, 0x00u, 0x44u, 0x00u, 0x40u, 0x00u, 0xfcu, 0xfdu, 0xffu, 0x00u, 0x00u, 0xcfu, 0x99u, 0x21u,
+    0xebu, 0xfcu, 0x10u, 0x07u, 0xbfu, 0x98u, 0xdau, 0xfbu, 0x10u, 0x07u, 0x08u, 0xafu, 0x97u, 0xc9u, 0xeau, 0x10u,
+    0x07u, 0x9fu, 0x86u, 0xb9u, 0x00u, 0xd9u, 0xffu, 0xffu, 0xfeu, 0xffu, 0x9eu, 0x75u, 0xa9u, 0x00u, 0xc9u, 0xffu,
+    0xffu, 0xedu, 0xffu, 0x9du, 0x64u, 0x98u, 0x00u, 0xb9u, 0xffu, 0xefu, 0xdcu, 0xffu, 0x8cu, 0x53u, 0x97u, 0x00u,
+    0xa9u, 0xfeu, 0xdfu, 0xcbu, 0xeeu, 0x7bu, 0x42u, 0x96u, 0x00u, 0x97u, 0xfdu, 0xcfu, 0xbau, 0xddu, 0x6au, 0x30u,
+    0x85u, 0x00u, 0x97u, 0xfcu, 0xbeu, 0xa9u, 0xccu, 0x59u, 0x20u, 0x74u, 0x00u, 0x96u, 0xebu, 0xadu, 0x99u, 0xbbu,
+    0x49u, 0x20u, 0x63u, 0x00u, 0x05u, 0xdau, 0x9cu, 0x99u, 0xaau, 0x39u, 0x10u, 0x52u, 0x00u, 0x04u, 0xc9u, 0x9bu,
+    0x98u, 0x99u, 0x08u, 0x10u, 0x42u, 0x00u, 0x03u, 0xb9u, 0x9au, 0x87u, 0x99u, 0x07u, 0x10u, 0x31u, 0x00u, 0x02u,
+    0xa9u, 0x89u, 0x76u, 0x99u, 0x06u, 0x10u, 0x21u, 0x00u, 0x02u, 0x99u, 0x79u, 0x65u, 0x98u, 0x05u, 0x10u, 0x21u,
+    0x00u, 0x01u, 0x98u, 0x69u, 0x04u, 0x87u, 0x04u, 0x10u, 0x11u, 0x00u, 0x01u, 0x97u, 0x58u, 0x03u, 0x76u, 0x00u,
+    0x00u, 0x11u, 0x04u, 0x01u, 0x80u, 0x47u, 0x02u, 0x65u, 0x10u, 0x07u, 0x70u, 0x36u, 0x20u, 0x02u, 0x54u, 0x00u,
+    0x07u, 0x00u, 0x60u, 0x25u, 0x00u, 0x43u, 0x84u, 0x10u, 0x07u, 0x50u, 0x24u, 0x00u, 0x30u, 0x10u, 0x07u, 0x40u,
+    0x13u, 0x00u, 0x00u, 0x20u, 0x00u, 0x00u, 0x10u, 0x00u, 0x30u, 0x12u, 0x9au, 0x30u, 0x07u, 0x20u, 0x02u, 0x10u,
+    0xc7u, 0x00u, 0x07u, 0x01u, 0x30u, 0x07u, 0x00u, 0xf0u, 0xa0u, 0x07u, 0x00u, 0x00u, 0xd0u, 0x07u, 0x20u, 0x00u,
+};
+
+static const u8 sNdsEntryEffectTexels39[22] __attribute__((aligned(4))) = {
     0x10u, 0x40u, 0x00u, 0x00u, 0x00u, 0x20u, 0x53u, 0x56u, 0x23u, 0x21u, 0x53u, 0x34u, 0x12u, 0xe0u, 0xf0u, 0x07u,
     0xf0u, 0x07u, 0xf0u, 0x07u, 0x34u, 0x12u,
 };
 
-static const u8 sNdsEntryEffectTexels39[405] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels40[405] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x40u, 0x00u, 0x10u, 0x00u, 0x10u, 0x10u, 0x40u, 0x99u, 0xbbu, 0xedu, 0x46u, 0xffu,
     0x10u, 0x00u, 0xbeu, 0x9eu, 0x52u, 0x20u, 0x12u, 0x90u, 0x00u, 0x10u, 0x06u, 0x20u, 0x60u, 0xcau, 0xfcu, 0xfeu,
     0x20u, 0x1eu, 0x00u, 0x00u, 0x57u, 0x89u, 0xf0u, 0x1eu, 0x88u, 0xdbu, 0xfdu, 0x50u, 0x1du, 0xffu, 0xefu, 0xd0u,
@@ -2247,7 +2264,7 @@ static const u8 sNdsEntryEffectTexels39[405] __attribute__((aligned(4))) = {
     0xc0u, 0xf0u, 0x00u, 0xd0u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels40[1785] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels41[1785] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x10u, 0x00u, 0x68u, 0x00u, 0xf0u, 0x00u, 0xa0u, 0x00u, 0x10u, 0x10u, 0x00u, 0x11u, 0x12u, 0x12u,
     0x2bu, 0x12u, 0x15u, 0x00u, 0x00u, 0x17u, 0x30u, 0x00u, 0x07u, 0x80u, 0x00u, 0xf0u, 0x31u, 0x80u, 0xf0u, 0x3eu,
     0x11u, 0x21u, 0x31u, 0x32u, 0x33u, 0x33u, 0x33u, 0x3cu, 0x25u, 0x26u, 0x40u, 0x3fu, 0x90u, 0x40u, 0xf0u, 0x32u,
@@ -2362,7 +2379,7 @@ static const u8 sNdsEntryEffectTexels40[1785] __attribute__((aligned(4))) = {
     0x00u, 0x31u, 0x6cu, 0x12u, 0x6du, 0xffu, 0x79u, 0x30u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels41[192] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels42[192] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x48u, 0x00u, 0xe0u, 0x00u, 0xa7u, 0x27u, 0xa0u, 0x0eu, 0x60u, 0xbbu, 0xabu, 0x42u,
     0x03u, 0x90u, 0x0fu, 0x70u, 0xbbu, 0xbbu, 0x3au, 0xb0u, 0x1fu, 0xbbu, 0x21u, 0xabu, 0x06u, 0x90u, 0x10u, 0xb7u,
     0xbbu, 0xbbu, 0x6bu, 0x40u, 0x0au, 0x28u, 0x32u, 0x23u, 0x30u, 0x20u, 0xbbu, 0x30u, 0x20u, 0x30u, 0x55u, 0x35u,
@@ -2377,7 +2394,7 @@ static const u8 sNdsEntryEffectTexels41[192] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x60u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels42[434] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels43[434] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x78u, 0x11u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x11u, 0x11u,
     0x51u, 0x00u, 0x91u, 0xb1u, 0xd1u, 0xf1u, 0xf1u, 0xd1u, 0xb1u, 0x91u, 0x40u, 0x51u, 0xf0u, 0x1bu, 0x11u, 0x11u,
     0x71u, 0xd1u, 0xf1u, 0xf3u, 0x42u, 0xf5u, 0x20u, 0x00u, 0xf3u, 0xf1u, 0xd1u, 0x71u, 0xe0u, 0x3bu, 0xb1u, 0x02u,
@@ -2408,12 +2425,12 @@ static const u8 sNdsEntryEffectTexels42[434] __attribute__((aligned(4))) = {
     0x30u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels43[25] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels44[25] __attribute__((aligned(4))) = {
     0x10u, 0x80u, 0x00u, 0x00u, 0x1fu, 0x11u, 0x01u, 0x00u, 0x20u, 0x00u, 0xf0u, 0x07u, 0xf0u, 0x07u, 0xf0u, 0x07u,
     0xf0u, 0x07u, 0xe0u, 0xf0u, 0x07u, 0xf0u, 0x07u, 0x90u, 0x07u,
 };
 
-static const u8 sNdsEntryEffectTexels44[207] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels45[207] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x00u, 0x00u, 0xe8u, 0xc8u, 0xa8u, 0x98u, 0x88u, 0x60u, 0x40u, 0x10u, 0x20u, 0x10u,
     0x00u, 0xc0u, 0x00u, 0x10u, 0x30u, 0x60u, 0x60u, 0x00u, 0x40u, 0x10u, 0x00u, 0x10u, 0xe8u, 0xf8u, 0xf8u, 0xf8u,
     0x30u, 0xe8u, 0xb8u, 0x20u, 0x22u, 0x70u, 0x23u, 0x10u, 0x30u, 0x50u, 0x70u, 0xe0u, 0x10u, 0x12u, 0x10u, 0x0bu,
@@ -2429,7 +2446,7 @@ static const u8 sNdsEntryEffectTexels44[207] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xe0u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x70u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels45[1349] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels46[1349] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x10u, 0x00u, 0x65u, 0x10u, 0xf0u, 0x00u, 0x00u, 0x00u, 0x11u, 0x21u, 0x00u, 0x00u, 0x31u, 0x00u,
     0x00u, 0x36u, 0x32u, 0x32u, 0x10u, 0x05u, 0x10u, 0x0du, 0x11u, 0xf0u, 0x25u, 0x10u, 0x00u, 0x21u, 0x60u, 0x21u,
     0x90u, 0x06u, 0x20u, 0x09u, 0x31u, 0x52u, 0x63u, 0x73u, 0x73u, 0x00u, 0x8cu, 0x8cu, 0x9cu, 0x9cu, 0xadu, 0xadu,
@@ -2517,7 +2534,7 @@ static const u8 sNdsEntryEffectTexels45[1349] __attribute__((aligned(4))) = {
     0x09u, 0xf0u, 0x00u, 0x20u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels46[671] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels47[671] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x40u, 0x00u, 0x10u, 0x00u, 0x40u, 0x99u, 0x89u, 0x8au, 0x8au, 0x8bu, 0x20u, 0x8cu,
     0x8du, 0x60u, 0x00u, 0x8cu, 0x8bu, 0x8au, 0x89u, 0x89u, 0x30u, 0x88u, 0x60u, 0x20u, 0x1cu, 0x00u, 0x00u, 0x60u,
     0xe9u, 0xdau, 0xdau, 0x04u, 0xdbu, 0xddu, 0xdeu, 0xdeu, 0xdfu, 0x40u, 0x00u, 0xdeu, 0xddu, 0x02u, 0xdcu, 0xdbu,
@@ -2562,7 +2579,7 @@ static const u8 sNdsEntryEffectTexels46[671] __attribute__((aligned(4))) = {
     0xf0u, 0xa9u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xe0u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x90u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels47[361] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels48[361] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x7fu, 0xffu, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u,
     0xf0u, 0x00u, 0xf0u, 0x00u, 0x1fu, 0xffu, 0xffu, 0xfeu, 0x50u, 0x00u, 0xf0u, 0x1au, 0x10u, 0x12u, 0x60u, 0x1eu,
     0xf0u, 0x00u, 0xffu, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u,
@@ -2588,7 +2605,7 @@ static const u8 sNdsEntryEffectTexels47[361] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x80u, 0x90u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels48[579] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels49[579] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x40u, 0x07u, 0x10u, 0x00u, 0x17u, 0x37u, 0x67u, 0x8fu, 0xafu, 0xafu, 0x06u, 0x9fu,
     0x9fu, 0x8fu, 0x67u, 0x27u, 0x20u, 0x0fu, 0xb0u, 0x00u, 0x17u, 0x00u, 0x37u, 0x57u, 0x8fu, 0xafu, 0xcfu, 0xdfu,
     0xefu, 0xefu, 0x08u, 0xefu, 0xdfu, 0xcfu, 0xbfu, 0x00u, 0x07u, 0xffu, 0x8fu, 0x17u, 0x98u, 0xf0u, 0x21u, 0x8fu,
@@ -2628,7 +2645,7 @@ static const u8 sNdsEntryEffectTexels48[579] __attribute__((aligned(4))) = {
     0xffu, 0x83u, 0xffu,
 };
 
-static const u8 sNdsEntryEffectTexels49[458] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels50[458] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x40u, 0x07u, 0x10u, 0x00u, 0x17u, 0x37u, 0x67u, 0x8fu, 0xafu, 0xafu, 0x06u, 0x9fu,
     0x9fu, 0x8fu, 0x67u, 0x27u, 0x20u, 0x0fu, 0xb0u, 0x00u, 0x17u, 0x00u, 0x37u, 0x57u, 0x8fu, 0xafu, 0xcfu, 0xdfu,
     0xefu, 0xefu, 0x08u, 0xefu, 0xdfu, 0xcfu, 0xbfu, 0x00u, 0x07u, 0xffu, 0x8fu, 0x17u, 0x98u, 0xf0u, 0x21u, 0x8fu,
@@ -2660,7 +2677,7 @@ static const u8 sNdsEntryEffectTexels49[458] __attribute__((aligned(4))) = {
     0xccu, 0x10u, 0x85u, 0x03u, 0x5bu, 0x8fu, 0x00u, 0xa0u, 0x40u, 0x3bu,
 };
 
-static const u8 sNdsEntryEffectTexels50[79] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels51[79] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x01u, 0x00u, 0x00u, 0xffu, 0xffu, 0xeeu, 0xeeu, 0xddu, 0xcdu, 0xbcu, 0xabu, 0x00u, 0x8bu, 0x52u,
     0x22u, 0x01u, 0x01u, 0x00u, 0x00u, 0x00u, 0x81u, 0x40u, 0x0fu, 0xbbu, 0xabu, 0x72u, 0x52u, 0x21u, 0x11u, 0x90u,
     0x0fu, 0x04u, 0x8au, 0x72u, 0x41u, 0x31u, 0x10u, 0xa0u, 0x0fu, 0x61u, 0x41u, 0x24u, 0x20u, 0x10u, 0xa0u, 0x0fu,
@@ -2668,7 +2685,7 @@ static const u8 sNdsEntryEffectTexels50[79] __attribute__((aligned(4))) = {
     0xf0u, 0x2fu, 0xf0u, 0x4fu, 0xf8u, 0xf0u, 0x6fu, 0xf0u, 0x8fu, 0xc0u, 0xafu, 0xb0u, 0xcfu, 0x60u, 0xefu,
 };
 
-static const u8 sNdsEntryEffectTexels51[213] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels52[213] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x75u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x60u, 0x00u, 0x10u, 0xc0u, 0x0fu, 0x30u,
     0xc0u, 0x0fu, 0x54u, 0x61u, 0xc0u, 0x0fu, 0x62u, 0xc0u, 0x3eu, 0x34u, 0xb0u, 0x0fu, 0x31u, 0x08u, 0x92u, 0xb0u,
     0x1eu, 0x43u, 0x06u, 0xa0u, 0x0fu, 0x32u, 0x84u, 0xa0u, 0x0fu, 0x21u, 0x22u, 0x43u, 0x88u, 0xa0u, 0x0eu, 0x33u,
@@ -2685,13 +2702,13 @@ static const u8 sNdsEntryEffectTexels51[213] __attribute__((aligned(4))) = {
     0x00u, 0xf0u, 0x00u, 0x20u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels52[46] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels53[46] __attribute__((aligned(4))) = {
     0x10u, 0x40u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x10u, 0x32u, 0x53u, 0x66u, 0x98u, 0x83u, 0x00u, 0x07u,
     0x21u, 0x33u, 0x65u, 0x86u, 0x99u, 0x40u, 0x0eu, 0x00u, 0x07u, 0xaau, 0x20u, 0x0eu, 0x99u, 0x40u, 0x0eu, 0x99u,
     0x40u, 0x0eu, 0x99u, 0x40u, 0x0eu, 0x99u, 0x08u, 0x21u, 0x33u, 0x64u, 0x76u, 0x00u, 0x06u, 0x99u,
 };
 
-static const u8 sNdsEntryEffectTexels53[527] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels54[527] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x7fu, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u,
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xffu, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u,
     0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xa0u, 0x00u, 0x99u, 0x82u,
@@ -2727,7 +2744,7 @@ static const u8 sNdsEntryEffectTexels53[527] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x30u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels54[163] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels55[163] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x10u, 0x32u, 0x53u, 0x66u, 0x98u, 0x83u, 0x00u, 0x07u,
     0x21u, 0x33u, 0x65u, 0x86u, 0x99u, 0x40u, 0x0eu, 0x00u, 0x07u, 0xaau, 0x20u, 0x0eu, 0x99u, 0x40u, 0x0eu, 0x99u,
     0x40u, 0x0eu, 0x99u, 0x40u, 0x0eu, 0x99u, 0x0fu, 0x21u, 0x33u, 0x64u, 0x76u, 0x00u, 0x06u, 0x00u, 0x27u, 0xf0u,
@@ -2741,7 +2758,7 @@ static const u8 sNdsEntryEffectTexels54[163] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels55[356] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels56[356] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x4cu, 0x07u, 0xb0u, 0x00u, 0x17u, 0x17u, 0xc0u, 0x10u, 0xc0u, 0x1du, 0x27u, 0x27u,
     0xc0u, 0xf0u, 0x21u, 0x50u, 0x1bu, 0x37u, 0x57u, 0x66u, 0x75u, 0x74u, 0x74u, 0x08u, 0x75u, 0x66u, 0x57u, 0x37u,
     0xf0u, 0x23u, 0x07u, 0x17u, 0x37u, 0x00u, 0x66u, 0x74u, 0x73u, 0x8au, 0x8au, 0x89u, 0x89u, 0x8au, 0x04u, 0x8au,
@@ -2767,7 +2784,7 @@ static const u8 sNdsEntryEffectTexels55[356] __attribute__((aligned(4))) = {
     0xf3u, 0xdfu, 0xb0u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels56[399] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels57[399] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x04u, 0x00u, 0x58u, 0x07u, 0x90u, 0x00u, 0xbdu, 0x60u, 0x04u, 0xb0u, 0x00u, 0x06u, 0x06u, 0x06u,
     0x49u, 0x37u, 0x00u, 0x06u, 0x27u, 0xfdu, 0x10u, 0x0cu, 0xfdu, 0x27u, 0x00u, 0x04u, 0x64u, 0x37u, 0x00u, 0x12u,
     0x80u, 0x20u, 0x63u, 0xfau, 0x10u, 0x1au, 0x27u, 0xfcu, 0xa2u, 0x10u, 0x0bu, 0xfcu, 0x10u, 0x1fu, 0xfdu, 0xfau,
@@ -2795,7 +2812,7 @@ static const u8 sNdsEntryEffectTexels56[399] __attribute__((aligned(4))) = {
     0xc3u, 0x1fu, 0xfcu, 0xf3u, 0x5fu, 0xe3u, 0x5fu, 0xf3u, 0x9fu, 0xc3u, 0x9fu, 0xf3u, 0xdfu, 0x50u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels57[693] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels58[693] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x7fu, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u,
     0xf0u, 0x00u, 0xf0u, 0x00u, 0x81u, 0x70u, 0x00u, 0x33u, 0x33u, 0x33u, 0xa6u, 0xa8u, 0x34u, 0xf0u, 0x17u, 0x81u,
     0x60u, 0x00u, 0x43u, 0x86u, 0x22u, 0xb2u, 0x1bu, 0x37u, 0xf0u, 0x17u, 0x80u, 0x50u, 0x00u, 0x30u, 0xa6u, 0x21u,
@@ -2842,7 +2859,7 @@ static const u8 sNdsEntryEffectTexels57[693] __attribute__((aligned(4))) = {
     0xc0u, 0xf0u, 0x00u, 0xe0u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels58[621] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels59[621] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x7fu, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u,
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xb8u, 0x70u, 0x00u, 0x33u, 0x20u, 0x00u, 0xf0u, 0x17u, 0x60u, 0x1fu, 0x53u, 0x55u,
     0x66u, 0x0cu, 0x77u, 0xaau, 0x35u, 0x44u, 0xf0u, 0x19u, 0x30u, 0x00u, 0x30u, 0x53u, 0x01u, 0x77u, 0x8au, 0x88u,
@@ -2884,7 +2901,7 @@ static const u8 sNdsEntryEffectTexels58[621] __attribute__((aligned(4))) = {
     0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x80u, 0x70u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels59[328] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels60[328] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x4cu, 0x00u, 0x40u, 0x00u, 0x04u, 0x04u, 0x50u, 0x09u, 0x30u, 0x00u, 0x06u, 0x60u,
     0x92u, 0xb0u, 0x0fu, 0x07u, 0x57u, 0xb0u, 0x0fu, 0x15u, 0x05u, 0xa0u, 0x0eu, 0x40u, 0x88u, 0xb0u, 0x0eu, 0x00u,
     0x40u, 0x11u, 0xb0u, 0x0fu, 0x60u, 0xd9u, 0x0cu, 0x88u, 0xa0u, 0x0fu, 0x64u, 0xfdu, 0x0au, 0xa0u, 0x0fu, 0x74u,
@@ -2908,7 +2925,7 @@ static const u8 sNdsEntryEffectTexels59[328] __attribute__((aligned(4))) = {
     0x7cu, 0x23u, 0x43u, 0x44u, 0x33u, 0x22u, 0x81u, 0x59u,
 };
 
-static const u8 sNdsEntryEffectTexels60[331] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels61[331] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x4du, 0x00u, 0x40u, 0x00u, 0x05u, 0x0au, 0x50u, 0x09u, 0x40u, 0x0fu, 0x90u, 0xb0u,
     0x0fu, 0x25u, 0x01u, 0x9au, 0xb0u, 0x0fu, 0xacu, 0x09u, 0xa0u, 0x0eu, 0x40u, 0xb0u, 0x0eu, 0x11u, 0x00u, 0x40u,
     0x91u, 0xa0u, 0x0eu, 0x20u, 0x62u, 0xd5u, 0x90u, 0x20u, 0x04u, 0x22u, 0x44u, 0x58u, 0xd5u, 0x0du, 0x80u, 0x0fu,
@@ -2932,7 +2949,7 @@ static const u8 sNdsEntryEffectTexels60[331] __attribute__((aligned(4))) = {
     0x64u, 0x06u, 0x87u, 0x55u, 0x11u, 0x11u, 0xc1u, 0xb1u, 0xa1u, 0x40u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels61[324] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels62[324] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x02u, 0x00u, 0x4cu, 0x00u, 0x40u, 0x00u, 0x02u, 0x03u, 0x50u, 0x09u, 0x30u, 0x00u, 0x04u, 0x30u,
     0x90u, 0xb0u, 0x0fu, 0x06u, 0x32u, 0x80u, 0x0cu, 0xccu, 0xbau, 0xebu, 0x3eu, 0x44u, 0x02u, 0x90u, 0x1du, 0x40u,
     0x84u, 0x08u, 0x80u, 0x0du, 0x32u, 0x44u, 0x11u, 0x77u, 0x58u, 0x95u, 0xb0u, 0x3eu, 0x40u, 0x57u, 0x09u, 0xb0u,
@@ -2956,7 +2973,7 @@ static const u8 sNdsEntryEffectTexels61[324] __attribute__((aligned(4))) = {
     0xf1u, 0x76u, 0x00u, 0x00u,
 };
 
-static const u8 sNdsEntryEffectTexels62[775] __attribute__((aligned(4))) = {
+static const u8 sNdsEntryEffectTexels63[775] __attribute__((aligned(4))) = {
     0x10u, 0x00u, 0x08u, 0x00u, 0x73u, 0x00u, 0xf0u, 0x00u, 0xf0u, 0x00u, 0x40u, 0x00u, 0x61u, 0x66u, 0x30u, 0x00u,
     0xf0u, 0x19u, 0x8fu, 0x10u, 0x00u, 0x11u, 0x11u, 0x11u, 0x50u, 0x20u, 0xf0u, 0x21u, 0x20u, 0x1eu, 0x20u, 0x1fu,
     0x5du, 0x88u, 0x20u, 0x00u, 0x06u, 0xf0u, 0x1eu, 0x20u, 0x1fu, 0x00u, 0x1au, 0xaau, 0x20u, 0x00u, 0xc9u, 0xc0u,
@@ -3137,49 +3154,53 @@ static const u16 sNdsEntryEffectPalette31[16] = {
 };
 
 static const u16 sNdsEntryEffectPalette32[16] = {
-    0x7f69u, 0x7f8bu, 0x7f8du, 0x7fb1u, 0x7fd3u, 0x7fd5u, 0x7ffau, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u,
+    0x0000u, 0x0308u, 0x032bu, 0x034eu, 0x0351u, 0x0373u, 0x0396u, 0x03b9u, 0x03bbu, 0x03deu, 0x13deu, 0x2bdeu, 0x43deu, 0x57deu, 0x6fdeu, 0x7bdeu,
 };
 
 static const u16 sNdsEntryEffectPalette33[16] = {
+    0x7f69u, 0x7f8bu, 0x7f8du, 0x7fb1u, 0x7fd3u, 0x7fd5u, 0x7ffau, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u,
+};
+
+static const u16 sNdsEntryEffectPalette34[16] = {
     0x0000u, 0x5540u, 0x7944u, 0x7a04u, 0x7a0cu, 0x7a63u, 0x7a68u, 0x7aedu, 0x7af2u, 0x7b16u, 0x7b8fu, 0x7bd0u, 0x7bd5u, 0x7bdbu, 0x7bdeu, 0x0000u,
 };
 
-static const u16 sNdsEntryEffectPalette34[32] = {
+static const u16 sNdsEntryEffectPalette35[32] = {
     0x0000u, 0x0421u, 0x0842u, 0x0c63u, 0x1084u, 0x14a5u, 0x18c6u, 0x1ce7u, 0x2108u, 0x2529u, 0x294au, 0x2d6bu, 0x318cu, 0x35adu, 0x39ceu, 0x3defu, 0x4210u, 0x4631u, 0x4a52u, 0x4e73u, 0x5294u, 0x56b5u, 0x5ad6u, 0x5ef7u, 0x6318u, 0x6739u, 0x6b5au, 0x6f7bu, 0x739cu, 0x77bdu, 0x7bdeu, 0x7fffu,
 };
 
-static const u16 sNdsEntryEffectPalette35[16] = {
+static const u16 sNdsEntryEffectPalette36[16] = {
     0x0000u, 0x7b80u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u,
 };
 
-static const u16 sNdsEntryEffectPalette36[8] = {
+static const u16 sNdsEntryEffectPalette37[8] = {
     0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu,
 };
 
-static const u16 sNdsEntryEffectPalette37[16] = {
+static const u16 sNdsEntryEffectPalette38[16] = {
     0x0000u, 0x2000u, 0x3400u, 0x4000u, 0x6400u, 0x6dcbu, 0x70c6u, 0x758cu, 0x7800u, 0x7a52u, 0x7bdeu, 0x7e4eu, 0x7f77u, 0x0000u, 0x0000u, 0x0000u,
 };
 
-static const u16 sNdsEntryEffectPalette38[16] = {
+static const u16 sNdsEntryEffectPalette39[16] = {
     0x0000u, 0x7800u, 0x7840u, 0x79e0u, 0x7a02u, 0x7a64u, 0x7bcfu, 0x7bd0u, 0x7bd3u, 0x7bdeu, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u, 0x0000u,
 };
 
-static const u16 sNdsEntryEffectPalette39[16] = {
+static const u16 sNdsEntryEffectPalette40[16] = {
     0x0000u, 0x05bau, 0x05fbu, 0x084bu, 0x084du, 0x086fu, 0x0891u, 0x08b3u, 0x0917u, 0x0a1eu, 0x0cf5u, 0x0e9eu, 0x1efeu, 0x439eu, 0x0000u, 0x0000u,
 };
 
-static const u16 sNdsEntryEffectPalette40[16] = {
+static const u16 sNdsEntryEffectPalette41[16] = {
     0x0000u, 0x05fbu, 0x0c4au, 0x0c6eu, 0x0c70u, 0x0d78u, 0x10b2u, 0x10f5u, 0x1154u, 0x127cu, 0x161au, 0x1affu, 0x1dd8u, 0x2f5fu, 0x439fu, 0x5fdfu,
 };
 
-static const u16 sNdsEntryEffectPalette41[16] = {
+static const u16 sNdsEntryEffectPalette42[16] = {
     0x0000u, 0x1585u, 0x1a26u, 0x1f47u, 0x2a8cu, 0x2f6cu, 0x318cu, 0x3b70u, 0x4210u, 0x42d1u, 0x4651u, 0x4b75u, 0x56b5u, 0x5f38u, 0x6b7au, 0x739cu,
 };
 
 static const u8 sNdsEntryEffectTextureStartupOnly[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {
     1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u,
-    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
-    0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 0u, 0u, 0u, 0u, 0u, 0u,
+    0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
 };
 
 static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {
@@ -3223,31 +3244,32 @@ static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXT
     { sNdsEntryEffectTexels35, sizeof(sNdsEntryEffectTexels35), sNdsEntryEffectPalette19, 8u, 16u, 16u, 1u, 0u, 1u },
     { sNdsEntryEffectTexels36, sizeof(sNdsEntryEffectTexels36), sNdsEntryEffectPalette19, 8u, 8u, 16u, 1u, 0u, 1u },
     { sNdsEntryEffectTexels37, sizeof(sNdsEntryEffectTexels37), sNdsEntryEffectPalette31, 16u, 16u, 16u, 0u, 0u, 1u },
-    { sNdsEntryEffectTexels38, sizeof(sNdsEntryEffectTexels38), sNdsEntryEffectPalette32, 16u, 16u, 8u, 0u, 0u, 1u },
-    { sNdsEntryEffectTexels39, sizeof(sNdsEntryEffectTexels39), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels40, sizeof(sNdsEntryEffectTexels40), sNdsEntryEffectPalette19, 8u, 64u, 64u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels41, sizeof(sNdsEntryEffectTexels41), sNdsEntryEffectPalette33, 16u, 32u, 32u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels42, sizeof(sNdsEntryEffectTexels42), sNdsEntryEffectPalette34, 32u, 32u, 32u, 3u, 0u, 1u },
-    { sNdsEntryEffectTexels43, sizeof(sNdsEntryEffectTexels43), sNdsEntryEffectPalette35, 16u, 16u, 16u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels44, sizeof(sNdsEntryEffectTexels44), sNdsEntryEffectPalette36, 8u, 32u, 16u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels45, sizeof(sNdsEntryEffectTexels45), sNdsEntryEffectPalette19, 8u, 64u, 64u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels46, sizeof(sNdsEntryEffectTexels46), sNdsEntryEffectPalette19, 8u, 32u, 64u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels47, sizeof(sNdsEntryEffectTexels47), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels48, sizeof(sNdsEntryEffectTexels48), sNdsEntryEffectPalette19, 8u, 32u, 64u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels49, sizeof(sNdsEntryEffectTexels49), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels50, sizeof(sNdsEntryEffectTexels50), sNdsEntryEffectPalette19, 8u, 16u, 16u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels44, sizeof(sNdsEntryEffectTexels44), sNdsEntryEffectPalette36, 8u, 32u, 16u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels51, sizeof(sNdsEntryEffectTexels51), sNdsEntryEffectPalette37, 16u, 32u, 32u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels52, sizeof(sNdsEntryEffectTexels52), sNdsEntryEffectPalette38, 16u, 16u, 8u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels53, sizeof(sNdsEntryEffectTexels53), NULL, 0u, 32u, 32u, 2u, 0u, 1u },
-    { sNdsEntryEffectTexels54, sizeof(sNdsEntryEffectTexels54), sNdsEntryEffectPalette38, 16u, 16u, 128u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels55, sizeof(sNdsEntryEffectTexels55), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels38, sizeof(sNdsEntryEffectTexels38), sNdsEntryEffectPalette32, 16u, 16u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels39, sizeof(sNdsEntryEffectTexels39), sNdsEntryEffectPalette33, 16u, 16u, 8u, 0u, 0u, 1u },
+    { sNdsEntryEffectTexels40, sizeof(sNdsEntryEffectTexels40), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels41, sizeof(sNdsEntryEffectTexels41), sNdsEntryEffectPalette19, 8u, 64u, 64u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels42, sizeof(sNdsEntryEffectTexels42), sNdsEntryEffectPalette34, 16u, 32u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels43, sizeof(sNdsEntryEffectTexels43), sNdsEntryEffectPalette35, 32u, 32u, 32u, 3u, 0u, 1u },
+    { sNdsEntryEffectTexels44, sizeof(sNdsEntryEffectTexels44), sNdsEntryEffectPalette36, 16u, 16u, 16u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels45, sizeof(sNdsEntryEffectTexels45), sNdsEntryEffectPalette37, 8u, 32u, 16u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels46, sizeof(sNdsEntryEffectTexels46), sNdsEntryEffectPalette19, 8u, 64u, 64u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels47, sizeof(sNdsEntryEffectTexels47), sNdsEntryEffectPalette19, 8u, 32u, 64u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels48, sizeof(sNdsEntryEffectTexels48), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels49, sizeof(sNdsEntryEffectTexels49), sNdsEntryEffectPalette19, 8u, 32u, 64u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels50, sizeof(sNdsEntryEffectTexels50), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels51, sizeof(sNdsEntryEffectTexels51), sNdsEntryEffectPalette19, 8u, 16u, 16u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels45, sizeof(sNdsEntryEffectTexels45), sNdsEntryEffectPalette37, 8u, 32u, 16u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels52, sizeof(sNdsEntryEffectTexels52), sNdsEntryEffectPalette38, 16u, 32u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels53, sizeof(sNdsEntryEffectTexels53), sNdsEntryEffectPalette39, 16u, 16u, 8u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels54, sizeof(sNdsEntryEffectTexels54), NULL, 0u, 32u, 32u, 2u, 0u, 1u },
+    { sNdsEntryEffectTexels55, sizeof(sNdsEntryEffectTexels55), sNdsEntryEffectPalette39, 16u, 16u, 128u, 0u, 1u, 1u },
     { sNdsEntryEffectTexels56, sizeof(sNdsEntryEffectTexels56), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
-    { sNdsEntryEffectTexels57, sizeof(sNdsEntryEffectTexels57), sNdsEntryEffectPalette39, 16u, 64u, 64u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels58, sizeof(sNdsEntryEffectTexels58), sNdsEntryEffectPalette39, 16u, 64u, 64u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels59, sizeof(sNdsEntryEffectTexels59), sNdsEntryEffectPalette40, 16u, 32u, 32u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels60, sizeof(sNdsEntryEffectTexels60), sNdsEntryEffectPalette40, 16u, 32u, 32u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels61, sizeof(sNdsEntryEffectTexels61), sNdsEntryEffectPalette40, 16u, 32u, 32u, 0u, 1u, 1u },
-    { sNdsEntryEffectTexels62, sizeof(sNdsEntryEffectTexels62), sNdsEntryEffectPalette41, 16u, 64u, 64u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels57, sizeof(sNdsEntryEffectTexels57), sNdsEntryEffectPalette19, 8u, 32u, 32u, 1u, 0u, 1u },
+    { sNdsEntryEffectTexels58, sizeof(sNdsEntryEffectTexels58), sNdsEntryEffectPalette40, 16u, 64u, 64u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels59, sizeof(sNdsEntryEffectTexels59), sNdsEntryEffectPalette40, 16u, 64u, 64u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels60, sizeof(sNdsEntryEffectTexels60), sNdsEntryEffectPalette41, 16u, 32u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels61, sizeof(sNdsEntryEffectTexels61), sNdsEntryEffectPalette41, 16u, 32u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels62, sizeof(sNdsEntryEffectTexels62), sNdsEntryEffectPalette41, 16u, 32u, 32u, 0u, 1u, 1u },
+    { sNdsEntryEffectTexels63, sizeof(sNdsEntryEffectTexels63), sNdsEntryEffectPalette42, 16u, 64u, 64u, 0u, 1u, 1u },
 };
 
