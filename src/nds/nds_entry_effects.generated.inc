@@ -1514,7 +1514,7 @@ static const NDSEntryEffectGroup sNdsEntryEffectGroups[NDS_ENTRY_EFFECT_GROUP_CO
     { 1152u, 2u, 18u, 37u, 20u, 7u, 2u, 1u, 0u, 3u, 8u, 3u, 3u, 3u, 3u, 0u, 255u },
     { 1158u, 2u, 18u, 38u, 21u, 6u, 2u, 1u, 0u, 3u, 8u, 3u, 3u, 3u, 3u, 0u, 255u },
     { 1164u, 8u, 18u, 39u, 22u, 8u, 5u, 2u, 3u, 3u, 8u, 2u, 2u, 4u, 4u, 0u, 255u },
-    { 1188u, 16u, 18u, 40u, 23u, 9u, 5u, 3u, 0u, 0u, 9u, 2u, 2u, 4u, 5u, 0u, 0u },
+    { 1188u, 16u, 18u, 40u, 23u, 9u, 5u, 3u, 0u, 0u, 9u, 0u, 2u, 4u, 5u, 0u, 0u },
     { 1236u, 16u, 18u, 41u, 24u, 10u, 5u, 3u, 0u, 0u, 9u, 0u, 2u, 4u, 3u, 0u, 0u },
     { 1284u, 2u, 18u, 42u, 25u, 6u, 6u, 2u, 0u, 4u, 9u, 2u, 2u, 5u, 5u, 0u, 0u },
     { 1290u, 2u, 18u, 43u, 26u, 11u, 6u, 2u, 0u, 5u, 9u, 2u, 2u, 6u, 6u, 0u, 8u },

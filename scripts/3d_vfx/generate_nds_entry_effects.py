@@ -164,11 +164,14 @@ FALCON_PUNCH_EXPECTED_TEXTURE_OFFSETS = (0x0490, 0x0288, 0x0080)
 # DObjDesc/MObj/AnimJoint/MatAnimJoint into LinkModel, whose drawable child's
 # DObjDLLink at 0x118F8 submits the immutable Gfx root at 0x11680.
 LINK_ENTRY_ROOTS = (0x02D8, 0x0698)
-# The wave's list loads its own green CI4 image (0x0030, TLUT 0x0008) but
-# leaves the render tile's size to its MObj's segment-E branch (MObjSub flag
-# 0x20): 16x32, decomp relocData/353_LinkSpecial2.c. Its MatAnim never moves
-# the texture (TRAU/TRAV 0, SCAU/SCAV 1), so the size is constant.
-LINK_ENTRY_WAVE_TEXTURE_SIZES = {LINK_ENTRY_ROOTS[0]: {0: (16, 32)}}
+# The wave's list loads its own green CI4 image (0x0030, TLUT 0x0008, 16x32)
+# but leaves the render tile's size to its MObj's segment-E branch (MObjSub
+# flag 0x20, unk0C x unk0E): 576x32, decomp relocData/353_LinkSpecial2.c. That
+# clamp window is 36 of the tile's 16-texel S periods (masks 4) and holds the
+# ring's whole S range (180-468 texels), so the RDP wraps the streaks around
+# the ring (Compiler.unclamped_windows). Its MatAnim never moves the texture
+# (TRAU/TRAV 0, SCAU/SCAV 1), so the size is constant.
+LINK_ENTRY_WAVE_TEXTURE_SIZES = {LINK_ENTRY_ROOTS[0]: {0: (576, 32)}}
 LINK_SPIN_EFFECT_ROOTS = (0x1100,)
 LINK_SPECIAL2_ROOTS = LINK_ENTRY_ROOTS + LINK_SPIN_EFFECT_ROOTS
 LINK_MODEL_SPIN_ROOTS = (0x11680,)
@@ -957,6 +960,9 @@ class Compiler:
         # calls both runs MObj 0's material twice (Sonic's spring: E+0 before
         # its LOADTLUT, E+8 before its LOADBLOCK).
         self.material_aliases = material_aliases or {}
+        # Per material slot, the (s, t) axes that sample as wrap for the root
+        # being compiled (compile_roots, unclamped_windows).
+        self.material_wrap: dict[int, tuple[bool, bool]] = {}
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.vertex_matrix_root: dict[int, int] = {}
@@ -1027,9 +1033,46 @@ class Compiler:
             # top-level roots, while recursive file-relative G_DL calls retain
             # ordinary RSP state exactly as before.
             self.material_slot = MATERIAL_NONE
-            self.material_texture_sizes = {**base_sizes, **(root_texture_sizes or {}).get(root, {})}
+            root_sizes = (root_texture_sizes or {}).get(root, {})
+            self.material_texture_sizes = {**base_sizes, **root_sizes}
+            self.material_wrap = (self.unclamped_windows(root, root_base + local_index)
+                                  if root_sizes else {})
             self.walk(root, root_base + local_index, ())
         self.material_texture_sizes = base_sizes
+        self.material_wrap = {}
+
+    def unclamped_windows(self, root: int, root_index: int) -> dict[int, tuple[bool, bool]]:
+        """Per material slot, the axes (s, t) whose clamp window -- the tile
+        size the MObj sets -- is wider than the mask period and holds every
+        corner the root draws: the RDP never clamps them and wraps every
+        period, so they sample as wrap (the DS repeats the one-period
+        texture). Found by walking the root once on a copy."""
+        probe = copy.deepcopy(self, {id(self.resources): self.resources,
+                                     id(self.resource): self.resource})
+        probe.material_wrap = {}
+        first = len(probe.groups)
+        probe.walk(root, root_index, ())
+        ranges: dict[int, list[int]] = {}
+        for group in probe.groups[first:]:
+            key = group.state.texture_key
+            slot = group.state.material_slot
+            if key is None or slot not in self.material_texture_sizes:
+                continue
+            r = ranges.setdefault(slot, [1 << 30, -(1 << 30), 1 << 30, -(1 << 30), key])
+            for v in group.corners:  # final UVs: 1/16 texel
+                r[0], r[1] = min(r[0], v.s), max(r[1], v.s)
+                r[2], r[3] = min(r[2], v.t), max(r[3], v.t)
+        wrap = {}
+        for slot, (s0, s1, t0, t1, key) in ranges.items():
+            width, height = self.material_texture_sizes[slot]
+
+            def unclamped(mode: int, mask: int, window: int, lo: int, hi: int) -> bool:
+                return (bool(mode & static.TX_CLAMP) and 0 < mask < 31 and
+                        window > (1 << mask) and lo >= 0 and hi < window * 16)
+
+            wrap[slot] = (unclamped(key.cms, key.masks, width, s0, s1),
+                          unclamped(key.cmt, key.maskt, height, t0, t1))
+        return wrap
 
     def walk(self, start: int, root_index: int, stack: tuple[int, ...]) -> None:
         if start in stack:
@@ -1094,6 +1137,12 @@ class Compiler:
                         tile.lrt = (height - 1) << 2
                         tile.width = width
                         tile.height = height
+                        wrap_s, wrap_t = self.material_wrap.get(
+                            self.material_slot, (False, False))
+                        if wrap_s:
+                            tile.cms &= ~static.TX_CLAMP
+                        if wrap_t:
+                            tile.cmt &= ~static.TX_CLAMP
                         self.display.texture_seen = True
                         self.display.texture_on = True
                         self.display.texture_tile = static.RENDER_TILE
