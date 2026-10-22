@@ -5,9 +5,12 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** build the S1 ROMs on HEAD with `scripts/tools/` (walk, soak,
-wireless lab, gate) and start S1 in the background slots; Phase C goes on in
-the foreground between builds (C3: `nds_renderer_textures_effects.c`).
+**Next action:** the owner's two `BUGS.md` rows first -- the off-screen
+magnifier (designed: a second lean submit of the culled fighter inside the
+bubble's viewport, then the bubble's disc, rim and arrow) and Link's entry wave
+(drawn every frame at alpha ~10/31 but hidden: it sits inside his beam, both
+translucent with polygon ID 1). S1's audits run in slots 8-12 meanwhile; C3
+(`nds_renderer_textures_effects.c` into seven slices) is planned and checked.
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -35,15 +38,15 @@ commit with explicit paths only.
 |---|---|---|
 | Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
 | H-1 tools S1 and the gate need, into `scripts/tools/` | done | 22 files, `scripts/tools/README.md`: play/walk/gate/soak builds, the probe session and halt probes, the six audit drivers, the wireless lag driver, the worst-case sweep, the heap census, the boot check; no session paths (`common.ps1`); `boot_check.ps1` boots `play-ram1` clean |
-| S1 regression net (full matrix) on HEAD | open | ROMs: walk, soak, wireless lab, ship layout |
+| S1 regression net (full matrix) on HEAD | in progress | ROMs `walk-u19`, `build-soak-s32`, `net-p8a`, `build-sweep-s62` on HEAD `8b9d2a52f9f`; slot images regenerate per slot now (`5075604365a`), five audits side by side. Wireless 2 consoles: 3 matches, 0 desyncs, 0 aborts. Training: 2 of the first 21 runs timed out after a second entry into the training battle (DK, Kirby: the walk's menu drive), rerun next |
 | C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` (`7f0dca28600`) and `reloc_backend_assets.c` (C2) done; next `nds_renderer_textures_effects.c` |
-| S3 static analysis (`-fanalyzer`, allocations, stacks) | open | foreground work while S1 runs |
+| S3 static analysis (`-fanalyzer`, allocations, stacks) | in progress | `-fanalyzer` over the 80 port compiles of the play config: 21 distinct warnings, all triaged false or benign (NULL-checked helpers read as maybe-NULL in `nds_p4.c`; the ARM7 snapshot copy; a zero-count loop; linker-symbol pointer differences; the joint table's parent-first order). `-fstack-usage`: largest frames `ndsAudioParseCtl` 12,384 B (boot, main stack), `ndsRendererAdapterSubmitStageDLBody` 5,192 B, `ndsRendererAdapterTryNativeEntryEffect` 2,888 B; next the allocation audit and the coroutine stack paint |
 | D purpose headers and invariant comments | open | after C |
 | E dormant verifier framework, legacy fighter executor | open | owner OK (`OWNER_QUESTIONS.md` 6) |
 | F history names | open | |
 | G Makefile cleanup and split | open | proof: `make -n` identity |
 | H-2 the rest of the tools, `quick_check.ps1` | open | |
-| I docs routing, P7 close-out, archive | in progress | `AGENTS.md`, `HANDOFF.md` and `docs/README.md` route to P8 (the owner's pending README rows kept); next `P7_STATUS.md`'s rows against their evidence, then the `BUG_NOTES.md` / `PERF_LEDGER.md` archive |
+| I docs routing, P7 close-out, archive | in progress | `AGENTS.md`, `HANDOFF.md` and `docs/README.md` route to P8 (the owner's pending README rows kept); P7's rows closed with their evidence (`ce376f1be3e`); next the `PERF_LEDGER.md` archive (`BUG_NOTES.md` waits: the owner's move from `docs/p2/` is uncommitted) |
 | S2 fault injection (squeeze, slow storage, long soak, laps, fuzz) | open | lab flags only |
 | S4 stalls (load ledger, storage waits, menu spikes) | open | |
 | S5 freeze report gaps | open | menus, loads, before the first frame; identity fields |
@@ -61,6 +64,10 @@ commit with explicit paths only.
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- I: P7's in-progress rows closed with their evidence (`ce376f1be3e`).
+- 2026-10-22 -- S1 tools: a slot's DLDI image regenerates while other slots run (`5075604365a`;
+  the Training audit had logged 32 empty runs); the shield palette test's C1 shadowing fixed
+  (`8d16bb7b50d`).
 - 2026-10-22 -- H-1: the S1 and gate tools in `scripts/tools/` (22 files, README); parse-clean,
   `boot_check.ps1` on `play-ram1`: scene 1, 0 storage failures.
 - 2026-10-22 -- C2: `reloc_backend_assets.c` (18,246 lines) into 8 slices of the
