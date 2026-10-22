@@ -1364,7 +1364,6 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
              (gobj->proc_display == ifCommonPlayerStockSingleProcDisplay))
     {
         route = 2u;
-        NDS_DIAG(gNdsIFCommonHUDLowerStockRouteCount++);
     }
     else if ((gobj->proc_display == ifCommonPlayerDamageProcDisplay) ||
              (gobj->proc_display == ndsIFCommonPlayerDamageProcDisplayGate))

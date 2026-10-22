@@ -1373,7 +1373,6 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
     }
     if (v2y == v1y)
     {
-        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         wall_x = ((f32)v1x + (f32)v2x) * 0.5F;
     }
     else

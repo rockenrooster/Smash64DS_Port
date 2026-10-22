@@ -45,8 +45,6 @@ void gcPlayAnimAll(GObj *gobj);
 extern s32 sGCCommonsActiveNum;
 extern u32 sGCDrawsActiveNum;
 extern volatile u32 gNdsStageInishieScaleLoopSourceSetupStep;
-extern volatile u32 gNdsStageInishieScaleLoopSourceSetupGObjCountBefore;
-extern volatile u32 gNdsStageInishieScaleLoopSourceSetupDObjCountBefore;
 extern volatile u32 gNdsStageInishieScaleLoopSourceSetupGObjReadyMask;
 
 #define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))

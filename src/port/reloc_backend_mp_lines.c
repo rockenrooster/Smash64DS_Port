@@ -307,7 +307,6 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
          * exactly when their bits are. */
         if (ndsFcmpBits(fx1) == ndsFcmpBits(fx2))
         {
-            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;
         }
         /* A flat segment's height is fy1 exactly (ndsMPFlatSegmentExact):
@@ -620,7 +619,6 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         y2 = ndsMPVertexY(verts, v2_id);
         if (x1 == x2)
         {
-            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;
         }
         ceil_y = ndsMPLineDistanceFC(object_local.x, x1, y1, x2, y2);
@@ -1445,10 +1443,6 @@ static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
     angle->z = 0.0F;
     if ((v2x == v1x) || (v2y == v1y))
     {
-        if (v2x != v1x)
-        {
-            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
-        }
         angle->x = (lr < 0) ? -1.0F : 1.0F;
         angle->y = 0.0F;
         return;

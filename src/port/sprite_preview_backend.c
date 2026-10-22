@@ -1243,7 +1243,6 @@ void syRdpSetDefaultViewport(Vp *vp)
     vp->vp.vscale[2] = (s16)(0x03FF / 2);
     vp->vp.vtrans[2] = (s16)(0x03FF / 2);
 
-    NDS_DIAG(gNdsRdpDefaultViewportSetCount++);
     gNdsRdpDefaultViewportScaleX = vp->vp.vscale[0];
     gNdsRdpDefaultViewportScaleY = vp->vp.vscale[1];
     gNdsRdpDefaultViewportTransX = vp->vp.vtrans[0];

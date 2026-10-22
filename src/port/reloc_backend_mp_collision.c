@@ -985,7 +985,6 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
     }
     if (v2x == v1x)
     {
-        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         angle->x = 0.0F;
         angle->y = (ud < 0) ? -1.0F : 1.0F;
         return;
@@ -1358,7 +1357,6 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
             }
         }
     }
-    NDS_DIAG(gNdsStageCollisionLoopOutOfRangeLineCount++);
     return FALSE;
 }
 

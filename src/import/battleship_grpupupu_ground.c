@@ -720,7 +720,6 @@ void grCommonSetupInitAll(void)
 
 static GObj *ndsGRNonPupupuGroundStub(void)
 {
-    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
     return NULL;
 }
 
@@ -767,11 +766,9 @@ GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_1P_GAME
 void sc1PBonusStageInitBonus2(void)
 {
-    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
 }
 
 void sc1PBonusStageMakeBonus1Ground(void)
 {
-    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
 }
 #endif

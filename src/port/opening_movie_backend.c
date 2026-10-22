@@ -1305,7 +1305,6 @@ static void ndsOpeningRoomRecordCapturedDisplay(GObj *camera_gobj,
     {
         return;
     }
-    NDS_DIAG(gNdsOpeningRoomDrawDisplayCallbackCount++);
 
     if ((display_gobj != NULL) &&
         (gNdsOpeningRoomDrawFirstObjectDLLink == 0xffffffffu))
@@ -1398,25 +1397,11 @@ static void ndsOpeningRoomRecordTextureMaterialDObj(GObj *gobj,
 
         if (counted_dobj == FALSE)
         {
-            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialCandidateCount++);
             counted_dobj = TRUE;
         }
-        NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialMObjCount++);
 
         mask = ndsOpeningRoomMakeTextureMObjMask(
             mobj, effective_flags, &sprite_curr, &sprite_next);
-        if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_SPRITE_ARRAY) != 0)
-        {
-            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteArrayCount++);
-        }
-        if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_CURR_SPRITE) != 0)
-        {
-            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteCurrCount++);
-        }
-        if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_NEXT_SPRITE) != 0)
-        {
-            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteNextCount++);
-        }
 
         ndsOpeningRoomStoreTextureMaterialCandidate(
             gobj, dobj, dl, callback_marker, mobj, mobj_count,
@@ -1512,7 +1497,6 @@ static void ndsOpeningRoomRecordDObjDraw(GObj *gobj, u32 callback_marker)
 
     if (material_dobj != NULL)
     {
-        NDS_DIAG(gNdsOpeningRoomDrawMaterialCandidateCount++);
         if (sNdsOpeningRoomMaterialPreviewDObj == NULL)
         {
             sNdsOpeningRoomMaterialPreviewCameraGObj =
@@ -1805,7 +1789,6 @@ void func_80017EC0(GObj *gobj)
         (gNdsFighterGCDrawAllLoopPrepared != 0u) &&
         (gNdsFighterMarioFoxGCDrawAllLoopResult == 0u))
     {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopCameraCallbackCount++);
     }
     ndsStageGCDrawAllLoopRecordCameraCallback();
 

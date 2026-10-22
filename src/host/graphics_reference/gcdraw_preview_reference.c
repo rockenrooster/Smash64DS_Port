@@ -28,7 +28,6 @@ static void ndsFighterGCDrawAllLoopDrawKeyframe(void)
 
     ndsFighterPreviewLoopClear(pixels, pitch);
     gcDrawAll();
-    NDS_DIAG(gNdsFighterGCDrawAllLoopDrawAllCount++);
     if (ndsFighterMarioFoxStageGCDrawAllLoopProofEnabled() != FALSE)
     {
         NDS_DIAG(gNdsStageGCDrawAllLoopDrawAllCount++);

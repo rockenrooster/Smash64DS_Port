@@ -595,7 +595,6 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
             (gNdsRendererAdapterCustom47TranslationMismatchCount !=
                 custom47_translation_mismatch_before))
         {
-            NDS_DIAG(gNdsWeaponRendererFireballCustom47MismatchCount++);
         }
         if ((texture_ready_delta != 0u) && (texture_reject_delta == 0u))
         {

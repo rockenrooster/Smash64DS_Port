@@ -163,7 +163,6 @@ void ndsFighterDisplayContractSetLightCount(u32 count)
     if (sNdsFighterDisplayContract.active != 0u)
     {
         sNdsFighterDisplayContract.light_count = count;
-        NDS_DIAG(gNdsFighterDisplayContractLightCount += count);
     }
 }
 
@@ -194,7 +193,6 @@ void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
     {
         sNdsFighterDisplayContract.light = *light;
         sNdsFighterDisplayContract.light_valid = TRUE;
-        NDS_DIAG(gNdsFighterDisplayContractLightDirectionCount++);
     }
 }
 
@@ -215,27 +213,13 @@ u8 ndsFighterDisplayContractSetStageEnvColor(Gfx **dls)
 sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
 {
     extern sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y);
-    sb32 is_in_bounds;
 
     if (sNdsFighterMagnifyFp != NULL)
     {
         /* The magnifier's submit draws the fighter the main pass culled. */
         return TRUE;
     }
-    /* Diagnostic words only (exported under NDS_DIAG_COUNTERS): out of the
-     * ship and gate ITCM, which pays for the test above. */
-    NDS_DIAG(gNdsFighterDisplayContractBoundsXBits = ndsFloatBits(pos_x));
-    NDS_DIAG(gNdsFighterDisplayContractBoundsYBits = ndsFloatBits(pos_y));
-    is_in_bounds = gmCameraCheckTargetInBounds(pos_x, pos_y);
-    if (is_in_bounds != FALSE)
-    {
-        NDS_DIAG(gNdsFighterDisplayContractBoundsPassCount++);
-    }
-    else
-    {
-        NDS_DIAG(gNdsFighterDisplayContractBoundsFailCount++);
-    }
-    return is_in_bounds;
+    return gmCameraCheckTargetInBounds(pos_x, pos_y);
 }
 
 /* BattleShip ftparam.c:2421-2439 in fixed point (P2-2p8, 2026-10-05; owner:
@@ -865,7 +849,6 @@ void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
         return;
     }
     sNdsFtrDrawMemoState = 3u;      /* boundary seen; not cacheable yet */
-    NDS_DIAG(gNdsFtrDrawMemoBoundary++);
     if ((display_mode_master == 0u) || (fp == NULL) ||
         (fp->afterimage.drawstatus >= 2))
     {
@@ -884,7 +867,6 @@ void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
     {
         if (slot->key[i] != sNdsFtrDrawMemoKey[i])
         {
-            NDS_DIAG(gNdsFtrDrawMemoInvalidations++);
             return;
         }
     }
@@ -904,7 +886,6 @@ static void ndsFtrDrawMemoFinish(void)
     sNdsFtrLeanMemoFromSlot = 0u;
     if (sNdsFtrDrawMemoState != 2u)
     {
-        NDS_DIAG(gNdsFtrDrawMemoBypass++);
         sNdsFtrDrawMemoState = 0u;
         return;
     }
@@ -925,8 +906,6 @@ static void ndsFtrDrawMemoFinish(void)
          * was replayed. Keeping the counter's meaning is what makes Boundary's
          * ftrContract smoke an equality control rather than a known diff. */
         gNdsFighterDisplayContractSelectedCount += n;
-        NDS_DIAG(gNdsFtrDrawMemoHits++);
-        NDS_DIAG(gNdsFtrDrawMemoReplayEvents += n);
         sNdsFtrDrawMemoState = 0u;
         return;
     }
@@ -948,7 +927,6 @@ static void ndsFtrDrawMemoFinish(void)
         slot->key[i] = sNdsFtrDrawMemoKey[i];
     }
     slot->valid = 1u;
-    NDS_DIAG(gNdsFtrDrawMemoFills++);
     sNdsFtrDrawMemoState = 0u;
 }
 

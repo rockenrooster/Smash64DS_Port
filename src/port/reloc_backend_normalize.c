@@ -3286,7 +3286,6 @@ static void ndsRelocRegisterNormalizedMObjSub(
     if (sNdsRelocNormalizedMObjSubCount >=
         NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY)
     {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
     sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount].record =
@@ -3368,7 +3367,6 @@ static void ndsRelocRecordMObjSubNormalize(
 
     if (mobjsub == NULL)
     {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -3382,21 +3380,8 @@ static void ndsRelocRecordMObjSubNormalize(
     gNdsOpeningRoomRelocMObjSubSourceResult =
         NDS_OPENING_ROOM_RELOC_MOBJ_SOURCE_PASS;
 
-    if (flags == MOBJ_FLAG_NONE)
-    {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubZeroFlagCount++);
-    }
-    if ((flags & MOBJ_FLAG_PRIMCOLOR) != 0)
-    {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubPrimColorCount++);
-    }
-    if ((flags & (MOBJ_FLAG_LIGHT1 | MOBJ_FLAG_LIGHT2)) != 0)
-    {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubLightCount++);
-    }
     if ((effective_flags & MOBJ_FLAG_TEXTURE) != 0)
     {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubTextureFlagCount++);
         if (gNdsOpeningRoomRelocMObjSubFirstTextureOffset == 0xffffffffu)
         {
             if ((loaded != NULL) &&
@@ -3410,10 +3395,6 @@ static void ndsRelocRecordMObjSubNormalize(
         }
     }
 
-    if (ndsRelocMObjSubFlagsKnown(flags) == FALSE)
-    {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
-    }
 }
 
 static s32 ndsRelocMObjSubMixedFieldsLookNative(const MObjSub *mobjsub)
@@ -3435,7 +3416,6 @@ static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
 {
     if (mobjsub == NULL)
     {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -3463,7 +3443,6 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
         (ndsRelocRangeInLoadedFile(loaded, offset, sizeof(*p_mobjsubs)) ==
          FALSE))
     {
-        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -3477,7 +3456,6 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
                 loaded, &p_mobjsubs[head_index], sizeof(*p_mobjsubs)) ==
             FALSE)
         {
-            NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
             return;
         }
 
@@ -3489,7 +3467,6 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
         if (ndsRelocPointerRangeInLoadedFile(
                 loaded, mobjsubs, sizeof(*mobjsubs)) == FALSE)
         {
-            NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
             return;
         }
 
@@ -3501,7 +3478,6 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
                     loaded, &mobjsubs[list_index], sizeof(*mobjsubs)) ==
                 FALSE)
             {
-                NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
                 return;
             }
 
@@ -3513,7 +3489,6 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
             if (ndsRelocPointerRangeInLoadedFile(
                     loaded, mobjsub, sizeof(*mobjsub)) == FALSE)
             {
-                NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
                 return;
             }
             ndsRelocNormalizeMObjSubMixedFields(loaded, mobjsub);

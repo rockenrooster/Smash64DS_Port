@@ -156,7 +156,6 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
                  * below the point, so that line offers no floor. */
                 if (x1 == x2)
                 {
-                    NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
                     break;
                 }
                 fpos = ndsMPLineDistanceFC(vpdist_x, x1, y1, x2, y2);
@@ -220,7 +219,6 @@ static void ndsStageCollisionLoopRecordProject(Vec3f *position, sb32 hit,
     {
         return;
     }
-    NDS_DIAG(gNdsStageCollisionLoopProjectCallCount++);
     if (used_geometry != FALSE)
     {
         gNdsStageCollisionLoopGeometryProjectCallCount++;
@@ -250,18 +248,9 @@ static void ndsStageCollisionLoopRecordProject(Vec3f *position, sb32 hit,
     }
     if ((best_slot == 0u) && (best_delta <= 256.0F))
     {
-        NDS_DIAG(gNdsStageCollisionLoopP0ProjectCount++);
         if (hit != FALSE)
         {
             gNdsStageCollisionLoopP0HitCount++;
-        }
-    }
-    else if ((best_slot == 1u) && (best_delta <= 256.0F))
-    {
-        NDS_DIAG(gNdsStageCollisionLoopP1ProjectCount++);
-        if (hit != FALSE)
-        {
-            NDS_DIAG(gNdsStageCollisionLoopP1HitCount++);
         }
     }
 }
@@ -286,7 +275,6 @@ static sb32 ndsStageCollisionLoopCheckProjectFloor(
     }
     if (ndsStageCollisionLoopGeometryReady() == FALSE)
     {
-        NDS_DIAG(gNdsStageCollisionLoopNoGeometryCount++);
         gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount++;
         if (floor_line_id != NULL)
         {
@@ -526,7 +514,6 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             u32 j_first;
             u32 j_last;
 
-            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepVisitCount++);
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
                 NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
@@ -592,7 +579,6 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 {
                     continue;
                 }
-                NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepCandidateCount++);
                 hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
@@ -878,7 +864,6 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
 
                 ndsMPVertexF32Get(verts, v1_id, &v1.x, &v1.y);
                 ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
-                NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepVisitCount++);
                 if ((ndsFcmpBits(v1.y) != ndsFcmpBits(v2.y)) &&
                     (ndsMPSweepSegmentXMissesKeys(&v1, &v2, key_min_x,
                                                   key_max_x) != FALSE))
@@ -891,7 +876,6 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 {
                     continue;
                 }
-                NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepCandidateCount++);
                 hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
@@ -1256,13 +1240,10 @@ sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
             fighter_gobj, MAP_PROC_TYPE_DEFAULT);
     }
     return ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj);
-    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorCallCount++);
     if (ndsStageMPUpdateFloorLoopUpdateFighter(fighter_gobj) != FALSE)
     {
-        NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorHitCount++);
         return TRUE;
     }
-    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorMissCount++);
     return FALSE;
 }
 
@@ -1303,10 +1284,8 @@ sb32 mpCommonCheckFighterOnCliffEdge(GObj *fighter_gobj)
     gNdsStageMPUpdateFloorLoopCheckCliffEdgeCallCount++;
     if (ndsStageMPUpdateFloorLoopUpdateFighter(fighter_gobj) != FALSE)
     {
-        NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount++);
         return TRUE;
     }
-    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount++);
     return FALSE;
 }
 

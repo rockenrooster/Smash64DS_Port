@@ -310,7 +310,6 @@ static void ndsRendererAdapterPrepareInitialMatrices(
      * the stage submits hundreds of lists per frame through this same path. */
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
-        NDS_DIAG(gNdsRendererAdapterEffectPrepCount++);
         gNdsRendererAdapterEffectPrepMask =
             ((camera_projection_valid != FALSE) ? 1u : 0u) |
             ((camera_modelview_valid != FALSE) ? 2u : 0u) |

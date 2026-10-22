@@ -7446,13 +7446,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
         handled = ndsRendererSubmitNativeVisualEffect(
             sNdsRendererAdapterVisualEffectTemplate, &config, render_stats);
-        if (handled != FALSE)
+        if (handled == FALSE)
         {
-            NDS_DIAG(gNdsVisualEffectNativeDrawCount++);
-        }
-        else
-        {
-            NDS_DIAG(gNdsVisualEffectNativeDeclineCount++);
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
             /* Recorded with its own reason, as the body settles it. */
@@ -13570,18 +13565,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         visual_effect_native_handled = ndsRendererSubmitNativeVisualEffect(
             visual_effect_template, &visual_config, render_stats);
-        if (visual_effect_native_handled != FALSE)
-        {
-            NDS_DIAG(gNdsVisualEffectNativeDrawCount++);
-        }
-        else
+        if (visual_effect_native_handled == FALSE)
         {
             /* LOUD, AND WITH THE RIGHT REASON. An owner exists and refused, so
              * this is REJECTED_PROGRAM, not the generic NO_PROGRAM the guards
              * below publish for "nothing claimed this root". Recording it here
              * is what lets `settled` suppress those guards without turning a
              * refusal into a successful empty draw. */
-            NDS_DIAG(gNdsVisualEffectNativeDeclineCount++);
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
         }

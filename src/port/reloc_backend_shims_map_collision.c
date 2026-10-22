@@ -977,10 +977,6 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
         gNdsPupupuGroundDeferredMask |= 1u << 5;
         return;
     }
-    if (ground_gobj == gGRCommonLayerGObjs[1])
-    {
-        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopStageAnimCallbackCount++);
-    }
 
     dobj = DObjGetStruct(ground_gobj);
     ndsMPYakumonoIndexBuild(yakumono_index);
