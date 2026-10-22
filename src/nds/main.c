@@ -103,8 +103,8 @@ int main(void)
      * gNdsBootSelfTestResult and read by every verifier over gdb; this is the
      * human-readable copy on the sub console, which a ROM handed to the owner
      * does not want under its menus. */
-    iprintf("OS queues/threads: %s", os_test == 0 ? "PASS\n" : "FAIL ");
-    if (os_test != 0) iprintf("%d\n", os_test);
+    ndsConsolePrintf("OS queues/threads: %s", os_test == 0 ? "PASS\n" : "FAIL ");
+    if (os_test != 0) ndsConsolePrintf("%d\n", os_test);
 #endif
     sniprintf(debug_message, sizeof(debug_message),
              "SSB64DS: OS SELFTEST %s (%d)\n",
@@ -116,7 +116,7 @@ int main(void)
 
     syMainLoop();
 #if NDS_BOOT_DIAG_TEXT
-    iprintf("Original boot: %s\n",
+    ndsConsolePrintf("Original boot: %s\n",
             gNdsOriginalBootStage == NDS_BOOT_EXPECTED ? "PASS" : "PARTIAL");
 #endif
     ndsVideoBootstrapStart();

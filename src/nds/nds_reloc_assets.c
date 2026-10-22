@@ -25,6 +25,7 @@ void ndsFsUnlock(void)
 #include <string.h>
 
 #include <nds/generated/nds_fighter_production.generated.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 
 /* src/port/nds_p4.c; declared here so this loader stays off ft/fighter.h. */
@@ -1366,14 +1367,14 @@ void ndsRelocAssetsInit(void)
         /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
          * the console line is the human copy, and the owner's free-play ROM
          * builds with NDS_BOOT_DIAG_TEXT := 0 so its bottom screen is clean. */
-        iprintf("NitroFS: PASS\n");
+        ndsConsolePrintf("NitroFS: PASS\n");
 #endif
     }
     else
     {
         gNdsRelocAssetInitResult = 0;
 #if NDS_BOOT_DIAG_TEXT
-        iprintf("NitroFS: FAIL\n");
+        ndsConsolePrintf("NitroFS: FAIL\n");
 #endif
     }
 }

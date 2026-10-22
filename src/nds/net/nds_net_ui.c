@@ -44,7 +44,7 @@ void ndsNetUiLine(u32 row, const char *fmt, ...)
     while (n < NDS_NET_UI_COLS)
         text[n++] = ' ';
     text[NDS_NET_UI_COLS] = '\0';
-    iprintf("\x1b[%lu;0H%s", (unsigned long)row, text);
+    ndsConsolePrintf("\x1b[%lu;0H%s", (unsigned long)row, text);
     sNdsNetUiShown = 1u;
 }
 

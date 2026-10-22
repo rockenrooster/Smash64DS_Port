@@ -190,6 +190,9 @@ extern volatile u32 gNdsHardwareRendererStatus;
 extern volatile u32 gNdsHardwareRendererControl;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformClearBattleTextHud(void);
+/* iprintf for the sub console, without newlib's stream printf engine. */
+void ndsConsolePrintf(const char *format, ...)
+    __attribute__((format(printf, 1, 2)));
 /* Push one presented-iteration snapshot of gNdsTickHudBuckets into the tick-HUD
  * percentile window. Must be called from the per-frame path: the HUD renderer
  * itself only runs about twice a second, so sampling there would build the

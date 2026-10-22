@@ -14,8 +14,20 @@ typedef struct NDSNewlibMallinfo
     u32 fordblks;
     u32 keepcost;
 } NDSNewlibMallinfo;
-extern NDSNewlibMallinfo mallinfo(void);
 extern int malloc_trim(size_t pad);
+
+/* newlib's mallinfo() lives in mstats.o beside malloc_stats(), which links
+ * fiprintf and with it the stream printf engine (vfiprintf.o, 7 KB of
+ * resident code). The same query, through the reentrant entry the newlib
+ * wrapper calls (devkitARM newlib: _REENT is __getreent()). */
+struct _reent;
+extern struct _reent *__getreent(void);
+extern NDSNewlibMallinfo _mallinfo_r(struct _reent *reent);
+
+NDSNewlibMallinfo mallinfo(void)
+{
+    return _mallinfo_r(__getreent());
+}
 
 /* 2026-09-14 build-p2-fidelity-02 with the shipped 0xA000 reserve reported
  * arena 1,380,096 B, BattleShip general-heap low-water 118,752 B and the old

@@ -500,6 +500,69 @@ static void ndsPlatformReserveGlNameTables(void)
     gNdsPlatformGlNameTablesReserved = ok;
 }
 
+/* The sub console's one writer: format with the string engine sniprintf
+ * already links, then write the bytes to stdout. iprintf would link newlib's
+ * stream printf engine (vfiprintf.o, 7 KB of resident code) for a few console
+ * lines; the bytes reach the console the same way either way. */
+static int ndsConsoleWriteV(const char *format, va_list args)
+{
+    char text[256];
+    int length = vsniprintf(text, sizeof(text), format, args);
+
+    if (length <= 0)
+    {
+        return length;
+    }
+    if ((size_t)length >= sizeof(text))
+    {
+        length = (int)sizeof(text) - 1;
+    }
+    fwrite(text, 1u, (size_t)length, stdout);
+    return length;
+}
+
+void ndsConsolePrintf(const char *format, ...)
+{
+    va_list args;
+
+    va_start(args, format);
+    (void)ndsConsoleWriteV(format, args);
+    va_end(args);
+}
+
+/* libnds9.a's console.o calls iprintf too; defining it here keeps newlib's
+ * iprintf.o, and the engine it calls, out of the link. Lines past 255 bytes
+ * are cut, which no console line comes near. */
+int iprintf(const char *format, ...)
+{
+    va_list args;
+    int length;
+
+    va_start(args, format);
+    length = ndsConsoleWriteV(format, args);
+    va_end(args);
+    return length;
+}
+
+/* libnds's assertion screen (sassert), through the writer above: libnds9.a's
+ * own __sassert prints with viprintf, the stream engine again. */
+void __sassert(const char *fileName, int lineNumber,
+               const char *conditionString, const char *format, ...)
+{
+    va_list args;
+
+    consoleDemoInit();
+    ndsConsolePrintf("\x1b[j\x1b[42mAssertion!\n\x1b[39mFile: \n%s\n\n"
+                     "Line: %d\n\nCondition:\n%s\n\n\x1b[41m",
+                     fileName, lineNumber, conditionString);
+    va_start(args, format);
+    ndsConsoleWriteV(format, args);
+    va_end(args);
+    while (1)
+    {
+    }
+}
+
 void ndsPlatformInit(void)
 {
     /* Calico's system tick owns timers 2/3. Initialize it before original
@@ -562,7 +625,7 @@ void ndsPlatformInit(void)
     videoSetModeSub(MODE_0_2D);
     vramSetBankH(VRAM_H_SUB_BG);
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);
-    iprintf("\x1b[?25l");
+    ndsConsolePrintf("\x1b[?25l");
     NDS_FREEZE_DIAGNOSTICS_INIT();
 
 
@@ -2372,7 +2435,7 @@ static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
     va_end(args);
 
     line[sizeof(line) - 1] = '\0';
-    iprintf("\x1b[%lu;0H%-31s", (unsigned long)row, line);
+    ndsConsolePrintf("\x1b[%lu;0H%-31s", (unsigned long)row, line);
 }
 
 #if NDS_TICK_HUD

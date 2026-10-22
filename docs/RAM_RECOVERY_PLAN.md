@@ -154,6 +154,16 @@ VRAM relocation needs its own bank/lifetime and transfer-cost budget.
   changed ownership, not just similar buffer names.
 - LOW-only battle packing was removed from the current integration: ordinary source
   paths can request HIGH. Do not promote its larger heap margin as current evidence.
+- 2026-10-22: newlib's stream printf engine (`vfiprintf.o`) is out of the link, 7,168 B
+  of `.main`. The console formats through the string engine instead:
+  `ndsConsolePrintf`, plus the port's own `iprintf` (libnds's `console.o` calls it),
+  `__sassert` and `mallinfo` (`nds_platform.c`, `diagnostics_taskman_heap.c`). A new
+  `printf`, `fprintf` or `malloc_stats` call links it back.
+- 2026-10-22 census (`play-p7y` map): the resident `.rodata` strings are 41,928 B, and
+  36,439 of them are 901 NitroFS paths. Factoring the directory prefixes would leave
+  17,342 B; the largest families are the `sNdsRelocAssets` rows (274, `nitro:/reloc/reloc_*/`)
+  and the generated fighter-production rows. Symbols inside `.ovl.frontend.*` (for example
+  the UI kit's 54 KB surface table) are lent to VS battles already and are not battle RAM.
 
 **Exit:** predicted linked/runtime savings are observed, replacement engagement is
 positive, and required behavior/lifetimes remain intact. Record why a rejected lever
