@@ -38,7 +38,7 @@ commit with explicit paths only.
 | Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
 | H-1 tools S1 and the gate need, into `scripts/tools/` | next | sources: session scratchpads `31e5c78d-...` and `4aa2b87d-...` under `%TEMP%\claude\D--Stuff-DevFolder-Smash64DS-Port\` |
 | S1 regression net (full matrix) on HEAD | open | ROMs: walk, soak, wireless lab, ship layout |
-| C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` done (`7f0dca28600`); next `reloc_backend_assets.c` |
+| C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` (`7f0dca28600`) and `reloc_backend_assets.c` (C2) done; next `nds_renderer_textures_effects.c` |
 | S3 static analysis (`-fanalyzer`, allocations, stacks) | open | foreground work while S1 runs |
 | D purpose headers and invariant comments | open | after C |
 | E dormant verifier framework, legacy fighter executor | open | owner OK (`OWNER_QUESTIONS.md` 6) |
@@ -62,6 +62,13 @@ commit with explicit paths only.
 ## Log
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
+
+- 2026-10-22 -- C2: `reloc_backend_assets.c` (18,246 lines) into 8 slices of the
+  `scene_backend` unit (1,269 to 3,545 lines); `scene_backend.o` preprocess-identical in the
+  five configs; the 14 affected test files fail exactly as on HEAD (18 pre-existing), the
+  four script tests pass; one stale Phase A check fixed (`test_results_demo_submotion_routes.py`).
+- 2026-10-22 -- R4 part: newlib's stream printf engine out of the link (`41636f74b0f`),
+  `.main` -7,168 B on `play-ram1`; boots clean.
 
 - 2026-10-22 -- owner: CPU hunting beside the RAM hunting (plan section 5, loop P).
 - 2026-10-22 -- owner answers Q1-Q3; I: `AGENTS.md` and `docs/HANDOFF.md` route to P8.

@@ -67,6 +67,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import generate_mn_ui_kit as kit  # noqa: E402  (the RELO/Sprite parser)
+import source_test_helpers as sources  # noqa: E402  (split source files)
 
 FMT = {0: "G_IM_FMT_RGBA", 1: "G_IM_FMT_YUV", 2: "G_IM_FMT_CI",
        3: "G_IM_FMT_IA", 4: "G_IM_FMT_I"}
@@ -192,15 +193,14 @@ def find_container(root: Path, name: str) -> Path:
 
 
 def read(root: Path, rel: str) -> str:
-    return (root / rel).read_bytes().decode("utf-8").replace("\r\n", "\n")
+    # A file split into slices (reloc_backend_assets.c) reads whole, with a
+    # marker line before each slice that write() splits on again.
+    return sources.read_for_edit(root / rel)
 
 
 def write(root: Path, rel: str, text: str, original: str) -> None:
-    raw = (root / rel).read_bytes()
-    if b"\r\n" in raw:
-        text = text.replace("\n", "\r\n")
     if text != original:
-        (root / rel).write_bytes(text.encode("utf-8"))
+        sources.write_for_edit(root / rel, text)
 
 
 def hand_asset_name(backend: str, file_id: int) -> str | None:

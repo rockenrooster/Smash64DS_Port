@@ -64,6 +64,8 @@ MAKEFILE = REPO / "Makefile"
 PRODUCTION_HEADER = (
     REPO / "include/nds/generated/nds_fighter_production.generated.h")
 RELOC_BACKEND = REPO / "src/port/reloc_backend_assets.c"
+sys.path.insert(0, str(REPO / "scripts" / "menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 BASE_GATES = set(gen.RESULTS_DEMO_BASE_GATES)
 C_TABLE = "sNdsRelocDemoAnimTokens"
@@ -143,7 +145,7 @@ def check(rows: list[dict] | None = None,
     rows = demo_rows() if rows is None else rows
     header = (PRODUCTION_HEADER.read_text(encoding="utf-8", errors="replace")
               if header is None else header)
-    backend = (RELOC_BACKEND.read_text(encoding="utf-8", errors="replace")
+    backend = (read_split(RELOC_BACKEND)
                if backend is None else backend)
     makefile = (MAKEFILE.read_text(encoding="utf-8", errors="replace")
                 if makefile is None else makefile)
@@ -181,7 +183,10 @@ def check(rows: list[dict] | None = None,
             "%s is staged into NitroFS but no token routes to it; dead bytes"
             % path)
 
-    # 3 -- every generated macro is consumed by the C table, under its gate.
+    # 3 -- every generated macro is consumed by the C table. The NDS_P2_<KIND>
+    # roster flags are 1 in every build and were resolved out of the C sources
+    # (docs/OLD_MACHINERY_DELETED.md, Phase A), so the table expands every
+    # fighter's rows unconditionally; the Makefile fan-in (4) keeps its gates.
     table_start = backend.find("%s[] =" % C_TABLE)
     if table_start < 0:
         failures.append(
@@ -201,16 +206,6 @@ def check(rows: list[dict] | None = None,
             failures.append(
                 "%s is generated but %s never expands it -- the rows exist in "
                 "the header and resolve to nothing at runtime" % (macro, C_TABLE))
-            continue
-        gate = gate_for(macro)
-        if gate in {name.upper() for name in BASE_GATES} or gate == "MARIOFOX":
-            continue
-        guard = "#if NDS_P2_%s\n    %s(" % (gate, macro)
-        if guard not in table_body:
-            failures.append(
-                "%s is expanded in %s without its `#if NDS_P2_%s` gate, so a "
-                "build without that fighter would route poses it does not pack"
-                % (macro, C_TABLE, gate))
 
     # 4 -- every generated file list is fanned into the VS Results set.
     lists = sorted(set(re.findall(r"^(NDS_\w*_DEMO_RELOC_FILES)\s*:=", fragment,
@@ -255,7 +250,7 @@ def self_test() -> int:
     """Prove each arm goes red when its input is taken away."""
     rows = demo_rows()
     header = PRODUCTION_HEADER.read_text(encoding="utf-8", errors="replace")
-    backend = RELOC_BACKEND.read_text(encoding="utf-8", errors="replace")
+    backend = read_split(RELOC_BACKEND)
     makefile = MAKEFILE.read_text(encoding="utf-8", errors="replace")
     problems: list[str] = []
 

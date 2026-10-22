@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from source_test_helpers import braced, function
+from source_test_helpers import braced, function, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'src/port/reloc_backend_assets.c'
@@ -26,7 +26,7 @@ typedef int32_t s32; typedef s32 sb32;
 
 class RelocMetadataTest(unittest.TestCase):
     def test_pending_fighters_use_relocation_generation(self):
-        body=function(SOURCE.read_text(), 'ndsR2AnimCacheMatchFighterBytes')
+        body=function(read_split(SOURCE), 'ndsR2AnimCacheMatchFighterBytes')
         program=TYPES+r'''
 #define GMCOMMON_PLAYERS_MAX 4
 #define nFTKindEnumCount 4
@@ -85,7 +85,7 @@ int main(void) {
             self.assertEqual(subprocess.run([str(exe)]).returncode,0)
 
     def test_registration_and_scene_lifetime(self):
-        source = SOURCE.read_text()
+        source = read_split(SOURCE)
         record = braced(source, r'typedef struct NDSRelocLoadedFile\s*\{', True)
         body = '\n'.join(function(source, name) for name in (
             'ndsRelocFindLoadedFileByAsset', 'ndsRelocResetLoadedFiles',

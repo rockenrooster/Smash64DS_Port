@@ -7,7 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from source_test_helpers import function
+from source_test_helpers import function, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -251,7 +251,7 @@ def test_arwing_removed_dependency_is_only_three_native_baked_texture_refs(tmp_p
     compiler.compile_roots(entry.FOX_ROOTS, len(entry.MARIO_ROOTS))
     assert any(key.image_asset == 109 and key.image_offset == 0x19F8
                for key in compiler.textures)
-    runtime = (ROOT / "src/port/reloc_backend_assets.c").read_text()
+    runtime = read_split(ROOT / "src/port/reloc_backend_assets.c")
     code = r'''
 #include <assert.h>
 #include <stddef.h>

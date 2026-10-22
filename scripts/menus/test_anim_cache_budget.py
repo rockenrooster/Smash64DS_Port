@@ -58,10 +58,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from source_test_helpers import function
+from source_test_helpers import function, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = (ROOT / "src/port/reloc_backend_assets.c").read_text(encoding="utf-8")
+ASSETS = read_split(ROOT / "src/port/reloc_backend_assets.c")
 MALLOC = (ROOT / "src/import/battleship_sys_malloc.c").read_text(encoding="utf-8")
 
 # Pinned production constants.  Each is parsed back out of the source so the

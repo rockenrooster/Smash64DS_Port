@@ -212,6 +212,16 @@ lists each file's slices and checks the parent still includes them in that order
 checkers read `nds_renderer_native_entry.c`, and `admit_fighter.py` writes its dense-normal rows to
 `_dl_walk` and its owner tables to `_hierarchy`.
 
+`reloc_backend_assets.c` (18,246 lines) keeps its first 1,269 (the loaded-file registry, the
+scene file buffer, the zero-copy motion hits) and continues in seven slices `reloc_backend.c`
+includes after it: `reloc_backend_symbol_tables.c` (probes, Sprite manifests, known symbols),
+`_asset_ids.c`, `_resolve.c`, `_normalize.c`, `_extern_trees.c`, `_motion_cache.c` and
+`_force_load.c` (1,378 to 3,545 lines). `scene_backend.o` preprocesses byte-identically in the five
+configs. Tools that edit or scan the backend read it whole: `stage_reloc_file.py` through
+`read_for_edit()` / `write_for_edit()` (a marker line before each slice; each slice is written back
+to its own file), `mf_corpus.py` and `audit_mn_screen_coverage.py` through `source()`. The defines
+`generate_fighter_production_manifest.py` checks during make stay in the first file.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,

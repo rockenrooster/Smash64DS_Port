@@ -6,12 +6,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
-from source_test_helpers import braced, function
+from source_test_helpers import braced, function, source as read_split
 
 
 def test_tree_attachment_converts_loaded_material_without_mutating_source(tmp_path):
     types = (ROOT / "decomp/BattleShip-main/decomp/src/sys/objtypes.h").read_text()
-    assets = (ROOT / "src/port/reloc_backend_assets.c").read_text()
+    assets = read_split(ROOT / "src/port/reloc_backend_assets.c")
     compat = (ROOT / "src/port/reloc_backend_compat_shims.c").read_text()
     material = braced(types, r"struct MObjSub\s*\{", True)
     normalize = "\n".join(function(assets, name) for name in (

@@ -5,14 +5,14 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from source_test_helpers import function
+from source_test_helpers import function, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class SceneMemoryLedgerTests(unittest.TestCase):
     def test_scene_peak_reset_and_actual_setup(self):
-        source = (ROOT / 'src/port/reloc_backend_assets.c').read_text()
+        source = read_split(ROOT / 'src/port/reloc_backend_assets.c')
         body = function(source, 'ndsRelocUpdateMemoryLedger') + '\n' + function(
             source, 'ndsRelocRecordSceneMemory')
         globals_ = sorted(set(re.findall(r'\bgNds\w+', body)))

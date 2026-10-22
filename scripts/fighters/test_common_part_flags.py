@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "menus"))
-from source_test_helpers import function
+from source_test_helpers import function, source as read_split
 
 SOURCE = ROOT / "src" / "port" / "reloc_backend_assets.c"
 O2R = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "reloc_fighters_main" / "YoshiMain"
@@ -48,7 +48,7 @@ def yoshi_container_bytes():
 
 
 def build_program():
-    helper = function(SOURCE.read_text(), "ndsRelocNormalizeFighterCommonPartFlags")
+    helper = function(read_split(SOURCE), "ndsRelocNormalizeFighterCommonPartFlags")
     raw = yoshi_container_bytes()
     vals = ",".join(f"0x{b:02x}" for b in raw)
     body = r'''
@@ -103,7 +103,7 @@ def test_common_part_flags_against_actual_c():
 
 
 def test_caller_runs_once_before_flag_set():
-    body = function(SOURCE.read_text(), "ndsRelocNormalizeFighterAttributesFile")
+    body = function(read_split(SOURCE), "ndsRelocNormalizeFighterAttributesFile")
     gate = body.index("if (loaded->format_fixups_applied == FALSE)")
     call = body.index("ndsRelocNormalizeFighterCommonPartFlags")
     done = body.index("loaded->format_fixups_applied = TRUE;")

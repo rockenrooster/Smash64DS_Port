@@ -45,6 +45,8 @@ while _p.name != "scripts":
     _p = _p.parent
 sys.path.insert(0, str(_p))
 import _paths  # noqa: F401,E402
+sys.path.insert(0, str(_p / "menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 import generate_compact_ground_maps as cgm  # noqa: E402
 import generate_native_wallpapers as wall  # noqa: E402
@@ -300,7 +302,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.make = MAKEFILE.read_text(encoding="utf-8")
-        cls.assets = ASSETS_C.read_text(encoding="utf-8")
+        cls.assets = read_split(ASSETS_C)
 
     def test_default_flag_targets(self):
         m = re.search(r"(?m)^NDS_P2_COMPACT_GROUND_MAPS \?= \\\r?\n\t"
@@ -383,7 +385,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         for path in (ASSETS_C, MATRIX_C, SPRITE_C, SHIMS_C):
             stack = []
             for number, line in enumerate(
-                    path.read_text(encoding="utf-8").splitlines(), 1):
+                    read_split(path).splitlines(), 1):
                 stripped = line.strip()
                 if stripped.startswith("#if"):
                     stack.append(stripped.startswith(flag))
@@ -741,7 +743,7 @@ class CompactSeamCTests(unittest.TestCase):
         cls.compiler = find_host_i686_compiler()
         if cls.compiler is None:
             return
-        source = ASSETS_C.read_text(encoding="utf-8")
+        source = read_split(ASSETS_C)
         defines = "\n".join(re.findall(
             r"(?m)^#define NDS_RELOC_ASSET_\w+ +(?:0x[0-9a-fA-F]+|\d+)u?$",
             source))

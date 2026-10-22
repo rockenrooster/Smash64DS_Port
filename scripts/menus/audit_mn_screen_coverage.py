@@ -110,6 +110,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from source_test_helpers import source as read_source  # noqa: E402  (split files)
+
 # ---------------------------------------------------------------------------
 # Screen table -- the only hand-written mapping in the tool, and every name in
 # it is checked to exist, so it cannot rot silently.
@@ -1029,7 +1032,7 @@ def scan_port_reloc(repo_root: Path) -> PortRelocState:
             # filed under MNBackupClear and looked up against the wrong asset.
             state.owner[symbol] = max(owners, key=len)
 
-    backend = (repo_root / BACKEND_PATH).read_text(errors="replace")
+    backend = read_source(repo_root / BACKEND_PATH)
     by_id: dict[int, str] = {}
     for name, value in _ASSET_DEFINE_RE.findall(backend):
         by_id.setdefault(int(value, 0), name)

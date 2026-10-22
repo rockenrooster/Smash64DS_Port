@@ -18,6 +18,8 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "scripts" / "menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -109,7 +111,7 @@ class PolygonStagedTreeTests(unittest.TestCase):
 
     def test_no_undefined_known_symbol_macros(self):
         header = (REPO / "include/reloc_data.h").read_text(encoding="utf-8")
-        backend = (REPO / "src/port/reloc_backend_assets.c").read_text(encoding="utf-8")
+        backend = read_split(REPO / "src/port/reloc_backend_assets.c")
         defined = set(re.findall(r"#define\s+(NDS_\w+_RELOC_SYMBOLS)\(", header))
         used = set(re.findall(r"\b(NDS_\w+_RELOC_SYMBOLS)\(", backend))
         self.assertEqual(used - defined, set())

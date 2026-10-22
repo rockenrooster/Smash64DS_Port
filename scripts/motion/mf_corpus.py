@@ -46,6 +46,8 @@ BANK = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "reloc_animation
 GEN_H = ROOT / "include" / "nds" / "generated" / "nds_fighter_production.generated.h"
 FTDATA = ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "ft" / "ftdata.c"
 ASSETS_C = ROOT / "src" / "port" / "reloc_backend_assets.c"
+sys.path.insert(0, str(ROOT / "scripts" / "menus"))
+from source_test_helpers import source as read_source  # noqa: E402  (split files)
 CACHE = ROOT / "builds" / "mf_corpus_v2.pickle"
 
 BPS1_HEADER = struct.Struct("<4sIIIIIII")
@@ -168,7 +170,7 @@ def generated_rows():
                          text):
         sym, aid, path = m.group(1), int(m.group(2), 16), m.group(3)
         rows.setdefault(sym, (aid, path))
-    text = ASSETS_C.read_text(errors="replace")
+    text = read_source(ASSETS_C)
     for m in re.finditer(r"&(llFT(?:Mario|Fox)Anim\w+FileID), /\* (\d+) \*/", text):
         rows.setdefault(m.group(1), (int(m.group(2)), None))
     return rows
