@@ -7,12 +7,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
-from source_test_helpers import braced, function
+from source_test_helpers import braced, function, source
 
 
 def test_shield_palette_variants_use_source_colors_and_retain_live_names(tmp_path):
     assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
-    common = (ROOT / "src/nds/nds_renderer_native_common.c").read_text()
+    common = source(ROOT / "src/nds/nds_renderer_native_common.c")
     textures = (ROOT / "src/nds/nds_renderer_textures_effects.c").read_text()
     source = (ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.c").read_text()
     colors = braced(source, r"SYColorRGBPair dEFManagerShieldColors\[", True)

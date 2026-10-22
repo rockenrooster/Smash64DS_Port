@@ -1625,7 +1625,11 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.insert_after_block(rs, APF, hint, blk)
     verify_prev = re.search(rf"#if {APF} && !NDS_NATIVE_OWNER_IMAGE_{APU}\n.*?\n#endif\n", txt, re.S).group(0)
     T.replace(rs, verify_prev, verify_prev + verify_prev.replace(APF, F).replace(APU, U).replace(APN, N))
-    nc = "src/nds/nds_renderer_native_common.c"
+    # nds_renderer_native_common.c is split into slices (2026-10-22): the
+    # dense normals live in the display-list walk, the owner tables in the
+    # hierarchy slice.
+    nc = "src/nds/nds_renderer_native_dl_walk.c"
+    nh = "src/nds/nds_renderer_native_hierarchy.c"
     T.insert_after_block(nc, APF, f"sNdsNative{APN}FighterDenseNormalsLow[", f"#if {F}\nstatic u32 sNdsNative{N}FighterDenseNormals[\n    NDS_NATIVE_IMAGE_{U}_HIGH_DENSE_VERTICES_COUNT];\nstatic u32 sNdsNative{N}FighterDenseNormalsLow[\n    NDS_NATIVE_IMAGE_{U}_LOW_DENSE_VERTICES_COUNT];\n#endif\n")
     T.insert_after_block(nc, APF, f"static u8 sNdsNative{APN}FighterDenseNormalsBuiltLow;", f"#if {F}\nstatic u8 sNdsNative{N}FighterDenseNormalsBuilt;\nstatic u8 sNdsNative{N}FighterDenseNormalsBuiltLow;\n#endif\n")
     _ap_slot = SPECS[APL]["owner_slot"]
@@ -1669,7 +1673,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         (f"return sNdsNative{APN}BindingParents;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}BindingParents) /\n                       sizeof(sNdsNative{N}BindingParents[0]));\n        return sNdsNative{N}BindingParents;\n    }}\n#endif\n"),
         (f"return sNdsNative{APN}CrossPaletteSlots;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}CrossPaletteSlots) /\n                       sizeof(sNdsNative{N}CrossPaletteSlots[0]));\n        return sNdsNative{N}CrossPaletteSlots;\n    }}\n#endif\n"),
     ):
-        T.insert_after_block(nc, APF, hint, blk)
+        T.insert_after_block(nh, APF, hint, blk)
 
     T.flush()
 

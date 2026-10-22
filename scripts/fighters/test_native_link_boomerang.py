@@ -1,5 +1,6 @@
 """Source Neutral-B siblings and the live mixed-owner topology must agree."""
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,8 @@ import generate_nds_native_owners as native
 
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts/menus"))
+from source_test_helpers import source as read_source  # noqa: E402
 
 
 @pytest.fixture(scope="module", params=("high", "low"))
@@ -65,7 +68,7 @@ def test_specialn_runtime_uses_complete_topology(link):
     assert special["source_owners"].count("linkboomerang") == 1
     assert special["source_owners"][5] == "linkboomerang"
     assert special["cross_slots"][5] == native.PACKED_GX_SLOT_CURRENT
-    source = (ROOT / "src/nds/nds_renderer_native_common.c").read_text()
+    source = read_source(ROOT / "src/nds/nds_renderer_native_common.c")
     # A missing dispatch case silently returns the 19-root canonical table;
     # owner selection alone therefore cannot establish valid matrix routing.
     for suffix in ("BindingParents", "CrossPaletteSlots"):

@@ -125,7 +125,7 @@ foreach ($token in @(
 }
 
 $native = Get-Content -LiteralPath (Join-Path $root `
-    'src\nds\nds_renderer_native_common.c') -Raw
+    'src/nds/nds_renderer_native_entry.c') -Raw
 Assert-LinkWeaponCheck ($native -match
     '(?s)owner_asset_id == 325u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST.*?owner_asset_id == 325u\)\s*\?\s*NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST') `
     'Native packet lookup does not bound LinkSpecial3 asset 325.'

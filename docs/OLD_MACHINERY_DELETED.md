@@ -199,6 +199,19 @@ at its `s60` size; replay digests are identical to `s60` over 1,960 samples on t
 originals on Dream Land and on Remix stage 41, Mr. Game & Watch x4 on stage 41), WORK P95 within
 noise (all three slightly lower); the ship-config play ROM links.
 
+## Giant files split into topic slices -- Phase C of the readability pass (2026-10-22)
+
+Nothing deleted here: the largest sources become consecutive slices of the same translation
+unit, so the compiler sees the same text. `nds_renderer_native_common.c` (19,218 lines) keeps its
+first 1,460 and continues in eight files the unity parent `nds_renderer.c` includes right after
+it, in order: `_rebirth_halo`, `_dl_walk`, `_entry`, `_production_runs`, `_fighter_packet`,
+`_lean_lists`, `_lean_entries` and `_hierarchy` (`nds_renderer_native_*.c`, 953 to 3,960 lines,
+each headed by what it holds). The renderer unit preprocesses byte-identically in the five configs.
+Host tests read a split file whole through `source_test_helpers.source()`, whose `SPLIT_SOURCES`
+lists each file's slices and checks the parent still includes them in that order; the entry-effect
+checkers read `nds_renderer_native_entry.c`, and `admit_fighter.py` writes its dense-normal rows to
+`_dl_walk` and its owner tables to `_hierarchy`.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,

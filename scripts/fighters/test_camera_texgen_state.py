@@ -43,11 +43,11 @@ from pathlib import Path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "menus"))
-from source_test_helpers import function  # noqa: E402
+from source_test_helpers import function, source  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 ADAPTER = (ROOT / "src/port/renderer_adapter_matrix.c").read_text(encoding="utf-8")
-RENDERER = (ROOT / "src/nds/nds_renderer_native_common.c").read_text(encoding="utf-8")
+RENDERER = source(ROOT / "src/nds/nds_renderer_native_common.c")
 PRODUCTION = (
     ROOT / "src/nds/nds_renderer_native_fighter_production.c"
 ).read_text(encoding="utf-8")

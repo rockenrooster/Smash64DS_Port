@@ -2,13 +2,17 @@
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_source  # noqa: E402
 
 
 def test_new_effect_roots_cannot_alias_the_pipe_matrix(tmp_path):
     repo = Path(__file__).resolve().parents[2]
     assets = (repo / "src/nds/nds_renderer_assets.c").read_text()
-    runtime = (repo / "src/nds/nds_renderer_native_common.c").read_text()
+    runtime = read_source(repo / "src/nds/nds_renderer_native_common.c")
     macro = re.search(r"#define NDS_ENTRY_EFFECT_MASK_WORDS[^\n]+", assets)[0]
     declaration = re.search(
         r"static u32 sNdsRendererEntryEffectModelviewValidMask[^;]+;", assets)[0]

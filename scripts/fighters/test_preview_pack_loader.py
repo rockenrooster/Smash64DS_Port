@@ -52,7 +52,7 @@ from pathlib import Path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "menus"))
-from source_test_helpers import function  # noqa: E402
+from source_test_helpers import function, source  # noqa: E402
 import generate_preview_core_packs as gen  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -637,8 +637,8 @@ class CompactConsumerAdmissionTests(unittest.TestCase):
             ({"NDS_P2_MENU_SHELL", "NDS_P2_SHELL_ARGMAX_ROSTER"}, True),
         )
         for path, pattern in consumers:
-            source = (ROOT / path).read_text(encoding="utf-8")
-            match = re.search(pattern, source)
+            text = source(ROOT / path)
+            match = re.search(pattern, text)
             self.assertIsNotNone(match, path)
             terms = [term.strip() for term in match[1].split("||")]
             self.assertTrue(all(re.fullmatch(r"NDS_[A-Z0-9_]+", term)

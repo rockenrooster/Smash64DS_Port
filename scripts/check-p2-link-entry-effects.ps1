@@ -91,7 +91,7 @@ Assert-LinkEntryCheck ($entrySource -match
     'BattleShip Link Appear no longer creates both entry effects in source order.'
 
 $nativeSource = Get-Content -LiteralPath (Join-Path $root `
-    'src\nds\nds_renderer_native_common.c') -Raw
+    'src/nds/nds_renderer_native_entry.c') -Raw
 Assert-LinkEntryCheck ($nativeSource -match
     '(?s)owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_LINK_ROOT_FIRST.*?owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST') `
     'Native entry root lookup does not bound Link asset 353 to its generated roots.'

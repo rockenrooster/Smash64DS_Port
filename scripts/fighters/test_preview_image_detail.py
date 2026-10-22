@@ -52,7 +52,7 @@ from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "menus"))
-from source_test_helpers import function  # noqa: E402
+from source_test_helpers import function, source  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = (ROOT / "src" / "import" / "battleship_ftmanager.c").read_text(
@@ -66,9 +66,8 @@ GENERATED_H = (
     ROOT / "include" / "nds" / "generated" /
     "nds_native_fighter_image.generated.h").read_text(encoding="utf-8")
 MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
-RENDERER_NATIVE_COMMON = (
-    ROOT / "src" / "nds" / "nds_renderer_native_common.c").read_text(
-        encoding="utf-8")
+RENDERER_NATIVE_COMMON = source(
+    ROOT / "src" / "nds" / "nds_renderer_native_common.c")
 INTRO_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "sc" /
            "sc1pmode" / "sc1pintro.c").read_text(encoding="utf-8")
 CSS_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "mn" /

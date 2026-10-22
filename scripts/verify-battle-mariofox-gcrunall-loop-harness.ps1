@@ -452,7 +452,7 @@ $expectedEntryTextureCount = [int]$entryTextureMatch.Groups[1].Value
 # from the generated texture set. Read the variant count from the owner's loop
 # bound so a new variant cannot silently widen or shrink this fence.
 $entryShieldSource = Get-Content -LiteralPath (
-    Join-Path $root 'src/nds/nds_renderer_native_common.c') -Raw
+    Join-Path $root 'src/nds/nds_renderer_native_entry.c') -Raw
 $entryShieldMatch = [regex]::Match(
     $entryShieldSource,
     'for \(variant = 0u; variant < (\d+)u; variant\+\+\)')

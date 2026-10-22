@@ -14,6 +14,9 @@ from pathlib import Path
 
 import check_native_owner_geometry_closure as closure
 import generate_nds_native_owners as live
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source  # noqa: E402
 
 RESIDENT_BODY_HEADS = (1, 14)
 
@@ -554,8 +557,8 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
             repo = repo.parent
         cls.repo = repo
         cls.assets = (repo / "src" / "nds" / "nds_renderer_assets.c").read_text()
-        cls.common = (repo / "src" / "nds" /
-                      "nds_renderer_native_common.c").read_text()
+        cls.common = source(repo / "src" / "nds" /
+                            "nds_renderer_native_common.c")
         cls.adapter = (repo / "src" / "port" /
                        "renderer_adapter_fighter.c").read_text()
         cls.lean = (repo / "src" / "port" /

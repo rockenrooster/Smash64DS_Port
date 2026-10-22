@@ -7,11 +7,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/menus'))
-from source_test_helpers import function
+from source_test_helpers import function, source
 
 
 def test_zero_coverage_is_culled_before_texture_or_primitive_submission(tmp_path):
-    runtime = (ROOT / 'src/nds/nds_renderer_native_common.c').read_text()
+    runtime = source(ROOT / 'src/nds/nds_renderer_native_common.c')
     submit = function(runtime, 'ndsRendererSubmitNativeEntryEffect')
     start = submit.index('polygon_alpha = ndsRendererHardwareAlpha(stats, NULL);')
     end = submit.index('lit = ndsRendererHardwareLitShadeCombine(stats);', start)

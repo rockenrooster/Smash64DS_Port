@@ -613,9 +613,9 @@ def main() -> int:
     require(len(renderer_sources) > 1,
             "nds_renderer.c has no implementation includes")
     renderer = "\n".join(renderer_sources)
-    native_common = (
-        source_root / "src/nds/nds_renderer_native_common.c"
-    ).read_text()
+    # The hierarchy dispatchers live in nds_renderer_native_common.c's slices
+    # (nds_renderer_native_hierarchy.c); the whole translation unit holds them.
+    native_common = renderer
     hierarchy_dispatch = re.search(
         r"static s32 ndsRendererNativeGetHierarchyTables\(.*?\n}\n",
         native_common,

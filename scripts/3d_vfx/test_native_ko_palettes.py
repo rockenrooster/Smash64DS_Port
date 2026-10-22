@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
 sys.path.insert(0, str(ROOT / "scripts/3d_vfx"))
-from source_test_helpers import braced, function
+from source_test_helpers import braced, function, source
 import generate_nds_entry_effects as gen
 
 
@@ -44,7 +44,7 @@ def test_ko_rgb_is_constant_through_source_alpha_animation():
 
 def test_palette_only_names_are_reused_and_alpha_does_not_change_binding(tmp_path):
     assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
-    common = (ROOT / "src/nds/nds_renderer_native_common.c").read_text()
+    common = source(ROOT / "src/nds/nds_renderer_native_common.c")
     textures = (ROOT / "src/nds/nds_renderer_textures_effects.c").read_text()
     tables = "\n".join(braced(assets, rf"static const u32 {name}\[", True)
                        for name in ("sNdsEntryKoRootOffsets", "sNdsEntryKoPrimRgb", "sNdsEntryKoEnvRgb"))

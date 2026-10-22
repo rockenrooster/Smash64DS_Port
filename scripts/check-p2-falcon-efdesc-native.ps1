@@ -104,7 +104,7 @@ foreach ($token in @(
 }
 
 $nativeSource = Get-Content -LiteralPath (Join-Path $root `
-    'src\nds\nds_renderer_native_common.c') -Raw
+    'src/nds/nds_renderer_native_entry.c') -Raw
 foreach ($token in @(
     'NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST',
     'NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST',

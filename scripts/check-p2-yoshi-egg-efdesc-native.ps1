@@ -37,7 +37,7 @@ $generator = Join-Path $root 'scripts\3d_vfx\generate_nds_entry_effects.py'
 $generated = Join-Path $root 'src\nds\nds_entry_effects.generated.inc'
 $modelO2R = Join-Path $root `
     'decomp\BattleShip-main\BattleShip_o2r\reloc_fighters_main\YoshiModel'
-$lookup = Join-Path $root 'src\nds\nds_renderer_native_common.c'
+$lookup = Join-Path $root 'src/nds/nds_renderer_native_entry.c'
 $admission = Join-Path $root 'src\port\renderer_adapter_stage.c'
 
 $generatorOutput = (& python $generator --check 2>&1 | Out-String)

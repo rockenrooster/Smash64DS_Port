@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'scripts/menus'))
-from source_test_helpers import braced, function
+from source_test_helpers import braced, function, source as read_split
 
 TYPES = '''#include <stdint.h>
 #include <stddef.h>
@@ -82,7 +82,7 @@ int main(void) {{
                     self.assertNotRegex(code,r'\bldr\s', 'Packed coordinates must not use an unaligned word load')
 
     def test_texture_memo_roundtrip_and_decline(self):
-        source=(ROOT/'src/nds/nds_renderer_native_common.c').read_text()
+        source=read_split(ROOT/'src/nds/nds_renderer_native_common.c')
         source=source.replace('__attribute__((noinline))', '')
         record=braced(source,r'typedef struct NDSR2RunTextureMemo\s*\{',True)
         bodies='\n'.join(function(source,name) for name in (
