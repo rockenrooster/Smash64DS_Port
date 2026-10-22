@@ -62,3 +62,15 @@ table, and where runs write. Conventions:
 |---|---|
 | `worst_case_sweep.ps1` | WORK P50/P95 and the two-VBlank share per stage and roster on a gate ROM; the CSV rows are the replay digest (`scripts/compare-replay-digest.py a.csv b.csv`) |
 | `heap_census.ps1` | one match's heap allocations, ensured files, stage program load, heap low-water, motion cache and lent spans |
+
+## Readability (Phase C)
+
+| tool | does |
+|---|---|
+| `outline.py FILE [--all]` | every top-level definition with its size and preprocessor depth, and runs of one prefix: where a file's topics change |
+| `split_slices.py [--check] PLAN.json` | cuts a file into topic slices at anchors (brace and preprocessor depth 0, moving up over each anchor's comment) and includes them in order: right after the file in its unity parent, or at the file's end when the plan's parent is the file itself |
+| `pp_run.py LISTING OUT_DIR` | preprocesses every compile of a `make -n -B` listing (`-E -P`) into OUT_DIR; a split's proof is the same text before and after |
+| `pp_cmp.py BEFORE AFTER` | compares two `pp_run.py` trees: exact, blank-lines-only, or different |
+
+A split also registers in `scripts/menus/source_test_helpers.py` `SPLIT_SOURCES`,
+so host tests read the file whole through `source()`.
