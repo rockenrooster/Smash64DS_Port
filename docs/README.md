@@ -38,7 +38,7 @@ in the existing batch receipt rather than reapplying unchanged patches.
 | `BACKLOG.md` | Owner-deferred minor bugs |
 | `OPTIMIZE_LIST.md` | Owner specialization/baking/offload wish list, not permission to override current priorities |
 | `optimization/README.md` + `optimization/Smash64DS_Native_Optimization_Plan.md` | Supporting research and historical evidence; implementation uses `p2/native-optimization/`, scheduling uses its `13_AGENT_EXECUTION.md` and the board |
-| `PERF_LEDGER.md` | Reproducible measurements and rejected experiments, lookup-only during ordinary work |
+| `PERF_LEDGER.md` | Where the measurements are: the July-September rows in `archive/`, since October each phase's status |
 | `PORTING.md` | Append-only chronology, lookup-only |
 | `DIAGNOSTIC_REFERENCE.md` | Diagnostic marker definitions and manual lookup |
 | `DECOMP_MAP.md`, `FTSTRUCT_PARITY.md` | Source map and source/DS ABI reference |

@@ -251,7 +251,7 @@ Correct as they stand, recorded so they are not re-reported:
   red rather than being loosened; shipping anyway was the owner's decision on
   that evidence, 2026-07-22. Do not "fix" it by relaxing the canonicalizer.
 - **`verify-dev-fast.ps1` is red on the `battle_playable` locked-30 pacing
-  contract.** Pre-existing emulator-fork artefact; see `PERF_LEDGER.md:14-22`.
+  contract.** Pre-existing emulator-fork artefact; see `archive/PERF_LEDGER_2026-07_to_09.md:14-22`.
 - **Freeing a per-frame graphics-heap allocation can turn the Boundary
   locked-30 phase accounting red (`phaseLag=-1`), 2026-08-09.**
   `NDS_R2_CAMERA_MATRIX_LEAN=3` drops a 64-byte `syMatrixAdvanceW` from
