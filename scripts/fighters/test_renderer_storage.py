@@ -41,7 +41,10 @@ class RendererStorageTest(unittest.TestCase):
         record=source[a:b].rsplit('#endif',1)[0]
         with tempfile.TemporaryDirectory() as directory:
             d=Path(directory)
-            for hw, size in ((0,16),(1,10)):
+            # The packed HW-light layout only: every build sets
+            # NDS_R2_FIGHTER_HW_LIGHT, and the 16-byte base layout went
+            # with its branch (2026-10-21).
+            for hw, size in ((1,10),):
                 program=TYPES+f'#define NDS_R2_FIGHTER_HW_LIGHT {hw}\n'+record+f'''
 _Static_assert(sizeof(NDSNativePreparedDenseVertex)=={size}, "vertex size");
 __attribute__((noinline)) u32 read_odd(const NDSNativePreparedDenseVertex *p) {{

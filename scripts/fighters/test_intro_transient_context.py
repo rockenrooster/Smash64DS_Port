@@ -314,9 +314,10 @@ int main(void) {
         self.assertLess(slot, 4, "scratch slot inside four-entry caches")
 
     def test_no_twenty_one_entry_caches(self):
-        """Battle caches stay four entries; only one transient context."""
-        for needle in ("sNdsFighterStatusGeneration[GMCOMMON_PLAYERS_MAX]",
-                       "sNdsFtrContractCensusPrev[GMCOMMON_PLAYERS_MAX]"):
+        """Battle caches stay four entries; only one transient context.
+        (The contract census's per-player array went with its lab flag,
+        2026-10-21.)"""
+        for needle in ("sNdsFighterStatusGeneration[GMCOMMON_PLAYERS_MAX]",):
             self.assertIn(needle, ADAPTER, needle)
         self.assertNotIn("[21]", ADAPTER, "no 21-entry cache")
         self.assertNotIn("GMCOMMON_PLAYERS_MAX +", ADAPTER,

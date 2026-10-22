@@ -11,7 +11,7 @@ from source_test_helpers import braced, function
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def host_source(diagnostic=False):
+def host_source():
     header = (ROOT / "include/sc/scene.h").read_text()
     types = "\n".join(braced(header, rf"typedef struct {name}\s*\{{", True)
                       for name in ("LBBackupVSRecord", "LBBackup1PRecord", "LBBackupData"))
@@ -145,8 +145,9 @@ static void reboot(void)
 static void fresh(void)
 {
     memset(disk, 0, sizeof(disk));
-    const char *names[] = {"fat:/smash64ds.sav", "fat:/smash64ds.sav.bak", "fat:/smash64ds.sav.tmp",
-                          "sd:/smash64ds.sav", "sd:/smash64ds.sav.bak", "sd:/smash64ds.sav.tmp"};
+    const char *names[] = {"fat:/smash64ds-diagnostic.sav", "fat:/smash64ds-diagnostic.sav.bak",
+                          "fat:/smash64ds-diagnostic.sav.tmp", "sd:/smash64ds-diagnostic.sav",
+                          "sd:/smash64ds-diagnostic.sav.bak", "sd:/smash64ds-diagnostic.sav.tmp"};
     for (int i = 0; i < 6; i++) strcpy(disk[i].name, names[i]);
     volume = 1; reboot();
     CHECK(lbBackupIsSramValid() == FALSE);
@@ -236,12 +237,6 @@ int main(void)
     return 0;
 }
 '''
-    if diagnostic:
-        # Only the independent FAT fixture's literal filenames change. The
-        # production arrays concatenate NDS_BACKUP_FILENAME and select it from
-        # compiler flags, so touching a canonical filename fails find_file().
-        result = result.replace("fat:/smash64ds.sav", "fat:/smash64ds-diagnostic.sav")
-        result = result.replace("sd:/smash64ds.sav", "sd:/smash64ds-diagnostic.sav")
     return result
 
 
@@ -251,16 +246,16 @@ class BackupRecoveryTest(unittest.TestCase):
         self.assertIsNotNone(compiler, "Host C compiler required")
         with tempfile.TemporaryDirectory() as directory:
             source, program = Path(directory) / "backup.c", Path(directory) / "backup.exe"
-            flags = ("NDS_DEV_SCENE_HARNESS", "NDS_P2_MENU_WALK", "NDS_HARNESS_FAST_LOGIC",
-                     "NDS_R2_BOTH_CPU", "NDS_P2_FOUR_CPU_STRESS")
+            # Every build is a scene-harness build (the shipping ROM runs the
+            # game as harness 163), so every one saves under the diagnostic
+            # names; the walk and four-CPU flags still open the dev unlocks.
+            flags = ("NDS_P2_MENU_WALK", "NDS_P2_FOUR_CPU_STRESS")
+            source.write_text(host_source())
             for active in (None, *flags):
-                with self.subTest(configuration=active or "normal"):
-                    source.write_text(host_source(diagnostic=active is not None))
-                    defines = [f"-D{flag}={163 if flag == active == flags[0] else int(flag == active)}"
-                               for flag in flags]
+                with self.subTest(configuration=active or "ship"):
+                    defines = [f"-D{flag}={int(flag == active)}" for flag in flags]
                     subprocess.run([compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
-                                    "-DNDS_DEV_SCENE_HARNESS_NORMAL=0", *defines,
-                                    str(source), "-o", str(program)], check=True)
+                                    *defines, str(source), "-o", str(program)], check=True)
                     subprocess.run([str(program)], check=True)
 
 

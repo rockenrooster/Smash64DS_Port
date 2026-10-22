@@ -49,6 +49,9 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(void *ptr,size_t n) 
 static size_t lbRelocGetFileSize(const void *id) {
     ++queries; return (size_t)(uintptr_t)id;
 }
+/* Each seat's P4 content (0 = an original fighter). */
+static u32 contents[4];
+static u32 ndsP4MatchContent(s32 player) { return contents[player]; }
 '''+body+r'''
 int main(void) {
     if(gNdsTaskmanHeapGeneration==sNdsRelocSceneGeneration) return 5;
@@ -65,6 +68,11 @@ int main(void) {
     if(ndsR2AnimCacheMatchFighterBytes()!=1002) return 3;
     battle.players[2].pkind=battle.players[3].pkind=0;
     if(ndsR2AnimCacheMatchFighterBytes()!=0) return 4;
+    /* A P4 player loads its own pack; its parent's Main is never charged. */
+    battle.players[2].pkind=1; contents[2]=17;
+    if(ndsR2AnimCacheMatchFighterBytes()!=0) return 6;
+    contents[2]=0;
+    if(ndsR2AnimCacheMatchFighterBytes()!=1002) return 7;
     return 0;
 }
 '''

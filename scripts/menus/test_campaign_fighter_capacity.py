@@ -83,8 +83,10 @@ typedef unsigned u32; typedef int s32;
 #define GMCOMMON_PLAYERS_MAX 4
 #define nFTPlayerKindNot 2
 static struct { struct { int pkind; } players[4]; } battle, *gSCManagerBattleState;
-static u32 last_flags; static int last_capacity;
+static u32 last_flags; static int last_capacity, hat_prepares;
 static void ftManagerAllocFighter(u32 f, s32 c) { last_flags=f; last_capacity=c; }
+/* Every build has Kirby: the wrapper readies his hats after each allocation. */
+static void ndsSC1PGamePrepareKirbyHats(void) { hat_prepares++; }
 ''' + wrapper + r'''
 int main(void) {
     gSCManagerBattleState = &battle;
@@ -95,6 +97,7 @@ int main(void) {
     ndsSC1PGameAllocFighters(1,4); assert(last_capacity==4);
     gSCManagerBattleState=NULL;
     ndsSC1PGameAllocFighters(7,4); assert(last_capacity==4 && last_flags==7);
+    assert(hat_prepares==3);
     return 0;
 }
 '''

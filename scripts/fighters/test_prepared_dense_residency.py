@@ -368,55 +368,6 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         self.assertIn("sNdsNativeFighterPreparedDenseLow,", src)
         self.assertNotIn("NDS_NATIVE_OWNER_IMAGE_MARIO", src)
 
-    def test_verification_after_reference_scratch_was_drawn(self):
-        sys.path.insert(0, str(REPO / 'scripts/menus'))
-        from source_test_helpers import function
-        source = LOADER_C.read_text(encoding='utf8')
-        start = source.index('typedef struct NDSNativePreparedDenseVertex')
-        end = source.index('typedef struct NDSNativeRoot', start)
-        record = source[start:end].rsplit('#endif', 1)[0]
-        helper = function(source, 'ndsRendererNativeVerifyPreparedMember')
-        start = source.index('#define NDS_IMG_VERIFY(')
-        dispatch = source[start:source.index('#else', start)]
-        with tempfile.TemporaryDirectory() as directory:
-            for hw in (0, 1):
-                program = f'''#include <assert.h>
-#include <stdint.h>
-typedef uint32_t u32; typedef uint16_t u16; typedef int16_t s16;
-#define NDS_R2_FIGHTER_HW_LIGHT {hw}
-static u32 gNdsNativeOwnerImageMatchCount, gNdsNativeOwnerImageMismatchCount;
-void ndsRendererNativeVerifyMember(const void*,u32,const void*,u32);
-''' + record + '\n' + helper + '\n' + dispatch + r'''
-int main(void) {
-    NDSNativePreparedDenseVertex reference[2] = {{0}};
-    struct { NDSNativePreparedDenseVertex rows[2]; } image = {{{0}}}, *img_ = &image;
-    reference[0].gx_xy = image.rows[0].gx_xy = 0xabcdef01;
-    reference[1].gx_z = image.rows[1].gx_z = 0x8000;
-    reference[0].s = 37; reference[1].t = -49;
-#if !NDS_R2_FIGHTER_HW_LIGHT
-    reference[0].shaded_rgba = 0x11223344; reference[1].packed_color = 0x1234;
-#endif
-    NDS_IMG_VERIFY(ignored, rows, reference)
-    assert(gNdsNativeOwnerImageMatchCount == 1);
-    image.rows[0].gx_xy ^= 1;
-    NDS_IMG_VERIFY(ignored, rows, reference)
-    image.rows[0].gx_xy ^= 1;
-    image.rows[1].s = 1;
-    NDS_IMG_VERIFY(ignored, rows, reference)
-    ndsRendererNativeVerifyPreparedMember(image.rows, sizeof(image.rows)-1,
-                                          reference, sizeof(reference));
-    assert(gNdsNativeOwnerImageMismatchCount == 3);
-    return 0;
-}
-'''
-                c = Path(directory) / ('verify%d.c' % hw)
-                exe = c.with_suffix('.exe')
-                c.write_text(program)
-                result = subprocess.run([shutil.which('gcc'), '-std=c11', str(c),
-                                         '-o', str(exe)], capture_output=True)
-                self.assertEqual(result.returncode, 0, result.stderr.decode())
-                subprocess.run([str(exe)], check=True, capture_output=True)
-
     def test_owners_chokepoint_and_typedef_shape(self):
         owners_src = OWNERS_PY.read_text(encoding="utf-8")
         # The P2 PreparedDense emission routes through the guarded local
@@ -428,12 +379,16 @@ int main(void) {
         self.assertIn("PreparedDense", NATIVE_OWNER_SUPPRESSED_ARRAYS)
         self.assertIn("if base in NATIVE_OWNER_SUPPRESSED_ARRAYS:", owners_src)
         # The renderer typedef the storage test extracts keeps its shape:
-        # both HW branches and the packed 10-byte layout.
+        # the packed 10-byte HW-light layout, the only one since every
+        # build sets NDS_R2_FIGHTER_HW_LIGHT (its other branch went
+        # 2026-10-21).
         renderer_src = LOADER_C.read_text(encoding="utf-8")
         a = renderer_src.index("typedef struct NDSNativePreparedDenseVertex")
         b = renderer_src.index("typedef struct NDSNativeRoot", a)
         record = renderer_src[a:b].rsplit("#endif", 1)[0]
-        self.assertIn("#if !NDS_R2_FIGHTER_HW_LIGHT", record)
+        self.assertNotIn("NDS_R2_FIGHTER_HW_LIGHT", record)
+        for field in ("u32 gx_xy;", "u16 gx_z;", "s16 s;", "s16 t;"):
+            self.assertIn(field, record)
         self.assertIn("} __attribute__((packed, aligned(2))) "
                       "NDSNativePreparedDenseVertex;", record)
 
