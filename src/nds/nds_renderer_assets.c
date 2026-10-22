@@ -615,8 +615,14 @@ typedef struct NDSEntryEffectRoot
     u32 source_offset;
     u16 first_group;
     u8 group_count;
-    u8 reserved;
+    u8 flags; /* NDS_ENTRY_ROOT_* */
 } NDSEntryEffectRoot;
+
+/* The root draws with a polygon ID of its own rather than the seeded 1: it
+ * sits inside another translucent root (Link's entry wave in his beam), and
+ * the DS draws no translucent pixel over one of the same ID. */
+#define NDS_ENTRY_ROOT_OWN_POLY_ID 0x01u
+#define NDS_ENTRY_ROOT_OWN_POLY_ID_VALUE 60u
 
 typedef struct NDSEntryEffectTexture
 {

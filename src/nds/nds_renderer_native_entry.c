@@ -2618,6 +2618,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
         poly_fmt = ndsRendererHardwarePolyFmt(stats, polygon_alpha);
+        if ((root->flags & NDS_ENTRY_ROOT_OWN_POLY_ID) != 0u)
+        {
+            poly_fmt = (poly_fmt & ~(u32)POLY_ID(NDS_RENDERER_POLY_ID_MASK)) |
+                       POLY_ID(NDS_ENTRY_ROOT_OWN_POLY_ID_VALUE);
+        }
         /* Lit groups are shaded on the CPU below unless the engine lights
          * them (hw_lit_group); otherwise
          * POLY_FORMAT_LIGHT0 must stay absent even if a previous hardware-lit

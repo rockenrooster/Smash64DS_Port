@@ -2205,12 +2205,23 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     lines.append("};")
     lines.append("")
 
+    # Roots drawn inside another translucent root of the same moment take a
+    # polygon ID of their own (NDS_ENTRY_ROOT_OWN_POLY_ID): the DS draws no
+    # translucent pixel over one of the same ID, and every root is seeded with
+    # ID 1, so Link's entry beam hid the whole wave inside it (owner
+    # 2026-10-22). Marth's, Roy's and Ike's entries are the same pair.
+    own_poly_id = {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
+                   len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) +
+                   LINK_SPECIAL2_ROOTS.index(LINK_ENTRY_ROOTS[0])}
+    own_poly_id |= {p4_root_first + i for i, p4_root in enumerate(p4)
+                    if p4_root.row.get("article") == "entry_wave"}
     lines.append("static const NDSEntryEffectRoot sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_ROOT_COUNT] = {")
     for root_index, root in enumerate(roots):
         indices = root_groups[root_index]
         first = indices[0] if indices else 0
         count = len(indices)
-        lines.append(f"    {{ 0x{root:04x}u, {first}u, {count}u, 0u }},")
+        flags = 1 if root_index in own_poly_id else 0
+        lines.append(f"    {{ 0x{root:04x}u, {first}u, {count}u, {flags}u }},")
     lines.append("};")
     lines.append("")
 

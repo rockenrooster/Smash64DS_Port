@@ -1591,7 +1591,7 @@ static const NDSEntryEffectRoot sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_ROOT_COUNT
     { 0x5e10u, 54u, 1u, 0u },
     { 0x5e40u, 55u, 1u, 0u },
     { 0x5e70u, 56u, 1u, 0u },
-    { 0x02d8u, 57u, 1u, 0u },
+    { 0x02d8u, 57u, 1u, 1u },
     { 0x0698u, 58u, 1u, 0u },
     { 0x1100u, 59u, 1u, 0u },
     { 0x11680u, 60u, 9u, 0u },
