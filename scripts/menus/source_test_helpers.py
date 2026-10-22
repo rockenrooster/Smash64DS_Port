@@ -34,6 +34,11 @@ SPLIT_SOURCES = {
         "reloc_backend_shims_fighter_parts.c",
         "reloc_backend_shims_map_collision.c",
     )),
+    "port/reloc_backend_mp_collision.c": ("port/reloc_backend.c", (
+        "reloc_backend_mp_lines.c",
+        "reloc_backend_mp_walls.c",
+        "reloc_backend_mp_floors.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

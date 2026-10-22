@@ -441,6 +441,9 @@ static void ndsMPCollisionSetGeometry(MPGeometryData *geometry);
 
 /* MP collision proofs. */
 #include "reloc_backend_mp_collision.c"
+#include "reloc_backend_mp_lines.c"
+#include "reloc_backend_mp_walls.c"
+#include "reloc_backend_mp_floors.c"
 
 /* Cliff/ledge proofs. */
 #include "reloc_backend_cliff_ledge.c"

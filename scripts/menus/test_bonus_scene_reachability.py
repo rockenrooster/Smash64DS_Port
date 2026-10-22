@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
+from source_test_helpers import source as read_split
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -42,7 +44,7 @@ class BonusSceneReachabilityTests(unittest.TestCase):
         compiler = shutil.which("gcc") or shutil.which("clang")
         if compiler is None:
             self.skipTest("host C compiler required")
-        source = (ROOT / "src/port/reloc_backend_mp_collision.c").read_text()
+        source = read_split(ROOT / "src/port/reloc_backend_mp_collision.c")
         functions = (
             "s32 mpCollisionGetLineCountType(s32 line_type)" +
             function_body(source, "mpCollisionGetLineCountType") +
