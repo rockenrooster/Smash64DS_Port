@@ -5,11 +5,9 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** H-1 -- copy the tools S1 and the gate need into
-`scripts/tools/` (gate and play ROM builds, the walk/soak/wireless drivers,
-the worst-case sweep, the digest compare, the heap census) with a README; then
-build the S1 ROMs on HEAD and start S1 in the background slots while Phase C
-goes on in the foreground.
+**Next action:** build the S1 ROMs on HEAD with `scripts/tools/` (walk, soak,
+wireless lab, gate) and start S1 in the background slots; Phase C goes on in
+the foreground between builds (C3: `nds_renderer_textures_effects.c`).
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -36,7 +34,7 @@ commit with explicit paths only.
 | item | state | evidence / next |
 |---|---|---|
 | Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
-| H-1 tools S1 and the gate need, into `scripts/tools/` | next | sources: session scratchpads `31e5c78d-...` and `4aa2b87d-...` under `%TEMP%\claude\D--Stuff-DevFolder-Smash64DS-Port\` |
+| H-1 tools S1 and the gate need, into `scripts/tools/` | done | 22 files, `scripts/tools/README.md`: play/walk/gate/soak builds, the probe session and halt probes, the six audit drivers, the wireless lag driver, the worst-case sweep, the heap census, the boot check; no session paths (`common.ps1`); `boot_check.ps1` boots `play-ram1` clean |
 | S1 regression net (full matrix) on HEAD | open | ROMs: walk, soak, wireless lab, ship layout |
 | C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` (`7f0dca28600`) and `reloc_backend_assets.c` (C2) done; next `nds_renderer_textures_effects.c` |
 | S3 static analysis (`-fanalyzer`, allocations, stacks) | open | foreground work while S1 runs |
@@ -63,6 +61,8 @@ commit with explicit paths only.
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- H-1: the S1 and gate tools in `scripts/tools/` (22 files, README); parse-clean,
+  `boot_check.ps1` on `play-ram1`: scene 1, 0 storage failures.
 - 2026-10-22 -- C2: `reloc_backend_assets.c` (18,246 lines) into 8 slices of the
   `scene_backend` unit (1,269 to 3,545 lines); `scene_backend.o` preprocess-identical in the
   five configs; the 14 affected test files fail exactly as on HEAD (18 pre-existing), the
