@@ -19,6 +19,15 @@ SPLIT_SOURCES = {
         "nds_renderer_native_lean_entries.c",
         "nds_renderer_native_hierarchy.c",
     )),
+    "nds/nds_renderer_textures_effects.c": ("nds/nds_renderer.c", (
+        "nds_renderer_texture_scene.c",
+        "nds_renderer_particles.c",
+        "nds_renderer_world_quads.c",
+        "nds_renderer_texture_convert.c",
+        "nds_renderer_texture_resolve.c",
+        "nds_renderer_submit.c",
+        "nds_renderer_fighter_vram.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

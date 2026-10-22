@@ -1295,6 +1295,13 @@ def check_runtime_contract(root: Path, source: str) -> None:
     renderer = '\n'.join((root / 'src/nds' / name).read_text() for name in (
         'nds_renderer.c', 'nds_renderer_preamble.c', 'nds_renderer_assets.c',
         'nds_renderer_dispatch_profile.c', 'nds_renderer_textures_effects.c',
+        'nds_renderer_texture_scene.c',
+        'nds_renderer_particles.c',
+        'nds_renderer_world_quads.c',
+        'nds_renderer_texture_convert.c',
+        'nds_renderer_texture_resolve.c',
+        'nds_renderer_submit.c',
+        'nds_renderer_fighter_vram.c',
         'nds_renderer_native_common.c', 'nds_renderer_native_rebirth_halo.c',
         'nds_renderer_native_dl_walk.c', 'nds_renderer_native_entry.c',
         'nds_renderer_native_production_runs.c',

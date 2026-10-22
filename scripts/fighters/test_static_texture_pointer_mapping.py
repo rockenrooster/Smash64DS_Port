@@ -11,11 +11,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
-from source_test_helpers import function
+from source_test_helpers import function, source as read_source
 
 
 def test_static_keys_map_all_three_pointers_and_reject_missing_spans(tmp_path):
-    source = (ROOT / "src/nds/nds_renderer_textures_effects.c").read_text()
+    source = read_source(ROOT / "src/nds/nds_renderer_textures_effects.c")
     bodies = "\n".join(function(source, name) for name in (
         "ndsRendererHardwareBattleStaticPointer",
         "ndsRendererHardwareBuildBattleStaticTextureKey",

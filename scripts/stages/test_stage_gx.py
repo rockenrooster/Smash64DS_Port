@@ -231,8 +231,8 @@ int main(void) {
 
 def test_attribute_decisions_match_renderer():
     sys.path.insert(0, str(gx.stage._paths.REPO_ROOT / 'scripts/menus'))
-    from source_test_helpers import function
-    source = (gx.stage._paths.REPO_ROOT / 'src/nds/nds_renderer_textures_effects.c').read_text()
+    from source_test_helpers import function, source as read_source
+    source = read_source(gx.stage._paths.REPO_ROOT / 'src/nds/nds_renderer_textures_effects.c')
     names = ('ndsRendererCombineUsesColor', 'ndsRendererCombineOutputUsesColor',
              'ndsRendererCombineSecondOutputUsesColor', 'ndsRendererHardwareUseSecondCycle',
              'ndsRendererHardwareSecondCyclePassesCombined', 'ndsRendererHardwareOutputUsesColor',

@@ -271,9 +271,10 @@ def main() -> None:
     # A3I5 wrapper uploads the exact requested width/height and this callback
     # fills one contiguous width*height buffer. Pin that contract so a future
     # wider-atlas row copy cannot silently use texture width as its stride.
-    renderer = (
-        ROOT / "src/nds/nds_renderer_textures_effects.c"
-    ).read_text(encoding="utf-8")
+    sys.path.insert(0, str(ROOT / "scripts/menus"))
+    from source_test_helpers import source as read_source
+
+    renderer = read_source(ROOT / "src/nds/nds_renderer_textures_effects.c")
     fill_start = renderer.find("static s32 ndsRendererEntryEffectTextureFill(")
     fill_end = renderer.find(
         "s32 ndsRendererHardwarePrepareImpactWaveTextures", fill_start

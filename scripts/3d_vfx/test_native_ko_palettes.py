@@ -45,7 +45,7 @@ def test_ko_rgb_is_constant_through_source_alpha_animation():
 def test_palette_only_names_are_reused_and_alpha_does_not_change_binding(tmp_path):
     assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
     common = source(ROOT / "src/nds/nds_renderer_native_common.c")
-    textures = (ROOT / "src/nds/nds_renderer_textures_effects.c").read_text()
+    textures = source(ROOT / "src/nds/nds_renderer_textures_effects.c")
     tables = "\n".join(braced(assets, rf"static const u32 {name}\[", True)
                        for name in ("sNdsEntryKoRootOffsets", "sNdsEntryKoPrimRgb", "sNdsEntryKoEnvRgb"))
     code = r'''
