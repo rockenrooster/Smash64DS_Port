@@ -413,6 +413,10 @@ static void ndsMPCollisionSetGeometry(MPGeometryData *geometry);
 
 /* Compatibility/proof shims. */
 #include "reloc_backend_compat_shims.c"
+#include "reloc_backend_shims_fighter_status.c"
+#include "reloc_backend_shims_fighter_effects.c"
+#include "reloc_backend_shims_fighter_parts.c"
+#include "reloc_backend_shims_map_collision.c"
 
 /* Relocation asset loading: the loaded-file registry, then its tables, file
  * IDs, pointer resolution, normalizers, symbols and extern trees, the motion

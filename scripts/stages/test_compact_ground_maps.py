@@ -405,7 +405,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         self.assertIn("ndsRelocCompactGroundMapExpectedSize(desc->asset_ids[index]",
                       MATRIX_C.read_text(encoding="utf-8"))
         self.assertIn("ndsRelocCompactGroundMapPrepareTraining(file, ground_data)",
-                      SHIMS_C.read_text(encoding="utf-8"))
+                      read_split(SHIMS_C))
 
 
 # --------------------------------------------------------------------------

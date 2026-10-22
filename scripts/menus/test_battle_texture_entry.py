@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from source_test_helpers import braced, function, original_enum
+from source_test_helpers import braced, function, original_enum, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
 DECOMP = ROOT / "decomp/BattleShip-main/decomp/src"
@@ -116,7 +116,7 @@ class BattleTextureEntryTest(unittest.TestCase):
         self.assertLess(load.index("func_start();"), load.index("syTaskmanRunTask("))
         for path, name in (("src/port/reloc_backend_compat_shims.c", "mpCollisionSetPlayBGM"),
                            ("src/port/reloc_backend_mp_collision.c", "mpCollisionSetBGM")):
-            self.assertNotIn("ndsBattlePrepareSceneTextures", function((ROOT / path).read_text(), name))
+            self.assertNotIn("ndsBattlePrepareSceneTextures", function(read_split(ROOT / path), name))
         for forbidden in ("gNdsMatchConfig", "gSCManagerTransferBattleState", "ndsR2AnimCachePreload"):
             self.assertNotIn(forbidden, prepare)
         self.assertIn("ndsBattlePrepareSceneTextures();", function(vs, "ndsSCVSBattleStartPlayBGM"))

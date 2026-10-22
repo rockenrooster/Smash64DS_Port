@@ -7,6 +7,9 @@ import tempfile
 import unittest
 
 import check_audio_cue_census as census
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,7 +21,7 @@ FUNCTIONS = {
 
 
 def function_source(path, prefix):
-    definitions = census.definitions(path.read_text(encoding="utf-8"))
+    definitions = census.definitions(read_split(path))
     source = "\n".join(signature + definitions[name][1]
                        for name, signature in FUNCTIONS.items())
     for name in FUNCTIONS:

@@ -28,6 +28,12 @@ SPLIT_SOURCES = {
         "nds_renderer_submit.c",
         "nds_renderer_fighter_vram.c",
     )),
+    "port/reloc_backend_compat_shims.c": ("port/reloc_backend.c", (
+        "reloc_backend_shims_fighter_status.c",
+        "reloc_backend_shims_fighter_effects.c",
+        "reloc_backend_shims_fighter_parts.c",
+        "reloc_backend_shims_map_collision.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",
