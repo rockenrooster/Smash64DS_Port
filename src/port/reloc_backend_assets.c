@@ -3344,79 +3344,6 @@ static const NDSRelocSpriteNormalizeDesc
       G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
-static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
-    {
-        &llMNTitleCutoutSprite,
-        NDS_RELOC_SYMBOL_TITLE_CUTOUT,
-        157, 94,
-        208, 90,
-        G_IM_FMT_I, G_IM_SIZ_4b
-    },
-    {
-        &llMNTitleSmashSprite,
-        NDS_RELOC_SYMBOL_TITLE_SMASH,
-        161, 88,
-        172, 62,
-        G_IM_FMT_RGBA, G_IM_SIZ_32b
-    },
-    {
-        &llMNTitleSuperSprite,
-        NDS_RELOC_SYMBOL_TITLE_SUPER,
-        55, 96,
-        64, 50,
-        G_IM_FMT_IA, G_IM_SIZ_8b
-    },
-    {
-        &llMNTitleBrosSprite,
-        NDS_RELOC_SYMBOL_TITLE_BROS,
-        268, 96,
-        56, 52,
-        G_IM_FMT_IA, G_IM_SIZ_8b
-    },
-    {
-        &llMNTitleTMUnkSprite,
-        NDS_RELOC_SYMBOL_TITLE_TM_UNK,
-        270, 132,
-        32, 12,
-        G_IM_FMT_I, G_IM_SIZ_4b
-    },
-    {
-        &llMNTitleCopyrightSprite,
-        NDS_RELOC_SYMBOL_TITLE_COPYRIGHT,
-        160, 208,
-        300, 44,
-        G_IM_FMT_IA, G_IM_SIZ_8b
-    },
-    {
-        &llMNTitleBorderUpperSprite,
-        NDS_RELOC_SYMBOL_TITLE_BORDER_UPPER,
-        160, 15,
-        300, 10,
-        G_IM_FMT_I, G_IM_SIZ_4b
-    },
-    {
-        &llMNTitlePressStartSprite,
-        NDS_RELOC_SYMBOL_TITLE_PRESS_START,
-        162, 177,
-        96, 18,
-        G_IM_FMT_IA, G_IM_SIZ_8b
-    },
-    {
-        &llMNTitleLogoAnimFullSprite,
-        NDS_RELOC_SYMBOL_TITLE_LOGO_FULL,
-        260, 60,
-        128, 124,
-        G_IM_FMT_I, G_IM_SIZ_4b
-    },
-    {
-        &llMNTitleTMSprite,
-        NDS_RELOC_SYMBOL_TITLE_TM,
-        277, 157,
-        32, 12,
-        G_IM_FMT_I, G_IM_SIZ_4b
-    }
-};
-
 static const NDSRelocKnownSymbol sNdsTitleFireAnimFrameSymbols[] = {
     { &llMNTitleFireAnimFrame1Sprite, NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME1 },
     { &llMNTitleFireAnimFrame2Sprite, NDS_RELOC_SYMBOL_TITLE_FIRE_FRAME2 },
@@ -11161,53 +11088,6 @@ static void ndsRelocNormalizeIFAnnounceMarioSprites(NDSRelocLoadedFile *loaded)
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Z);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_PERIOD);
-}
-
-static s32 ndsRelocNormalizeTitleSprite(NDSRelocLoadedFile *loaded,
-                                        const NDSTitleSpriteDesc *desc)
-{
-    Sprite *sprite;
-    u32 bitmap_count;
-
-    if ((loaded == NULL) ||
-        (loaded->asset_id != NDS_RELOC_ASSET_MN_TITLE) ||
-        (desc == NULL) ||
-        (ndsRelocRangeInLoadedFile(loaded, desc->offset,
-                                   sizeof(Sprite)) == FALSE))
-    {
-        gNdsTitleSpriteNormalizeFailCount++;
-        return FALSE;
-    }
-
-    sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
-    if (((u32)(u16)sprite->width == desc->width) &&
-        ((u32)(u16)sprite->height == desc->height) &&
-        (sprite->bmfmt == desc->bmfmt) &&
-        (sprite->bmsiz == desc->bmsiz))
-    {
-        gNdsTitleSpriteNormalizeCount++;
-        return TRUE;
-    }
-
-    ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt, desc->bmsiz);
-    bitmap_count = (u32)(u16)sprite->nbitmaps;
-    if (((u32)(u16)sprite->width != desc->width) ||
-        ((u32)(u16)sprite->height != desc->height) ||
-        ((u32)(u16)sprite->width == 0) ||
-        ((u32)(u16)sprite->height == 0) ||
-        ((u32)(u16)sprite->width > NDS_TITLE_MAX_WIDTH) ||
-        ((u32)(u16)sprite->height > NDS_TITLE_MAX_HEIGHT) ||
-        (bitmap_count == 0) ||
-        (bitmap_count > 128u) ||
-        (ndsRelocNormalizeSpriteBitmapTable(loaded, sprite,
-                                            bitmap_count) == FALSE))
-    {
-        gNdsTitleSpriteNormalizeFailCount++;
-        return FALSE;
-    }
-
-    gNdsTitleSpriteNormalizeCount++;
-    return TRUE;
 }
 
 static s32 ndsRelocNormalizeTitleFireSprite(NDSRelocLoadedFile *loaded,

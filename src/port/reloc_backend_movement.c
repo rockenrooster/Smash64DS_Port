@@ -3622,30 +3622,6 @@ static void ndsFighterGCRunAllLoopCopyFromPreview(void)
         gNdsFighterPreviewLoopGADriftCount;
 }
 
-static void ndsFighterGCRunAllLoopPauseProofOwnedProcesses(void)
-{
-    u32 i;
-
-    for (i = 0u; i < 2u; i++)
-    {
-        if (sNdsFighterSchedulerLoopProcesses[i] != NULL)
-        {
-            gcPauseGObjProcess(sNdsFighterSchedulerLoopProcesses[i]);
-            NDS_DIAG(gNdsFighterGCRunAllLoopOldProcessPauseCount++);
-        }
-        if (sNdsFighterControllerLoopProcesses[i] != NULL)
-        {
-            gcPauseGObjProcess(sNdsFighterControllerLoopProcesses[i]);
-            NDS_DIAG(gNdsFighterGCRunAllLoopOldProcessPauseCount++);
-        }
-        if (sNdsFighterPreviewLoopProcesses[i] != NULL)
-        {
-            gcPauseGObjProcess(sNdsFighterPreviewLoopProcesses[i]);
-            NDS_DIAG(gNdsFighterGCRunAllLoopOldProcessPauseCount++);
-        }
-    }
-}
-
 static void ndsFighterGCRunAllLoopPauseNonTargetGObjVisitor(GObj *gobj,
                                                             u32 param)
 {
@@ -3669,41 +3645,6 @@ static void ndsFighterGCRunAllLoopPauseNonTargetGObjVisitor(GObj *gobj,
         NDS_DIAG(gNdsFighterGCRunAllLoopNonTargetProcessPauseCount++);
     }
     gobj->flags |= GOBJ_FLAG_NORUN;
-}
-
-static void ndsFighterGCRunAllLoopPauseNonTargetProcesses(void)
-{
-    gcFuncGObjAll(ndsFighterGCRunAllLoopPauseNonTargetGObjVisitor, 0u);
-}
-
-static void ndsFighterGCRunAllLoopGObjProc(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    u32 slot = 2u;
-
-    if ((fp != NULL) && (fp->player < 2))
-    {
-        slot = fp->player;
-    }
-    if ((slot >= 2u) || (fp == NULL) ||
-        (ndsFighterStructIsPoolPointer(fp) == FALSE))
-    {
-        NDS_DIAG(gNdsFighterGCRunAllLoopProcessAttachEscapeCount++);
-        return;
-    }
-    if (slot == 0u)
-    {
-        NDS_DIAG(gNdsFighterGCRunAllLoopP0ProcCallbackCount++);
-        gNdsFighterGCRunAllLoopP0GObjProcessRunCount++;
-    }
-    else
-    {
-        NDS_DIAG(gNdsFighterGCRunAllLoopP1ProcCallbackCount++);
-        gNdsFighterGCRunAllLoopP1GObjProcessRunCount++;
-    }
-    sNdsFighterGCRunAllLoopActive = TRUE;
-    ndsFighterPreviewLoopRunSlotProcess(slot, fp);
-    sNdsFighterGCRunAllLoopActive = FALSE;
 }
 
 s32 ndsFighterMarioFoxGCRunAllLoopUpdateEnabled(void)
@@ -9538,75 +9479,6 @@ static void ndsFighterGCDrawAllLoopCopyFromPreview(void)
         gNdsFighterPreviewLoopRootYDriftCount;
     gNdsFighterGCDrawAllLoopGADriftCount =
         gNdsFighterPreviewLoopGADriftCount;
-}
-
-static void ndsFighterGCDrawAllLoopPauseProofOwnedProcesses(void)
-{
-    u32 i;
-
-    for (i = 0u; i < 2u; i++)
-    {
-        if (sNdsFighterGCRunAllLoopProcesses[i] != NULL)
-        {
-            gcPauseGObjProcess(sNdsFighterGCRunAllLoopProcesses[i]);
-            NDS_DIAG(gNdsFighterGCDrawAllLoopOldProcessPauseCount++);
-        }
-    }
-}
-
-static void ndsFighterGCDrawAllLoopPauseNonTargetGObjVisitor(GObj *gobj,
-                                                             u32 param)
-{
-    GObj *target0 = sNdsFighterStructPool[0].fighter_gobj;
-    GObj *target1 = sNdsFighterStructPool[1].fighter_gobj;
-    (void)param;
-
-    if (gobj == NULL)
-    {
-        return;
-    }
-    if ((gobj == target0) || (gobj == target1))
-    {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopTargetProcessPreserveCount++);
-        return;
-    }
-    NDS_DIAG(gNdsFighterGCDrawAllLoopNonTargetGObjVisitCount++);
-    if (gobj->gobjproc_head != NULL)
-    {
-        gcPauseGObjProcessAll(gobj);
-        NDS_DIAG(gNdsFighterGCDrawAllLoopNonTargetProcessPauseCount++);
-    }
-    gobj->flags |= GOBJ_FLAG_NORUN;
-}
-
-static void ndsFighterGCDrawAllLoopGObjProc(GObj *fighter_gobj)
-{
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    u32 slot = 2u;
-
-    if ((fp != NULL) && (fp->player < 2))
-    {
-        slot = fp->player;
-    }
-    if ((slot >= 2u) || (fp == NULL) ||
-        (ndsFighterStructIsPoolPointer(fp) == FALSE))
-    {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopProcessAttachEscapeCount++);
-        return;
-    }
-    if (slot == 0u)
-    {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopP0ProcCallbackCount++);
-        gNdsFighterGCDrawAllLoopP0GObjProcessRunCount++;
-    }
-    else
-    {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopP1ProcCallbackCount++);
-        gNdsFighterGCDrawAllLoopP1GObjProcessRunCount++;
-    }
-    sNdsFighterGCDrawAllLoopActive = TRUE;
-    ndsFighterPreviewLoopRunSlotProcess(slot, fp);
-    sNdsFighterGCDrawAllLoopActive = FALSE;
 }
 
 static void ndsFighterGCDrawAllLoopRecordDisplayFromCallback(

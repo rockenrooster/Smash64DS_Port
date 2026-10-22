@@ -3310,29 +3310,6 @@ void ndsPlatformClearBattleTextHud(void)
 #endif
 }
 
-static u32 ndsPlatformScaleToFps(u32 delta, u32 elapsed_ticks)
-{
-    if (elapsed_ticks == 0)
-    {
-        return 0;
-    }
-    return ((delta * 60u) + (elapsed_ticks / 2u)) / elapsed_ticks;
-}
-
-static u32 ndsPlatformOpeningMovieLogicTickCount(void)
-{
-    return gNdsOpeningRoomTickCount +
-           gNdsOpeningPortraitsTickCount +
-           gNdsOpeningMarioTickCount +
-           gNdsOpeningMovieActionPreviewFrameCount;
-}
-
-static u32 ndsPlatformPreviewCommitCount(void)
-{
-    return gNdsOriginalSpritePreviewCommitCount +
-           gNdsOriginalDLPreviewCommitCount;
-}
-
 
 void ndsPlatformRenderDebugHud(void)
 {

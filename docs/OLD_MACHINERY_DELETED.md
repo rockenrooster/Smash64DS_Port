@@ -119,6 +119,19 @@ has every other symbol at its `s59` size, replay digests identical to `s59` over
 (the originals on Dream Land, Mr. Game & Watch x4 on Remix stage 41), WORK P95 within noise;
 the ship-config play ROM links.
 
+## Helpers the deletions left unused (81) -- Phase B, third batch (2026-10-22)
+
+81 `static` helpers gcc reports unused in all five live configs once the two batches above were
+gone, and that nothing else names, 5,233 lines in 7 files: the Mario/Fox hooks' loop reset and
+pause helpers and the live-preview pause and diagnostics helpers they called
+(`reloc_backend_mp_collision.c` 42, `reloc_backend_cliff_ledge.c` 26, `reloc_backend_movement.c`
+6), the title-sprite normalizer and its table (`reloc_backend_assets.c`), a cliff collision
+bridge, a DL-preview material store and three platform perf helpers. A second scan of the
+changed units finds no more: the 22 statics still unused there are named by code that only
+other builds compile, by comments or by scripts, and stay. The compiler had dropped each
+already: both changed translation units (the `scene_backend.c` unity build and
+`nds_platform.c`) are byte-identical before and after, section for section.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,

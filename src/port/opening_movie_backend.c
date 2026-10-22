@@ -1044,39 +1044,6 @@ static void ndsOpeningRoomProbeDObjMaterial(
     }
 }
 
-static void ndsOpeningRoomStoreDLPreviewMaterial(
-    const NDSOpeningRoomMaterialProbe *probe)
-{
-    if (probe == NULL)
-    {
-        return;
-    }
-
-    gNdsOpeningRoomDLPreviewMaterialCount = probe->count;
-    gNdsOpeningRoomDLPreviewMaterialFlags = probe->flags;
-    gNdsOpeningRoomDLPreviewMaterialEffectiveFlags = probe->effective_flags;
-    gNdsOpeningRoomDLPreviewMaterialMask = probe->mask;
-    gNdsOpeningRoomDLPreviewMaterialTextureCurr = probe->texture_curr;
-    gNdsOpeningRoomDLPreviewMaterialTextureNext = probe->texture_next;
-    gNdsOpeningRoomDLPreviewMaterialPaletteIndex = probe->palette_index;
-    gNdsOpeningRoomDLPreviewMaterialLfrac100 = probe->lfrac100;
-    gNdsOpeningRoomDLPreviewMaterialFormat = probe->format;
-    gNdsOpeningRoomDLPreviewMaterialSize = probe->size;
-    gNdsOpeningRoomDLPreviewMaterialBlockFormat = probe->block_format;
-    gNdsOpeningRoomDLPreviewMaterialBlockSize = probe->block_size;
-    gNdsOpeningRoomDLPreviewMaterialTileWidth = probe->tile_width;
-    gNdsOpeningRoomDLPreviewMaterialTileHeight = probe->tile_height;
-    gNdsOpeningRoomDLPreviewMaterialScrollWidth = probe->scroll_width;
-    gNdsOpeningRoomDLPreviewMaterialScrollHeight = probe->scroll_height;
-    gNdsOpeningRoomDLPreviewMaterialScaleS100 = probe->scale_s100;
-    gNdsOpeningRoomDLPreviewMaterialScaleT100 = probe->scale_t100;
-    gNdsOpeningRoomDLPreviewMaterialTranslateS100 = probe->translate_s100;
-    gNdsOpeningRoomDLPreviewMaterialTranslateT100 = probe->translate_t100;
-    gNdsOpeningRoomDLPreviewMaterialSpriteCurr = probe->sprite_curr;
-    gNdsOpeningRoomDLPreviewMaterialSpriteNext = probe->sprite_next;
-    gNdsOpeningRoomDLPreviewMaterialPalettePtr = probe->palette_ptr;
-}
-
 static void ndsOpeningRoomStoreCandidateMaterial(
     const NDSOpeningRoomMaterialProbe *probe)
 {
