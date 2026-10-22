@@ -1,6 +1,5 @@
 #include <nds/nds_fox_gun.h>
 
-#if NDS_R2_FOX_GUN_OVERLAY
 
 /* Fox's blaster, as data.
  *
@@ -190,4 +189,3 @@ _Static_assert(sizeof(sNdsFoxGunTexels) ==
                     NDS_FOX_GUN_TEXTURE_HEIGHT) / 2u,
                "Fox gun texels do not match the declared CI4 extent");
 
-#endif /* NDS_R2_FOX_GUN_OVERLAY */

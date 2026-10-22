@@ -1,6 +1,5 @@
 #include <ft/fighter.h>
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #define NDS_STATUS_ALIAS(original, base)          \
     void base(GObj *fighter_gobj);                \
     __attribute__((weak)) void original(          \
@@ -24,7 +23,6 @@ NDS_STATUS_ALIAS(ftCommonAttack13ProcInterrupt, ndsBaseFTCommonAttack13ProcInter
 NDS_STATUS_ALIAS(ftCommonAttack13ProcUpdate, ndsBaseFTCommonAttack13ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackAirLwProcUpdate, ndsBaseFTCommonAttackAirLwProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackAirProcMap, ndsBaseFTCommonAttackAirProcMap)
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 NDS_STATUS_ALIAS(ftCommonAttackLw3ProcInterrupt, ndsBaseFTCommonAttackLw3ProcInterrupt)
 NDS_STATUS_ALIAS(ftCommonAttackLw3ProcUpdate, ndsBaseFTCommonAttackLw3ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackS4ProcUpdate, ndsBaseFTCommonAttackS4ProcUpdate)
@@ -34,7 +32,6 @@ NDS_STATUS_ALIAS(ftCommonJumpAerialProcInterrupt, ndsBaseFTCommonJumpAerialProcI
  * its own. */
 NDS_STATUS_ALIAS(ftCommonJumpAerialProcPhysics, ndsBaseFTCommonJumpAerialProcPhysics)
 NDS_STATUS_ALIAS(ftCommonJumpAerialProcUpdate, ndsBaseFTCommonJumpAerialProcUpdate)
-#endif
 NDS_STATUS_ALIAS(ftCommonCapturePulledProcMap, ndsBaseFTCommonCapturePulledProcMap)
 NDS_STATUS_ALIAS(ftCommonCapturePulledProcPhysics, ndsBaseFTCommonCapturePulledProcPhysics)
 NDS_STATUS_ALIAS(ftCommonCaptureWaitProcMap, ndsBaseFTCommonCaptureWaitProcMap)
@@ -92,4 +89,3 @@ NDS_STATUS_ALIAS(ftCommonWallDamageProcUpdate, ndsBaseFTCommonWallDamageProcUpda
 
 #undef NDS_STATUS_ALIAS
 
-#endif

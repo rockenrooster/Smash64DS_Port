@@ -35,96 +35,6 @@ volatile u32 gNdsFtrDrawMemoBoundary __attribute__((used));
 /* Events replayed from the cache, so a hit that replayed an empty list is
  * visible rather than silently counted as a hit. */
 volatile u32 gNdsFtrDrawMemoReplayEvents __attribute__((used));
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-volatile u32 gNdsRendererProfileLoopWallTicks;
-volatile u32 gNdsRendererProfileInputTicks;
-volatile u32 gNdsRendererProfileSourceUpdate1Ticks;
-volatile u32 gNdsRendererProfileSourceUpdate2Ticks;
-volatile u32 gNdsRendererProfileSourceUpdateTicks;
-volatile u32 gNdsRendererProfileAudioUpdateTicks;
-volatile u32 gNdsRendererProfileBeginFrameTicks;
-volatile u32 gNdsRendererProfileWallpaperTicks;
-volatile u32 gNdsRendererProfileForegroundTicks;
-volatile u32 gNdsRendererProfileStageLayer0Ticks;
-volatile u32 gNdsRendererProfileFlushTicks;
-volatile u32 gNdsRendererProfileVBlankWaitTicks;
-volatile u32 gNdsRendererProfilePostVBlankTicks;
-volatile u32 gNdsRendererProfileThreadTicks;
-volatile u32 gNdsRendererProfilePresentActiveTicks;
-volatile u32 gNdsRendererProfileDrawResidualTicks;
-volatile u32 gNdsRendererProfilePresentResidualTicks;
-volatile u32 gNdsRendererProfileLoopResidualTicks;
-volatile u32 gNdsRendererProfileConservationErrorTicks;
-volatile u32 gNdsRendererProfileLogicTick;
-volatile u32 gNdsRendererProfilePresentIntervalVBlanks;
-volatile u32 gNdsRendererProfileGXStatusBeforeFlush;
-volatile u32 gNdsRendererProfileGXStatusAfterFlush;
-volatile u32 gNdsRendererProfileGXControlBeforeFlush;
-volatile u32 gNdsRendererProfileGXStatusPostVBlank;
-volatile u32 gNdsRendererProfileGXControlPostVBlank;
-volatile NDSRendererOwnerProfile
-    gNdsRendererProfileOwners[NDS_RENDERER_PROFILE_OWNER_COUNT];
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-volatile u32 gNdsRendererPhase05WallpaperSetupTicks;
-volatile u32 gNdsRendererPhase05WallpaperXMapTicks;
-volatile u32 gNdsRendererPhase05WallpaperYMapTicks;
-volatile u32 gNdsRendererPhase05WallpaperWriteTicks;
-volatile u32 gNdsRendererPhase05WallpaperCommitTicks;
-volatile u32 gNdsRendererPhase05PresentHardwareTicks;
-volatile u32 gNdsRendererPhase05GCDrawAllTicks;
-volatile u32 gNdsRendererPhase05StageTransitionTicks;
-volatile u32 gNdsRendererPhase05FighterWrapperTicks;
-volatile u32 gNdsRendererPhase05FrameResetTicks;
-volatile u32 gNdsRendererPhase05PresentTailTicks;
-volatile u32 gNdsRendererPhase05ProfileBookkeepingTicks;
-volatile u32 gNdsRendererPhase05ProfilePublishTicks;
-volatile u32 gNdsRendererPhase05FlushPrepTicks;
-volatile u32 gNdsRendererPhase05TimerReadCount;
-volatile u32 gNdsRendererPhase05TimerSpanCount;
-volatile u32 gNdsRendererPhase05CalibrationTicks;
-volatile u32 gNdsRendererPhase05CalibrationIntervals;
-volatile u32 gNdsRendererPhase05WallpaperRowCount;
-volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
-volatile u32 gNdsRendererPhase05WallpaperFullRowCount;
-volatile u32 gNdsRendererPhase05WallpaperIncrementalRowCount;
-volatile u32 gNdsRendererPhase05WallpaperChangedXCount;
-volatile u32 gNdsRendererPhase05WallpaperChangedRunCount;
-volatile u32 gNdsRendererPhase05WallpaperLongestChangedRun;
-volatile u32 gNdsRendererPhase05WallpaperRunGE2Count;
-volatile u32 gNdsRendererPhase05WallpaperRunGE2Pixels;
-volatile u32 gNdsRendererPhase05WallpaperRunGE4Count;
-volatile u32 gNdsRendererPhase05WallpaperRunGE4Pixels;
-volatile u32 gNdsRendererPhase05WallpaperRunGE8Count;
-volatile u32 gNdsRendererPhase05WallpaperRunGE8Pixels;
-volatile u32 gNdsRendererPhase05WallpaperScalarStoreCount;
-volatile u32 gNdsRendererPhase05WallpaperPackedStoreCount;
-volatile u32 gNdsRendererPhase05WallpaperDmaPixelCount;
-volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
-#endif
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-volatile u32 gNdsRendererSemanticOutputHash;
-volatile u32 gNdsRendererSemanticOutputHash2;
-volatile u32 gNdsRendererSemanticEventCount;
-volatile u32 gNdsRendererSemanticOverflowCount;
-volatile u32 gNdsRendererSemanticPrefixHash[
-    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
-volatile u32 gNdsRendererSemanticPrefixHash2[
-    NDS_RENDERER_SEMANTIC_TRACE_CAPACITY];
-volatile NDSRendererStageDepthTrace gNdsRendererStageDepthTrace[
-    NDS_RENDERER_STAGE_DEPTH_TRACE_CAPACITY];
-volatile u32 gNdsRendererStageDepthTraceCount;
-volatile u32 gNdsRendererStageDepthTraceOverflowCount;
-volatile u32 gNdsRendererStageDepthTraceHash;
-volatile u32 gNdsRendererStageDepthTraceClassCount[8];
-volatile u32 gNdsRendererStageDepthTraceNoZCollisionCount;
-volatile u32 gNdsRendererStageDepthTraceBackgroundCount;
-volatile s32 gNdsRendererStageDepthTraceBackgroundMin;
-volatile s32 gNdsRendererStageDepthTraceBackgroundMax;
-volatile u32 gNdsRendererStageDepthTraceForegroundCount;
-volatile s32 gNdsRendererStageDepthTraceForegroundMin;
-volatile s32 gNdsRendererStageDepthTraceForegroundMax;
-#endif
 volatile u32 gNdsRendererProfileStageAdapterTicks;
 volatile u32 gNdsRendererProfileMaterialTicks;
 volatile u32 gNdsRendererProfileMatrixTicks;
@@ -700,33 +610,6 @@ volatile u32 gNdsFighterDisplayContractBoundsPassCount;
 volatile u32 gNdsFighterDisplayContractBoundsFailCount;
 volatile u32 gNdsFighterDisplayContractBoundsXBits;
 volatile u32 gNdsFighterDisplayContractBoundsYBits;
-#if NDS_R2_FTR_CONTRACT_CENSUS
-/* 2026-08-16. FTR_LANE.md section 5 priced the capture pass at 34,307 tk/fr and
- * refused to call it a saving, because nobody had ever measured how often the
- * contract it re-derives actually CHANGES. These count exactly that, per
- * fighter slot, against that slot's own previous capture.
- *
- * `used` is not decoration: --gc-sections has already dropped five diagnostic
- * globals in this repo and turned Boundary red on "Missing ELF symbol". */
-volatile u32 gNdsFtrContractCaptures __attribute__((used));
-volatile u32 gNdsFtrContractSame __attribute__((used));
-volatile u32 gNdsFtrContractCountSame __attribute__((used));
-volatile u32 gNdsFtrContractDObjSame __attribute__((used));
-volatile u32 gNdsFtrContractDLSame __attribute__((used));
-volatile u32 gNdsFtrContractPreSame __attribute__((used));
-volatile u32 gNdsFtrContractKeySame __attribute__((used));
-/* The soundness column. A DObj-tree key that reads "unchanged" while the
- * contract changed would make a key-guarded memo WRONG, so this must be read
- * before any memo is proposed. */
-volatile u32 gNdsFtrContractKeySameContractDiff __attribute__((used));
-volatile u32 gNdsFtrContractKeyDiffContractSame __attribute__((used));
-/* Cumulative, so -PerFrameGlobals differencing gives per-frame changes and the
- * change set can be intersected with the marginal-80 frames. */
-volatile u32 gNdsFtrContractChangeTotal __attribute__((used));
-volatile u32 gNdsFtrContractMaxRun __attribute__((used));
-volatile u32 gNdsFtrContractZeroEvents __attribute__((used));
-volatile u32 gNdsFtrContractEventTotal __attribute__((used));
-#endif
 Vec3f gLBCommonScale;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarrySeedCount;
 volatile u32 gNdsStageGCDrawAllLoopHardwareCarryCaptureCount;
@@ -4239,9 +4122,6 @@ volatile u32 gNdsOpeningRoomRelocMObjSubFirstTextureOffset;
 volatile u32 gNdsOpeningRoomRelocMObjSubFirstTextureFlags;
 
 SYAudioPublicSettings dSYAudioPublicSettings;
-#if !NDS_IMPORT_BATTLESHIP_FTMANAGER
-size_t gFTManagerFigatreeHeapSize;
-#endif
 f32 gMPCollisionLightAngleX;
 f32 gMPCollisionLightAngleY;
 MPGroundData *gMPCollisionGroundData;

@@ -131,14 +131,6 @@ volatile u32 gNdsObjAnimRunawayOpcode;
 volatile u32 gNdsShieldAnimJointInstallCalls __attribute__((used));
 volatile u32 gNdsShieldAnimJointAttachCount __attribute__((used));
 volatile u32 gNdsShieldAnimJointNullCount __attribute__((used));
-#if NDS_ANIM_JOINT_AUDIT
-volatile u32 gNdsAnimJointFlagFrames __attribute__((used));
-volatile u32 gNdsAnimJointIdleSkip32Count __attribute__((used));
-volatile u32 gNdsAnimJointDispatch32Count __attribute__((used));
-volatile u32 gNdsAnimJointDispatchFigatreeCount __attribute__((used));
-volatile u32 gNdsAnimJointDispatchMisalignCount __attribute__((used));
-volatile u32 gNdsAnimJointDispatchFigatreeScript __attribute__((used));
-#endif
 volatile u32 gNdsStartupTaskmanMallocCount;
 volatile u32 gNdsTaskmanGeneralHeapUsed;
 volatile u32 gNdsTaskmanDLContextsValid;
@@ -2719,36 +2711,6 @@ volatile u32 gNdsFighterNaturalMotionFigatreeNullCount;
 volatile u32 gNdsFighterNaturalMotionFigatreeTableInvalidCount;
 volatile u32 gNdsFighterNaturalMotionFigatreeAnimInvalidCount;
 volatile u32 gNdsFighterNaturalMotionUnsafeCount;
-#if NDS_FIGHTER_ANIM_AUDIT
-volatile u16 gNdsFighterAnimAuditRequested
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u16 gNdsFighterAnimAuditResolved
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u16 gNdsFighterAnimAuditFallback
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u16 gNdsFighterAnimAuditExpectedFrames
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u16 gNdsFighterAnimAuditPlayedFrames
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u16 gNdsFighterAnimAuditFlags
-    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
-    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
-volatile u32 gNdsFighterAnimAuditActiveKind;
-volatile u32 gNdsFighterAnimAuditActiveMotion;
-volatile u32 gNdsFighterAnimAuditEpoch;
-volatile u32 gNdsFighterAnimAuditCaptureCount;
-volatile u32 gNdsFighterAnimAuditCompleteCount;
-volatile u32 gNdsFighterAnimAuditInvalidMotionCount;
-volatile u32 gNdsFighterAnimAuditLoadSerial;
-volatile u32 gNdsFighterAnimAuditLoadAssetID;
-volatile u32 gNdsFighterAnimAuditLoadResolved;
-volatile u32 gNdsFighterAnimAuditLoadFallback;
-#endif
 volatile u32 gNdsFighterNaturalCombatPhase;
 volatile u32 gNdsFighterNaturalCombatPhaseFrames;
 volatile u32 gNdsFighterNaturalCombatStallCount;
