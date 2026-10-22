@@ -1,6 +1,9 @@
 #include "nds_renderer_preamble.c"
 #include <nds/nds_frontend_overlay.h>
 #include "nds_renderer_assets.c"
+#include "nds_renderer_owner_tables.c"
+#include "nds_renderer_owner_runtime.c"
+#include "nds_renderer_native_pools.c"
 #include "nds_renderer_dl_core.c"
 #include "nds_renderer_textures_effects.c"
 #include "nds_renderer_texture_scene.c"

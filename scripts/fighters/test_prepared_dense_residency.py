@@ -47,6 +47,8 @@ from native_owner_image_arrays import (  # noqa: E402
     NATIVE_OWNER_RESIDENT_ARRAYS,
     NATIVE_OWNER_SUPPRESSED_ARRAYS,
 )
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 PREPARED_GUARD = "NDS_RENDERER_PROFILE_LEVEL < 2"
 NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x364F444E
@@ -289,7 +291,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                       f"memb={got['memb']} tagoff={got['tagoff']}")
 
     def test_renderer_bind_contract(self):
-        src = LOADER_C.read_text(encoding="utf-8")
+        src = read_split(LOADER_C)
         # The renderer provides its own identical element type; the generated
         # header skips its fallback copy here.
         define = "#define NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER 1"
@@ -382,7 +384,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         # the packed 10-byte HW-light layout, the only one since every
         # build sets NDS_R2_FIGHTER_HW_LIGHT (its other branch went
         # 2026-10-21).
-        renderer_src = LOADER_C.read_text(encoding="utf-8")
+        renderer_src = read_split(LOADER_C)
         a = renderer_src.index("typedef struct NDSNativePreparedDenseVertex")
         b = renderer_src.index("typedef struct NDSNativeRoot", a)
         record = renderer_src[a:b].rsplit("#endif", 1)[0]

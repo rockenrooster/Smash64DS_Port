@@ -11,11 +11,13 @@ sys.path.insert(0, str(ROOT / "scripts/menus"))
 sys.path.insert(0, str(ROOT / "scripts/3d_vfx"))
 from source_test_helpers import braced, function, source
 import generate_nds_entry_effects as gen
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def test_ko_rgb_is_constant_through_source_alpha_animation():
     source = (ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.c").read_text()
-    assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
+    assets = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     resource = gen.census.load_o2r(ROOT, gen.CATCH)
     prim_table = braced(assets, r"static const u32 sNdsEntryKoPrimRgb\[", True)
     env_table = braced(assets, r"static const u32 sNdsEntryKoEnvRgb\[", True)
@@ -43,7 +45,7 @@ def test_ko_rgb_is_constant_through_source_alpha_animation():
 
 
 def test_palette_only_names_are_reused_and_alpha_does_not_change_binding(tmp_path):
-    assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
+    assets = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     common = source(ROOT / "src/nds/nds_renderer_native_common.c")
     textures = source(ROOT / "src/nds/nds_renderer_textures_effects.c")
     tables = "\n".join(braced(assets, rf"static const u32 {name}\[", True)

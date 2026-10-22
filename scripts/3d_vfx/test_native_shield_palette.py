@@ -8,10 +8,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
 from source_test_helpers import braced, function, source as read_source
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def test_shield_palette_variants_use_source_colors_and_retain_live_names(tmp_path):
-    assets = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
+    assets = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     common = read_source(ROOT / "src/nds/nds_renderer_native_common.c")
     textures = read_source(ROOT / "src/nds/nds_renderer_textures_effects.c")
     source = (ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.c").read_text()

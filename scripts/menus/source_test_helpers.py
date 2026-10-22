@@ -59,6 +59,11 @@ SPLIT_SOURCES = {
         "renderer_adapter_matrix_world.c",
         "renderer_adapter_matrix_owner.c",
     )),
+    "nds/nds_renderer_assets.c": ("nds/nds_renderer.c", (
+        "nds_renderer_owner_tables.c",
+        "nds_renderer_owner_runtime.c",
+        "nds_renderer_native_pools.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

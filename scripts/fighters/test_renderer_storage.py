@@ -35,7 +35,7 @@ class RendererStorageTest(unittest.TestCase):
         return cfile
 
     def test_vertex_words_and_arm_load_alignment(self):
-        source=(ROOT/'src/nds/nds_renderer_assets.c').read_text()
+        source=read_split(ROOT/'src/nds/nds_renderer_assets.c')
         a=source.index('typedef struct NDSNativePreparedDenseVertex')
         b=source.index('typedef struct NDSNativeRoot',a)
         record=source[a:b].rsplit('#endif',1)[0]

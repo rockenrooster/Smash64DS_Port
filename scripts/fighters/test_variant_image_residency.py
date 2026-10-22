@@ -24,6 +24,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 
@@ -70,7 +72,7 @@ ZAKO_SLOTS = [
 
 
 def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    return read_split(path)
 
 
 def _function_body(src: str, start_marker: str) -> str:

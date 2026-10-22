@@ -1294,6 +1294,9 @@ def check_runtime_contract(root: Path, source: str) -> None:
     header = (root / "include/nds/nds_ifcommon_oam.h").read_text()
     renderer = '\n'.join((root / 'src/nds' / name).read_text() for name in (
         'nds_renderer.c', 'nds_renderer_preamble.c', 'nds_renderer_assets.c',
+        'nds_renderer_owner_tables.c',
+        'nds_renderer_owner_runtime.c',
+        'nds_renderer_native_pools.c',
         'nds_renderer_dispatch_profile.c', 'nds_renderer_textures_effects.c',
         'nds_renderer_texture_scene.c',
         'nds_renderer_particles.c',

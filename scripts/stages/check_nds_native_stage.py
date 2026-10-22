@@ -632,8 +632,7 @@ def verify_multistage_runtime(repo_root: Path) -> None:
         encoding="utf-8")
     selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(
         encoding="utf-8")
-    assets = (repo_root / "src/nds/nds_renderer_assets.c").read_text(
-        encoding="utf-8")
+    assets = read_split(repo_root / "src/nds/nds_renderer_assets.c")
     adapter = (repo_root / "src/port/renderer_adapter_stage.c").read_text(
         encoding="utf-8")
     prepare = re.sub(r"\s+", "", generator.named_c_closure(

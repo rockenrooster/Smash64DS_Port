@@ -17,6 +17,8 @@ import generate_nds_native_owners as live
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
 from source_test_helpers import source  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 RESIDENT_BODY_HEADS = (1, 14)
 
@@ -428,7 +430,7 @@ class KirbyTrioLegacyResolveTests(unittest.TestCase):
         while not (repo / "src" / "nds" / "nds_renderer_assets.c").is_file():
             repo = repo.parent
         cls.repo = repo
-        src = (repo / "src" / "nds" / "nds_renderer_assets.c").read_text()
+        src = read_split(repo / "src" / "nds" / "nds_renderer_assets.c")
         key = ("static const NDSNativeRoot "
                "*ndsRendererNativeKirbyTrioBodyRoot(")
         i = src.find(key)
@@ -556,7 +558,7 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
         while not (repo / "src" / "nds" / "nds_renderer_assets.c").is_file():
             repo = repo.parent
         cls.repo = repo
-        cls.assets = (repo / "src" / "nds" / "nds_renderer_assets.c").read_text()
+        cls.assets = read_split(repo / "src" / "nds" / "nds_renderer_assets.c")
         cls.common = source(repo / "src" / "nds" /
                             "nds_renderer_native_common.c")
         cls.adapter = (repo / "src" / "port" /

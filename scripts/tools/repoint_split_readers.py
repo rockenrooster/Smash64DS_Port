@@ -44,6 +44,9 @@ for rel in sys.argv[2:]:
         lines = text.split("\n")
         last = max(i for i, l in enumerate(lines)
                    if re.match(r"(import |from \S+ import )", l))
+        if lines[last].rstrip().split("#")[0].rstrip().endswith("("):
+            while not lines[last].strip().startswith(")"):
+                last += 1  # past a parenthesized import's closing line
         need = []
         if "import sys" not in text and prefix:
             need.append("import sys")

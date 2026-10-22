@@ -12,6 +12,8 @@ SOURCE = native._paths.REPO_ROOT
 RUNTIME = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RUNTIME / "scripts/menus"))
 from source_test_helpers import source  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 @pytest.mark.parametrize("detail", ("high", "low"))
@@ -50,7 +52,7 @@ def test_all_source_morph_siblings_share_two_programs_and_restore():
 
 
 def test_runtime_has_each_complete_program_and_topology():
-    assets = (RUNTIME / "src/nds/nds_renderer_assets.c").read_text()
+    assets = read_split(RUNTIME / "src/nds/nds_renderer_assets.c")
     common = source(RUNTIME / "src/nds/nds_renderer_native_common.c")
     for program_id, name in ((2, "MorphUnfold"), (3, "MorphBall")):
         assert re.search(r"program == " + str(program_id) + r"u\)\).*?return.*?&sNdsNativeSamus" + name + r"LowOwner.*?&sNdsNativeSamus" + name + r"HighOwner", assets, re.S)

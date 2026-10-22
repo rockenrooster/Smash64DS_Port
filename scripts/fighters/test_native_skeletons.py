@@ -9,6 +9,8 @@ import native_skeletons as skeletons
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/menus"))
 from test_menu_repair import function
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def test_source_skeletons():
@@ -25,7 +27,7 @@ def test_source_skeletons():
 
 
 def test_program_selection(tmp_path):
-    text = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
+    text = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     code = r'''
 #include <assert.h>
 #include <stddef.h>

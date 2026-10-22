@@ -67,6 +67,8 @@ if str(_scripts_root) not in sys.path:
 import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 import generate_nds_native_owners as native  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 REPO = _paths.REPO_ROOT
 
@@ -1014,8 +1016,7 @@ def kirby_copy_closure() -> list[str]:
     if not accepted:
         return ["kirby copy: NDS_NATIVE_KIRBY_TRIO_HEAD_LIST parsed empty"]
 
-    predicate = KIRBY_PREDICATE_SOURCE.read_text(
-        encoding="utf-8", errors="replace")
+    predicate = read_split(KIRBY_PREDICATE_SOURCE)
     copy_link_head = re.search(
         r"return \(head_mp == (\d+)u\) \? TRUE : FALSE;", predicate)
     if copy_link_head is None:

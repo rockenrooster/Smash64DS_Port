@@ -8,6 +8,9 @@ import re
 import shutil
 import subprocess
 import tempfile
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,7 +58,7 @@ enum { FALSE = 0, TRUE = 1 };
 
 
 def test_match_bank_sharing_failure_and_scene_generation():
-    source = (ROOT / "src/nds/nds_renderer_assets.c").read_text()
+    source = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     start = source.index("typedef struct NDSNativeKirbyHatImageSlot")
     declarations = source[start:source.index("\n#endif", start)]
     fixture = COMMON + r'''
