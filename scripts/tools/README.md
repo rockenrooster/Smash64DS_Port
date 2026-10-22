@@ -69,6 +69,7 @@ table, and where runs write. Conventions:
 |---|---|
 | `outline.py FILE [--all]` | every top-level definition with its size and preprocessor depth, and runs of one prefix: where a file's topics change |
 | `split_slices.py [--check] PLAN.json` | cuts a file into topic slices at anchors (brace and preprocessor depth 0, moving up over each anchor's comment) and includes them in order: right after the file in its unity parent, or at the file's end when the plan's parent is the file itself |
+| `split_header.py [--check] PLAN.json` | the same for a header: topic headers it includes in place, before its guard's #endif; the proof is every translation unit of a full `make -n -B` listing |
 | `pp_run.py LISTING OUT_DIR` | preprocesses every compile of a `make -n -B` listing (`-E -P`) into OUT_DIR; a split's proof is the same text before and after |
 | `pp_cmp.py BEFORE AFTER` | compares two `pp_run.py` trees: exact, blank-lines-only, or different |
 
