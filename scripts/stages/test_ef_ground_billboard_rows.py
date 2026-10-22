@@ -22,6 +22,8 @@ while _p.name != "scripts":
     _p = _p.parent
 sys.path.insert(0, str(_p))
 import _paths  # noqa: E402,F401
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 REPO_ROOT = _paths.REPO_ROOT
 
@@ -36,7 +38,7 @@ LBCOMMON_PATH = REPO_ROOT / "decomp/BattleShip-main/decomp/src/lb/lbcommon.c"
 def _extract_rows(begin_marker: str, end_marker: str, signature: str,
                   writes: tuple[str, str]) -> str:
     """Verbatim Rows function body from the production adapter (single source)."""
-    text = ADAPTER_PATH.read_text()
+    text = read_split(ADAPTER_PATH)
     begin = text.index(begin_marker)
     impl_start = text.index(signature, begin)
     end = text.index(end_marker)
@@ -101,7 +103,7 @@ def test_kind46_real_source_host_execution(tmp_path):
 
 def test_kind72_math_against_source():
     """Cited tokens the host kind72 mirror depends on; drift fails here first."""
-    adapter = ADAPTER_PATH.read_text()
+    adapter = read_split(ADAPTER_PATH)
     for token in ("has_mvp_recalc_rpy_0x47", "ndsRendererAdapterIsMvpRecalcKind"):
         assert token in adapter, (
             f"shared adapter contract moved at {token!r}; re-check the arm")
@@ -120,7 +122,7 @@ def test_kind72_math_against_source():
 
 def test_kind46_math_against_source():
     """Cited tokens the host kind46 mirror depends on; drift fails here first."""
-    adapter = ADAPTER_PATH.read_text()
+    adapter = read_split(ADAPTER_PATH)
     for token in ("ndsRendererAdapterEfGroundKind46Rows",
                   "BEGIN-EF-GROUND-KIND46-ROWS", "END-EF-GROUND-KIND46-ROWS"):
         assert token in adapter, (

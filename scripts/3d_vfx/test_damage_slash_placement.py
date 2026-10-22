@@ -42,6 +42,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "stages"))
 
 import native_matrix_math as matrix  # noqa: E402
+sys.path.insert(0, str(REPO / "scripts" / "menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 DECOMP = REPO / "decomp" / "BattleShip-main" / "decomp" / "src"
 EFMANAGER = DECOMP / "ef" / "efmanager.c"
@@ -63,7 +65,7 @@ SLASH_SCALE = (2.26, 2.26, 1.0)
 
 
 def _source_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8", errors="replace")
+    return read_split(path)
 
 
 def _strip_comments(text: str) -> str:

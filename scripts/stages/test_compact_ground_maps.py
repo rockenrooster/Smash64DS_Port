@@ -271,7 +271,7 @@ class GeneratorTests(unittest.TestCase):
     def test_matrix_rows_are_untouched_source_sizes(self):
         """The emitted adapter rows (compiled into P1 too) are the descriptors'
         pinned SOURCE sizes; the compact size is applied at run time only."""
-        text = MATRIX_C.read_text(encoding="utf-8")
+        text = read_split(MATRIX_C)
         names = {"castle": "Castle", "sector": "Sector", "jungle": "Jungle",
                  "zebes": "Zebes", "hyrule": "Hyrule", "yoster": "Yoster",
                  "dreamland": "DreamLand", "yamabuki": "Yamabuki",
@@ -403,7 +403,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         self.assertIn("ndsRelocCompactGroundMapWallpaperKey(&asset_id",
                       SPRITE_C.read_text(encoding="utf-8"))
         self.assertIn("ndsRelocCompactGroundMapExpectedSize(desc->asset_ids[index]",
-                      MATRIX_C.read_text(encoding="utf-8"))
+                      read_split(MATRIX_C))
         self.assertIn("ndsRelocCompactGroundMapPrepareTraining(file, ground_data)",
                       read_split(SHIMS_C))
 

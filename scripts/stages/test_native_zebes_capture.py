@@ -12,6 +12,8 @@ from source_test_helpers import function
 import emit_native_stage_runtime_rows as emitter
 import register_native_stage_runtime as register
 from native_stage_descriptors import get_descriptor
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def test_existing_capture_and_census_refresh_is_idempotent(tmp_path, monkeypatch):
@@ -85,7 +87,7 @@ assert(!ndsRendererAdapterNativeStageProcMatches(1,NULL)); return 0; }
 
 def test_translation_only_stage_nodes_keep_their_source_matrix_kind(tmp_path):
     stage = (ROOT/'src/port/renderer_adapter_stage.c').read_text()
-    matrix = (ROOT/'src/port/renderer_adapter_matrix.c').read_text()
+    matrix = read_split(ROOT/'src/port/renderer_adapter_matrix.c')
     admit = function(stage,'ndsRendererAdapterNativeStageTransformFlags')
     source = (ROOT/'decomp/BattleShip-main/decomp/src/gr/grcommon/grzebes.c').read_text()
     assert 'nGCMatrixKindTra,' in function(source,'grZebesMakeAcid')

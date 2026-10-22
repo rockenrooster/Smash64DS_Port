@@ -5,13 +5,14 @@ import subprocess
 import tempfile
 import unittest
 from source_test_helpers import function
+from source_test_helpers import source as read_split  # noqa: E402
 
 ROOT=Path(__file__).resolve().parents[2]
 
 
 class WorldCacheBudgetTest(unittest.TestCase):
     def test_reserve_alignment_and_scene_retry(self):
-        source=(ROOT/'src/port/renderer_adapter_matrix.c').read_text()
+        source=read_split(ROOT/'src/port/renderer_adapter_matrix.c')
         body='\n'.join(function(source,name) for name in (
             'ndsRendererAdapterEnsureDObjWorldCache',
             'ndsRendererAdapterEnsureStageWorldCache'))

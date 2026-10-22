@@ -44,7 +44,7 @@ MATRIX_PATH = REPO_ROOT / "decomp/BattleShip-main/decomp/src/sys/matrix.c"
 
 
 def _token(path: Path, token: str, fix: str) -> None:
-    text = path.read_text()
+    text = read_split(path)
     assert token in text, (
         f"DEFECT {path.name} missing {token!r}. Exact fix: {fix}")
 
@@ -111,7 +111,7 @@ def test_cloud_header_counts_match_production():
 
 def test_cloud_adapter_dispatch_wiring():
     """Adapter must compute live drawable MVPs and dispatch kind48, not skip it."""
-    adapter = ADAPTER_PATH.read_text()
+    adapter = read_split(ADAPTER_PATH)
     for token, fix in (
         ("ndsRendererAdapterSubmitNativeYosterCloud",
          "restore the adapter slot in renderer_adapter_matrix.c"),
@@ -157,7 +157,7 @@ def test_cloud_route_and_executor_wiring():
 
 def test_cloud_kind48_math_against_source():
     """Cited tokens the host kind48 mirror depends on; drift fails here first."""
-    adapter = ADAPTER_PATH.read_text()
+    adapter = read_split(ADAPTER_PATH)
     for token in (
         "f32 dx = cobj->vec.at.x - cobj->vec.eye.x",
         "f32 dz = cobj->vec.at.z - cobj->vec.eye.z",

@@ -50,6 +50,8 @@ if str(_scripts_root) not in sys.path:
     sys.path.insert(0, str(_scripts_root))
 import _paths  # noqa: E402  (repo-standard root resolution)
 import pytest  # noqa: E402  (skip support for the C harness below)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 REPO_ROOT = _paths.REPO_ROOT
@@ -422,7 +424,7 @@ def test_source_world_compose_order():
 
 
 def test_c_source_contains_lock_paths():
-    text = MATRIX_C.read_text(encoding="utf-8")
+    text = read_split(MATRIX_C)
     assert "ndsRendererAdapterBuildAnimLockInvariantMtx" in text
     assert "lock_accum[joint_index] = lock_accum[parent]" in text
     assert "ftdisplaymain.c:1162" in text
@@ -433,7 +435,7 @@ def test_c_source_contains_lock_paths():
 
 def _extract_kernel_c_source() -> str:
     """Cut the actual helper text out of matrix.c by brace balancing."""
-    text = MATRIX_C.read_text(encoding="utf-8")
+    text = read_split(MATRIX_C)
     sig = "static sb32 ndsRendererAdapterBuildAnimLockInvariantMtx("
     start = text.find(sig)
     assert start != -1, "kernel helper missing from matrix.c"

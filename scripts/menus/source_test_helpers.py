@@ -54,6 +54,11 @@ SPLIT_SOURCES = {
         "reloc_backend_movement_moveset.c",
         "reloc_backend_stage_draw_loop.c",
     )),
+    "port/renderer_adapter_matrix.c": ("port/reloc_backend_renderer_dl.c", (
+        "renderer_adapter_matrix_math.c",
+        "renderer_adapter_matrix_world.c",
+        "renderer_adapter_matrix_owner.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

@@ -8,10 +8,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/menus'))
 from source_test_helpers import function, braced
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def test_shared_camera_operands_preserve_draw_results(tmp_path):
-    source = (ROOT / 'src/port/renderer_adapter_matrix.c').read_text()
+    source = read_split(ROOT / 'src/port/renderer_adapter_matrix.c')
     apply = function(source, 'ndsRendererAdapterApplyMvpRecalc')
     prepare = braced(apply, r'^\s*if \(\(kind == nGCMatrixKind48\)')
     billboard = braced(apply, r'^\s*else if \(kind == nGCMatrixKind48\)')

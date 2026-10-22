@@ -32,6 +32,8 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 import generate_nds_native_stage as generator
 
 from native_stage_descriptors import get_descriptor as _get_stage_descriptor
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
+from source_test_helpers import source as read_split  # noqa: E402
 
 
 def _resolve_stage(stage: str | object = "dreamland"):
@@ -778,7 +780,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> bool:
         adapter, "ndsRendererAdapterPrepareNativeStageBindingMatrix"))
     require("(projection_ptr==NULL)&&(modelview_ptr==NULL)" in binding,
             "native stage admission rejects a completed MVP without separate projection")
-    matrix = (repo_root / "src/port/renderer_adapter_matrix.c").read_text(encoding="utf-8")
+    matrix = read_split(repo_root / "src/port/renderer_adapter_matrix.c")
     predicate = generator.named_c_closure(matrix, "ndsRendererAdapterIsMvpRecalcKind")
     require("kind == nGCMatrixKind48" in predicate, "kind 48 still takes affine local scale")
     apply = re.sub(r"\s+", "", generator.named_c_closure(matrix, "ndsRendererAdapterApplyMvpRecalc"))

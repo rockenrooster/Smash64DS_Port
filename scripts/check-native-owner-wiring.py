@@ -349,7 +349,7 @@ def main() -> int:
     renderer = renderer_path.read_text(encoding="utf-8", errors="replace")
     native_owners = native_owners_path.read_text(encoding="utf-8", errors="replace")
     adapter = adapter_path.read_text(encoding="utf-8", errors="replace")
-    matrix_adapter = matrix_adapter_path.read_text(encoding="utf-8", errors="replace")
+    matrix_adapter = read_split(matrix_adapter_path)
     movement = read_split(movement_path)
     program_arms = no_program_arms(adapter)
     tracked = tracked_files()
