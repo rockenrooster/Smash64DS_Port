@@ -75,21 +75,37 @@ U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
 PILLAR_HEIGHT = 2500.0     # 2x her first pillar's 1,250 (owner p6f notes; 1.5x and 1.25x before)
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
-# Each card: atlas region (s0, t0, s1, t1 in texels; s1 < s0 mirrors it),
-# left and right x, bottom, top, z (toward the camera), and its PRIM alpha
-# (255: cut out and opaque, else translucent). The 3DS's column (its clip on
-# a model-unit grid): a white core about 85 across in a cyan band about 140,
-# a faint glow past it; the dust a bank either way along the floor, 400 and
-# more from its foot, 150 high. The dust cards reach out from the foot (x 0)
-# and the flare lies over it; her code scales each (src/port/nds_p4_palutena.c,
-# the cards in this order).
+# Each card: atlas region (s0, t0, s1, t1 in texels; s1 < s0 mirrors it; the
+# floor's regions half a texel in from their neighbours, whose edge rows
+# showed as a line; None for the glow's own image), left and right x, bottom, top, z (toward the
+# camera), and its material's PRIM (alpha 255: cut out and opaque, else
+# translucent). Every card's PRIM is its material's (PILLAR_MOBJSUBS), so her
+# code fades and colours it (src/port/nds_p4_palutena.c). The 3DS's column
+# (the owner's quarter-speed Strong_Up_A clip, owner 2026-10-22, against her
+# height): a white core about 0.23 of it across in a solid cyan glow about
+# 0.68 that fades out past it, a cyan pool on the floor about her height
+# across (a flash up its foot here, over a stage's foreground), and dust
+# rolling out either way about her height or more, about 0.3 of it high. The dust
+# cards reach out from the foot (x 0), the flare lies over it. The order is
+# the draw order, and the first card drawn shows where translucent cards
+# overlap (every card draws as its own entry root with the same polygon ID):
+# the dust and the pool first, the glow last (it was first, and hid the
+# dust's and the pool's middles).
 PILLAR_CARDS = (
-    ("glow", (16, 0, 32, 64), -140.0, 140.0, 0.0, PILLAR_HEIGHT, 0.0, 150),
-    ("core", (0, 0, 16, 64), -65.0, 65.0, 0.0, PILLAR_HEIGHT, 4.0, 255),
-    ("flare", (32, 0, 64, 16), -220.0, 220.0, -40.0, 90.0, 8.0, 210),
-    ("dust_l", (64, 16, 32, 48), -460.0, 0.0, -10.0, 220.0, 12.0, 200),
-    ("dust_r", (32, 16, 64, 48), 0.0, 460.0, -10.0, 220.0, 12.0, 200),
+    ("dust_l", (64, 16.5, 32, 47.5), -760.0, 0.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
+    ("dust_r", (32, 16.5, 64, 47.5), 0.0, 760.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
+    ("flare", (32, 0.5, 64, 15.5), -300.0, 300.0, -80.0, 300.0, 8.0, (255, 255, 255, 240)),
+    ("core", (0, 0, 16, 64), -65.0, 65.0, 0.0, PILLAR_HEIGHT, 4.0, (255, 255, 255, 255)),
+    ("glow", None, -300.0, 300.0, 0.0, PILLAR_HEIGHT, 0.0, (30, 205, 255, 215)),
 )
+# The glow's own image: an I4 coverage mask (graded alpha, its colour the
+# material's PRIM), solid to GLOW_SOLID of its half width and fading out to
+# its edge, its top rounded over GLOW_CAP of its rows (it rises with a round
+# head), as the 3DS's soft glow.
+GLOW_W, GLOW_H = 32, 64
+GLOW_SOLID = 0.62
+GLOW_CAP = 14
+PILLAR_DOBJS = len(PILLAR_CARDS) + 1
 # The pillar's tree, after the gate's five rows (p4_articles.py "pillar"):
 # its root, its cards, the end.
 PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
@@ -108,6 +124,8 @@ LIGHT_TREE = GLOW_TREE + p6_light.GLOW_ROWS * N.DOBJ_DESC_SIZE
 # The light's MObjSub*** table right after its rows (nds_p4_palutena.c
 # PAL_LIGHT_MOBJSUBS): its cards fade by their live material (owner p6ac).
 LIGHT_MOBJSUBS = LIGHT_TREE + p6_light.LIGHT_ROWS * N.DOBJ_DESC_SIZE
+# The pillar's after it (nds_p4_palutena.c PAL_PILLAR_MOBJSUBS).
+PILLAR_MOBJSUBS = LIGHT_MOBJSUBS + 4 * p6_light.LIGHT_DOBJS
 # The model writer's cut-out state (model_writer.CUTOUT_ON / _OFF).
 CUTOUT_ON = [N.Gfx(0xE2001E01, 0x00000001), N.Gfx(0xE200001C, 0xC4113078)]
 CUTOUT_OFF = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0xC4112078)]
@@ -239,6 +257,9 @@ def build() -> tuple[bytes, dict]:
     light_mobj_at = app.put(bytes(4 * p6_light.LIGHT_DOBJS))
     if light_mobj_at != LIGHT_MOBJSUBS:
         raise GateError(f"light materials at {light_mobj_at:#x}, expected {LIGHT_MOBJSUBS:#x}")
+    pillar_mobj_at = app.put(bytes(4 * PILLAR_DOBJS))
+    if pillar_mobj_at != PILLAR_MOBJSUBS:
+        raise GateError(f"pillar materials at {pillar_mobj_at:#x}, expected {PILLAR_MOBJSUBS:#x}")
     doors = {}
     for side in ("L", "R"):
         mesh = meshes[side]
@@ -294,7 +315,7 @@ def build() -> tuple[bytes, dict]:
             app.slot(at + 4, ("intern", FILE_ID, dl))
         struct.pack_into(">3f", f.data, at + 8, *t)
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
-    pillar_lists = pillar(app)
+    pillar_lists = pillar(app, pillar_mobj_at)
     prow = [(0, None, (0.0, 0.0, 0.0))]
     prow += [(1, pillar_lists[card[0]], (0.0, 0.0, card[6])) for card in PILLAR_CARDS]
     prow.append((DOBJ_END, None, (0.0, 0.0, 0.0)))
@@ -308,7 +329,8 @@ def build() -> tuple[bytes, dict]:
     wings = p6_wings.write(app, FILE_ID, wings_at)
     app.slot(WINGS_TABLE_SLOT, ("intern", FILE_ID, wings["table"]))
     light = p6_light.write(app, FILE_ID, glow_at, light_at, light_mobj_at)
-    info = {"tree": tree_at, "pillar": pillar_at, "lists": lists, "pillar_lists": pillar_lists,
+    info = {"tree": tree_at, "pillar": pillar_at, "pillar_mobjsubs": pillar_mobj_at,
+            "lists": lists, "pillar_lists": pillar_lists,
             "wings": wings, "light": light,
             "scale": scale, "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
     return f.to_bytes(), info
@@ -323,54 +345,102 @@ def pillar_atlas() -> tuple[bytes, bytes]:
     return M.ci4_bytes(idx), M.rgba5551(palette)
 
 
-def pillar(app: "M.Appender") -> dict:
+def glow_i4() -> np.ndarray:
+    """The pillar glow's coverage, GLOW_H rows of GLOW_W levels (0-15)."""
+    levels = np.zeros((GLOW_H, GLOW_W), dtype=int)
+    for y in range(GLOW_H):
+        half = 1.0
+        if y < GLOW_CAP:
+            half = float(np.sqrt(max(0.0, 1.0 - ((GLOW_CAP - y) / GLOW_CAP) ** 2)))
+        for x in range(GLOW_W):
+            u = abs((x + 0.5) - GLOW_W / 2.0) / (GLOW_W / 2.0)
+            if half <= 0.0 or u >= half:
+                continue
+            u /= half
+            k = min(max((u - GLOW_SOLID) / (1.0 - GLOW_SOLID), 0.0), 1.0)
+            a = 1.0 - k * k * (3.0 - 2.0 * k)
+            levels[y, x] = int(round(a * 15.0))
+    levels[levels <= 1] = 0
+    return levels
+
+
+def pillar_mobjsub(prim: tuple) -> bytes:
+    """A material that sets only PRIM (MOBJ_FLAG_PRIMCOLOR), as p6_light's."""
+    sub_ = bytearray(p6_light.MOBJSUB_SIZE)
+    struct.pack_into(">ff", sub_, 0x1C, 1.0, 1.0)
+    struct.pack_into(">H", sub_, 0x30, p6_light.MOBJ_FLAG_PRIMCOLOR)
+    sub_[0x50:0x54] = bytes(prim)
+    return bytes(sub_)
+
+
+def pillar(app: "M.Appender", mobj_at: int) -> dict:
     """The pillar's card lists: each a quad facing the camera (+z) in its
-    node's plane, textured from the atlas, unlit; cut out and opaque, or
-    translucent at its PRIM alpha."""
+    node's plane, unlit, its PRIM its DObj's material (a call to segment E's
+    first slot; the MObjSub*** table at mobj_at): the atlas's cards cut out
+    and opaque, or translucent at their PRIM alpha; the glow's own I4 image
+    translucent, coloured by its PRIM."""
     texels, pal = pillar_atlas()
     app.align(8)
     tex_at = app.put(texels)
     app.align(8)
     pal_at = app.put(pal)
+    app.align(8)
+    glow_at = app.put(p6_light._i4_bytes(glow_i4()))
     line = PILLAR_TEX * 4 // 64
     mask = PILLAR_TEX.bit_length() - 1
     clamp = 2
     out = {}
-    for name, (s0, t0, s1, t1), left, right, bottom, top, _z, alpha in PILLAR_CARDS:
-        corners = [(left, top, s0, t0), (right, top, s1, t0),
-                   (right, bottom, s1, t1), (left, bottom, s0, t1)]
-        app.align(8)
-        vtx_at = app.put(b"".join(vtx(x, y, 0.0, s * 32, t * 32) for x, y, s, t in corners))
-        cmds = [N.Gfx(0xE7000000, 0),
-                N.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
-                N.Gfx(0xE3001001, 0x00008000)]
-        cmds += CUTOUT_ON if alpha >= 255 else XLU_ON
-        cmds += [PILLAR_COMBINE, N.Gfx(0xF9000000, 0),
-                 N.Gfx(0xE7000000, 0), N.Gfx(0xFA000000, 0xFFFFFF00 | alpha), N.Gfx(0xE8000000, 0),
-                 N.Gfx(0xF5000100, 0x05000000),
-                 N.Gfx(0xF5500000, (7 << 24) | (mask << 14) | (mask << 4)),
-                 N.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (mask << 14) | (clamp << 8) | (mask << 4)),
-                 N.Gfx(0xFD100000, pal_at // 4, ("intern", FILE_ID, pal_at)),
-                 N.Gfx(0xE6000000, 0), N.Gfx(0xF0000000, 0x0503C000), N.Gfx(0xE7000000, 0),
-                 N.Gfx(0xD7000002, 0xFFFFFFFF),
-                 N.Gfx(0xF2000000, (((PILLAR_TEX - 1) << 2) << 12) | ((PILLAR_TEX - 1) << 2)),
-                 N.Gfx(0xFD500000, tex_at // 4, ("intern", FILE_ID, tex_at)),
-                 N.Gfx(0xE6000000, 0),
-                 N.Gfx(0xF3000000, (7 << 24) | ((PILLAR_TEX * PILLAR_TEX // 4 - 1) << 12) | (2048 // line)),
-                 N.Gfx(0xE7000000, 0),
-                 N.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", FILE_ID, vtx_at)),
-                 N.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
-                 N.Gfx(0xE7000000, 0)]
-        cmds += CUTOUT_OFF
-        cmds += [N.Gfx(0xE3001001, 0x00000000),
-                 N.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),
-                 N.Gfx(0xDF000000, 0)]
+    for name, region, left, right, bottom, top, _z, prim in PILLAR_CARDS:
+        if region is None:
+            corners = [(left, top, 0, 0), (right, top, GLOW_W, 0),
+                       (right, bottom, GLOW_W, GLOW_H), (left, bottom, 0, GLOW_H)]
+            app.align(8)
+            vtx_at = app.put(b"".join(p6_light._vtx(x, y, s * 32, t * 32) for x, y, s, t in corners))
+            cmds = p6_light._card_list(FILE_ID, glow_at, GLOW_W, GLOW_H, vtx_at, None)
+        else:
+            s0, t0, s1, t1 = region
+            corners = [(left, top, s0, t0), (right, top, s1, t0),
+                       (right, bottom, s1, t1), (left, bottom, s0, t1)]
+            app.align(8)
+            vtx_at = app.put(b"".join(vtx(x, y, 0.0, s * 32, t * 32) for x, y, s, t in corners))
+            cmds = [N.Gfx(0xE7000000, 0),
+                    N.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
+                    N.Gfx(0xE3001001, 0x00008000)]
+            cmds += CUTOUT_ON if prim[3] >= 255 else XLU_ON
+            cmds += [PILLAR_COMBINE, N.Gfx(0xF9000000, 0),
+                     N.Gfx(0xE7000000, 0), N.Gfx(0xDE000000, p6_light.SEGMENT_E_SLOT0), N.Gfx(0xE8000000, 0),
+                     N.Gfx(0xF5000100, 0x05000000),
+                     N.Gfx(0xF5500000, (7 << 24) | (mask << 14) | (mask << 4)),
+                     N.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (mask << 14) | (clamp << 8) | (mask << 4)),
+                     N.Gfx(0xFD100000, pal_at // 4, ("intern", FILE_ID, pal_at)),
+                     N.Gfx(0xE6000000, 0), N.Gfx(0xF0000000, 0x0503C000), N.Gfx(0xE7000000, 0),
+                     N.Gfx(0xD7000002, 0xFFFFFFFF),
+                     N.Gfx(0xF2000000, (((PILLAR_TEX - 1) << 2) << 12) | ((PILLAR_TEX - 1) << 2)),
+                     N.Gfx(0xFD500000, tex_at // 4, ("intern", FILE_ID, tex_at)),
+                     N.Gfx(0xE6000000, 0),
+                     N.Gfx(0xF3000000, (7 << 24) | ((PILLAR_TEX * PILLAR_TEX // 4 - 1) << 12) | (2048 // line)),
+                     N.Gfx(0xE7000000, 0),
+                     N.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", FILE_ID, vtx_at)),
+                     N.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
+                     N.Gfx(0xE7000000, 0)]
+            cmds += CUTOUT_OFF
+            cmds += [N.Gfx(0xE3001001, 0x00000000),
+                     N.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),
+                     N.Gfx(0xDF000000, 0)]
         blob, slots = N.encode_dl(cmds)
         app.align(8)
         at = app.put(blob)
         for rel, target in slots.items():
             app.slot(at + rel, target)
         out[name] = at
+    # The materials: entry 0 (the root) NULL, then per card a NULL-ended list
+    # naming its MObjSub.
+    for k, card in enumerate(PILLAR_CARDS):
+        app.align(8)
+        sub_at = app.put(pillar_mobjsub(card[7]))
+        list_at = app.put(bytes(8))
+        app.slot(list_at, ("intern", FILE_ID, sub_at))
+        app.slot(mobj_at + 4 * (k + 1), ("intern", FILE_ID, list_at))
     return out
 
 

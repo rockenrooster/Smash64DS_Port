@@ -130,8 +130,10 @@ ARTICLES = {
         {"name": "gate", "special": 2, "dobjdesc": 0x0, "entry": True},
         # Her up smash's light pillar, a second tree in the same file
         # (scripts/p6/p6_gate.py PILLAR_TREE), made by her code for the
-        # whole match.
-        {"name": "pillar", "special": 2, "dobjdesc": 0xDC},
+        # whole match. "material": each card's list calls its DObj's one
+        # MObj (segment E) for PRIM, which her code fades and colours (owner
+        # 2026-10-22).
+        {"name": "pillar", "special": 2, "dobjdesc": 0xDC, "material": True},
         # Her forward and down smash's wings, a third tree (p6_gate.py
         # WINGS_TREE, scripts/p6/p6_wings.py): eight cards, each a bone's,
         # posed by her code every tic.

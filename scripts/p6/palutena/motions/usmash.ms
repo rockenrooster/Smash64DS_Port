@@ -23,7 +23,13 @@
 # radius above: 2,054; it was 2,300, 2,925); the halves meet at 883,
 # attacks 2 and 3 at their middles (542, 1,224); nds_p4_palutena.c's
 # column with it.
+# Owner 2026-10-22 (the 3DS's in the owner's quarter-speed clip): the
+# sparkle at the staff's gem as she swings it up (frame 4, the 3DS's burst
+# 8 frames before the column), her gem's glow at the thrust
+# (nds_p4_palutena.c sNdsP4PalutenaGlowWindows).
 SetFlag0 value=0
+AsyncWait frames=4
+Effect joint_id=18 effect_id=31 flag=0 off_x=23 off_y=150 off_z=-160 rng_x=0 rng_y=0 rng_z=0
 AsyncWait frames=11
 Effect joint_id=0 effect_id=13 flag=0 off_x=0 off_y=0 off_z=0 rng_x=0 rng_y=0 rng_z=0
 PlaySmashVoice value=0

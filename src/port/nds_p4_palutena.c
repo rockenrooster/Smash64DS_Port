@@ -885,25 +885,37 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * Strong_Up_A clip (a frame a tic; her clip maps its frames 11-23 onto hers
  * 0-12, the staff thrust up at the hit and flag0, frame 12, and its frames
  * 23-56 onto hers 12-42; the tic below is the 3DS's frame less about 24).
- * The tree's cards (p6_gate.py PILLAR_CARDS): the glow
- * (translucent), the core (white down its middle to cyan), the flare on the
- * floor at its foot and the dust either way along the floor (translucent).
- * The column rises from the floor with a round head over PAL_PILLAR_RISE
- * tics (its height sNdsP4PalutenaPillarRise), the flare at its foot fading by
- * PAL_PILLAR_FLARE_END; from PAL_PILLAR_DUST_AT the dust rolls out either
- * way, at its full reach by PAL_PILLAR_DUST_FULL, and settles (flattens) by
- * PAL_PILLAR_DUST_END (the 3DS's frames 26 to 38); the column stands, its
- * glow shimmering, and thins from PAL_PILLAR_THIN_AT to PAL_PILLAR_END (the
- * 3DS's frames 50 to 62; its hitboxes, the script's, are up to tic 26). */
+ *
+ * Owner 2026-10-22, against the 3DS's in the owner's quarter-speed clip
+ * (game frames after the column first shows; her height the unit): the tree's
+ * cards (p6_gate.py PILLAR_CARDS, in draw order, each its PRIM a live
+ * material, PAL_PILLAR_MOBJSUBS): the dust either way along the floor, the
+ * pool on the floor at its foot (the flare), the core (white down its middle
+ * to cyan, 0.22 across) and the glow (soft, solid to 0.68 across, coloured
+ * by its material). The column rises from the floor with a round head over
+ * PAL_PILLAR_RISE tics (its height sNdsP4PalutenaPillarRise), posed for tic
+ * 0 when made (it drew one frame at full height first); the pool brightest
+ * as it rises, fading out by PAL_PILLAR_FLARE_END; the dust rolls out either
+ * way with it, at its full reach by PAL_PILLAR_DUST_FULL, and settles and
+ * fades by PAL_PILLAR_DUST_END; the column stands, its glow shimmering, to
+ * PAL_PILLAR_THIN_AT, thins to a line by PAL_PILLAR_LINE_AT as its glow turns
+ * violet, and the violet line fades out by PAL_PILLAR_END (its hitboxes, the
+ * script's, are up to tic 26). */
 #define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
+#define PAL_PILLAR_MOBJSUBS 0x620           /* p6_gate.py PILLAR_MOBJSUBS */
 #define PAL_PILLAR_RISE 3
-#define PAL_PILLAR_FLARE_END 9
-#define PAL_PILLAR_DUST_AT 2
-#define PAL_PILLAR_DUST_FULL 7
+#define PAL_PILLAR_FLARE_END 11
+#define PAL_PILLAR_DUST_FULL 6
 #define PAL_PILLAR_DUST_END 13
-#define PAL_PILLAR_THIN_AT 24
-#define PAL_PILLAR_END 36
+#define PAL_PILLAR_THIN_AT 28
+#define PAL_PILLAR_LINE_AT 32
+#define PAL_PILLAR_END 38
+/* The glow: cyan, turning violet as it thins (from PAL_PILLAR_VIOLET_AT,
+ * violet by PAL_PILLAR_LINE_AT + 1), its width a line's from LINE_AT. */
+#define PAL_PILLAR_VIOLET_AT 29
+#define PAL_PILLAR_LINE_W 0.12F
+#define PAL_PILLAR_CORE_LINE_W 0.3F
 
 static const f32 sNdsP4PalutenaPillarRise[PAL_PILLAR_RISE] = { 0.18F, 0.45F, 1.0F };
 
@@ -924,23 +936,149 @@ static EFDesc sNdsP4PalutenaPillarDesc = {
     { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
     { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
     ndsP4PalutenaPillarProcUpdate, gcDrawDObjTreeForGObj,
-    0xDC, 0x0, 0x0, 0x0
+    0xDC, PAL_PILLAR_MOBJSUBS, 0x0, 0x0
 };
+
+/* The glow's colour full and violet (its material's PRIM at full alpha:
+ * p6_gate.py PILLAR_CARDS), the pool's and the dust's alpha. */
+static const u8 sNdsP4PalutenaPillarCyan[4] = { 30, 205, 255, 215 };
+static const u8 sNdsP4PalutenaPillarViolet[3] = { 140, 110, 255 };
+#define PAL_PILLAR_FLARE_ALPHA 240.0F
+#define PAL_PILLAR_DUST_ALPHA 235.0F
+
+static void ndsP4PalutenaPillarPrim(DObj *card, f32 alpha)
+{
+    if (card->mobj != NULL)
+    {
+        card->mobj->sub.primcolor.s.a = (u8)((alpha < 0.0F) ? 0.0F : ((alpha > 255.0F) ? 255.0F : alpha));
+    }
+}
+
+/* The pillar at its tic: each card's scale and material. */
+static void ndsP4PalutenaPillarPose(GObj *effect_gobj, s32 tic)
+{
+    DObj *dust_l = DObjGetStruct(effect_gobj)->child;
+    DObj *dust_r = dust_l->sib_next;
+    DObj *flare = dust_r->sib_next;
+    DObj *core = flare->sib_next;
+    DObj *glow = core->sib_next;
+    f32 width;
+    f32 core_width;
+    f32 height;
+    f32 flare_size;
+    f32 flare_alpha;
+    f32 reach;
+    f32 rise;
+    f32 dust_alpha;
+    f32 violet;
+    f32 glow_alpha;
+
+    if (tic < PAL_PILLAR_RISE)
+    {
+        width = 0.7F + (0.1F * (f32)tic);
+        height = sNdsP4PalutenaPillarRise[tic];
+    }
+    else
+    {
+        width = 1.0F;
+        height = 1.0F;
+    }
+    core_width = width;
+    glow_alpha = (f32)sNdsP4PalutenaPillarCyan[3];
+    if (tic >= PAL_PILLAR_LINE_AT)
+    {
+        /* The violet line, fading out. */
+        f32 p = (f32)(tic - PAL_PILLAR_LINE_AT) / (f32)(PAL_PILLAR_END - PAL_PILLAR_LINE_AT);
+
+        width = PAL_PILLAR_LINE_W * (1.0F - (0.35F * p));
+        core_width = 0.0F;
+        glow_alpha *= 1.0F - p;
+    }
+    else if (tic >= PAL_PILLAR_THIN_AT)
+    {
+        f32 p = (f32)(tic - PAL_PILLAR_THIN_AT) / (f32)(PAL_PILLAR_LINE_AT - PAL_PILLAR_THIN_AT);
+
+        width = 1.0F - ((1.0F - PAL_PILLAR_LINE_W) * p);
+        core_width = 1.0F - ((1.0F - PAL_PILLAR_CORE_LINE_W) * p);
+    }
+    glow->scale.vec.f.x = ((tic >= PAL_PILLAR_RISE) && (tic < PAL_PILLAR_THIN_AT) && ((tic & 1) != 0)) ?
+        0.94F : width;
+    glow->scale.vec.f.y = height;
+    core->scale.vec.f.x = core_width;
+    core->scale.vec.f.y = (core_width > 0.0F) ? height : 0.0F;
+    violet = (tic <= PAL_PILLAR_VIOLET_AT) ? 0.0F :
+        (f32)(tic - PAL_PILLAR_VIOLET_AT) / (f32)(PAL_PILLAR_LINE_AT + 1 - PAL_PILLAR_VIOLET_AT);
+    violet = (violet > 1.0F) ? 1.0F : violet;
+    if (glow->mobj != NULL)
+    {
+        SYColorPack *prim = &glow->mobj->sub.primcolor;
+
+        prim->s.r = (u8)(sNdsP4PalutenaPillarCyan[0] +
+                         (((s32)sNdsP4PalutenaPillarViolet[0] - (s32)sNdsP4PalutenaPillarCyan[0]) * violet));
+        prim->s.g = (u8)(sNdsP4PalutenaPillarCyan[1] +
+                         (((s32)sNdsP4PalutenaPillarViolet[1] - (s32)sNdsP4PalutenaPillarCyan[1]) * violet));
+        prim->s.b = (u8)(sNdsP4PalutenaPillarCyan[2] +
+                         (((s32)sNdsP4PalutenaPillarViolet[2] - (s32)sNdsP4PalutenaPillarCyan[2]) * violet));
+    }
+    ndsP4PalutenaPillarPrim(glow, glow_alpha);
+    /* The pool at its foot: brightest as it rises, fading out by
+     * PAL_PILLAR_FLARE_END. */
+    if (tic < PAL_PILLAR_RISE)
+    {
+        flare_size = 0.6F + (0.4F * (f32)tic / (f32)PAL_PILLAR_RISE);
+        flare_alpha = PAL_PILLAR_FLARE_ALPHA;
+    }
+    else if (tic < PAL_PILLAR_FLARE_END)
+    {
+        f32 p = (f32)(tic - PAL_PILLAR_RISE) / (f32)(PAL_PILLAR_FLARE_END - PAL_PILLAR_RISE);
+
+        flare_size = 1.0F - (0.3F * p);
+        flare_alpha = PAL_PILLAR_FLARE_ALPHA * (1.0F - p);
+    }
+    else
+    {
+        flare_size = 0.0F;
+        flare_alpha = 0.0F;
+    }
+    flare->scale.vec.f.x = flare_size;
+    flare->scale.vec.f.y = flare_size;
+    ndsP4PalutenaPillarPrim(flare, flare_alpha);
+    /* The dust: rolling out either way along the floor with the column and
+     * rising, then still spreading as it settles and fades. */
+    if (tic <= PAL_PILLAR_DUST_FULL)
+    {
+        f32 p = (f32)tic / (f32)PAL_PILLAR_DUST_FULL;
+
+        reach = 0.25F + (0.85F * p);
+        rise = 0.45F + (0.55F * p);
+        dust_alpha = PAL_PILLAR_DUST_ALPHA;
+    }
+    else if (tic < PAL_PILLAR_DUST_END)
+    {
+        f32 p = (f32)(tic - PAL_PILLAR_DUST_FULL) / (f32)(PAL_PILLAR_DUST_END - PAL_PILLAR_DUST_FULL);
+
+        reach = 1.1F + (0.2F * p);
+        rise = 1.0F - (0.5F * p);
+        dust_alpha = PAL_PILLAR_DUST_ALPHA * (1.0F - p);
+    }
+    else
+    {
+        reach = 0.0F;
+        rise = 0.0F;
+        dust_alpha = 0.0F;
+    }
+    dust_l->scale.vec.f.x = reach;
+    dust_l->scale.vec.f.y = rise;
+    dust_r->scale.vec.f.x = reach;
+    dust_r->scale.vec.f.y = rise;
+    ndsP4PalutenaPillarPrim(dust_l, dust_alpha);
+    ndsP4PalutenaPillarPrim(dust_r, dust_alpha);
+}
 
 static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
 {
     EFStruct *ep = efGetStruct(effect_gobj);
-    DObj *glow = DObjGetStruct(effect_gobj)->child;
-    DObj *core = glow->sib_next;
-    DObj *flare = core->sib_next;
-    DObj *dust_l = flare->sib_next;
-    DObj *dust_r = dust_l->sib_next;
     s32 tic = ep->effect_vars.common.size;
-    f32 width;
-    f32 height;
-    f32 flare_size;
-    f32 reach;
-    f32 rise;
 
     if (ep->is_pause_effect)
     {
@@ -952,70 +1090,7 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
         gcEjectGObj(effect_gobj);
         return;
     }
-    if (tic < PAL_PILLAR_RISE)
-    {
-        width = 0.7F + (0.1F * (f32)tic);
-        height = sNdsP4PalutenaPillarRise[tic];
-    }
-    else if (tic < PAL_PILLAR_THIN_AT)
-    {
-        width = 1.0F;
-        height = 1.0F;
-    }
-    else
-    {
-        width = (f32)(PAL_PILLAR_END - tic) / (f32)(PAL_PILLAR_END - PAL_PILLAR_THIN_AT);
-        height = 1.0F;
-    }
-    glow->scale.vec.f.x = ((tic >= PAL_PILLAR_RISE) && (tic < PAL_PILLAR_THIN_AT) && ((tic & 1) != 0)) ?
-        0.94F : width;
-    glow->scale.vec.f.y = height;
-    core->scale.vec.f.x = (tic < PAL_PILLAR_THIN_AT) ? width : (0.15F + (0.85F * width));
-    core->scale.vec.f.y = height;
-    /* The flare at its foot: brightest as it rises, gone by
-     * PAL_PILLAR_FLARE_END. */
-    if (tic < PAL_PILLAR_RISE)
-    {
-        flare_size = 0.6F + (0.4F * (f32)tic / (f32)PAL_PILLAR_RISE);
-    }
-    else if (tic < PAL_PILLAR_FLARE_END)
-    {
-        flare_size = (f32)(PAL_PILLAR_FLARE_END - tic) / (f32)(PAL_PILLAR_FLARE_END - PAL_PILLAR_RISE);
-    }
-    else
-    {
-        flare_size = 0.0F;
-    }
-    flare->scale.vec.f.x = flare_size;
-    flare->scale.vec.f.y = flare_size;
-    /* The dust: rolling out either way along the floor and rising, then
-     * still spreading as it settles. */
-    if (tic < PAL_PILLAR_DUST_AT)
-    {
-        reach = 0.0F;
-        rise = 0.0F;
-    }
-    else if (tic <= PAL_PILLAR_DUST_FULL)
-    {
-        f32 p = (f32)(tic - PAL_PILLAR_DUST_AT) / (f32)(PAL_PILLAR_DUST_FULL - PAL_PILLAR_DUST_AT);
-
-        reach = 0.25F + (0.85F * p);
-        rise = 0.45F + (0.55F * p);
-    }
-    else if (tic < PAL_PILLAR_DUST_END)
-    {
-        reach = 1.1F + (0.035F * (f32)(tic - PAL_PILLAR_DUST_FULL));
-        rise = (f32)(PAL_PILLAR_DUST_END - tic) / (f32)(PAL_PILLAR_DUST_END - PAL_PILLAR_DUST_FULL);
-    }
-    else
-    {
-        reach = 0.0F;
-        rise = 0.0F;
-    }
-    dust_l->scale.vec.f.x = reach;
-    dust_l->scale.vec.f.y = rise;
-    dust_r->scale.vec.f.x = reach;
-    dust_r->scale.vec.f.y = rise;
+    ndsP4PalutenaPillarPose(effect_gobj, tic);
     ep->effect_vars.common.size = tic + 1;
 }
 
@@ -1326,6 +1401,7 @@ static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
     { 176, 3, 5, 22, 26, 0, 0 },    /* down tilt (hits 6-9, its spin to 22) */
     { 184, 3, 5, 32, 39, 0, 0 },    /* neutral air (its hit 7-29) */
     { 187, 6, 10, 34, 44, 0, 0 },   /* up air (hits 10-32: its clip at 0.5, owner p7h) */
+    { 182, 3, 5, 13, 17, 0, 0 },    /* up smash: the swing to the thrust (12), the 3DS's burst and glint (owner 2026-10-22) */
 };
 
 /* Ultimate's frames through each clip's time anchors (art/p6/palutena/
@@ -1962,6 +2038,8 @@ static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
     if (effect_gobj != NULL)
     {
         efGetStruct(effect_gobj)->effect_vars.common.size = 0;
+        /* Its first frame draws before its first update: posed now. */
+        ndsP4PalutenaPillarPose(effect_gobj, 0);
     }
 }
 
