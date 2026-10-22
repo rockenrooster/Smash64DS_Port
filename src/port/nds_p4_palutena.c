@@ -893,16 +893,17 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * pool on the floor at its foot (the flare), the core (white down its middle,
  * 0.25 across, to bright cyan, 0.5 across) and the glow (full at the core's
  * edge, faint by 0.7 across and gone by 0.9, coloured by its material: the
- * owner's clip measured). The column rises from the floor with a round head
- * over PAL_PILLAR_RISE tics (its height sNdsP4PalutenaPillarRise), posed for
- * tic 0 when made (it drew one frame at full height first); the pool
- * brightest as it rises, fading out by PAL_PILLAR_FLARE_END; the dust rolls out either
- * way with it, at its full reach by PAL_PILLAR_DUST_FULL, and settles and
- * fades by PAL_PILLAR_DUST_END; the column stands, its glow shimmering, to
- * PAL_PILLAR_THIN_AT, thins (slowly, then quickly: sNdsP4PalutenaPillarThin)
- * to a line by PAL_PILLAR_LINE_AT as its glow turns violet, and the violet
- * line fades out by PAL_PILLAR_END (its hitboxes, the script's, are up to
- * tic 26). */
+ * owner's clip measured; their tops as the clip's: the white fading to cyan
+ * up the middle, the cyan narrowing to a soft round top in the glow's haze).
+ * The column rises from the floor, its top first, over PAL_PILLAR_RISE tics
+ * (its height sNdsP4PalutenaPillarRise), posed for tic 0 when made (it drew
+ * one frame at full height first); the pool brightest as it rises, fading out
+ * by PAL_PILLAR_FLARE_END; the dust rolls out either way with it, at its full
+ * reach by PAL_PILLAR_DUST_FULL, and settles and fades by PAL_PILLAR_DUST_END;
+ * the column stands, its glow shimmering, to PAL_PILLAR_THIN_AT, thins
+ * (slowly, then quickly: sNdsP4PalutenaPillarThin) to a line by
+ * PAL_PILLAR_LINE_AT as its glow turns violet, and the violet line fades out
+ * by PAL_PILLAR_END (its hitboxes, the script's, are up to tic 26). */
 #define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
 #define PAL_PILLAR_MOBJSUBS 0x620           /* p6_gate.py PILLAR_MOBJSUBS */
@@ -917,6 +918,9 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * violet by PAL_PILLAR_LINE_AT + 1), its width a line's from LINE_AT. */
 #define PAL_PILLAR_VIOLET_AT 29
 #define PAL_PILLAR_LINE_W 0.21F
+/* The core's and the glow's cards stand PAL_PILLAR_STRETCH times as tall as
+ * authored (p6_gate.py PILLAR_STRETCH: inside the DS's vertex range). */
+#define PAL_PILLAR_STRETCH 2.0F
 
 static const f32 sNdsP4PalutenaPillarRise[PAL_PILLAR_RISE] = { 0.18F, 0.45F, 1.0F };
 
@@ -927,10 +931,12 @@ static const u8 sNdsP4PalutenaPillarThin[PAL_PILLAR_LINE_AT - PAL_PILLAR_THIN_AT
 };
 
 /* Owner (2026-10-19): the column's top at the pillar's drawn top plus 6.
- * Its cards are 2,500 tall (p6_gate.py PILLAR_HEIGHT) but draw to about
- * 2,048 above her floor (measured; the DS's v16 vertex range at the x16
- * factor, nds_renderer_textures_effects.c): 1,565 x her size 1.185 =
- * 1,854, the hitbox's 200 radius above it: 2,054 (it reached 2,925). */
+ * Its cards were 2,500 tall and drew to about 2,048 above her floor
+ * (measured; the DS's v16 vertex range at the x16 factor,
+ * nds_renderer_textures_effects.c); now the core's round top stands there
+ * (0.915 of p6_gate.py PILLAR_HEIGHT, 2,240), the glow's soft top over it:
+ * 1,565 x her size 1.185 = 1,854, the hitbox's 200 radius above it: 2,054
+ * (it reached 2,925). */
 static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
     { 200.0F, 883.0F },     /* attack 0: the floor to the middle */
     { 883.0F, 1565.0F },    /* attack 1: the middle to the top */
@@ -1008,9 +1014,9 @@ static void ndsP4PalutenaPillarPose(GObj *effect_gobj, s32 tic)
     }
     glow->scale.vec.f.x = ((tic >= PAL_PILLAR_RISE) && (tic < PAL_PILLAR_THIN_AT) && ((tic & 1) != 0)) ?
         (0.94F * width) : width;
-    glow->scale.vec.f.y = height;
+    glow->scale.vec.f.y = height * PAL_PILLAR_STRETCH;
     core->scale.vec.f.x = core_width;
-    core->scale.vec.f.y = (core_width > 0.0F) ? height : 0.0F;
+    core->scale.vec.f.y = (core_width > 0.0F) ? (height * PAL_PILLAR_STRETCH) : 0.0F;
     violet = (tic <= PAL_PILLAR_VIOLET_AT) ? 0.0F :
         (f32)(tic - PAL_PILLAR_VIOLET_AT) / (f32)(PAL_PILLAR_LINE_AT + 1 - PAL_PILLAR_VIOLET_AT);
     violet = (violet > 1.0F) ? 1.0F : violet;

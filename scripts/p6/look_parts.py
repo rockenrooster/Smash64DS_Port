@@ -145,44 +145,26 @@ def authored_pillar_burst(w: int, h: int) -> np.ndarray:
 PILLAR_LIGHT_PALETTE = (
     (0, 0, 0, 0),
     (255, 255, 255, 255), (226, 250, 255, 255), (178, 238, 255, 255), (120, 214, 255, 255),
-    (70, 208, 255, 255), (40, 178, 250, 255), (22, 148, 240, 255),
+    (70, 208, 255, 255), (40, 178, 250, 255), (185, 255, 252, 255),
     (250, 250, 250, 255), (231, 232, 237, 255), (207, 210, 218, 255), (180, 184, 195, 255),
     (152, 157, 170, 255),
     (140, 255, 250, 255), (96, 242, 246, 255), (56, 212, 240, 255),
 )
 
 
-def pillar_light_atlas(size: int = 64) -> tuple[list, tuple]:
+def pillar_light_atlas(core: list, size: int = 64) -> tuple[list, tuple]:
     """The up smash's light, as the 3DS's Heavenly Light (the owner's
     half-speed Strong_Up_A clip): a 64-texel CI4 atlas (rows of palette
     indices, PILLAR_LIGHT_PALETTE). Columns 0-31: the core, white down its
-    middle to cyan at its edges, its top rounded (it rises from the floor
-    with a round head; the glow around it is p6_gate.py's own image); 32-63,
-    rows 0-15: the
+    middle to cyan at its edges, its top fading and narrowing (`core`, rows
+    of 32 palette indices: p6_gate.py core_block, which draws it; the glow
+    around it is p6_gate.py's own image); 32-63, rows 0-15: the
     flare on the floor at its foot; rows 16-47: a bank of dust puffs rolling
     out from its foot along the floor (the foot at column 32), shaded from
     their tops; rows 48-63 clear."""
     idx = np.zeros((size, size), dtype=int)
     q = size // 4
-
-    def column(x0, width, cap, bands):
-        c = (width - 1) / 2.0
-        for y in range(size):
-            half = (width / 2.0) * (math.sqrt(max(0.0, 1.0 - ((cap - y) / cap) ** 2)) if y < cap else 1.0)
-            for x in range(width):
-                d = abs(x - c) / (width / 2.0)
-                if abs(x - c) + 0.5 > half:
-                    continue
-                for limit, k in bands:
-                    if d <= limit:
-                        idx[y, x0 + x] = k
-                        break
-    # The core, its half width a quarter of her height (p6_gate.py), 16
-    # texels each side: white to 0.11 of her height out, near-white to 0.125,
-    # bright cyan to 0.19, deeper cyan to its edge, as the owner's clip
-    # measures (owner 2026-10-22: Ultimate's white column, a quarter of her
-    # height across; it was white to 0.05 out).
-    column(0, 2 * q, 10, ((0.44, 1), (0.5, 2), (0.57, 13), (0.75, 14), (0.88, 15), (1.01, 6)))
+    idx[:, 0:2 * q] = np.array(core, dtype=int)
     # The flare: an ellipse on the floor, white at its middle.
     fw, fh = size - 2 * q, q
     for y in range(fh):

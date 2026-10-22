@@ -23,9 +23,9 @@ her on the ground, src/port/nds_p4_palutena.c) and cards facing the camera:
 the glow (translucent), the core (white down its middle to cyan, cut out),
 the flare on the floor at its foot and the dust rolling out from it either
 way (translucent) -- from one authored atlas (look_parts.py
-pillar_light_atlas), unlit. Her code scales the cards over the effect's
-life: the column rises from the floor with a round head, the dust rolls out
-and settles, the column thins away.
+pillar_light_atlas) and the glow's own image, unlit. Her code scales the
+cards over the effect's life: the column rises from the floor, its soft top
+first, the dust rolls out and settles, the column thins away.
 
 A third tree at WINGS_TREE holds her forward and down smash's wings
 (scripts/p6/p6_wings.py: the kit's godwing rigged, a continuous mesh a wing,
@@ -73,7 +73,15 @@ FRONT = -380.0
 TEX = 64              # the door image's side (CI4: 2 KB, TMEM's half)
 U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
-PILLAR_HEIGHT = 2500.0     # 2x her first pillar's 1,250 (owner p6f notes; 1.5x and 1.25x before)
+# The column's height: 2x her first pillar's 1,250 (owner p6f notes) was
+# 2,500, which drew to about 2,048 (the DS's v16 vertex range from the
+# card's origin, its texture squashed into it). Now the core's round top
+# stands there (the hitboxes' top, owner 2026-10-19), the glow's soft top
+# over it to PILLAR_HEIGHT: the two cards authored PILLAR_STRETCH times
+# shorter, her code stretching them back (nds_p4_palutena.c
+# PAL_PILLAR_STRETCH).
+PILLAR_HEIGHT = 2240.0
+PILLAR_STRETCH = 2.0
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
 # Each card: atlas region (s0, t0, s1, t1 in texels; s1 < s0 mirrors it; the
 # floor's regions half a texel in from their neighbours, whose edge rows
@@ -96,12 +104,12 @@ PILLAR_CARDS = (
     ("dust_l", (64, 16.5, 32, 47.5), -760.0, 0.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
     ("dust_r", (32, 16.5, 64, 47.5), 0.0, 760.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
     ("flare", (32, 0.5, 64, 15.5), -300.0, 300.0, -80.0, 300.0, 8.0, (255, 255, 255, 240)),
-    ("core", (0, 0, 32, 64), -150.0, 150.0, 0.0, PILLAR_HEIGHT, 4.0, (255, 255, 255, 255)),
-    ("glow", None, -276.0, 276.0, 0.0, PILLAR_HEIGHT, 0.0, (8, 168, 255, 235)),
+    ("core", (0, 0, 32, 64), -150.0, 150.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, 4.0, (255, 255, 255, 255)),
+    ("glow", None, -276.0, 276.0, 0.0, PILLAR_HEIGHT / PILLAR_STRETCH, 0.0, (8, 168, 255, 235)),
 )
 # The glow's own image: an I4 coverage mask (graded alpha, its colour the
-# material's PRIM), its top rounded over GLOW_CAP of its rows (it rises with
-# a round head). Across it the glow's strength (GLOW_PROFILE: its distance
+# material's PRIM), its top faded as the column's (GLOW_TOP, below). Across
+# it the glow's strength (GLOW_PROFILE: its distance
 # out from the middle in her heights, HER_HEIGHT units; its alpha) as the
 # owner's clip shows it (owner 2026-10-22; measured, its blue over the
 # stage): full to the core's edge, quickly down to a third by 0.32 of her
@@ -109,11 +117,40 @@ PILLAR_CARDS = (
 # 3DS's add, which the DS cannot, drawn in. Ultimate's glow plane reaches as
 # far (0.45 of her height).
 GLOW_W, GLOW_H = 32, 64
-GLOW_CAP = 14
 HER_HEIGHT = 600.0
 GLOW_PROFILE = ((0.0, 1.0), (0.23, 1.0), (0.24, 0.94), (0.26, 0.74), (0.28, 0.6), (0.3, 0.43),
                 (0.32, 0.31), (0.34, 0.23), (0.36, 0.19), (0.38, 0.16), (0.4, 0.13), (0.42, 0.1),
                 (0.44, 0.06), (0.46, 0.0))
+# The core across (its half width 0-1): a brightness, its colour CORE_RAMP's
+# (from brightness, palette index: white from 1.0, near-white, pale, light,
+# bright and deeper cyan), standing as the clip's (white to 0.44, bright cyan
+# from 0.57 to 0.75).
+CORE_W = 32
+CORE_ACROSS = ((0.0, 1.3), (0.44, 1.0), (0.5, 0.93), (0.501, 0.86), (0.57, 0.76), (0.75, 0.56),
+               (0.88, 0.42), (1.0, 0.3))
+CORE_RAMP = ((1.0, 1), (0.93, 2), (0.86, 7), (0.76, 13), (0.56, 14), (0.42, 15), (0.0, 6))
+CORE_CYAN = 0.56
+# The column's top as the owner's clip shows it (owner 2026-10-22, measured;
+# heights as fractions of the column's: the clip's is 4.35 of her height,
+# ours 3.4). The white fades from its edges in, its middle near-white, pale,
+# light then bright cyan going up (CORE_FADE: the part of each brightness
+# over bright cyan left, at heights); the bright cyan narrows to a rounded
+# point (CORE_TOP: the core's half width left); the glow fades out over the
+# top (GLOW_TOP, over the rest of the height from GLOW_TOP_FROM, which is
+# lower by GLOW_TOP_SLOPE per her height out from the middle). Each of the
+# two cards draws its top from TIP_FROM as a second quad over its image's
+# first TIP_ROWS rows (its rest, the rows below, as the column stands).
+TIP_FROM = 0.62
+TIP_ROWS = 60
+TIPPED = ("core", "glow")
+CORE_FADE = ((0.655, 1.0), (0.675, 0.85), (0.7, 0.62), (0.715, 0.5), (0.765, 0.405), (0.835, 0.27),
+             (0.9, 0.1), (1.0, 0.0))
+CORE_TOP = ((0.78, 1.0), (0.8, 0.82), (0.83, 0.72), (0.87, 0.6), (0.8925, 0.52), (0.902, 0.42),
+            (0.909, 0.3), (0.9135, 0.16), (0.915, 0.0))
+GLOW_TOP_FROM = 0.874
+GLOW_TOP_SLOPE = 0.387
+GLOW_TOP = ((0.0, 1.0), (0.09, 0.92), (0.18, 0.8), (0.27, 0.69), (0.36, 0.59), (0.45, 0.5), (0.55, 0.4),
+            (0.64, 0.27), (0.8, 0.2), (0.91, 0.11), (1.0, 0.0))
 PILLAR_DOBJS = len(PILLAR_CARDS) + 1
 # The pillar's tree, after the gate's five rows (p4_articles.py "pillar"):
 # its root, its cards, the end.
@@ -345,11 +382,46 @@ def build() -> tuple[bytes, dict]:
     return f.to_bytes(), info
 
 
+def tip_height(y: int) -> float:
+    """A tipped card's image row as a height on the column (a fraction of
+    it): its first TIP_ROWS rows its second quad's, TIP_FROM to the top; the
+    rows below its first quad's (0: as the column stands)."""
+    if y >= TIP_ROWS:
+        return 0.0
+    return TIP_FROM + (1.0 - TIP_FROM) * (1.0 - (y + 0.5) / TIP_ROWS)
+
+
+def lerp(x: float, points: tuple) -> float:
+    return float(np.interp(x, [p[0] for p in points], [p[1] for p in points]))
+
+
+def core_block() -> list:
+    """The core's atlas columns, PILLAR_TEX rows of CORE_W palette indices
+    (0 clear): CORE_ACROSS through CORE_RAMP, its top as CORE_FADE and
+    CORE_TOP draw it."""
+    rows = []
+    for y in range(PILLAR_TEX):
+        h = tip_height(y)
+        width, fade = lerp(h, CORE_TOP), lerp(h, CORE_FADE)
+        row = []
+        for x in range(CORE_W):
+            u = abs((x + 0.5) - CORE_W / 2.0) / (CORE_W / 2.0)
+            if u >= width:
+                row.append(0)
+                continue
+            b = lerp(u / width, CORE_ACROSS)
+            if b > CORE_CYAN:
+                b = CORE_CYAN + (b - CORE_CYAN) * fade
+            row.append(next(k for at, k in CORE_RAMP if b >= at))
+        rows.append(row)
+    return rows
+
+
 def pillar_atlas() -> tuple[bytes, bytes]:
     """The pillar's atlas as CI4 texels and an RGBA5551 palette (index 0
     clear): look_parts.pillar_light_atlas, its palette padded to 16."""
     import look_parts
-    idx, palette = look_parts.pillar_light_atlas(PILLAR_TEX)
+    idx, palette = look_parts.pillar_light_atlas(core_block(), PILLAR_TEX)
     palette = list(palette) + [palette[-1]] * (16 - len(palette))
     return M.ci4_bytes(idx), M.rgba5551(palette)
 
@@ -359,15 +431,13 @@ def glow_i4() -> np.ndarray:
     levels = np.zeros((GLOW_H, GLOW_W), dtype=int)
     reach = next(card[3] for card in PILLAR_CARDS if card[0] == "glow") / HER_HEIGHT
     for y in range(GLOW_H):
-        half = 1.0
-        if y < GLOW_CAP:
-            half = float(np.sqrt(max(0.0, 1.0 - ((GLOW_CAP - y) / GLOW_CAP) ** 2)))
+        h = tip_height(y)
         for x in range(GLOW_W):
-            r = abs((x + 0.5) - GLOW_W / 2.0) / (GLOW_W / 2.0)
-            if half <= 0.0 or r >= half:
-                continue
-            r /= half
-            a = float(np.interp(r * reach, [p[0] for p in GLOW_PROFILE], [p[1] for p in GLOW_PROFILE]))
+            d = reach * abs((x + 0.5) - GLOW_W / 2.0) / (GLOW_W / 2.0)
+            a = lerp(d, GLOW_PROFILE)
+            fade_from = GLOW_TOP_FROM - GLOW_TOP_SLOPE * d
+            if h > fade_from:
+                a *= lerp((h - fade_from) / (1.0 - fade_from), GLOW_TOP)
             levels[y, x] = int(round(a * 15.0))
     levels[levels <= 1] = 0
     return levels
@@ -400,16 +470,20 @@ def pillar(app: "M.Appender", mobj_at: int) -> dict:
     clamp = 2
     out = {}
     for name, region, left, right, bottom, top, _z, prim in PILLAR_CARDS:
+        s0, t0, s1, t1 = region if region is not None else (0, 0, GLOW_W, GLOW_H)
+        # Each quad: its top and bottom y, its image rows there.
+        quads = [(top, bottom, t0, t1)]
+        if name in TIPPED:
+            split_y = bottom + TIP_FROM * (top - bottom)
+            split_t = t0 + TIP_ROWS
+            quads = [(top, split_y, t0, split_t), (split_y, bottom, split_t, t1)]
+        corners = [c for qt, qb, tt, tb in quads
+                   for c in ((left, qt, s0, tt), (right, qt, s1, tt), (right, qb, s1, tb), (left, qb, s0, tb))]
         if region is None:
-            corners = [(left, top, 0, 0), (right, top, GLOW_W, 0),
-                       (right, bottom, GLOW_W, GLOW_H), (left, bottom, 0, GLOW_H)]
             app.align(8)
             vtx_at = app.put(b"".join(p6_light._vtx(x, y, s * 32, t * 32) for x, y, s, t in corners))
-            cmds = p6_light._card_list(FILE_ID, glow_at, GLOW_W, GLOW_H, vtx_at, None)
+            cmds = p6_light._card_list(FILE_ID, glow_at, GLOW_W, GLOW_H, vtx_at, None, len(quads))
         else:
-            s0, t0, s1, t1 = region
-            corners = [(left, top, s0, t0), (right, top, s1, t0),
-                       (right, bottom, s1, t1), (left, bottom, s0, t1)]
             app.align(8)
             vtx_at = app.put(b"".join(vtx(x, y, 0.0, s * 32, t * 32) for x, y, s, t in corners))
             cmds = [N.Gfx(0xE7000000, 0),
@@ -429,9 +503,11 @@ def pillar(app: "M.Appender", mobj_at: int) -> dict:
                      N.Gfx(0xE6000000, 0),
                      N.Gfx(0xF3000000, (7 << 24) | ((PILLAR_TEX * PILLAR_TEX // 4 - 1) << 12) | (2048 // line)),
                      N.Gfx(0xE7000000, 0),
-                     N.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", FILE_ID, vtx_at)),
-                     N.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
-                     N.Gfx(0xE7000000, 0)]
+                     N.Gfx(0x01000000 | (4 * len(quads) << 12) | (4 * len(quads) << 1), vtx_at,
+                           ("intern", FILE_ID, vtx_at))]
+            cmds += [N.Gfx(0x06000000 | (8 * q << 16) | ((8 * q + 2) << 8) | (8 * q + 4),
+                           (8 * q << 16) | ((8 * q + 4) << 8) | (8 * q + 6)) for q in range(len(quads))]
+            cmds += [N.Gfx(0xE7000000, 0)]
             cmds += CUTOUT_OFF
             cmds += [N.Gfx(0xE3001001, 0x00000000),
                      N.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),

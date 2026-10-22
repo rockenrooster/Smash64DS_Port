@@ -295,10 +295,12 @@ def _vtx(x: float, y: float, s: float, t: float) -> bytes:
     return struct.pack(">hhhHhh", xs, ys, 0, 0, int(round(s)), int(round(t))) + bytes((255, 255, 255, 255))
 
 
-def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple | None) -> list:
-    """One quad (four vertices at vtx_at), its I4 image loaded as the N64
-    loads a 4-bit block (16-bit load tile), translucent at PRIM (or, prim
-    None, at its DObj's material: a call to segment E's first slot)."""
+def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple | None,
+               quads: int = 1) -> list:
+    """One quad (four vertices at vtx_at; or `quads` of them, four vertices
+    each), its I4 image loaded as the N64 loads a 4-bit block (16-bit load
+    tile), translucent at PRIM (or, prim None, at its DObj's material: a call
+    to segment E's first slot)."""
     line = max(1, w * 4 // 64)                   # 4-bit row in 64-bit words
     masks, maskt = w.bit_length() - 1, h.bit_length() - 1
     clamp = 2
@@ -321,8 +323,9 @@ def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple |
             N.Gfx(0xE6000000, 0),
             N.Gfx(0xF3000000, (7 << 24) | (((w * h + 3) // 4 - 1) << 12) | (2048 // line)),
             N.Gfx(0xE7000000, 0),
-            N.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", fid, vtx_at)),
-            N.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
+            N.Gfx(0x01000000 | (4 * quads << 12) | (4 * quads << 1), vtx_at, ("intern", fid, vtx_at))] + [
+            N.Gfx(0x06000000 | (8 * q << 16) | ((8 * q + 2) << 8) | (8 * q + 4),
+                  (8 * q << 16) | ((8 * q + 4) << 8) | (8 * q + 6)) for q in range(quads)] + [
             N.Gfx(0xE7000000, 0)] + CUTOUT_OFF + [
             N.Gfx(0xE3001001, 0x00000000),
             N.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),
