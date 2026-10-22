@@ -1299,10 +1299,11 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   the far wing PAL_WING_FAR as wide; the camera-facing ones -- down
  *   smash, up air and the taunt -- face the camera (owner 2026-10-22;
  *   Ultimate's down smash and up air do); the orb PAL_ORB_UP above her
- *   head joint (her head's base), PAL_ORB_BACK toward her back and
- *   PAL_LIGHT_BEHIND behind her; each wing level (PAL_WING_DROOP down at its tip), its
- *   strokes meeting PAL_WING_GAP to the orb's side and PAL_WING_DROP below
- *   its centre. Owner 2026-10-22 (the centre's style B, against Ultimate's own
+ *   head joint (her head's base) less its window's drop (the down smash's
+ *   at Ultimate's height for it), PAL_ORB_BACK toward her back and
+ *   PAL_LIGHT_BEHIND behind her; each wing level (PAL_WING_DROOP down at
+ *   its tip), its strokes meeting PAL_WING_GAP to the orb's side and
+ *   PAL_WING_DROP below its centre. Owner 2026-10-22 (the centre's style B, against Ultimate's own
  *   effect data): the wings placed as Ultimate's are about its centre --
  *   their strokes meet 1.10 ring radii out and 0.49 below the centre, not
  *   drooped -- where the 3DS's sat half a radius lower and drooped 9 deg --
@@ -1371,40 +1372,45 @@ typedef struct NDSP4PalLightWindow
     u8 last;
     u8 turn;                    /* the light: turned toward her facing (else to the camera) */
     u8 anchor;                  /* the light: its place taken until here */
+    u8 drop;                    /* the light: its orb this much under PAL_ORB_UP */
 } NDSP4PalLightWindow;
 
 /* scripts/p6/palutena/spec.json "motions" (the clips' hits: the motion
  * scripts). */
 static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
-    { 165, 2, 4, 9, 14, 0, 0 },     /* jab 1 (hits 4-7) */
-    { 166, 0, 2, 12, 18, 0, 0 },    /* jab 2 (hits 4-10) */
-    { 228, 0, 2, 8, 8, 0, 0 },      /* rapid jab start, full into the loop */
-    { 229, 0, 0, 24, 24, 0, 0 },    /* rapid jab loop */
-    { 230, 0, 0, 8, 14, 0, 0 },     /* rapid jab finisher (hits 3-6) */
-    { 170, 6, 8, 33, 38, 0, 0 },    /* forward tilt (hits 9-32) */
-    { 174, 3, 5, 34, 39, 0, 0 },    /* up tilt (hits 6-33) */
-    { 176, 3, 5, 22, 26, 0, 0 },    /* down tilt (hits 6-9, its spin to 22) */
-    { 184, 3, 5, 32, 39, 0, 0 },    /* neutral air (its hit 7-29) */
-    { 187, 6, 10, 34, 44, 0, 0 },   /* up air (hits 10-32: its clip at 0.5, owner p7h) */
-    { 182, 3, 5, 13, 17, 0, 0 },    /* up smash: the swing to the thrust (12), the 3DS's burst and glint (owner 2026-10-22) */
+    { 165, 2, 4, 9, 14, 0, 0, 0 },     /* jab 1 (hits 4-7) */
+    { 166, 0, 2, 12, 18, 0, 0, 0 },    /* jab 2 (hits 4-10) */
+    { 228, 0, 2, 8, 8, 0, 0, 0 },      /* rapid jab start, full into the loop */
+    { 229, 0, 0, 24, 24, 0, 0, 0 },    /* rapid jab loop */
+    { 230, 0, 0, 8, 14, 0, 0, 0 },     /* rapid jab finisher (hits 3-6) */
+    { 170, 6, 8, 33, 38, 0, 0, 0 },    /* forward tilt (hits 9-32) */
+    { 174, 3, 5, 34, 39, 0, 0, 0 },    /* up tilt (hits 6-33) */
+    { 176, 3, 5, 22, 26, 0, 0, 0 },    /* down tilt (hits 6-9, its spin to 22) */
+    { 184, 3, 5, 32, 39, 0, 0, 0 },    /* neutral air (its hit 7-29) */
+    { 187, 6, 10, 34, 44, 0, 0, 0 },   /* up air (hits 10-32: its clip at 0.5, owner p7h) */
+    { 182, 3, 5, 13, 17, 0, 0, 0 },    /* up smash: the swing to the thrust (12), the 3DS's burst and glint (owner 2026-10-22) */
 };
 
 /* Ultimate's frames through each clip's time anchors (art/p6/palutena/
  * anims, "time"), each grown in one frame sooner than that (owner p7h,
  * 2026-10-19: "draw 1 frame sooner ... 1 frame longer overall"). */
 static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
-    { 187, 7, 9, 36, 46, 0, 8 },    /* up air: backlight2 at 7, held to 71% (its clip at 0.5) */
-    { 182, 10, 12, 33, 44, 1, 11 }, /* up smash: with the pillar (16) */
-    { 177, 13, 15, 26, 37, 1, 0 },  /* forward smash, angled up: the hit (16) */
-    { 178, 13, 15, 26, 37, 1, 0 },
-    { 179, 13, 15, 26, 37, 1, 0 },  /* forward smash */
-    { 180, 13, 15, 26, 37, 1, 0 },
-    { 181, 13, 15, 26, 37, 1, 0 },  /* forward smash, angled down */
-    { 183, 15, 17, 33, 54, 0, 16 }, /* down smash: the slam (16) */
+    { 187, 7, 9, 36, 46, 0, 8, 0 },    /* up air: backlight2 at 7, held to 71% (its clip at 0.5) */
+    { 182, 10, 12, 33, 44, 1, 11, 0 }, /* up smash: with the pillar (16) */
+    { 177, 13, 15, 26, 37, 1, 0, 0 },  /* forward smash, angled up: the hit (16) */
+    { 178, 13, 15, 26, 37, 1, 0, 0 },
+    { 179, 13, 15, 26, 37, 1, 0, 0 },  /* forward smash */
+    { 180, 13, 15, 26, 37, 1, 0, 0 },
+    { 181, 13, 15, 26, 37, 1, 0, 0 },  /* forward smash, angled down */
+    /* Down smash: the slam (16), the orb at Ultimate's height for it, 13.5
+     * of her 19.5 on "top" -- 0.69 of her height, 415 -- not her head's
+     * there (445) plus PAL_ORB_UP, 610 (owner 2026-10-22: too high against
+     * Ultimate's and the 3DS's, whose wings centre at 0.58 of her height). */
+    { 183, 15, 17, 33, 54, 0, 16, 195 },
     /* Taunt: shown from frame 12 with her white sparkle and its sound
      * (motions/appeal.ms), not Ultimate's 54, and without the ring (owner
      * p7h, 2026-10-19: "an extra blue/green ring ... remove it"). */
-    { 164, 11, 13, 65, 85, 0, 12 },
+    { 164, 11, 13, 65, 85, 0, 12, 0 },
 };
 
 /* Each light card's material alpha at full, in the tree's order (p6_light.py
@@ -1771,7 +1777,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             const Vec3f *at = &DObjGetStruct(fighter_gobj)->translate.vec.f;
 
             pos.x = at->x + state->offset.x - (lr * PAL_ORB_BACK);
-            pos.y = at->y + state->offset.y + PAL_ORB_UP;
+            pos.y = at->y + state->offset.y + PAL_ORB_UP - (f32)w->drop;
             pos.z = at->z + state->offset.z - PAL_LIGHT_BEHIND;
             state->last_pos = pos;
             state->turn = w->turn;
