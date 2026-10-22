@@ -11,12 +11,13 @@ natively as entry effects, placed and sized every tic by her code
 - The gem's glow: a root her code puts at her staff's gem and two cards
   facing the camera, a soft cyan halo and a white core.
 - The overhead light wings: a root her code puts above her head and turns
-  to the camera, the small glowing orb there, the left wing's card
-  (Ultimate's backlight01, three feather strokes of light fanning out from
-  beside the orb), the right wing's (the left's mirror), and the two halves
-  of the ring about her head for her taunt (a soft ring drawn here:
-  Ultimate's backlight00 and 03 carry a filled inner glow that drew as a
-  sheet of light over the stage).
+  to the camera, the centre there (since owner 2026-10-22 Ultimate's ring
+  and dot, backlight00; ORB_STYLES), the left wing's card (Ultimate's
+  backlight01, three feather strokes of light fanning out from beside the
+  centre), the right wing's (the left's mirror), and the two halves of a
+  ring: style B's crisp ring and dot over the centre's glow, or the
+  taunt's ring about her head (a soft ring drawn here; no window shows it
+  since owner p7h).
 
 Each image is an I4 coverage mask (the DS's A5I3: graded alpha, its colour
 the card's PRIM), scaled down from Ultimate's effect textures in the owner's
@@ -57,26 +58,81 @@ GLOW_ROWS = len(GLOW_CARDS) + 2
 # The light's cards, all in one plane her code turns to the camera (owner
 # p6ab, 2026-10-17: the 3DS forward smash's wind-up, Strong_Side_A frames
 # 0-10: "camera facing", "the 2 light wings separated by the small glowing
-# circle"). The orb: a soft white disc ORB_HALF from its centre to the
-# card's edge, its centre the tree's origin. The wings' cards: the image's
+# circle"). The orb: since owner 2026-10-22 Ultimate's centre
+# (ef_palutena_backlight00, the left half of a thin ring round a dot that
+# sits low in it, mirrored whole: its colour channels the crisp ring and
+# dot, its alpha a soft glow round them that also fills the gap under the
+# dot), the style's `orb_half` from its centre to the card's edge, its
+# centre the tree's origin; ORB_STYLE picks how it is drawn (ORB_STYLES).
+# The wings' cards: the image's
 # anchor (where its three strokes meet, in texels over its side) sits on the
-# node's origin, the card WING_W across and WING_H high (the 3DS's wing is
-# wider than Ultimate's image); the right wing mirrors the left about x. The
-# ring's halves: the left half of the ring, RING_RADIUS across and twice
-# that high, mirrored.
+# node's origin, the card the style's `wing_size` across and high (A the
+# 3DS's, WING_W x WING_H, wider than Ultimate's image; B Ultimate's); the
+# right wing mirrors the left about x. The
+# ring's halves: the left half of a ring, the style's `ring_radius` across
+# and twice that high, mirrored -- the taunt's ring (no window shows it since
+# owner p7h), or style B's crisp core.
 ORB_HALF = 115.0
-ORB_CORE = 0.6
+# The centre's styles (owner 2026-10-22: "fix the centre ... same/similar
+# color as current wings", and an alternate "more ultimate-like within DS
+# constraints"). Ultimate draws the centre twice: once translucent (teal)
+# and once additively (pale mint where the texture is bright, teal on its
+# soft edge), so at full it is a near-white ring and dot in a teal glow, and
+# as it fades it goes teal, then blue. The DS draws one translucent colour
+# per card, nothing additive.
+#   ring (A): one card, the ring and dot crisp with a faint glow of the same
+#     colour (`glow` of the alpha), the wings' cyan; the ring halves stay
+#     the taunt's (hidden).
+#   ultimate (B): two layers -- the orb card the soft glow (the alpha,
+#     blurred `blur` texels of 256), teal; the ring halves over it the crisp
+#     ring and dot at twice the texels (each half 32x64), near-white mint --
+#     and both colours move as the light fades: at full, at half faded
+#     (`mid`), faded out (`late`), as Ultimate's colour keys do. Her code
+#     reads the ramp from each card's material (nds_p4_palutena.c): blend
+#     colour the full colour and alpha, light 1 the half-faded colour, env
+#     the faded-out colour; a ring half whose blend alpha is not 0 is the
+#     core and shows with the light. Its wings (owner 2026-10-22, "the
+#     colors of the wings too", "match the wing size too") as Ultimate's:
+#     near-white cyan at full fading to cyan, then blue (Ultimate's strokes
+#     are white-hot cores with cyan edges, one colour per card here), and
+#     Ultimate's size about its centre, 4.16 x 3.19 ring radii (its wing
+#     mesh, x 1.21-12.86 and y -6.11-2.81 about a ring of radius 2.8).
+# Colours: (full RGBA, mid RGB, late RGB).
+WING_COLOUR = ((100, 230, 255, 255), (100, 230, 255), (100, 230, 255))
+TAUNT_RING_COLOUR = ((190, 242, 255, 230), (190, 242, 255), (190, 242, 255))
+ORB_STYLES = {
+    "ring": {"glow": 0.3, "orb_half": ORB_HALF, "ring_radius": 170.0, "core": False,
+             "orb": ((100, 230, 255, 240), (100, 230, 255), (100, 230, 255)),
+             "ring": TAUNT_RING_COLOUR},
+    "ultimate": {"blur": 3.0, "orb_half": ORB_HALF * 1.1, "orb_fill": 1.0 / 1.1, "ring_radius": ORB_HALF,
+                 "core": True,
+                 "orb": ((40, 196, 190, 215), (0, 150, 178), (0, 64, 118)),
+                 "ring": ((232, 255, 250, 255), (60, 220, 255), (0, 104, 180)),
+                 "wing": ((160, 240, 255, 255), (30, 205, 255), (0, 130, 250)), "wing_size": (385.0, 295.0)},
+}
+# Owner 2026-10-22: B.
+ORB_STYLE = "ultimate"
 WING_W = 358.0
 WING_H = 244.0
 WING_ANCHOR = (0.84, 0.47)
-RING_RADIUS = 170.0
 LIGHT_CARDS = (
-    ("orb", "orb", (235, 250, 255, 240)),
-    ("wing_l", "wing", (100, 230, 255, 255)),
-    ("wing_r", "wing", (100, 230, 255, 255)),
-    ("ring_l", "ring", (190, 242, 255, 230)),
-    ("ring_r", "ring", (190, 242, 255, 230)),
+    # name, image (its colours: card_colours)
+    ("orb", "orb"),
+    ("wing_l", "wing"),
+    ("wing_r", "wing"),
+    ("ring_l", "ring"),
+    ("ring_r", "ring"),
 )
+
+
+def card_colours(name: str) -> tuple:
+    """(full RGBA, mid RGB, late RGB) of a light card in ORB_STYLE."""
+    style = ORB_STYLES[ORB_STYLE]
+    if name.startswith("wing"):
+        return style.get("wing", WING_COLOUR)
+    return style["orb"] if name == "orb" else style["ring"]
+
+
 LIGHT_ROWS = len(LIGHT_CARDS) + 2
 # The tree's DObjs (its root, then each card) as gcAddMObjAll walks them:
 # one MObjSub*** entry each, the root's NULL.
@@ -121,21 +177,65 @@ def _alpha(name: str) -> np.ndarray:
     return np.asarray(Image.open(path).convert("RGBA"), dtype=np.float32)[:, :, 3] / 255.0
 
 
+def _centre_halves() -> tuple:
+    """backlight00's left half (256 high, 128 wide): its colour channels (the
+    crisp ring and dot, 0-1) and its alpha (the soft glow round them)."""
+    from PIL import Image
+    path = FX / "ef_palutena_backlight00.png"
+    if not path.exists():
+        raise LightError(f"{path}: Ultimate's effect texture (the owner's local rip) is missing")
+    rgba = np.asarray(Image.open(path).convert("RGBA"), dtype=np.float32) / 255.0
+    return rgba[:, :, :3].mean(axis=2), rgba[:, :, 3]
+
+
+def _whole(half: np.ndarray) -> np.ndarray:
+    return np.concatenate([half, half[:, ::-1]], axis=1)
+
+
+def _fit(a: np.ndarray, fill: float) -> np.ndarray:
+    """`a` (square) shrunk to `fill` of itself about its centre, the rest clear."""
+    from PIL import Image
+    if fill >= 1.0:
+        return a
+    n = a.shape[0]
+    size = int(round(n * fill))
+    small = Image.fromarray(a.astype(np.float32), "F").resize((size, size), Image.BOX)
+    out = np.zeros_like(a)
+    at = (n - size) // 2
+    out[at:at + size, at:at + size] = np.asarray(small)
+    return out
+
+
+def _orb_coverage(style: dict) -> np.ndarray:
+    """The orb card's coverage, 256x256: A the crisp ring and dot with a faint
+    glow; B the glow alone, blurred."""
+    from PIL import Image, ImageFilter
+    core, glow = (_whole(h) for h in _centre_halves())
+    if style["core"]:
+        img = Image.fromarray((glow * 255.0).astype(np.uint8), "L")
+        a = np.asarray(img.filter(ImageFilter.GaussianBlur(style["blur"])), dtype=np.float32) / 255.0
+        a = a / max(float(a.max()), 1e-6)
+    else:
+        a = np.maximum(core, glow * style["glow"])
+    return _fit(a, style.get("orb_fill", 1.0))
+
+
 def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
     """The image as 4-bit coverage levels (rows of 0-15) and its size."""
     from PIL import Image
     source, w, h = IMAGES[kind]
-    if kind == "ring":
+    centre = kind == "orb" or (kind == "ring" and ORB_STYLES[ORB_STYLE]["core"])
+    if kind == "ring" and centre:
+        # Style B's crisp ring and dot: backlight00's left half itself.
+        a = _centre_halves()[0]
+    elif kind == "ring":
         # The left half of a ring whose centre is the image's right edge,
         # middle row (the card's origin): a soft band about RING_AT.
         ys, xs = np.mgrid[0:256, 0:128].astype(np.float32)
         r = np.hypot((xs + 0.5 - 128.0) / 128.0, (ys + 0.5 - 128.0) / 128.0)
         a = np.clip(1.0 - np.abs(r - RING_AT) / RING_BAND, 0.0, 1.0) ** 1.5
     elif kind == "orb":
-        # A disc full to ORB_CORE of its radius, soft to its edge.
-        ys, xs = np.mgrid[0:256, 0:256].astype(np.float32)
-        r = np.hypot((xs + 0.5 - 128.0) / 128.0, (ys + 0.5 - 128.0) / 128.0)
-        a = np.clip((1.0 - r) / (1.0 - ORB_CORE), 0.0, 1.0) ** 1.5
+        a = _orb_coverage(ORB_STYLES[ORB_STYLE])
     else:
         a = _alpha(source)
     if kind in ("glow", "core"):
@@ -155,7 +255,8 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         a = a / max(float(a.max()), 1e-6)
         a = a ** 0.6
     img = Image.fromarray((np.clip(a, 0.0, 1.0) * 255.0).astype(np.uint8), "L")
-    img = img.resize((w, h), Image.LANCZOS)
+    # The centre's crisp edges by area (no ringing about the thin ring).
+    img = img.resize((w, h), Image.BOX if centre else Image.LANCZOS)
     levels = np.rint(np.asarray(img, dtype=np.float32) / 255.0 * 15.0).astype(int)
     # No faint haze over the card: the lowest level clear, so a card's
     # rectangle never shows.
@@ -164,6 +265,10 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         # The rim fully clear: no square edge where the card ends.
         levels[0, :] = levels[-1, :] = 0
         levels[:, 0] = levels[:, -1] = 0
+    elif centre:
+        # The core's half: clear but for its right edge (the ring's middle).
+        levels[0, :] = levels[-1, :] = 0
+        levels[:, 0] = 0
     return np.clip(levels, 0, 15), w, h
 
 
@@ -220,15 +325,17 @@ def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple |
 def _corners(kind: str, name: str, w: int, h: int, half: float = 0.0) -> list:
     """The card's corners (x, y, s, t texels), top left first, clockwise."""
     if kind == "orb":
-        half = ORB_HALF
+        half = ORB_STYLES[ORB_STYLE]["orb_half"]
     if kind in ("glow", "orb"):
         return [(-half, half, 0, 0), (half, half, w, 0), (half, -half, w, h), (-half, -half, 0, h)]
     if kind == "wing":
         ax, ay = WING_ANCHOR
-        left, right = -ax * WING_W, (1.0 - ax) * WING_W
-        top, bottom = ay * WING_H, -(1.0 - ay) * WING_H
+        wing_w, wing_h = ORB_STYLES[ORB_STYLE].get("wing_size", (WING_W, WING_H))
+        left, right = -ax * wing_w, (1.0 - ax) * wing_w
+        top, bottom = ay * wing_h, -(1.0 - ay) * wing_h
     else:
-        left, right, top, bottom = -RING_RADIUS, 0.0, RING_RADIUS, -RING_RADIUS
+        radius = ORB_STYLES[ORB_STYLE]["ring_radius"]
+        left, right, top, bottom = -radius, 0.0, radius, -radius
     c = [(left, top, 0, 0), (right, top, w, 0), (right, bottom, w, h), (left, bottom, 0, h)]
     if name.endswith("_r"):
         # The right half: the left's mirror about x.
@@ -236,14 +343,21 @@ def _corners(kind: str, name: str, w: int, h: int, half: float = 0.0) -> list:
     return c
 
 
-def _mobjsub(prim: tuple) -> bytes:
+def _mobjsub(colours: tuple, core: bool = True) -> bytes:
     """A material that sets only PRIM (MOBJ_FLAG_PRIMCOLOR), in the file's
     big-endian layout (the loader word-swaps it; attachment restores the
-    u16/u8 lanes, ndsRelocCopyMObjSubForAttachment)."""
+    u16/u8 lanes, ndsRelocCopyMObjSubForAttachment). The colours the flag
+    leaves unread carry her code's ramp: blend (0x5C) the full colour and
+    alpha (alpha 0: not drawn by the ramp; a ring half then the taunt's),
+    light 1 (0x60) the colour half faded, env (0x58) faded out."""
+    full, mid, late = colours
     sub = bytearray(MOBJSUB_SIZE)
     struct.pack_into(">ff", sub, 0x1C, 1.0, 1.0)
     struct.pack_into(">H", sub, 0x30, MOBJ_FLAG_PRIMCOLOR)
-    sub[0x50:0x54] = bytes(prim)
+    sub[0x50:0x54] = bytes(full)
+    sub[0x58:0x5C] = bytes(late) + b"\xff"
+    sub[0x5C:0x60] = bytes(full) if core else bytes(full[:3]) + b"\x00"
+    sub[0x60:0x64] = bytes(mid) + b"\xff"
     return bytes(sub)
 
 
@@ -271,14 +385,16 @@ def write(app, fid: int, glow_at: int, light_at: int, mobj_at: int) -> dict:
 
     for name, kind, half, prim in GLOW_CARDS:
         lists[name] = card(name, kind, prim, half)
-    for name, kind, prim in LIGHT_CARDS:
+    for name, kind in LIGHT_CARDS:
         lists[name] = card(name, kind, None)
     # The light's materials: entry 0 (the root) NULL, then per card a
     # NULL-ended list naming its MObjSub.
     subs = {}
-    for k, (name, _kind, prim) in enumerate(LIGHT_CARDS):
+    for k, (name, _kind) in enumerate(LIGHT_CARDS):
         app.align(8)
-        sub_at = app.put(_mobjsub(prim))
+        # A ring half is the core only in a style that draws one there.
+        core = not name.startswith("ring") or ORB_STYLES[ORB_STYLE]["core"]
+        sub_at = app.put(_mobjsub(card_colours(name), core))
         list_at = app.put(bytes(8))
         app.slot(list_at, ("intern", fid, sub_at))
         app.slot(mobj_at + 4 * (k + 1), ("intern", fid, list_at))

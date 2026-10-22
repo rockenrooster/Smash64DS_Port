@@ -1240,7 +1240,12 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   PAL_LIGHT_BEHIND behind her; each wing level (PAL_WING_DROOP down at its tip), its
  *   strokes meeting PAL_WING_GAP to the orb's side and PAL_WING_DROP below
  *   its centre, the wing behind her PAL_WING_FAR as wide as the one she
- *   faces. Shown when the 3DS shows them: the forward smash's wind-up before
+ *   faces. Owner 2026-10-22 (the centre's style B, against Ultimate's own
+ *   effect data): the wings placed as Ultimate's are about its centre --
+ *   their strokes meet 1.10 ring radii out and 0.49 below the centre, not
+ *   drooped -- where the 3DS's sat half a radius lower and drooped 9 deg --
+ *   and their cards Ultimate's size (p6_light.py ORB_STYLES wing_size).
+ *   Shown when the 3DS shows them: the forward smash's wind-up before
  *   its godwings, the up smash's pillar, the down smash's slam, up air's
  *   last hit, the taunt's pose.
  *
@@ -1282,9 +1287,9 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
 #define PAL_ORB_UP 165.0F                   /* above the head joint: over her crown */
 #define PAL_ORB_BACK 20.0F
 #define PAL_RING_UP 25.0F                   /* the taunt's ring: the base of her head */
-#define PAL_WING_GAP 117.0F
-#define PAL_WING_DROP 93.0F
-#define PAL_WING_DROOP 0.16F                /* radians */
+#define PAL_WING_GAP 102.0F
+#define PAL_WING_DROP 46.0F
+#define PAL_WING_DROOP 0.0F                 /* radians */
 #define PAL_WING_FAR 0.72F
 #define PAL_LIGHT_DECAY 0.25F
 #define PAL_LIGHT_SHOWN 0.04F
@@ -1336,8 +1341,46 @@ static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
 };
 
 /* Each light card's material alpha at full (p6_light.py LIGHT_CARDS):
- * the orb, the wings, the ring's halves. */
+ * the orb, the wings, the ring's halves -- for a material that carries no
+ * colour ramp (ndsP4PalutenaLightCardColour). */
 static const u8 sNdsP4PalutenaLightAlpha[] = { 240, 255, 255, 230, 230 };
+
+/* A light card's colour this tic (owner 2026-10-22: the centre's style B,
+ * Ultimate's colour moving as its light fades, p6_light.py ORB_STYLES). Its
+ * material carries the ramp in the colours its flag leaves unread
+ * (p6_light.py _mobjsub): blend the colour and alpha at full, light 1 the
+ * colour half faded, env faded out. Without one (blend alpha 0) only the
+ * alpha moves, from `alpha`. */
+static void ndsP4PalutenaLightCardColour(MObj *mobj, u8 alpha, f32 level)
+{
+    MObjSub *sub = &mobj->sub;
+    const SYColorPack *from;
+    const SYColorPack *to;
+    f32 t;
+
+    if (sub->blendcolor.s.a == 0)
+    {
+        sub->primcolor.s.a = (u8)(alpha * level);
+        return;
+    }
+    if (level >= 0.5F)
+    {
+        from = &sub->light1color;
+        to = &sub->blendcolor;
+        t = (level - 0.5F) * 2.0F;
+    }
+    else
+    {
+        from = &sub->envcolor;
+        to = &sub->light1color;
+        t = level * 2.0F;
+    }
+    t = (t < 0.0F) ? 0.0F : ((t > 1.0F) ? 1.0F : t);
+    sub->primcolor.s.r = (u8)(from->s.r + (((s32)to->s.r - (s32)from->s.r) * t));
+    sub->primcolor.s.g = (u8)(from->s.g + (((s32)to->s.g - (s32)from->s.g) * t));
+    sub->primcolor.s.b = (u8)(from->s.b + (((s32)to->s.b - (s32)from->s.b) * t));
+    sub->primcolor.s.a = (u8)(sub->blendcolor.s.a * level);
+}
 
 typedef struct NDSP4PalLight
 {
@@ -1679,7 +1722,12 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             DObj *card;
             f32 grown = ((w != NULL) && (frame < (f32)w->full)) ? level : 1.0F;
             f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * grown);
-            f32 ring_size = (state->ring != 0u) ? size : 0.0F;
+            /* The centre's style B (p6_light.py ORB_STYLES): the ring's halves
+             * are its crisp ring and dot over the orb's glow, shown with the
+             * light -- halves whose material carries a ramp. Otherwise they
+             * are the taunt's ring, which no window shows since owner p7h. */
+            s32 core = ((ring_l->mobj != NULL) && (ring_l->mobj->sub.blendcolor.s.a != 0)) ? TRUE : FALSE;
+            f32 ring_size = ((core != FALSE) || (state->ring != 0u)) ? size : 0.0F;
             u32 i;
 
             for (card = orb, i = 0u; (card != NULL) && (i < ARRAY_COUNT(sNdsP4PalutenaLightAlpha));
@@ -1687,7 +1735,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             {
                 if (card->mobj != NULL)
                 {
-                    card->mobj->sub.primcolor.s.a = (u8)(sNdsP4PalutenaLightAlpha[i] * level);
+                    ndsP4PalutenaLightCardColour(card->mobj, sNdsP4PalutenaLightAlpha[i], level);
                 }
             }
             ndsP4PalutenaToCamera(&pos, &to);
@@ -1701,11 +1749,20 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             wing_l->scale.vec.f.x = size * ((lr > 0.0F) ? PAL_WING_FAR : 1.0F);
             wing_r->scale.vec.f.x = size * ((lr > 0.0F) ? 1.0F : PAL_WING_FAR);
             wing_l->scale.vec.f.y = wing_r->scale.vec.f.y = size;
-            ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = lr * PAL_ORB_BACK;
-            ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = PAL_RING_UP - PAL_ORB_UP;
+            if (core != FALSE)
+            {
+                /* On the orb, its size. */
+                ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = 0.0F;
+                ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = 0.0F;
+            }
+            else
+            {
+                ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = lr * PAL_ORB_BACK;
+                ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = PAL_RING_UP - PAL_ORB_UP;
+            }
             ring_l->scale.vec.f.x = ring_l->scale.vec.f.y = ring_size;
             ring_r->scale.vec.f.x = ring_r->scale.vec.f.y = ring_size;
-            /* Not drawn at all outside the taunt (two native cards a frame). */
+            /* Not drawn at all when unused (two native cards a frame). */
             if (ring_size > 0.0F)
             {
                 ring_l->flags &= ~DOBJ_FLAG_HIDDEN;

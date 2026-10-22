@@ -36,7 +36,7 @@ Fourth and fifth, her light effects (owner p6x VFX plan; scripts/p6/
 p6_light.py): the gem's glow at GLOW_TREE and the overhead light wings with
 the taunt's ring at LIGHT_TREE, cards her code places and sizes every tic.
 
-    p6_gate.py --out assets/p6-art/palutena/gate/1b10 [--preview gate.png]
+    p6_gate.py --out assets/p6-art/palutena/gate/1b10 [--preview gate.png] [--orb-style ring|ultimate]
 
 Kit-derived: the file stays local (D10); this recipe is the committed part.
 """
@@ -378,7 +378,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--preview", type=Path)
+    ap.add_argument("--orb-style", choices=sorted(p6_light.ORB_STYLES), default=p6_light.ORB_STYLE,
+                    help="the light wings' centre (p6_light.py ORB_STYLES)")
     args = ap.parse_args()
+    p6_light.ORB_STYLE = args.orb_style
     blob, info = build()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_bytes(blob)
