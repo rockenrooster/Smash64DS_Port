@@ -15,15 +15,16 @@ skip it; indexing is the owner's decision.
 <!-- CODEGRAPH_END -->
 
 ## Continue, do not restart
-Execute the **Execution cursor** in `docs/P2_EXECUTION_BOARD.md`, the only live queue.
-Inspect relevant changes only; after context loss read
-`docs/HANDOFF.md`, the cursor and receipt; reconcile scoped inputs/jobs once.
+Execute the **Cursor** in `docs/P8/P8_STATUS.md` (plan: `docs/P8/P8_PLAN.md`), the only
+live queue. Inspect relevant changes only; after context loss read `docs/HANDOFF.md`,
+the cursor and its log; reconcile scoped inputs/jobs once.
 Reselect only after completion, a specific blocker or owner reprioritization.
-Process changed owner edits and briefs. Reuse evidence; reruns need a
+Process changed owner edits and briefs (`docs/BUGS.md`, `docs/PLAYTEST_NOTES.md`,
+`docs/OWNER_QUESTIONS.md`). Reuse evidence; reruns need a
 recorded invalidator or missing coverage. A new turn or failed commit erases nothing.
 Update the cursor at phase changes, before yielding a job and at handoff: next action,
-identity, evidence, checks owed and jobs/capabilities. P2-2p8 details:
-`docs/p2/native-optimization/13_AGENT_EXECUTION.md`; old plan copies are references.
+identity, evidence, checks owed and jobs/capabilities. Earlier queues (the P2 board,
+the P3-P7 status files) are history and references.
 
 ## Hard rules
 - Use PowerShell 7 (`pwsh`). Preserve owner edits; change `AGENTS.md`/`CLAUDE.md`

@@ -35,7 +35,7 @@ commit with explicit paths only.
 
 | item | state | evidence / next |
 |---|---|---|
-| Q1-Q3 owner decisions (plan section 7) | open | ask once, at the start |
+| Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
 | H-1 tools S1 and the gate need, into `scripts/tools/` | next | sources: session scratchpads `31e5c78d-...` and `4aa2b87d-...` under `%TEMP%\claude\D--Stuff-DevFolder-Smash64DS-Port\` |
 | S1 regression net (full matrix) on HEAD | open | ROMs: walk, soak, wireless lab, ship layout |
 | C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` done (`7f0dca28600`); next `reloc_backend_assets.c` |
@@ -45,17 +45,19 @@ commit with explicit paths only.
 | F history names | open | |
 | G Makefile cleanup and split | open | proof: `make -n` identity |
 | H-2 the rest of the tools, `quick_check.ps1` | open | |
-| I docs routing and archive | open | `AGENTS.md` waits on Q1 |
+| I docs routing, P7 close-out, archive | in progress | `AGENTS.md` and `HANDOFF.md` route to P8 (2026-10-22); next `docs/README.md`'s table (dirty: merge) and `P7_STATUS.md`'s rows against their evidence |
 | S2 fault injection (squeeze, slow storage, long soak, laps, fuzz) | open | lab flags only |
 | S4 stalls (load ledger, storage waits, menu spikes) | open | |
 | S5 freeze report gaps | open | menus, loads, before the first frame; identity fields |
 | S6 open bug rows | open | Yoshi-win Results freeze, Master Hand stiff, FD backgrounds, Palutena's Results dress, wireless start on a slow card |
 | R0 RAM ledger and buffer peaks | open | after D (owner order) |
 | R1-R9 RAM levers | open | ranked in plan section 4; R4's second printf engine already gone (`41636f74b0f`, 7 KB) |
-| R10 per-fighter code overlays | gated | owner Q2 |
+| R10 per-fighter code overlays | allowed (owner Q2) | only if R1-R9 leave the heavy mixes short |
 | P spends and storage waits | open | Hyrule Temple's whole program in the heavy mixes first |
 | Final: play ROM, S1 matrix, worst-case search on the final HEAD | open | |
 
 ## Log
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
+
+- 2026-10-22 -- owner answers Q1-Q3; I: `AGENTS.md` and `docs/HANDOFF.md` route to P8.

@@ -259,9 +259,12 @@ parameter names across tools; no session paths. Then
 `scripts/tools/quick_check.ps1`: host tests, the five-config compile, the ship
 link, the gate ROM and three replay digests, in one command.
 
-**I Docs.** One live route for this phase (`P8_STATUS.md`); `docs/README.md`
-and `HANDOFF.md` point at it (`AGENTS.md` only with the owner's permission,
-Q1). Move the closed parts of `BUG_NOTES.md` (7,684 lines) and
+**I Docs.** One live route for this phase (`P8_STATUS.md`): `AGENTS.md` and
+`HANDOFF.md` point at it (owner yes, Q1); `docs/README.md`'s routing table
+next (it carries uncommitted edits: merge, never overwrite). Reconcile
+`docs/P7/P7_STATUS.md`'s in-progress rows with their evidence (the audit, the
+commits): the owner expects P7 complete, so a row is closed with its proof or
+its gap becomes a bug row. Move the closed parts of `BUG_NOTES.md` (7,684 lines) and
 `PERF_LEDGER.md` (9,216) to `docs/archive/`, leaving the open rows and an
 index.
 
@@ -300,7 +303,7 @@ replaces them):
 | R7 | The original fighters' native owner tables (`nds_native_fighter_owner.generated.inc`) as per-fighter files loaded with the fighter, as the P4 donors' are | 60-100 KB in a 4P match | generator change; tables only |
 | R8 | Stage-specific renderer code and tables (Dream Land's Whispy, Yoshi's Island's clouds, Congo Jungle's barrel, Mushroom Kingdom's POW and Piranha Plants, ...) in one battle stage overlay | 30-60 KB | one stage per battle; ROM grows, which is allowed |
 | R9 | P4 content data (`nds_p4_data`: 26 KB rodata + 19 KB rw) per content | 25-35 KB | loaded with the content |
-| R10 | Spike, owner's go (Q2): per-fighter code in four overlay slots, each fighter linked once per slot | 100-200 KB in a 4P match | architecture change; only if R1-R9 leave the heavy mixes short |
+| R10 | Spike (owner yes, Q2): per-fighter code in four overlay slots, each fighter linked once per slot | 100-200 KB in a 4P match | architecture change; only if R1-R9 leave the heavy mixes short |
 
 **Spend** (loop P): recovered bytes go, in order, to (1) Hyrule Temple's whole
 stage program for the heavy roster and the mixes (segment 0 or one segment
@@ -336,14 +339,17 @@ past two VBlanks by a motion read.
 5. A final play ROM, the full S1 matrix and the worst-case search on the final
    HEAD, recorded in `P8_STATUS.md`.
 
-## 7. Owner decisions (asked once, at the start; nothing else blocks)
+## 7. Owner decisions (answered 2026-10-22)
 
-- **Q1** May `AGENTS.md`'s "Continue, do not restart" section route to
-  `docs/P8/P8_STATUS.md` instead of the P2 board?
-- **Q2** If R1-R9 leave the heavy mixes short: spike R10 (per-fighter code in
-  four overlay slots; ROM grows about 1 MB; nothing visible changes)?
+- **Q1** Route `AGENTS.md`'s "Continue, do not restart" section to
+  `docs/P8/P8_STATUS.md` instead of the P2 board? **Yes.** Done, with
+  `docs/HANDOFF.md`'s route.
+- **Q2** If R1-R9 leave the heavy mixes short, spike R10 (per-fighter code in
+  four overlay slots; ROM grows about 1 MB; nothing visible changes)? **Yes.**
 - **Q3** The P7 items still marked in progress (U3-U5's unlock chain, U9's
-  layout answer, C5's probe classes): in this goal only as bugs, or as items?
+  layout answer, C5's probe classes)? **Only as bugs:** "P7 should probably be
+  complete now." Item I reconciles `P7_STATUS.md`'s rows with their evidence;
+  a real gap becomes a bug row.
 
 ## 8. Goal block
 
