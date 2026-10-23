@@ -5,6 +5,9 @@
 # Owner (2026-10-21): 1.1x damage (10 -> 11) and base knockback (30 -> 33);
 # its sound the forward tilt's: the swing (se_swing_m) in place of Ultimate's
 # se_special_l02, the hit the heavy punch (fgm_level 2) as before.
+# Owner (2026-10-23): its damage scales with the hit it counted, as
+# Ultimate's (1.3x, 11 to 50: nds_p4_palutena.c PAL_COUNTER_MUL); the 11
+# here is that floor, replaced every tic.
 SetHitStatusAll value=2
 AsyncWait frames=6
 Effect joint_id=18 effect_id=29 flag=0 off_x=35 off_y=146 off_z=-160 rng_x=0 rng_y=0 rng_z=0

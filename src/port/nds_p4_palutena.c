@@ -140,6 +140,14 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * reflects projectiles (Fox's rule) with Ness's reflector kind (no status
  * change on a reflect). */
 #define PAL_COUNTER_ARMOUR 131072.0F
+/* The counterattack's damage from the hit it counted, as Ultimate's
+ * (fighter/palutena/param/vl.prc param_special_lw: attack_mul 1.3,
+ * attack_power_limit 10, attack_max 50; owner 2026-10-23): 1.3 times it,
+ * at least PAL_COUNTER_MIN (Ultimate's 10 at the owner's 1.1x, 2026-10-21),
+ * at most PAL_COUNTER_MAX. */
+#define PAL_COUNTER_MUL 1.3F
+#define PAL_COUNTER_MIN 11
+#define PAL_COUNTER_MAX 50
 
 static FTSpecialColl sNdsP4PalutenaReflectColl = {
     nFTSpecialCollKindNessReflector, nFTPartsJointCommonStart,
@@ -703,6 +711,28 @@ static s32 *ndsP4PalutenaCounterHit(FTStruct *fp)
     return ndsP4PalutenaVar(fp, 0);
 }
 
+/* The damage of the hit each player's counter last counted (status_vars do
+ * not outlive the status change into the counterattack). */
+static s32 sNdsP4PalutenaCounterTaken[4];
+
+/* The counterattack's hits deal what the counted hit was worth
+ * (PAL_COUNTER_MUL, PAL_COUNTER_MIN, PAL_COUNTER_MAX), in place of the
+ * script's (motions/counter_hit.ms). */
+static void ndsP4PalutenaCounterDamage(FTStruct *fp)
+{
+    s32 damage = (s32)(((f32)sNdsP4PalutenaCounterTaken[fp->player & 3u] * PAL_COUNTER_MUL) + 0.5F);
+    s32 i;
+
+    damage = (damage < PAL_COUNTER_MIN) ? PAL_COUNTER_MIN : ((damage > PAL_COUNTER_MAX) ? PAL_COUNTER_MAX : damage);
+    for (i = 0; i < ARRAY_COUNT(fp->attack_colls); i++)
+    {
+        if (fp->attack_colls[i].attack_state != nGMAttackStateOff)
+        {
+            fp->attack_colls[i].damage = damage;
+        }
+    }
+}
+
 static void ndsP4PalutenaCounterStart(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -776,6 +806,7 @@ static s32 ndsP4PalutenaUpdateDamage(FTStruct *fp, s32 damage)
         (fp->motion_vars.flags.flag0 != 0))
     {
         *ndsP4PalutenaCounterHit(fp) = 1;
+        sNdsP4PalutenaCounterTaken[fp->player & 3u] = damage;
         return 0;
     }
     return damage;
@@ -1999,6 +2030,11 @@ static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
 
     ndsP4PalutenaDress(fighter_gobj, fp);
     ndsP4PalutenaLight(fighter_gobj, fp);
+    if ((fp->status_id == PAL_STATUS_COUNTER_HIT) || (fp->status_id == (PAL_STATUS_COUNTER_HIT + PAL_AIR)))
+    {
+        ndsP4PalutenaCounterDamage(fp);
+        return;
+    }
     if (clip >= 0)
     {
         ndsP4PalutenaWings(fighter_gobj, fp, clip);
