@@ -152,7 +152,7 @@ static void *ndsRendererNativePolygonPoolTake(u32 owner_slot, u32 bytes)
 }
 #endif
 
-s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
+NDS_RENDERER_COLD s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
 {
     NdsRelocAssetStream stream;
     NDSNativeOwnerImageSlot *slot;
@@ -272,7 +272,7 @@ static void ndsRendererNativeBuildDenseShadeWords(
 
 
 
-void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
+NDS_RENDERER_COLD void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
 {
     uintptr_t start;
     uintptr_t end;

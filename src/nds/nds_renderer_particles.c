@@ -44,7 +44,7 @@ static u32 sNdsParticleMaterialGen = 1u;
 /* Sheets already uploaded when a later one fails are direct scene-owned GL
  * names. Reclaim those names here so a partial prepare cannot leak texture or
  * palette VRAM for the rest of the scene. */
-static void ndsRendererParticleAtlasReleaseSheets(void)
+NDS_RENDERER_COLD static void ndsRendererParticleAtlasReleaseSheets(void)
 {
     u32 sheet;
 
@@ -983,7 +983,7 @@ static NDS_RENDERER_COLD s32 ndsRendererParticleAtlasUploadSheet(
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareParticleAtlas(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
     FILE *file = NULL;
     int size_x;
@@ -1277,7 +1277,7 @@ u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
     return 0u;
 }
 
-void ndsRendererHardwareDiscardParticleAtlas(void)
+NDS_RENDERER_COLD void ndsRendererHardwareDiscardParticleAtlas(void)
 {
     u32 sheet;
 

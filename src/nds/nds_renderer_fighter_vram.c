@@ -288,7 +288,7 @@ static void ndsFtrCarveCarrierClose(void)
 
 /* One reservation: libnds's own first-fit search over the allocator's usable,
  * unlocked banks, 16-byte aligned. */
-static s32 ndsFtrCarveReserve(u32 which, u32 bytes)
+NDS_RENDERER_COLD static s32 ndsFtrCarveReserve(u32 which, u32 bytes)
 {
     s_vramBlock *mb = glGlobalData.vramBlocks[which];
     NDSFtrCarveRegion *region;
@@ -324,7 +324,7 @@ static s32 ndsFtrCarveReserve(u32 which, u32 bytes)
 }
 
 /* Take every free run down to `smallest`, largest pieces first. */
-static void ndsFtrCarveFill(u32 which, u32 largest, u32 smallest)
+NDS_RENDERER_COLD static void ndsFtrCarveFill(u32 which, u32 largest, u32 smallest)
 {
     u32 size;
 
@@ -336,7 +336,7 @@ static void ndsFtrCarveFill(u32 which, u32 largest, u32 smallest)
     }
 }
 
-static s32 ndsFtrCarveTake(u32 which, u32 bytes, u32 align, u32 *lcd,
+NDS_RENDERER_COLD static s32 ndsFtrCarveTake(u32 which, u32 bytes, u32 align, u32 *lcd,
                            u32 *region_index)
 {
     u32 i;
@@ -409,7 +409,7 @@ static u32 ndsFtrCarvePaletteOffset(u32 lcd)
 
 /* CPU-copy into VRAM through the LCD mapping of exactly the banks the range
  * covers (glTexImage2D / glColorTableEXT map A-D / E-G the same way). */
-static void ndsFtrCarveCopy(u32 lcd, const void *src, u32 bytes, u32 halfwords)
+NDS_RENDERER_COLD static void ndsFtrCarveCopy(u32 lcd, const void *src, u32 bytes, u32 halfwords)
 {
     volatile u8 *cnt;
     u8 saved[4];
@@ -549,7 +549,7 @@ static s32 NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveOpen(u32 with_d)
 /* Admission end: give back what was not carved. A region keeps exactly its
  * used bytes (released, then re-reserved at the same address, which is free
  * and large enough by construction). */
-static void NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveShrink(u32 which)
+NDS_RENDERER_COLD static void NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveShrink(u32 which)
 {
     s_vramBlock *mb = glGlobalData.vramBlocks[which];
     u32 i;
@@ -622,7 +622,7 @@ static void NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveClose(void)
  * and the carrier. The last carved entry's release calls this; so does the
  * scene reset (before glResetTextures rebuilds the allocators) and the
  * admission when it carved nothing. */
-void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitCarveRetire(void)
+NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitCarveRetire(void)
 {
     u32 which;
     u32 i;
@@ -713,7 +713,7 @@ static void ndsFtrCarveNoteRelease(
 static u32 ndsFtrAdmitEntryAddress(
     const NDSRendererHardwareTextureCacheEntry *entry);
 
-static void NDS_FTR_ADMIT_COLD_CODE
+NDS_RENDERER_COLD static void NDS_FTR_ADMIT_COLD_CODE
 ndsFtrAdmitLatch(u32 fkind, u32 detail, u32 reason, u32 index,
                  u32 image, u32 reject)
 {
@@ -739,7 +739,7 @@ static u32 sNdsFtrAdmitBaseCount;
  * it either); 2 = the file is not loaded in this battle (a part that lives in
  * another kind's file -- Kirby's copy props -- whose kind is absent);
  * 0 = a real failure. */
-static const void *ndsFtrAdmitAddress(u32 asset, u32 offset, u32 *why)
+NDS_RENDERER_COLD static const void *ndsFtrAdmitAddress(u32 asset, u32 offset, u32 *why)
 {
     const void *data = NULL;
     const void *mapped;
@@ -1364,7 +1364,7 @@ ndsFtrAdmitP4Pass(NDSFtrAdmitPass *pass, const u32 *fkind, const u32 *costume,
     ndsRelocAssetStreamClose(&stream);
 }
 
-u32 NDS_FTR_ADMIT_COLD_CODE
+NDS_RENDERER_COLD u32 NDS_FTR_ADMIT_COLD_CODE
 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                    const u32 *costume, const u32 *detail,
                    const u32 *player, const u32 *content, u32 count,
@@ -1531,7 +1531,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
  * outlives the battle is the renderer's own fighter tint set, which VS Results
  * and the character select draw with: its tiles in D go here (slice 7,
  * ndsR2FighterTintReleaseRange). */
-void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
+NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
 {
     u32 i;
 
@@ -1601,7 +1601,7 @@ void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
 #endif
 }
 
-static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitSceneResetGuard(void)
+NDS_RENDERER_COLD static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitSceneResetGuard(void)
 {
     if (sNdsFtrAdmitRegions != 0u)
     {

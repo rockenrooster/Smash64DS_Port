@@ -1829,7 +1829,7 @@ ndsRendererHardwareFindTexel1RefreshTexture(
     return NULL;
 }
 
-static s32 ndsRendererHardwareReplaceTextureData(
+NDS_RENDERER_COLD static s32 ndsRendererHardwareReplaceTextureData(
     NDSRendererHardwareTextureCacheEntry *entry,
     const void *texture,
     u32 staged_bytes,
@@ -2099,7 +2099,7 @@ ndsRendererHardwareReleaseTexture(
  * stage packet does (stage_warm: eviction skips the entry for the scene), so
  * its next stage would find the VRAM held by the stages before it and never
  * finish warming. The preview releases them when it drops a stage. */
-void ndsRendererHardwareReleaseStageWarmTextures(void)
+NDS_RENDERER_COLD void ndsRendererHardwareReleaseStageWarmTextures(void)
 {
     u32 i;
 
@@ -2199,7 +2199,7 @@ volatile u32 gNdsRendererTextureRangeReleaseEntries;
  * Pinned and static entries are never touched: those are the generated corpus
  * and the deliberately retained residents, and neither lives in a preview
  * arena. */
-u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
+NDS_RENDERER_COLD u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
 {
     uintptr_t start;
     uintptr_t end;
@@ -2368,7 +2368,7 @@ static void ndsRendererHardwareReleaseFoxGunTexture(void);
  * this translation unit further down nds_renderer.c. */
 void ndsNativeThunderGroundReleaseCoverageTextures(void);
 
-void ndsRendererHardwareDiscardTextureCache(void)
+NDS_RENDERER_COLD void ndsRendererHardwareDiscardTextureCache(void)
 {
     if ((sNdsRendererBattleStaticTexturePrepared != 0u) ||
         (sNdsRendererBattleStaticTextureArmed != 0u))

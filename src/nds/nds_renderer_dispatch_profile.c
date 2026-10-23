@@ -143,7 +143,7 @@ void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache)
 
 
 
-void ndsRendererHardwareResetSourceCaches(void)
+NDS_RENDERER_COLD void ndsRendererHardwareResetSourceCaches(void)
 {
     memset(sNdsRendererStageTextureSites, 0,
            sizeof(sNdsRendererStageTextureSites));

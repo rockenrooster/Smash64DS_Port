@@ -48,7 +48,7 @@ typedef struct NDSDamageSlashTextureFill
     u32 mirror_s;
 } NDSDamageSlashTextureFill;
 
-static s32 ndsDamageSlashTextureFill(u8 *pixels, u32 bytes, void *user_data)
+NDS_RENDERER_COLD static s32 ndsDamageSlashTextureFill(u8 *pixels, u32 bytes, void *user_data)
 {
     const NDSDamageSlashTextureFill *fill =
         (const NDSDamageSlashTextureFill *)user_data;
@@ -120,7 +120,7 @@ static s32 ndsDamageSlashTextureFill(u8 *pixels, u32 bytes, void *user_data)
  * texture name from CURRENT_IMAGE at draw time without touching the texture
  * allocator, refilling scratch, or issuing glTexImage2D in the effect pass.
  */
-s32 ndsRendererHardwarePrepareDamageSlashTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareDamageSlashTextures(void)
 {
     const void *asset_view = NULL;
     const u8 *asset_base;

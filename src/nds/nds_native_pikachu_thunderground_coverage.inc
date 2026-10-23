@@ -56,7 +56,7 @@ typedef struct NDSNativeThunderGroundCoverageFill
     const u8 *texels;
 } NDSNativeThunderGroundCoverageFill;
 
-static s32 ndsNativeThunderGroundCoverageFill(u8 *pixels, u32 bytes,
+NDS_RENDERER_COLD static s32 ndsNativeThunderGroundCoverageFill(u8 *pixels, u32 bytes,
                                               void *user_data)
 {
     const NDSNativeThunderGroundCoverageFill *fill =
@@ -118,7 +118,7 @@ static u32 ndsNativeThunderGroundCoverageKey(
 /* What this owner is actually holding right now, not what it may hold: VRAM is
  * the scarce resource, so every path that adds or drops a name republishes the
  * live sum through here rather than keeping its own count. */
-static void ndsNativeThunderGroundCoverageAccountVram(void)
+NDS_RENDERER_COLD static void ndsNativeThunderGroundCoverageAccountVram(void)
 {
     u32 index;
     u32 bytes = 0u;
@@ -165,7 +165,7 @@ static void ndsNativeThunderGroundCoverageForgetAfterReset(void)
  * deliberately: that caller sits earlier in the same translation unit and
  * reaches this through a forward declaration, and a static definition nothing
  * had called yet would warn. */
-void ndsNativeThunderGroundReleaseCoverageTextures(void)
+NDS_RENDERER_COLD void ndsNativeThunderGroundReleaseCoverageTextures(void)
 {
     u32 slot;
 

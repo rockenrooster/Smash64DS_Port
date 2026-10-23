@@ -188,7 +188,7 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
     return NULL;
 }
 
-static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
+NDS_RENDERER_COLD static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
 {
     /* Same generated rows as the path lookup above; the byte count is the
      * sizeof of the image struct the generator emitted for that owner. */
@@ -373,7 +373,7 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
         ndsRendererNativeBindImageTables(&(tables_), &desc_, (base_));         \
     } while (0)
 
-static const char *ndsRendererNativeKirbyHatImagePath(
+NDS_RENDERER_COLD static const char *ndsRendererNativeKirbyHatImagePath(
     u32 copy_modelpart_id, u32 use_low_detail)
 {
 #define NDS_KIRBY_HAT_PATH_CASE(id_, detail_, type_, prefix_, path_)            \
@@ -386,7 +386,7 @@ static const char *ndsRendererNativeKirbyHatImagePath(
     return NULL;
 }
 
-static u32 ndsRendererNativeKirbyHatImageBytes(
+NDS_RENDERER_COLD static u32 ndsRendererNativeKirbyHatImageBytes(
     u32 copy_modelpart_id, u32 use_low_detail)
 {
 #define NDS_KIRBY_HAT_BYTES_CASE(id_, detail_, type_, prefix_, path_)           \
@@ -437,7 +437,7 @@ static s32 ndsRendererNativeBindKirbyHatImage(
 }
 
 #if defined(NDS_P4_KIRBY_HATS_PRESENT)
-static const char *ndsRendererNativeP4KirbyHatImagePath(u32 hat, u32 use_low_detail)
+NDS_RENDERER_COLD static const char *ndsRendererNativeP4KirbyHatImagePath(u32 hat, u32 use_low_detail)
 {
 #define NDS_P4_KIRBY_HAT_PATH_CASE(id_, base_, detail_, type_, prefix_, path_)   \
     if ((hat == (id_)) && (use_low_detail == (detail_)))                        \
@@ -449,7 +449,7 @@ static const char *ndsRendererNativeP4KirbyHatImagePath(u32 hat, u32 use_low_det
     return NULL;
 }
 
-static u32 ndsRendererNativeP4KirbyHatImageBytes(u32 hat, u32 use_low_detail)
+NDS_RENDERER_COLD static u32 ndsRendererNativeP4KirbyHatImageBytes(u32 hat, u32 use_low_detail)
 {
 #define NDS_P4_KIRBY_HAT_BYTES_CASE(id_, base_, detail_, type_, prefix_, path_)  \
     if ((hat == (id_)) && (use_low_detail == (detail_)))                        \
@@ -540,7 +540,7 @@ void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_d
     sNdsNativeKirbyP4HatWithLow = use_low_detail;
 }
 
-s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
+NDS_RENDERER_COLD s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
 {
     const u32 valid_mask = 0x3ff8u; /* source modelparts 3..13 */
     u32 masks[2] = { high_mask, low_mask };
@@ -802,7 +802,7 @@ s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail)
     return FALSE;
 }
 
-s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)
+NDS_RENDERER_COLD s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)
 {
     u32 i;
 

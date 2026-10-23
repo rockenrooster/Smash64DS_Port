@@ -28,7 +28,7 @@ typedef struct NDSDamageFlyMDustFill
     u32 band;
 } NDSDamageFlyMDustFill;
 
-static s32 ndsDamageFlyMDustFill(u8 *pixels, u32 bytes, void *user)
+NDS_RENDERER_COLD static s32 ndsDamageFlyMDustFill(u8 *pixels, u32 bytes, void *user)
 {
     const NDSDamageFlyMDustFill *fill = user;
     u32 i;
@@ -41,7 +41,7 @@ static s32 ndsDamageFlyMDustFill(u8 *pixels, u32 bytes, void *user)
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareDamageFlyMDustTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareDamageFlyMDustTextures(void)
 {
     const void *asset_view = NULL;
     u32 asset_bytes = 0u;

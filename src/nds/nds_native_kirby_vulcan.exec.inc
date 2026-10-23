@@ -8,7 +8,7 @@ static u32 sVulcanTextureNames[5];
 static u32 sVulcanTextureGeneration;
 volatile u32 gNdsKirbyVulcanNativeDraws[2];
 
-static s32 ndsVulcanFill(u8 *pixels, u32 bytes, void *data)
+NDS_RENDERER_COLD static s32 ndsVulcanFill(u8 *pixels, u32 bytes, void *data)
 {
     u32 bank = (u32)(uintptr_t)data;
     u32 wanted = (bank == 4u) ? 256u : 512u;
@@ -17,7 +17,7 @@ static s32 ndsVulcanFill(u8 *pixels, u32 bytes, void *data)
     return TRUE;
 }
 
-s32 ndsRendererPrepareNativeKirbyVulcan(void)
+NDS_RENDERER_COLD s32 ndsRendererPrepareNativeKirbyVulcan(void)
 {
     u32 i;
     if (sVulcanTextureGeneration != gNdsTaskmanHeapGeneration)

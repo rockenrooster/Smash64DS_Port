@@ -177,7 +177,7 @@ static sb32 ndsNativeBakedRootOutsideView(
 
 /* TRUE while `handle` is a root of the ending's loaded room table; the table
  * leaves with the ending's heap, after which no handle is one. */
-sb32 ndsNativeBakedRootIsRoom(const void *handle)
+NDS_RENDERER_COLD sb32 ndsNativeBakedRootIsRoom(const void *handle)
 {
     const NDSNativeBakedRoot *r = (const NDSNativeBakedRoot *)handle;
 

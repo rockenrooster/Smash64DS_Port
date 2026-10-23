@@ -11,7 +11,7 @@ volatile u32 gNdsYoshiBugProofSharedEggDrawCount;
 static u32 sNdsYoshiEggTextureName;
 static u32 sNdsYoshiEggTextureGeneration;
 
-static s32 ndsYoshiEggTextureFill(u8 *pixels, u32 bytes, void *user_data)
+NDS_RENDERER_COLD static s32 ndsYoshiEggTextureFill(u8 *pixels, u32 bytes, void *user_data)
 {
     (void)user_data;
     if ((pixels == NULL) || (bytes < NDS_NATIVE_YOSHI_EGG_IMAGE_BYTES))

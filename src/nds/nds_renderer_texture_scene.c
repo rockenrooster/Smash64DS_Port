@@ -39,7 +39,7 @@ volatile u32 gNdsRendererSceneTextureVramResetCount;
 
 static void ndsFtrAdmitSceneResetGuard(void);
 
-void ndsRendererHardwareResetSceneTextureVram(void)
+NDS_RENDERER_COLD void ndsRendererHardwareResetSceneTextureVram(void)
 {
     /* The reset frees every texel a held frame's 3D still draws with (the
      * transition hold, nds_platform.c): such a frame ends here. */
@@ -235,7 +235,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     u32 width, u32 height, const u16 palette[8],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
@@ -268,7 +268,7 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
  * reach for whenever the source asset is CI4 and its palette carries the
  * transparency. `fill` writes PACKED nibbles here, two texels per byte, low
  * nibble first -- not one byte per texel as the A5I3/A3I5 fills do. */
-s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
     u32 width, u32 height, const u16 palette[16],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
@@ -281,7 +281,7 @@ s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
         fill, user_data, texture_name, TRUE);
 }
 
-static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
+NDS_RENDERER_COLD static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
                                           void *user_data)
 {
     (void)user_data;
@@ -300,7 +300,7 @@ typedef struct NDSRebirthHaloTextureFill
     u32 bytes;
 } NDSRebirthHaloTextureFill;
 
-static s32 ndsRendererRebirthHaloTextureFill(u8 *pixels, u32 bytes,
+NDS_RENDERER_COLD static s32 ndsRendererRebirthHaloTextureFill(u8 *pixels, u32 bytes,
                                               void *user_data)
 {
     const NDSRebirthHaloTextureFill *fill =
@@ -349,7 +349,7 @@ static void ndsRendererEntryTexelsClose(void)
     }
 }
 
-static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
+NDS_RENDERER_COLD static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
                                               void *user_data)
 {
     const NDSEntryEffectTexture *texture =
@@ -427,7 +427,7 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 {
     u32 variant;
 
@@ -452,7 +452,7 @@ s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 {
     static const struct
     {
@@ -908,7 +908,7 @@ static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 }
 
 /* Once a match, two frames into GO: compact, not fast. */
-void __attribute__((cold, optimize("Os")))
+NDS_RENDERER_COLD void __attribute__((cold, optimize("Os")))
 ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
     u32 i;
@@ -1645,7 +1645,7 @@ typedef struct NDSHyruleTextureFill
     u32 offset;
 } NDSHyruleTextureFill;
 
-static s32 ndsHyruleTextureFill(u8 *pixels, u32 bytes, void *user)
+NDS_RENDERER_COLD static s32 ndsHyruleTextureFill(u8 *pixels, u32 bytes, void *user)
 {
     const NDSHyruleTextureFill *fill = user;
 
@@ -1655,7 +1655,7 @@ static s32 ndsHyruleTextureFill(u8 *pixels, u32 bytes, void *user)
         (ndsRendererHardwareFencedTextureFread(pixels, 1, bytes, fill->file) == bytes));
 }
 
-void ndsRendererHardwareReleaseHyruleTextures(void)
+NDS_RENDERER_COLD void ndsRendererHardwareReleaseHyruleTextures(void)
 {
     u32 i;
 
@@ -1669,7 +1669,7 @@ void ndsRendererHardwareReleaseHyruleTextures(void)
     }
 }
 
-s32 ndsRendererHardwarePrepareHyruleTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareHyruleTextures(void)
 {
     FILE *file = NULL;
     u16 palette[256];
@@ -2627,7 +2627,7 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 {
     FILE *file = NULL;
     long payload_size;

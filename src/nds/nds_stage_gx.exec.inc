@@ -103,14 +103,14 @@ static u32 sNdsStageGxBodyBytes;
 static u32 sNdsStageGxInSegment;
 volatile u32 gNdsP2StageProgYields;
 
-static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
+NDS_RENDERER_COLD static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
     const u8 *p = data;
     while (bytes-- != 0u) { hash = (hash ^ *p++) * 16777619u; }
     return hash;
 }
 
-static u32 ndsStageGxSourceHash(void)
+NDS_RENDERER_COLD static u32 ndsStageGxSourceHash(void)
 {
     u32 hash = 2166136261u, i;
     u32 counts[] = { NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT,
@@ -135,7 +135,7 @@ static u32 ndsStageGxSourceHash(void)
  * loaded slices [patch_lo, patch_hi) and [word_lo, word_hi). The tables are
  * indexed as the whole program's: a partial load's pointers are biased by
  * its slices' first rows (ndsStageGxLoad). */
-static sb32 ndsStageGxValidate(const NDSStageGxHeader *h,
+NDS_RENDERER_COLD static sb32 ndsStageGxValidate(const NDSStageGxHeader *h,
                                const NDSStageGxRun *runs,
                                const NDSStageGxPatch *patches, const u32 *words,
                                u32 run_lo, u32 run_hi, u32 patch_lo,
@@ -352,7 +352,7 @@ static inline sb32 ndsStageGxCullsRuns(void);
  * loan idle, and Hyrule Temple's 61,936 B body never fit the heap, so the
  * stage drew uncompiled at 20 FPS), otherwise heap with
  * NDS_STAGE_GX_HEAP_KEEP_FREE left over, or NULL. */
-static u8 *ndsStageGxAllocBody(u32 bytes)
+NDS_RENDERER_COLD static u8 *ndsStageGxAllocBody(u32 bytes)
 {
     u8 *body = ndsVSBattleOverlayTryAlloc(bytes, 32u);
 

@@ -533,7 +533,7 @@ __attribute__((used)) volatile u32 gNdsEntryP4RetiredCornerBytes;
  * loaded -- with `storage`, only a content all of whose entry roots live in
  * that special file -- and lend their corner runs (each run's span in the
  * position, s, t and colour rows). Each content once a scene. */
-void ndsRendererEntryP4RetireEntries(void **storage)
+NDS_RENDERER_COLD void ndsRendererEntryP4RetireEntries(void **storage)
 {
     static u32 retired_contents[(NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS + 31u) / 32u];
     u32 content;
@@ -823,7 +823,7 @@ static u8 sNdsEntryEffectMatrixSlot[NDS_ENTRY_EFFECT_ROOT_COUNT];
 #define NDS_ENTRY_EFFECT_MATRIX_SLOT_NONE 0xffu
 __attribute__((used)) volatile u32 gNdsEntryEffectMatrixSlotOverflow;
 
-static void ndsRendererEntryEffectOverrideSourcesInit(void)
+NDS_RENDERER_COLD static void ndsRendererEntryEffectOverrideSourcesInit(void)
 {
     u32 next = 1u;
     u32 i;
@@ -3151,7 +3151,7 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
 }
 
 /* Setup-only, with the texture set below: compact, not fast. */
-static s32 __attribute__((noinline, cold, optimize("Os")))
+NDS_RENDERER_COLD static s32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
 {
     u32 variant;
@@ -3193,7 +3193,7 @@ ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
  * probe: --gc-sections has discarded unreferenced witnesses in this tree. */
 __attribute__((used)) volatile u32 gNdsEntryShieldTexturePrepareDeclineCount;
 
-static s32 __attribute__((noinline, cold, optimize("Os")))
+NDS_RENDERER_COLD static s32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererPrepareEntryKoPalettes(void)
 {
     u32 part;
@@ -3348,7 +3348,7 @@ static void ndsRendererEntryTextureMarkLate(u8 *late)
     }
 }
 
-static s32 __attribute__((noinline, cold, optimize("Os")))
+NDS_RENDERER_COLD static s32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
 {
     u8 late[NDS_ENTRY_EFFECT_TEXTURE_COUNT];
@@ -3448,7 +3448,7 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
     return ok;
 }
 
-s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
 #ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
     ndsRendererEntryP4CornersLoad();
@@ -3456,7 +3456,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
     return ndsRendererPrepareEntryEffectTextureSet(0u);
 }
 
-s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
 {
     return ndsRendererPrepareEntryEffectTextureSet(1u);
 }

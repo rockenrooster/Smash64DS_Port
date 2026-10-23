@@ -875,7 +875,7 @@ static void ndsRendererHardwareReleaseFoxGunTexture(void)
     ndsRendererHardwareResetFoxGunTextureState();
 }
 
-s32 ndsRendererHardwarePrepareFoxGunTexture(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareFoxGunTexture(void)
 {
     const u8 *texels;
     const u16 *palette;
@@ -1213,7 +1213,7 @@ void ndsRendererHardwareArmBattleStaticTextures(void)
     }
 }
 
-void ndsRendererHardwareDiscardBattleStaticTextures(void)
+NDS_RENDERER_COLD void ndsRendererHardwareDiscardBattleStaticTextures(void)
 {
     u32 was_prepared = sNdsRendererBattleStaticTexturePrepared;
 

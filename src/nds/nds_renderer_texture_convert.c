@@ -1634,7 +1634,7 @@ typedef struct NDSRendererPrimRgbTexel0AlphaFill
     s32 materialize_t;
 } NDSRendererPrimRgbTexel0AlphaFill;
 
-static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
+NDS_RENDERER_COLD static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
     u8 *pixels, u32 bytes, void *user_data)
 {
     const NDSRendererPrimRgbTexel0AlphaFill *fill =

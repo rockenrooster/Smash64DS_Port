@@ -35,7 +35,7 @@ typedef struct NDSNativeTaruCannAssetRange
     u32 bytes;
 } NDSNativeTaruCannAssetRange;
 
-static const void *ndsNativeTaruCannResolveData(const void *ptr, size_t bytes,
+NDS_RENDERER_COLD static const void *ndsNativeTaruCannResolveData(const void *ptr, size_t bytes,
                                                void *user)
 {
     const NDSNativeTaruCannAssetRange *range = user;
@@ -1291,7 +1291,7 @@ static const NDSRendererTileState sNdsNativeStageAlphaRampTile;
 __attribute__((used)) volatile u32 gNdsNativeStageAlphaRampUploadCount;
 __attribute__((used)) volatile u32 gNdsNativeStageAlphaRampRunCount;
 
-static s32 ndsRendererNativeStageAlphaRampFill(
+NDS_RENDERER_COLD static s32 ndsRendererNativeStageAlphaRampFill(
     u8 *pixels, u32 bytes, void *user_data)
 {
     u32 i;
@@ -3270,7 +3270,7 @@ done:
     return accepted;
 }
 
-void ndsRendererResetNativeStageValidationCache(void)
+NDS_RENDERER_COLD void ndsRendererResetNativeStageValidationCache(void)
 {
     memset(&sNdsNativeStageValidationCache, 0,
            sizeof(sNdsNativeStageValidationCache));
