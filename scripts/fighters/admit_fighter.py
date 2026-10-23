@@ -705,8 +705,10 @@ def admit_pickup_fileids(root: Path, dry: bool, check: bool) -> None:
                 errors.append(
                     f"{symbol}: fighter_production_files.mk is missing {path}"
                 )
+            # The generated manifest names the file by its directory's code
+            # (P8 R2): NDS_NITRO_RELOC_FIGHTERS_MAIN "LuigiMain".
             token_row = (
-                f'X({symbol}, 0x{file_id:x}u, "nitro:/reloc/{path}")'
+                f'X({symbol}, 0x{file_id:x}u, {generator.nitro_path_expr(path)})'
             )
             if token_row not in runtime_header:
                 errors.append(f"{symbol}: generated runtime token/path row is missing")
@@ -879,8 +881,10 @@ class BossPlan:
         return f"    case {self.asset}:\n"
 
     def assets_line(self) -> str:
+        # The asset table's directory-code form (P8 R2), as stage_reloc_file.py
+        # writes it.
         return (f"    {{ 0x{self.file_id:x}, 0x{self.file_id:x}, "
-                f'"nitro:/reloc/{self.dir}/{self.name}" }},\n')
+                f'NDS_NITRO_{self.dir.upper()} "{self.name}" }},\n')
 
     def make_entry(self) -> str:
         return f"{self.dir}/{self.name}"
