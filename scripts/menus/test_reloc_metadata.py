@@ -108,6 +108,22 @@ static int read_ok = TRUE;
 static u16 input_ids[144];
 static void ndsAObjEvent32ResetNormalizedScripts(void) {}
 static void ndsFighterMarioFoxResetFileSlots(void) {}
+/* The reset's newer duties: the stage-asset mutation key, the loaded-file
+ * epoch and the normalized weapon attributes. */
+static u32 stage_mutations, sNdsRelocLoadedFilesEpoch;
+static void ndsRelocBumpStageAssetMutation(void) { ++stage_mutations; }
+static u32 sNdsRelocNormalizedWeaponAttrs[2], sNdsRelocNormalizedWeaponAttrCount;
+/* The animation loader's one-entry lookup memo (never armed here), the
+ * Dream Land stage-asset test, and the weapon attributes' forget hook. */
+static struct { u32 asset_id; const void *data; u32 epoch, count; s32 index; u32 valid; }
+    sNdsRelocPreparedAnim;
+static int ndsRelocIsDreamLandStageAsset(u32 asset) { (void)asset; return FALSE; }
+static void ndsRelocForgetNormalizedWeaponAttrs(u32 asset) { (void)asset; }
+/* No asset here is a compact polygon model. */
+static u32 gNdsRelocCompactModelCount;
+static int ndsRelocCompactModelProbe(u32 asset, const void *data, u32 size,
+                                     u32 *source_size, u32 *lo, u32 *hi)
+{ (void)asset; (void)data; (void)size; (void)source_size; (void)lo; (void)hi; return FALSE; }
 static void ndsRelocRecordExternalFixupFail(u32 asset) {
     (void)asset; ++failures;
 }
@@ -209,7 +225,9 @@ int main(void) {
             self.assertEqual(result.returncode, 0, result.stdout.decode())
             # Check the target's actual pointer width and alignment, not a
             # manually transcribed host model of the DS layout.
-            src.write_text(TYPES + record + '\n_Static_assert(sizeof(NDSRelocLoadedFile)==56, "DS metadata layout");\n')
+            # 60: the compact polygon model's backed range (compact_lo/hi)
+            # joined the record.
+            src.write_text(TYPES + record + '\n_Static_assert(sizeof(NDSRelocLoadedFile)==60, "DS metadata layout");\n')
             arm = Path('C:/devkitPro/devkitARM/bin/arm-none-eabi-gcc.exe')
             self.assertTrue(arm.exists())
             result = subprocess.run([str(arm), '-mcpu=arm946e-s', '-mthumb',

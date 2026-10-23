@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_actual_end_bank_preserves_go_sparks_and_tags_and_retries(tmp_path):
     source = read_split(ROOT / 'src/nds/nds_ifcommon_oam.c')
-    defines = '\n'.join(re.findall(r'^#define NDS_IFCOMMON_(?:ASSET_COUNT|MAX_TILES|OBJ_VRAM_BYTES|GAME_STATUS_SIZE|END_FIRST|\w+_BANK_\w+|ANNOUNCE_\w+|USED_BYTES)\b[^\n]*', source, re.M))
+    # A define may continue over backslashed lines (the Training bank's does).
+    defines = '\n'.join(re.findall(r'^#define NDS_IFCOMMON_(?:ASSET_COUNT|MAX_TILES|OBJ_VRAM_BYTES|GAME_STATUS_SIZE|END_FIRST|\w+_BANK_\w+|ANNOUNCE_\w+|USED_BYTES)\b(?:[^\n]*\\\n)*[^\n]*', source, re.M))
     # Keep full macro names: the noncapturing expression above returns lines.
     types = '\n'.join(re.search(r'typedef struct '+n+r'\b.*?\} '+n+r';', source, re.S)[0]
                       for n in ('NDSIFCommonTileSpec','NDSIFCommonAssetSpec','NDSIFCommonNativeTile','NDSIFCommonNativeAsset','NDSIFCommonEndSlot'))
@@ -52,7 +53,15 @@ static void dmaFillHalfWords(u16 value,void *dst,u32 bytes)
 { assert(value==0);assert((u16*)dst>=vram&&((u8*)dst+bytes)<=(u8*)(vram+32768)); memset(dst,0,bytes); ++writes; }
 static u16 ndsIFCommonDecodePrefilteredGoPixel(const Sprite *s,const void *f,size_t n,u32 x,u32 y)
 { (void)s;(void)f;(void)n; return (u16)(0x8000u|((x+y)&0x7fff)); }
-''' + function(source,'ndsIFCommonBakeDirectAsset') + '\n' + function(source,'ndsIFCommonEndAssetActive') + '\n' + function(source,'ndsIFCommonNativeOamPrepareAnnouncement') + r'''
+/* The classic path: the letters' pixels are resident (not the compact,
+ * pre-baked bank images), and the common letters reset is a no-op here. */
+static u32 sNdsIFCommonCompact;
+static const u16 *sNdsIFCommonEndBaked[2];
+static u32 sNdsIFCommonEndBakedWords[2];
+static void ndsIFCommonResetCommonLetters(void) {}
+#define NDS_DIAG(...) do { __VA_ARGS__; } while (0)
+static u32 gNdsIFCommonEndBakedFailCount, gNdsIFCommonEndBakedDecodeCount;
+''' + function(source,'ndsIFCommonBakeDirectAssetTo') + '\n' + function(source,'ndsIFCommonBakeDirectAsset') + '\n' + function(source,'ndsIFCommonEndAssetActive') + '\n' + function(source,'ndsIFCommonNativeOamPrepareAnnouncement') + r'''
 int main(void) {
  unsigned i,before;
  assert(!ndsIFCommonNativeOamPrepareAnnouncement(0));

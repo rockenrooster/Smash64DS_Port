@@ -19,7 +19,8 @@ class CampaignCapacityTest(unittest.TestCase):
         one_player = (ROOT / 'decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pgame.c').read_text()
         versus = (ROOT / 'decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c').read_text()
         native_address = function(preview, 'ndsRelocNativeAssetAddress')
-        preview_load = function(preview, 'ndsRelocLoadPreviewFighterUnlocked')
+        preview_load = function(preview, 'ndsRelocPreviewFighterLoadBegin')
+        battle_core = function(preview, 'ndsRelocUseBattleCoreFighterData')
         patch_externs = function(preview, 'ndsRelocPatchCompactBattleMainExterns')
         manager_setup = function(manager, 'ftManagerSetupFilesAllKind')
         scene_exit = function(scene_manager, 'ndsSceneManagerExit')
@@ -40,22 +41,27 @@ class CampaignCapacityTest(unittest.TestCase):
             (patch_externs, 1, 0),
             (manager_setup, 0, 1),
         )
+        # Every site asks the one battle-core predicate, which reads the
+        # scene's battle flag (and adds Results, the 1P continue and the
+        # ending, the demo-pose scenes that stand one fighter).
+        self.assertIn('gNdsSceneManagerCurrIsBattle != 0u', battle_core)
+        self.assertNotIn('nSCKindVSBattle', battle_core)
         for body, false_sites, true_sites in compact_admission_bodies:
             self.assertNotIn('nSCKindVSBattle', body)
             self.assertEqual(
-                len(re.findall(r'gNdsSceneManagerCurrIsBattle\s*==\s*0u', body)),
+                len(re.findall(r'ndsRelocUseBattleCoreFighterData\(\)\s*==\s*FALSE', body)),
                 false_sites)
             self.assertEqual(
-                len(re.findall(r'gNdsSceneManagerCurrIsBattle\s*!=\s*0u', body)),
+                len(re.findall(r'ndsRelocUseBattleCoreFighterData\(\)\s*!=\s*FALSE', body)),
                 true_sites)
         self.assertRegex(
             preview_load,
-            r'if\s*\(gNdsSceneManagerCurrIsBattle\s*!=\s*0u\)\s*\{\s*'
-            r'path\s*=\s*battle_path;')
+            r'if\s*\(\(ndsRelocUseBattleCoreFighterData\(\)\s*!=\s*FALSE\)\s*&&\s*'
+            r'\(fkind\s*<\s*12\)\)\s*\{\s*path\s*=\s*battle_path;')
         self.assertRegex(
             manager_setup,
             r'\(preview\s*==\s*2\)\s*&&\s*'
-            r'\(gNdsSceneManagerCurrIsBattle\s*!=\s*0u\)')
+            r'\(ndsRelocUseBattleCoreFighterData\(\)\s*!=\s*FALSE\)')
         self.assertRegex(scene_exit,
                          r'gNdsSceneManagerCurrIsBattle\s*=\s*0u\s*;')
         self.assertIn('ftManagerSetupFilesAllKind(gSCManagerBattleState->players[i].fkind);',
