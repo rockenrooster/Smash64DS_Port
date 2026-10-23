@@ -116,7 +116,10 @@ def extract_real():
     out = {
         "payload": function(ASSETS, "ndsR2AnimCachePayloadBytes"),
         "setup": function(ASSETS, "ndsR2AnimCacheSetupBytes"),
-        "ensure_setup": function(ASSETS, "ndsR2AnimCacheArenaEnsureSetup"),
+        # EnsureSetup is EnsureSetupWith at the ledger's keep-free (the CSS
+        # working set passes its own); both run, in source order.
+        "ensure_setup": function(ASSETS, "ndsR2AnimCacheArenaEnsureSetupWith") +
+        "\n\n" + function(ASSETS, "ndsR2AnimCacheArenaEnsureSetup"),
         "validate": function(ASSETS, "ndsR2AnimCacheValidateGeneration"),
         "still_owned": function(ASSETS, "ndsR2AnimCacheArenaStillOwned"),
         "drop_for_reset": function(ASSETS, "ndsR2AnimCacheArenaDropForReset"),
@@ -145,6 +148,7 @@ HARNESS_HEAD = r'''
 #include <string.h>
 
 typedef uint8_t u8;
+typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int32_t s32;
 typedef s32 sb32;
@@ -178,6 +182,19 @@ static u32 sNdsR2AnimCacheArenaUsed;
 static sb32 sNdsR2AnimCacheArenaRawOnly;
 static u32 sNdsR2AnimCacheArenaGeneration;
 static u32 sNdsR2AnimCacheCount;
+/* The motion cache's later seams the extracted bodies touch: the elastic
+ * arena flag (never set by the setup carve), the entry index the reset
+ * clears, the ring extent origin the carve records, and the pins and the
+ * prefetch the reset drains (nothing pinned or in flight here). */
+static sb32 sNdsR2AnimCacheArenaElastic;
+static u16 sNdsR2AnimCacheIndex[64];
+static uintptr_t sNdsR2AnimCacheExtentOrigin;
+static void ndsR2AnimPrefetchDrain(void) { }
+static void ndsR2AnimPinsRescueRange(const u8 *start, const u8 *end)
+{
+    (void)start;
+    (void)end;
+}
 static volatile u32 gNdsR2AnimCacheBytes;
 static volatile u32 gNdsR2AnimCacheArenaReservedBytes;
 static volatile u32 gNdsR2AnimCacheArenaUsedBytes;
