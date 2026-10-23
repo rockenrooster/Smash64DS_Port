@@ -1,5 +1,6 @@
-param([Parameter(Mandatory)][string]$Build, [int]$MatchCount = 3, [int]$TimeoutSeconds = 1500, [string]$Tag = 'lag')
-# Two linked consoles (melonDS-mp, MELONDS_MP_INSTANCES=2, gdb 3600/3610) run
+param([Parameter(Mandatory)][string]$Build, [int]$MatchCount = 3, [int]$TimeoutSeconds = 1500, [string]$Tag = 'lag',
+      [ValidateRange(2, 4)][int]$Consoles = 2)
+# Two to four linked consoles (melonDS-mp, MELONDS_MP_INSTANCES, gdb 3600 + 10 a console) run
 # the lab autopilot of a wireless lab ROM in builds/<Build> (NDS_NET_LAB_LOBBY
 # + SWEEP). Each console prints its VBlank count at every scene entry, at the
 # stage select's commit/START paths, at the battle's first lockstep gates and
@@ -12,12 +13,12 @@ $ErrorActionPreference = 'Stop'
 $melon = Join-Path $S64Repo 'emulators\melonds-mp\melonDS.exe'
 $rom = Join-Path $S64Repo "builds\$Build\smash64ds.nds"
 $elf = Join-Path $S64Repo "builds\$Build\smash64ds.elf"
-$env:MELONDS_MP_INSTANCES = '2'
+$env:MELONDS_MP_INSTANCES = [string]$Consoles
 $env:MELONDS_NO_ACTIVATE = '1'
 $p = Start-Process -FilePath $melon -ArgumentList @($rom) -WorkingDirectory (Split-Path $melon) -PassThru -WindowStyle Minimized
 $gps = @()
 try {
-    foreach ($i in 0, 1) {
+    foreach ($i in 0..($Consoles - 1)) {
         $port = 3600 + 10 * $i
         $deadline = (Get-Date).AddSeconds(60)
         while (-not (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)) {
@@ -62,7 +63,7 @@ try {
     foreach ($g in $gps) { if (-not $g.HasExited) { Stop-Process -Id $g.Id -Force } }
     if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
 }
-foreach ($i in 0, 1) {
+foreach ($i in 0..($Consoles - 1)) {
     Get-Content (Join-Path $S64Probes "$Tag-$i.log") | Where-Object { $_ -match '^(S|G|H|C|END|VEC) ' }
     Get-Content (Join-Path $S64Probes "$Tag-$i.err") -ErrorAction SilentlyContinue | Select-String 'No symbol|Error|error' |
         Select-Object -First 3 | ForEach-Object { "ERR i=${i}: $($_.Line)" }
