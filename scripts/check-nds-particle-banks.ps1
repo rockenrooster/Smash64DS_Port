@@ -1033,7 +1033,10 @@ $whispyTextures = @($whispy.textures)
 if (($whispyTextures.Count -ne 3) -or
     (($whispyTextures.ds_format_name -join ',') -ne 'A5I3,A3I5,PAL16') -or
     ([int]$whispyTextures[2].source_frames -ne 4) -or
-    ([int]$whispyTextures[2].frames -ne 1) -or
+    # 2026-10-23 (P8 loop V): all four leaf frames, one 16x64 PAL16 strip,
+    # still lossless; the draw offsets T by the frame.
+    ([int]$whispyTextures[2].frames -ne 4) -or
+    ([int]$whispyTextures[2].upload_height -ne 64) -or
     ([double]$whispyTextures[2].mean_error -ne 0.0) -or
     ([double]$whispyTextures[2].max_error -ne 0.0)) {
     throw 'Whispy native formats/leaf-frame fidelity changed.'
@@ -1081,8 +1084,8 @@ foreach ($token in @(
     'whispy_lean_source_frames |= 1u << pc->frame_id;',
     'gNdsWhispyNativeTextureDrawCount += whispy_lean_draws',
     'gNdsWhispyNativeTextureMask |=',
-    'NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH',
-    'draws the one generated DS-native source-frame-0 leaf')) {
+    'NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_WIDTH',
+    'NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_HEIGHT *')) {
     if (-not $runtime.Contains($token)) {
         throw "Whispy native texture runtime guard lost: $token"
     }
@@ -1278,4 +1281,4 @@ Write-Output (("Particle bank pack passed: " +
      "textures in $([int64]$report.quads.frame_count) frames " +
      "(frame cap $($report.quads.frame_cap), cell cap " +
      "$($report.quads.cell_cap)) $quadState; Whispy native " +
-     "$($whispy.asset_bytes) B A5I3/A3I5/PAL16 (one lossless static leaf frame).")))
+     "$($whispy.asset_bytes) B A5I3/A3I5/PAL16 (four lossless leaf frames).")))

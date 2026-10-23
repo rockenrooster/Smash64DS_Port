@@ -4551,10 +4551,15 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     texture_height = NDS_WHISPY_NATIVE_TEXTURE_1_HEIGHT;
                     break;
                 case 2u:
-                    /* The source still advances frame_id; this deliberately
-                     * draws the one generated DS-native source-frame-0 leaf. */
-                    texture_width = NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH;
-                    texture_height = NDS_WHISPY_NATIVE_TEXTURE_2_HEIGHT;
+                    /* The leaf's four frames stacked in one strip (P8 loop
+                     * V; it drew frame 0 until 2026-10-23): T starts at the
+                     * frame the source has advanced to. */
+                    texture_width = NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_WIDTH;
+                    texture_height = NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_HEIGHT;
+                    texture_y = NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_HEIGHT *
+                        (((u32)pc->frame_id < NDS_WHISPY_NATIVE_TEXTURE_2_FRAMES) ?
+                             (u32)pc->frame_id :
+                             (NDS_WHISPY_NATIVE_TEXTURE_2_FRAMES - 1u));
                     break;
                 default:
                     gNdsWhispyNativeTextureMissCount++;

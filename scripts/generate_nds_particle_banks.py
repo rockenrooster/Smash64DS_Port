@@ -3043,10 +3043,10 @@ def build_whispy_native_asset(repo_root: Path) -> dict:
 
     The lab AOT route instead gives each source texture the DS format selected
     by the generator's decode-back error model: IA16 -> A5I3, I8 -> A3I5, and
-    RGBA16 -> PAL16.  The lab deliberately holds the leaf on source frame zero:
-    one 16x16 PAL16 image is enough for the effect and is lossless after the
-    DS's native RGB555 conversion.  There is no runtime frame selection and no
-    upload or texel conversion in the hot path.
+    RGBA16 -> PAL16.  The leaf's four frames are one 16x64 PAL16 strip (P8
+    loop V: it held frame zero until 2026-10-23); the draw offsets T by the
+    frame (NDS_WHISPY_NATIVE_TEXTURE_2_FRAME_HEIGHT). There is no upload or
+    texel conversion in the hot path.
 
     Everything stays in one NitroFS payload.  No texel or palette byte is linked
     into ARM9 RAM, where this project's measured boot headroom is only bytes.
@@ -3075,7 +3075,7 @@ def build_whispy_native_asset(repo_root: Path) -> dict:
                     (4, 16, 16):
                 raise SystemExit(
                     "Whispy RGBA16 animation is no longer four 16x16 frames")
-            frames = source_frames[:1]
+            frames = source_frames
         else:
             if texture["frames"] != 1:
                 raise SystemExit(
@@ -3092,10 +3092,11 @@ def build_whispy_native_asset(repo_root: Path) -> dict:
                 f"{DS_FORMAT_NAMES[ds_format]}")
 
         upload_width = texture["width"]
-        upload_height = texture["height"]
+        upload_height = texture["height"] * len(frames)
         frame_width = texture["width"]
         frame_height = texture["height"]
-        upload_pixels = frames[0]
+        # Frames stacked down the strip: frame N is rows N*height.. of it.
+        upload_pixels = [pixel for frame in frames for pixel in frame]
 
         texels = encode_frame(upload_pixels, ds_format, palette, upload_width)
         packed_palette = ([0] if ds_format in DS_PALETTE_FORMATS else []) + \
@@ -3109,7 +3110,10 @@ def build_whispy_native_asset(repo_root: Path) -> dict:
 
         decoded_upload = decode_ds_frame(
             texels, ds_format, packed_palette, upload_width * upload_height)
-        decoded_frames = [decoded_upload]
+        frame_texels = frame_width * frame_height
+        decoded_frames = [decoded_upload[index * frame_texels:
+                                         (index + 1) * frame_texels]
+                          for index in range(len(frames))]
         mean_error, max_error = measure_error(frames, decoded_frames)
         if (abs(mean_error - model_mean) > 1e-6 or
                 abs(max_error - model_max) > 1e-6):
@@ -3118,7 +3122,7 @@ def build_whispy_native_asset(repo_root: Path) -> dict:
                 f"{mean_error:.4f}/{max_error:.4f} != modelled "
                 f"{model_mean:.4f}/{model_max:.4f}")
         if texture["id"] == 2 and (mean_error != 0.0 or max_error != 0.0):
-            raise SystemExit("Whispy PAL16 frame zero is no longer lossless")
+            raise SystemExit("Whispy PAL16 leaf frames are no longer lossless")
 
         while len(payload) % DS_TEXTURE_DATA_ALIGN:
             payload.append(0)

@@ -2295,8 +2295,8 @@
     }
   ],
   "whispy_native": {
-    "asset_bytes": 1520,
-    "payload_sha256": "f59b9452ba280d507c9bd70672e2b93b228d9e9439d758e4410591c70d5c5b77",
+    "asset_bytes": 1904,
+    "payload_sha256": "39b61368beadfbb9acf7e2c680bc395607eb4b47a00ecd12a2764640a80b7e23",
     "source_sha256": "95fe2fca23f5729354f2551c48156d5a75cc472c1f54ef47992c6d6716dea3b3",
     "textures": [
       {
@@ -2340,17 +2340,17 @@
         "ds_format_name": "PAL16",
         "frame_height": 16,
         "frame_width": 16,
-        "frames": 1,
+        "frames": 4,
         "max_error": 0.0,
         "mean_error": 0.0,
         "palette_entries": 16,
-        "palette_offset": 1488,
+        "palette_offset": 1872,
         "source_format": "RGBA16",
         "source_frames": 4,
-        "texel_bytes": 128,
+        "texel_bytes": 512,
         "texel_offset": 1360,
         "texture": 2,
-        "upload_height": 16,
+        "upload_height": 64,
         "upload_width": 16
       }
     ]
