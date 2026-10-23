@@ -1,9 +1,10 @@
-# P8 -- Stability, RAM, CPU and readability
+# P8 -- Stability, RAM, CPU, VRAM and readability
 
 Owner brief (2026-10-22): find RAM savings, bugs and crashes/stalls, and run
 refactoring / human-readability loops, so the game plays more stably and faster
 and is easier to develop on. Later the same day: CPU hunting beside the RAM
-hunting (loop P).
+hunting (loop P). 2026-10-23: VRAM hunting too, packing every bank as
+efficiently as possible (loop V, section 2b).
 
 Live state and the cursor: [P8_STATUS.md](P8_STATUS.md).
 `PROJECT_GOAL.md` still owns fidelity and acceptance. Nothing in this plan
@@ -96,8 +97,8 @@ Every turn:
    loop V (particle animations, owner 2026-10-22) is the standing owner row.
 2. **Pick** the first open item in `P8_STATUS.md`, in this order: a crash,
    freeze or regression any run found; an owner row; the current phase item.
-   After D, RAM (R) and CPU (P) batches alternate, the larger expected gain
-   over risk first.
+   After D, RAM (R), CPU (P) and VRAM (V) batches alternate, the larger
+   expected gain over risk first.
 3. **One batch:** one rule or one lever, everything it touches, nothing else.
 4. **Prove** it with the matching row of the table below.
 5. **Commit** with explicit paths and log it: the `P8_STATUS.md` row;
@@ -117,6 +118,7 @@ Jungle, Saffron City; the cast on Saffron City) and a play ROM for the owner.
 | text only: split, rename, comment, move | the touched TUs preprocess byte-identical in the five live configs (`pp_run.py`), or objects identical (`obj_cmp.py`); host tests |
 | deletion | compiles in the five configs; no new `-Wreturn-type` (`warn_diff.py`); `obj_cmp` / `obj_secdiff`; gate ROM symbol diff; replay digests on three configs; the ship play ROM links (ITCM) |
 | RAM lever | the ledger delta (R0) matches the prediction; the new path's engagement counter is positive; digests identical; frame-0 heap on the heavy mixes up by the bytes; WORK P95 no worse; the affected scenes walked; 0 native failures |
+| VRAM lever | V4's map moves by the predicted bytes; exact levers capture pixel-identical (approved cuts: captures to the owner); 0 texture refusals, rejects and quad misses; stage prepare rebuilds not up; WORK P95 no worse; digests identical; main-RAM heap unchanged or charged to R |
 | bug fix | `BUG_FIXING_PROCESS.md`: reproduction, fix, witness on the failing input, the nearest regression probe |
 | performance | worst-case search on the ship layout; digests; the share within two VBlanks |
 
@@ -204,7 +206,7 @@ wireless start on a slow card. Confetti stays parked until the owner says go.
 ship layout; every stack >= 25% free; pool growth flat; every owner row fixed
 or answered.
 
-## 2b. Loop V -- particle animations (owner, 2026-10-22: high priority)
+## 2b. Loop V -- particle animations, then VRAM hunting (owner 2026-10-22 and 2026-10-23)
 
 Owner: "Lets make a plan to fix this so we have actual animations now.
 resolution reductions may need to take place. 32x32>24x24 is approved
@@ -291,9 +293,80 @@ unchanged; a play ROM for the owner.
 
 **Then (owner 2026-10-23: the dusts at 0.5x; "Anything not using 0.75x textures?").** The dusts' 32x32 cells alone push five textures out of the seven sheets, so frame 0 goes to 0.75x as well (`QUAD_BASE_SCALE`; the cells the rules set smaller keep theirs): 65,536 -> 41,904 texels, but 24x24 cells seat ten a 128x64 sheet against eight 32x32, so the frame-0 set still takes seven of the nine prepare sheets (palette-grouped, the last sheet folded into the holes before it). The other two prepare sheets and the countdown's seven take animation frames, the set chosen whole in priority order and packed largest cells first: 28 textures, 108 frames (60,272 texels) -- the owner list with the dusts, the KO blast's four pieces, the music notes. Still on frame 0: StockSnap (23), Ness's PK Fire (160), Yoshi's egg (176); they need about one more sheet (every one of the 31 seats in ten). Texture VRAM elsewhere: the stage textures are PAL16 already (Hyrule Castle: 36 names, 71,808 B, every one 4-bit and a power of two), so 0.75x saves nothing unless they are repacked into shared sheets; the entry-effect names kept after GO (31,680 B) hold 15,040 B that only Link, Kirby, Samus, Captain Falcon, Yoshi or Fox draw -- a per-match load would free it in matches without them.
 
-**Exit V:** every listed effect, and any other effect whose source animates,
-plays its scripted frames at 0.75x or better, or the owner has picked the
-remaining reductions.
+**Exit V (animations):** every listed effect, and any other effect whose
+source animates, plays its scripted frames at 0.75x or better, or the owner
+has picked the remaining reductions.
+
+### VRAM hunting (owner 2026-10-23: "make sure we are packing it as efficiently as possible")
+
+The particle frames above are VRAM's first spend. The hunt makes every bank
+hold more, the way R does for main RAM: measure, recover at the owning
+representation, spend. V batches alternate with R and P by expected gain
+over risk.
+
+**The banks today** (`nds_platform.c`, `nds_renderer_fighter_vram.c`):
+
+| bank | size | menus | battle |
+|---|---|---|---|
+| A | 128 KB | texture slot 0 | texture slot 0, locked after setup |
+| B | 128 KB | texture slot 1 | texture slot 1, locked after setup |
+| C | 128 KB | main BG2, a 256x256 16-bit bitmap | the same: the stage wallpaper (`nds_native_wallpaper.c`), a 16-colour or direct-colour image |
+| D | 128 KB | main BG3, a 256x256 16-bit bitmap (the foreground) | texture slot 3, lent at battle setup and returned after |
+| E | 64 KB | main OBJ (IFCommon's OAM cells) | the same: the HUD |
+| F, G | 16 KB each | texture palette slots 0 and 1 | the same |
+| H | 32 KB | sub BG (the text console) | the same |
+| I | 16 KB | sub OBJ | the same |
+
+Battle texture VRAM is A + B + D = 393,216 B. At GO on Hyrule Castle (the
+9-sheet baseline) it held stage textures 71,808, entry-effect textures kept
+after GO 55,744, particle sheets 73,728, the countdown's atlases 57,344 (now
+released when the countdown ends), battle scene textures 29,696, halo and
+shield 8,192, the fighters' textures, and 23,040 free. Formats in use: PAL16
+for most (every stage texture), PAL256, A3I5, A5I3, one 4-colour use, and
+direct 16-bit colour (`GL_RGBA`) in the converter, the resolver, particles,
+entry effects and fighter VRAM; no compressed 4x4 texture anywhere. libnds
+places textures first-fit and A+B are locked after setup, so a free byte is
+not a usable byte: 86 KB free and 55 KB contiguous while every 8 KiB upload
+failed, and 16 and 32 KiB allocations refused for contiguity since August.
+
+**V4 The VRAM map (first).** Extend `gNdsVramCensus` and `vram_census.ps1` to
+every bank and scene class (title, the CSS with four previews, SSS, the 1P
+intro, VS battle with two and four fighters, 1P battle, bonus, Training,
+Results). Per texture: its owner (stage, fighter, effect, item, HUD, scene),
+format, size, bytes, distinct colours, the smallest exact format, whether
+every 4x4 block fits the compressed format losslessly, a hash for duplicates,
+and the first and last frame it is drawn. Per bank: the allocations, the holes
+and the largest free run. Also the palette bytes, the OBJ tiles in E and I,
+and what BG2 and BG3 hold. Output a static HTML page of the banks
+(`artifacts/visibility/vram/<build>/`, rebuilt by a ps1, no JavaScript) and the
+bytes each lever below would recover.
+
+| # | lever | expected | notes |
+|---|---|---|---|
+| V5 | Bank C to textures in battle: the wallpaper leaves its 128 KB 16-bit bitmap, either as a textured backdrop in texture VRAM at 4 or 8 bits (32-64 KB), or as an 8-bit BG in E with the HUD's OBJ cells in G and the texture palettes in F alone, whichever V4 shows fits | texture VRAM 384 -> 512 KB, less the backdrop | exact for wallpapers of up to 256 colours; the affine motion moves with it; translucent 3D blends against the backdrop inside the 3D engine instead of through BG2's blend, so captures decide |
+| V6 | The project's own battle texture allocator, planned at setup: match-long textures from one end, pre-GO textures from the other, so their release leaves one hole for post-GO uploads; size-class pools for the lean images; no locks found by surprise | contiguity: no refusal while the bytes are free; larger sheets fit | replaces libnds's first-fit list for battle textures; A+B's lock becomes part of the plan |
+| V7 | Smallest exact format per texture: direct colour with up to 256 colours to PAL256, up to 16 to PAL16, up to 4 to the 4-colour format; translucent textures to A3I5/A5I3 where alpha and colour fit exactly | direct to PAL16 is 4x; V4 counts it | lossless only; pixel-identical captures |
+| V8 | Compressed 4x4 textures where every block's colours fit losslessly: about 3 bits a texel against 4 or 8 | 25-60% of each eligible texture | texel data in slot 0 or 2 (A, C), index data in slot 1 (B): V5's bank C fits that plan |
+| V9 | Duplicates once: identical texels (costumes that differ only in palette, four of one fighter, shared effect cells) and identical palettes | the mirrors and the costume sets | V4's hashes |
+| V10 | Per-match residency (owner 2026-10-23): only what this match's fighters, items and stage can draw: the 15 KB of fighter-specific entry names kept after GO, item textures with items off, other stages' and fighters' effects | 15-60 KB a match | the generators' reach data, loaded with the match |
+| V11 | Shared sheets for the small clamp-only textures (stage, effects): no power-of-two padding, fewer allocations; then the owner-approved 0.75x stage textures inside them | the padding, then 44% of the stage's texels | textures that wrap or mirror stay alone |
+| V12 | Bigger particle sheets once V6 makes them fit: 24x24 cells fill 70% of a 128x64 sheet, 88% of a 128x128 or 256x128 one | +25% particle cells in the same bytes | `QUAD_ATLAS` sheet size |
+| V13 | Palette VRAM packed (4-colour palettes at 8 B, CI4 palettes sharing one 256-colour block, duplicates once) so one 16 KB bank holds them | frees G for V5's bank plan | |
+| V14 | OBJ and 2D: the HUD's cells in E (4-bit where they fit, duplicates once, only this match's icons); the menus' 16-bit BG2/BG3 bitmaps where a smaller BG or a texture does the same | more texture VRAM for the CSS previews and covers | the menus' own map from V4 |
+| V15 | Owner-gated: any cut below 0.75x, any HUD cut, any lossy compressed texture | | captures to the owner first |
+
+**Spend**, in order: (1) the particle frames still missing (StockSnap, PK
+Fire, Yoshi's egg), then the frames left out (every second 1-tick frame), then
+frame 0 back at 1x; (2) the texture cache never refused (Hyrule Castle's stage
+prepare rebuilds to 0), which is CPU too; (3) the lean fighter images kept
+resident, fewer uploads a match; (4) a margin of one 32 KiB sheet on the worst
+stage.
+
+**Exit V (VRAM):** V4's map on the final HEAD shows every battle texture in
+its smallest exact format, no duplicate texel or palette upload and no texture
+resident that the match cannot draw; the heavy roster and the four mixes run
+on every VS stage with 0 texture refusals, 0 quad misses and 0 stage prepare
+rebuilds; or every lever V5-V14 landed or refuted with numbers.
 
 ## 3. Loop C -- readability and ease of development
 
@@ -472,7 +545,7 @@ counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 ## 6. Done
 
 1. Exit S, on the final HEAD.
-2. Exit V.
+2. Exit V (animations and VRAM).
 3. Exit C.
 4. Exit R.
 5. Exit P.
@@ -494,10 +567,11 @@ counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 ## 8. Goal block
 
 ```
-/goal run docs/P8/P8_PLAN.md (stability, readability, RAM and CPU hunting) as fast as possible; docs/P8/P8_STATUS.md is the cursor.
+/goal run docs/P8/P8_PLAN.md (stability, readability, RAM, CPU and VRAM hunting) as fast as possible; docs/P8/P8_STATUS.md is the cursor.
 Done when:
 Every owner row in BUGS.md and PLAYTEST_NOTES.md is fixed.
 Every particle effect whose source animates plays its scripted frames at 0.75x or better (loop V), or the owner has picked the rest.
+VRAM: every battle texture in its smallest exact format, no duplicate or unreachable texture resident, 0 texture refusals, quad misses and stage prepare rebuilds with the heavy roster and the four mixes on every VS stage (or every lever in P8_PLAN section 2b settled with numbers).
 Stability matrix on the final HEAD (ship layout): every mode x every fighter, 30-min 4P all-items soaks, 2-4 console heavy mixes, 50 rematch laps, seeded fuzz, 16 KB heap-squeeze and slow-SD runs: 0 crashes, 0 freezes, 0 desyncs, 0 native failures; heap low-water >= 25,600; every stack >= 25% free; pool growth flat.
 No port-owned source over 4,000 lines; every port file has a purpose header; history names gone; Makefile split; live tools in scripts/tools with quick_check.ps1 green.
 Battle-resident RAM >= 128 KB below play-p7z (or every lever in P8_PLAN section 4 settled with numbers); Hyrule Temple keeps its whole stage program with the heavy roster and the four mixes.
@@ -507,7 +581,7 @@ Guardrails:
 decomp/ is read-only; game rules stay source code; no visible or audible change without the owner's OK.
 Native-only ROMs; measure the config that ships; instruments and fault injection stay out of the gate and ship ROMs.
 Never edit source while a build is running. One batch = one rule, proved by P8_PLAN section 1's table, committed with explicit paths.
-Bugs and crashes first; readability C/D before the RAM and CPU hunts.
+Bugs and crashes first, then the owner's loop V rows; the RAM, CPU and VRAM hunts by gain over risk.
 Ask only about visible approximations or a contract change.
 Subagents: NO Subagents.
 Keep docs updated.
