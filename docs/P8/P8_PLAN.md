@@ -107,9 +107,16 @@ Every turn:
 6. **Background:** keep one probe campaign running in the runner slots while
    code batches go on (emulator runs do not block edits; builds do).
 
-**Checkpoint** every five batches and at each phase end: S1-short (section 2),
-the short worst-case sweep (heavy roster and one mix on Hyrule Temple, Congo
-Jungle, Saffron City; the cast on Saffron City) and a play ROM for the owner.
+**Checkpoint** every five batches and at each phase end: the short worst-case
+sweep (heavy roster and one mix on Hyrule Temple, Congo Jungle, Saffron City;
+the cast on Saffron City) and a play ROM for the owner.
+
+**Stability testing goes last (owner 2026-10-23).** S1's matrix, S2's fault
+injection and soaks and S5's freeze-report pass run once, as P8's final step,
+on the final HEAD (section 6). Until then bugs and crashes still come first --
+an owner row, or a crash, freeze or regression any run or playtest finds -- and
+each batch keeps its own proof (the table below); only the stability campaigns
+wait.
 
 ### Proof by kind of change
 
@@ -129,8 +136,9 @@ halt. A **freeze** is no presented frame for 2 s. A **stall** is a frame past
 two VBlanks outside the gate's known set, or a scene load slower than its
 ledger entry (S4).
 
-**S1 Regression net (first).** Re-run the audit matrix on HEAD's ship layout,
-because A and B deleted ~47,000 lines with only battle digests behind them:
+**S1 Regression net (last: P8's final step, owner 2026-10-23).** Run the audit
+matrix on the final HEAD's ship layout, which also covers A and B's ~47,000
+deleted lines (only battle digests stood behind them):
 
 - walk ROM: the 1P campaign for every fighter (32), both bonus practices
   (64 boards), Training for every fighter (32), the VS select (3D previews) to
@@ -139,11 +147,13 @@ because A and B deleted ~47,000 lines with only battle digests behind them:
 - melonDS-mp: two and four consoles, the four heavy mixes, Results, rematch.
 
 Record per run: halts, native failures, lean declines, ledger refusals, heap
-low-water, desyncs. **S1-short** (the checkpoint set): the campaign for Mario,
+low-water, desyncs. **S1-short** (a quick regression pass when a batch touches
+scenes a sweep does not cover, not a checkpoint): the campaign for Mario,
 Kirby, Bowser, Sonic, Snake and Palutena; soak m5 and m6; one wireless heavy
 mix; 5 rematch laps.
 
-**S2 Fault injection** (lab builds only; never in the gate or ship ROMs):
+**S2 Fault injection** (lab builds only; never in the gate or ship ROMs; with
+S1, at the end):
 
 - **Heap squeeze:** a lab flag takes 16 KB from the heap at each battle's
   first frame. The 25,600 B floor exists so that this survives: the heavy
@@ -544,13 +554,15 @@ counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 
 ## 6. Done
 
-1. Exit S, on the final HEAD.
+1. Every owner row fixed or answered (loop S's bugs, as they come).
 2. Exit V (animations and VRAM).
 3. Exit C.
 4. Exit R.
 5. Exit P.
-6. A final play ROM, the full S1 matrix and the worst-case search on the final
-   HEAD, recorded in `P8_STATUS.md`.
+6. Last (owner 2026-10-23): stability testing on the final HEAD -- S1's full
+   matrix, S2's fault injection, soaks, rematch laps and fuzz, S5's freeze
+   report -- for Exit S, then the worst-case search and a final play ROM,
+   recorded in `P8_STATUS.md`.
 
 ## 7. Owner decisions (answered 2026-10-22)
 
