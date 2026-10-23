@@ -200,7 +200,7 @@ NDS_RENDERER_COLD static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u3
     return 0u;
 }
 
-u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail)
+NDS_RENDERER_COLD u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail)
 {
     return ndsRendererNativeOwnerImageBytes(owner_slot, use_low_detail);
 }
@@ -313,7 +313,7 @@ static void ndsRendererNativeForgetFighterRunUvTables(const void *tables);
     ndsRendererNativeForgetFighterRunUvTables((const void *)&(tables_))
 
 /* Binds a runtime tables struct to a loaded image (NULL unbinds it). */
-static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
+NDS_RENDERER_COLD static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
     NDSNativeFighterRuntimeTables *tables, const NDSImgBindDesc *desc,
     const void *base)
 {
@@ -399,7 +399,7 @@ NDS_RENDERER_COLD static u32 ndsRendererNativeKirbyHatImageBytes(
     return 0u;
 }
 
-static s32 ndsRendererNativeBindKirbyHatImage(
+NDS_RENDERER_COLD static s32 ndsRendererNativeBindKirbyHatImage(
     NDSNativeKirbyHatImageSlot *entry, u32 copy_modelpart_id, u32 use_low_detail,
     const void *base)
 {
@@ -463,7 +463,7 @@ NDS_RENDERER_COLD static u32 ndsRendererNativeP4KirbyHatImageBytes(u32 hat, u32 
 
 /* A Remix hat's image binds as its source hat's does: the image names the
  * source hat (copy_modelpart_id) whose live part it draws in place of. */
-static s32 ndsRendererNativeBindP4KirbyHatImage(
+NDS_RENDERER_COLD static s32 ndsRendererNativeBindP4KirbyHatImage(
     NDSNativeKirbyHatImageSlot *entry, u32 hat, u32 use_low_detail, const void *base)
 {
     if ((entry == NULL) || (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS) || (base == NULL))
@@ -1447,7 +1447,7 @@ static const void *ndsP4OwnerTablesInImage(u32 owner_slot, u32 use_low_detail,
     return NULL;
 }
 
-static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
+NDS_RENDERER_COLD static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                                             const void *base)
 {
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1)

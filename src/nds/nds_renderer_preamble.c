@@ -2191,7 +2191,7 @@ static FILE *ndsRendererHardwareFencedTextureFopen(const char *path,
     return fopen(path, mode);
 }
 
-static int ndsRendererHardwareFencedTextureFseek(FILE *file, long offset,
+NDS_RENDERER_COLD static int ndsRendererHardwareFencedTextureFseek(FILE *file, long offset,
                                                  int origin)
 {
     ndsRendererHardwareRecordBattleTextureFence(
@@ -2206,7 +2206,7 @@ static long ndsRendererHardwareFencedTextureFtell(FILE *file)
     return ftell(file);
 }
 
-static size_t ndsRendererHardwareFencedTextureFread(
+NDS_RENDERER_COLD static size_t ndsRendererHardwareFencedTextureFread(
     void *destination, size_t size, size_t count, FILE *file)
 {
     ndsRendererHardwareRecordBattleTextureFence(
@@ -2214,7 +2214,7 @@ static size_t ndsRendererHardwareFencedTextureFread(
     return fread(destination, size, count, file);
 }
 
-static int ndsRendererHardwareFencedTextureFclose(FILE *file)
+NDS_RENDERER_COLD static int ndsRendererHardwareFencedTextureFclose(FILE *file)
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_FILE_IO);

@@ -1311,8 +1311,8 @@ NDS_RENDERER_COLD static s32 ndsRendererNativeStageAlphaRampFill(
     return TRUE;
 }
 
-static s32 __attribute__((noinline, cold))
-ndsRendererNativeStageAlphaRampResolve(
+NDS_RENDERER_COLD static s32 __attribute__((noinline, cold))
+NDS_RENDERER_COLD ndsRendererNativeStageAlphaRampResolve(
     NDSRendererHardwareResolvedTexture *resolved)
 {
     static const u16 white[8] = {
@@ -2503,7 +2503,7 @@ static void ndsRendererNativeStageProjectedDepthMatrix(
     matrix->m[3][3] = ndsRendererRoundShiftS32Signed(clip->w, 8u);
 }
 
-static void ndsRendererNativeStageEmitProjectedDepthVertex(
+NDS_RENDERER_COLD static void ndsRendererNativeStageEmitProjectedDepthVertex(
     const NDSRendererProjectedClipVertex *vertex,
     const NDSNativeStagePreparedRun *run)
 {
@@ -2531,8 +2531,8 @@ static void ndsRendererNativeStageEmitProjectedDepthVertex(
  * inline into ndsRendererCommitNativeStageSegment grew that ITCM function
  * by 552 bytes and overflowed the 32 KiB region by 448. Same treatment the
  * near-plane clipper below already has. */
-static u32 __attribute__((noinline, cold, optimize("Os")))
-ndsRendererNativeStageEmitCrossMatrixTriangle(
+NDS_RENDERER_COLD static u32 __attribute__((noinline, cold, optimize("Os")))
+NDS_RENDERER_COLD ndsRendererNativeStageEmitCrossMatrixTriangle(
     const NDSNativeStageRun *run,
     const NDSNativeStagePreparedRun *prepared_run,
     u32 triangle_offset)

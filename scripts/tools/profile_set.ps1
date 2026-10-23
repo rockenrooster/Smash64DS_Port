@@ -10,7 +10,9 @@ param([string]$Build = 'build-prof-s67', [string]$Tag = 's67p', [int[]]$Slots = 
 # split over the gate (per-function totals only with -NoSplit: the per-frame
 # regions' DTCM words do not fit beside the ship layout's), written to
 # artifacts/performance/<date>_<Tag>-<run>-g<gkind>-profile/. -Set picks
-# 'cast', 'heavy', 'mixes' or 'all'. One line a run in
+# 'cast', 'heavy', 'mixes', 'all' or 'everyone' (the twelve original fighters
+# four a roster with items on, on Hyrule Temple, Saffron City and Congo
+# Jungle). One line a run in
 # builds/probes/profile-<Tag>.out.
 . "$PSScriptRoot\common.ps1"
 $stages = @(0, 1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 16, 41, 42, 43, 44)
@@ -18,6 +20,13 @@ function Word([int[]]$v) { $w = 0; for ($i = 0; $i -lt 4; $i++) { $w = $w -bor (
 $runs = @()
 if ($Set -in 'all', 'cast') { foreach ($g in $stages) { $runs += @{ Name = "cast-g$g"; G = $g; Kinds = '4294967295'; Content = '0' } } }
 if ($Set -in 'all', 'heavy') { foreach ($g in $stages) { $runs += @{ Name = "heavy-g$g"; G = $g; Kinds = (Word @(0, 1, 0, 1)); Content = (Word @(9, 13, 17, 20)) } } }
+if ($Set -eq 'everyone') {
+    # The twelve original fighters, four a roster, items on at the very-high
+    # rate: R1's cold set must not take a fighter's or an item's draw code
+    # for cold just because the cast and heavy rosters lack them.
+    foreach ($roster in @(@(0, 1, 2, 3), @(4, 5, 6, 7), @(8, 9, 10, 11))) { foreach ($g in 43, 7, 2) {
+        $runs += @{ Name = "f$($roster[0])-g$g"; G = $g; Kinds = (Word $roster); Content = '0'; Items = $true } } }
+}
 if ($Set -in 'all', 'mixes') {
     $mixes = @{ A = @(@(6, 0, 7, 7), @(4, 9, 19, 14)); B = @(@(1, 0, 10, 1), @(13, 10, 16, 3));
                 C = @(@(7, 1, 7, 8), @(2, 8, 18, 0)); D = @(@(7, 7, 7, 0), @(5, 6, 11, 17)) }
@@ -49,7 +58,8 @@ while ($queue.Count -gt 0 -or $jobs.Count -gt 0) {
                 & (Join-Path $repo 'scripts\run-task37-profile-census.ps1') -Build $build -NoBuild `
                     -Target smash64ds-p2-fourcpu-tickhud-hwtri -StartFrame $start -Frames $frames -Top 60 `
                     -OutDir $dir -RunnerSlot $slot @split `
-                    -BootSetGlobals @("gNdsLabFourCpuGkind=$($r.G)", "gNdsLabFourCpuKinds=$($r.Kinds)", "gNdsLabP4Content=$($r.Content)") *> $log
+                    -BootSetGlobals (@("gNdsLabFourCpuGkind=$($r.G)", "gNdsLabFourCpuKinds=$($r.Kinds)", "gNdsLabP4Content=$($r.Content)") +
+                                     $(if ($r.Items) { @('gNdsLabItemRate=5') } else { @() })) *> $log
                 "$($r.Name) slot=$slot exit=$LASTEXITCODE census=$(Test-Path (Join-Path $dir 'census.json'))"
             } catch {
                 "FAILED $($_.Exception.Message)" | Add-Content $log

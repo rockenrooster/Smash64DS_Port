@@ -36,7 +36,7 @@ __attribute__((used)) volatile u32 gNdsNativePolygonPoolBytes;
 __attribute__((used)) volatile u32 gNdsNativePolygonPoolEvictions;
 __attribute__((used)) volatile u32 gNdsNativePolygonPoolFull;
 
-void ndsRendererNativeArmPolygonImagePool(void)
+NDS_RENDERER_COLD void ndsRendererNativeArmPolygonImagePool(void)
 {
     sNdsNativePolygonPool.armed_generation = gNdsTaskmanHeapGeneration;
 }
@@ -68,7 +68,7 @@ static void ndsRendererNativePolygonPoolUnbind(u32 owner_slot)
     }
 }
 
-static void *ndsRendererNativePolygonPoolTake(u32 owner_slot, u32 bytes)
+NDS_RENDERER_COLD static void *ndsRendererNativePolygonPoolTake(u32 owner_slot, u32 bytes)
 {
     u32 entry = NDS_NATIVE_POLYGON_POOL_ENTRIES;
     u32 i;

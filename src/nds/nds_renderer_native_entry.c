@@ -469,8 +469,8 @@ static s32 ndsRendererEntryEffectCornersSelect(u32 root_index)
 /* At battle setup, before any entry draws: the blocks of the contents in the
  * match from nitro:/p4/entry_corners.bin into this scene's heap. A block that
  * does not fit or read stays out; its roots then fail closed (counted). */
-static void __attribute__((noinline, cold, optimize("Os")))
-ndsRendererEntryP4CornersLoad(void)
+NDS_RENDERER_COLD static void __attribute__((noinline, cold, optimize("Os")))
+NDS_RENDERER_COLD ndsRendererEntryP4CornersLoad(void)
 {
     FILE *file = NULL;
     u32 content;
@@ -3273,7 +3273,7 @@ volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
  * scene can draw it: an absent content's image, or one only the original
  * cast's entry props name whose special files the scene never loaded (18.5 KB
  * in an all-P4 match; FoxSpecial3 also loads for Sector Z's fly-by). */
-static void ndsRendererEntryTextureMarkLate(u8 *late)
+NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
 {
     static const u8 entry_end[6] = {
         NDS_ENTRY_EFFECT_FOX_ROOT_FIRST, NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST,

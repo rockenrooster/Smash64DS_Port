@@ -46,7 +46,7 @@ static void ndsRendererNativeBuildDenseShadeWords(
     }
 }
 
-static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
+NDS_RENDERER_COLD static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
 {
     ndsRendererNativeBuildDenseShadeWords(
         sNdsNativeFighterActiveTables->dense_vertices,

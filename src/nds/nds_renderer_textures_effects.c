@@ -2036,7 +2036,7 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
 static void ndsFtrCarveNoteRelease(
     const NDSRendererHardwareTextureCacheEntry *entry);
 
-static NDSRendererHardwareTextureCacheEntry *
+NDS_RENDERER_COLD static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareReleaseTexture(
     NDSRendererHardwareTextureCacheEntry *entry)
 {

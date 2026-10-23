@@ -572,7 +572,7 @@ u8 *ndsFighterPacketArenaTail(u32 *out_bytes)
         (NDS_FIGHTER_PACKET_ARENA_WORDS * sizeof(u32));
 }
 
-void ndsRendererFighterPacketRelease(void)
+NDS_RENDERER_COLD void ndsRendererFighterPacketRelease(void)
 {
     u16 *arena = &gSYFramebufferSets[0][0][0];
     u32 i;

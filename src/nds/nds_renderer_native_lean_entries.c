@@ -2377,7 +2377,7 @@ static u32 ndsFtrLeanGxParams(u32 op)
     }
 }
 
-void __attribute__((noinline, cold)) ndsFtrLeanPacketAlphaRestore(void)
+NDS_RENDERER_COLD void __attribute__((noinline, cold)) ndsFtrLeanPacketAlphaRestore(void)
 {
     u32 i;
 
@@ -2399,7 +2399,7 @@ void __attribute__((noinline, cold)) ndsFtrLeanPacketAlphaRestore(void)
     gNdsFtrLeanAlphaPending = 0u;
 }
 
-void __attribute__((noinline, cold)) ndsFtrLeanPacketSetAlpha(u32 battle_slot,
+NDS_RENDERER_COLD void __attribute__((noinline, cold)) ndsFtrLeanPacketSetAlpha(u32 battle_slot,
                                                              u32 alpha)
 {
     NDSFtrLeanEntryState *state;

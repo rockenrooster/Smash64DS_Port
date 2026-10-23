@@ -159,7 +159,7 @@ void ndsLabParticleReserveAfterCountdown(void)
  * generator: A5I3 for IA16 dust, A3I5 for I8 air, and lossless PAL16 for leaf
  * frame zero. Upload happens once at scene prepare; the hot path receives only
  * GL names and full-texture UVs. */
-static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
+NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
 {
     FILE *file = NULL;
     u32 texture;
@@ -315,7 +315,7 @@ fail:
  * own immutable GL name so the DS can do the same reflection in TEXIMAGE_PARAM
  * (WRAP_T|FLIP_T); an atlas cell cannot wrap without sampling its neighbours.
  */
-static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
+NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
 {
     const NDSParticleTexture *texture =
         &gNdsParticleTextures[27u];
@@ -845,7 +845,7 @@ static void ndsRendererParticleEnvVariantCommit(void)
     NDS_DIAG(gNdsParticleEnvVariantCommits++);
 }
 
-static void ndsRendererParticleEnvVariantDiscard(void)
+NDS_RENDERER_COLD static void ndsRendererParticleEnvVariantDiscard(void)
 {
     u32 slot;
 
@@ -1139,7 +1139,7 @@ volatile u32 gNdsParticleAnimSheetFailCount;
 static u32 sNdsParticleAnimNextSheet;
 static FILE *sNdsParticleAnimFile;
 
-static void ndsRendererParticleAnimationStop(void)
+NDS_RENDERER_COLD static void ndsRendererParticleAnimationStop(void)
 {
     if (sNdsParticleAnimFile != NULL)
     {

@@ -885,7 +885,7 @@ volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
  * caller says when that stage is live; nothing else keeps its textures. */
 volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
 
-static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
+NDS_RENDERER_COLD static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 {
     u32 root_index;
 
@@ -2417,7 +2417,7 @@ static inline void ndsRendererHardwareBindForeignTextureName(
     sNdsRendererHardwareActiveTextureEntry = NULL;
 }
 
-static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)
+NDS_RENDERER_COLD static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)
 {
     u32 i;
 
@@ -2468,7 +2468,7 @@ static const void *ndsRendererHardwareBattleStaticPointer(
             ((address - (uintptr_t)base) < bytes)) ? pointer : NULL;
 }
 
-static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
+NDS_RENDERER_COLD static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     const NDSBattlePlayableStaticTextureRecord *record,
     NDSRendererHardwareTextureKey *key)
 {
@@ -2538,7 +2538,7 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
             (key->height == record->logical_height)) ? TRUE : FALSE;
 }
 
-s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
+NDS_RENDERER_COLD s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
 {
     u32 record_index;
     u32 refreshed = 0u;

@@ -604,7 +604,7 @@ static sb32 ndsStageGxEligible(u32 segment)
 void ndsBattleDeadSpanAdd(void *base, u32 bytes);
 extern volatile u32 gNdsBattleDeadSpanLentBytes;
 
-s32 __attribute__((noinline, cold)) ndsStageGxYield(size_t size)
+NDS_RENDERER_COLD s32 __attribute__((noinline, cold)) ndsStageGxYield(size_t size)
 {
     u32 lent;
 

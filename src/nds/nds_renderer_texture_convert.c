@@ -352,7 +352,7 @@ static u8 ndsRendererReadTexturePackedNibble(
         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
 }
 
-static u32 ndsRendererHardwareCiPaletteEntriesUsed(
+NDS_RENDERER_COLD static u32 ndsRendererHardwareCiPaletteEntriesUsed(
     const NDSRendererConfig *config,
     const u8 *texels,
     u32 size,
@@ -1068,8 +1068,8 @@ static u16 ndsRendererHardwarePrimRgbTexel0Alpha(u16 texel0, u32 primitive)
     return (u16)(opaque | red | (green << 5) | (blue << 10));
 }
 
-static void __attribute__((noinline))
-ndsRendererHardwareBuildTexel01Ci4Lut(
+NDS_RENDERER_COLD static void __attribute__((noinline))
+NDS_RENDERER_COLD ndsRendererHardwareBuildTexel01Ci4Lut(
     const NDSRendererConfig *config,
     const u16 *palette,
     u32 palette_count,
@@ -1218,7 +1218,7 @@ static const u8 *ndsRendererHardwareGetCi4Indices(
     return entry->indices;
 }
 
-static u32 ndsRendererHardwareBuildCi4RepresentativeMap(
+NDS_RENDERER_COLD static u32 ndsRendererHardwareBuildCi4RepresentativeMap(
     const u8 *source0, const u8 *source1, u8 *representative, u32 count)
 {
     u32 i;

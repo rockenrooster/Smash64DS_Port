@@ -860,7 +860,7 @@ static void ndsRendererHardwareResetFoxGunTextureState(void)
     gNdsRendererFoxGunBytes = 0u;
 }
 
-static void ndsRendererHardwareReleaseFoxGunTexture(void)
+NDS_RENDERER_COLD static void ndsRendererHardwareReleaseFoxGunTexture(void)
 {
     if (sNdsRendererFoxGunName != 0)
     {
@@ -1185,7 +1185,7 @@ void ndsRendererSubmitDebugDiamond(f32 cx, f32 cy, f32 cz,
      * NOT re-enable GL_TEXTURE_2D here -- the batch is about to close. */
 }
 
-void ndsRendererHardwareArmBattleStaticTextures(void)
+NDS_RENDERER_COLD void ndsRendererHardwareArmBattleStaticTextures(void)
 {
     if ((gNdsRendererBattleStaticTextureEnabled != 0u) &&
         (sNdsRendererBattleStaticTexturePrepared != 0u) &&
