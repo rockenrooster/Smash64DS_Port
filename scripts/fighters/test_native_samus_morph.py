@@ -20,9 +20,11 @@ from source_test_helpers import source as read_split  # noqa: E402
 def test_morph_programs_reuse_source_geometry_and_live_joint(detail):
     context = native.build_p2_owner_runtime_context(SOURCE, "samus", detail)
     programs = native.build_owner_root_programs(SOURCE, context)
-    assert [p["name"] for p in programs] == ["Catch", "MorphUnfold", "MorphBall"]
+    # FSmash (the forward smash's own root program) sits between Catch and
+    # the morph pair.
+    assert [p["name"] for p in programs] == ["Catch", "FSmash", "MorphUnfold", "MorphBall"]
     assert len(programs[0]["roots"]) == 21
-    for program, offset in zip(programs[1:], (0x8158, 0x8708)):
+    for program, offset in zip(programs[2:], (0x8158, 0x8708)):
         assert program["root_offsets"] == (offset,)
         assert program["roots"] == [next(row for row in context["roots"] if row[0] == offset)]
         assert program["binding_parents"] == (255,)

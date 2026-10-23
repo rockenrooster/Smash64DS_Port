@@ -37,18 +37,24 @@ sys.path.insert(0, SCRIPT_DIR)
 import preview_source_metadata as srcgen
 
 REPO = srcgen.REPO
+# Re-pinned 2026-10-23 (kirby, link, yoshi): the generator commits after this
+# pin changed those packs on purpose -- 1de1fb0ae83 (Yoshi's invisible CSS
+# preview, Kirby's ladder), 538862570e7 (Link's boots). The test's claim is
+# unchanged: Ness's metadata moves no other kind's bytes.
 BASELINE_SHA256 = {
     'captain': '588732dc9f579c176e19560ae9aa672edfac6f27be1fbf0751dd72563187f506',
     'donkey': '9e5bf61fd1b34e6988b3709bb2b1c91cb561bd8e93eb06ddbe9e9fdb94f754b4',
     'fox': 'cc856574f512a99e53318e3b4c4c32bdb3232af4f7075404f783b4ad6e651058',
-    'kirby': 'ea731d504328580c922a3d8a2f698679f38ddb57bcc49e7f47c0df4e384224cc',
-    'link': '05ab208afeb6fdaf10e32d24e9b273c27b65b2cf969f759553cd9dc2e35ac34f',
+    'kirby': '3c4e2c8c21a438a25450232b418bba06e88768a476feadd1f034f60276288443',
+    # Re-pinned 2026-10-23: 538862570e7 (Link's CSS boots brown again) keeps
+    # every texture the preview lists, which changed Link's pack on purpose.
+    'link': '08d3e94c16a7f1a63d619a4641fe7d8f2916145322b62a5ef8ec928b8c9e7832',
     'luigi': '740a9070e40ebbfe9a0bbf86dddda71e79c0cbc8ae2f0d5ce256c8dc8332faf3',
     'mario': 'eb110d020e2f6640468f2650471d7370c81b5401570f073de75d122a381430ee',
     'pikachu': '660bfd3c179c661cd350af3106182124ab9c410e3d85d9c95dd76f0acedadc6b',
     'purin': 'e10880cad27d07ad0510fcb59944c738f431b0eff5bcccd17ea610f941497f5f',
     'samus': '8ccec4dd5767727c262be0f267d2ca34690047cfa3c6b9e722d615620b90f248',
-    'yoshi': 'e47fcd4d4d55704f2371c357794631f5aae20528e308531fa55494f16106d9d1',
+    'yoshi': '8d54d70f4cc50b26d7ecb11b457d11694ebd46fa401bafd59bdc588f84a02036',
 }
 
 # Pinned O2R-chain resolutions (measured from the Ness Model O2R payload
