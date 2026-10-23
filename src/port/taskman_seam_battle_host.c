@@ -1157,7 +1157,13 @@ static void ndsCampaignDrivePlayback(void)
         {
             /* Round-robin over the enemy slots: a team slot whose fighter is
              * already down keeps its GObj, and always taking the first slot
-             * starved the live ones. */
+             * starved the live ones. The live fighter decides, not the slot:
+             * after a whole ladder a slot the Master Hand stage leaves unused
+             * still names an earlier stage's fighter and its GObj, which the
+             * pool can hand to Master Hand, so the slot's own kind said
+             * "not the boss" while its GObj was Master Hand (owner video
+             * 2026-10-22: Master Hand dropped below the stage every 45
+             * frames of the S1 campaign audit's Wario run). */
             static s32 sNdsCampaignKoNext;
             s32 step;
 
@@ -1166,13 +1172,18 @@ static void ndsCampaignDrivePlayback(void)
                 s32 player = (sNdsCampaignKoNext + step) % GMCOMMON_PLAYERS_MAX;
                 GObj *enemy_gobj =
                     gSCManagerBattleState->players[player].fighter_gobj;
+                const FTStruct *enemy_fp;
 
                 if ((player == gSCManagerSceneData.player) ||
                     (gSCManagerBattleState->players[player].is_spgame_enemy ==
                      FALSE) ||
-                    (ndsCampaignFighterLinked(enemy_gobj) == FALSE) ||
-                    (gSCManagerBattleState->players[player].fkind ==
-                     nFTKindBoss))
+                    (ndsCampaignFighterLinked(enemy_gobj) == FALSE))
+                {
+                    continue;
+                }
+                enemy_fp = ftGetStruct(enemy_gobj);
+                if ((enemy_fp == NULL) || (enemy_fp->fkind == nFTKindBoss) ||
+                    ((s32)enemy_fp->player != player))
                 {
                     continue;
                 }
