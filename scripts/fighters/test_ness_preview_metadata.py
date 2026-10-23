@@ -52,7 +52,10 @@ BASELINE_SHA256 = {
     'luigi': '740a9070e40ebbfe9a0bbf86dddda71e79c0cbc8ae2f0d5ce256c8dc8332faf3',
     'mario': 'eb110d020e2f6640468f2650471d7370c81b5401570f073de75d122a381430ee',
     'pikachu': '660bfd3c179c661cd350af3106182124ab9c410e3d85d9c95dd76f0acedadc6b',
-    'purin': 'e10880cad27d07ad0510fcb59944c738f431b0eff5bcccd17ea610f941497f5f',
+    # Re-pinned 2026-10-23: f971a460d31 (Purin's VS select bow and hats keep
+    # their texture) walks her costume accessory's list, which changed her
+    # pack on purpose.
+    'purin': 'ee92bb4af22a1d48e61310406a000fdcb099afb93675d37a1e6757507c7c211f',
     'samus': '8ccec4dd5767727c262be0f267d2ca34690047cfa3c6b9e722d615620b90f248',
     'yoshi': '8d54d70f4cc50b26d7ecb11b457d11694ebd46fa401bafd59bdc588f84a02036',
 }
