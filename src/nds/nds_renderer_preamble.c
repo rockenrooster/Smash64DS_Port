@@ -3109,6 +3109,9 @@ static const NDSRendererHardwareTextureCacheEntry
  * atlas-coverage change cannot grow the dedicated set unnoticed. */
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 9u,
                "particle atlas sheets would crowd the texture cache");
+/* Main RAM, not the DTCM hot list: one word a sheet, and the sheet count
+ * grows (P8 loop V) while the gate ROM's DTCM sits at its 12,288-byte
+ * ceiling (linker/nds_hot_text.ld); the ninth sheet's word took it over. */
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 /* 9 -> 10 on 2026-10-04: a sixth quad sheet seats the item flame and smoke
  * at source size. 10 -> 11 the same day: a seventh seats Yoshi's egg

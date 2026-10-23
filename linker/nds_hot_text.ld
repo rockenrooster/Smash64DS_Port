@@ -559,7 +559,6 @@ SECTIONS {
 		*(.bss.gNdsMPWallSweepCalls)
 		*(.bss.gNdsLabPoseJointCapLimit)
 		*(.bss.gMPCollisionLineGroups)
-		*(.bss.sNdsRendererParticleAtlasName)
 		*(.bss.sNdsFtrLeanMemoFill)
 		*(.bss.gspF3DEX2_fifoTextStart)
 		*(.bss.sNdsMPLineYakumonoState)
