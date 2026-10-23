@@ -65,6 +65,10 @@ static const NDSRendererAdapterNativeStageCaptureSegment *ndsRendererAdapterNati
 {return i==1 ? &row : NULL;}
 static void *ndsGRZebesAcidGObj(void) {return acid;}
 static void gcDrawDObjTreeDLLinksForGObj(GObj *g) {(void)g;}
+/* The stage-select preview's own tables (mode 0 here: the battle path). */
+static u32 sNdsRendererAdapterStagePreviewMode;
+static GObj *sNdsRendererAdapterStagePreviewLayers[4];
+static GObj *sNdsRendererAdapterStagePreviewActors[6][4];
 ''' + '\n'.join('static void '+cb+'(GObj *g) {(void)g;}' for cb in dict.fromkeys(callbacks)) + '\n' + get + '\n' + matches + '''
 int main(void) {
 GObj a={gcDrawDObjTreeDLLinksForGObj},b={grDisplayLayer1SecProcDisplay};
@@ -100,7 +104,7 @@ def test_translation_only_stage_nodes_keep_their_source_matrix_kind(tmp_path):
 typedef uint16_t u16; typedef int sb32;
 #define TRUE 1
 #define FALSE 0
-enum {nGCMatrixKindTra=3,nGCMatrixKindTraRotRpyRSca=18,nGCMatrixKind48=48,
+enum {nGCMatrixKindTra=3,nGCMatrixKindTraRotRpyR=17,nGCMatrixKindTraRotRpyRSca=18,nGCMatrixKind48=48,
       nGCMatrixKind46=46,nGCMatrixKindRecalcRotRpyRSca=45};
 typedef struct {int kind;} XObj;
 typedef struct {unsigned xobjs_num;XObj *xobjs[2];} DObj;
@@ -109,6 +113,7 @@ int main(void) {
 u16 flags=99; XObj x={nGCMatrixKindTra}; DObj d={1,{&x,NULL}};
 assert(ndsRendererAdapterNativeStageTransformFlags(&d,&flags)&&flags==0);
 x.kind=nGCMatrixKindTraRotRpyRSca;assert(ndsRendererAdapterNativeStageTransformFlags(&d,&flags)&&flags==0);
+x.kind=nGCMatrixKindTraRotRpyR;assert(ndsRendererAdapterNativeStageTransformFlags(&d,&flags)&&flags==0);
 x.kind=99;assert(!ndsRendererAdapterNativeStageTransformFlags(&d,&flags));
 x.kind=nGCMatrixKindTra;d.xobjs_num=2;assert(!ndsRendererAdapterNativeStageTransformFlags(&d,&flags));
 return 0; }

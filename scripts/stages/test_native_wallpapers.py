@@ -57,9 +57,12 @@ class NativeWallpaperTests(unittest.TestCase):
 
     def test_all_nine_battle_plus_results_present_and_sized(self):
         keys = [source.key for source in gen.SOURCES]
-        self.assertEqual(len(keys), 10, "nine VS stages plus Results")
-        self.assertEqual(len([s for s in gen.SOURCES if s.battle]), 9,
-                         "1P stays paused: exactly nine battle wallpapers")
+        # The nine VS stages, the 1P campaign's own four (the final stage,
+        # the Fighting Polygon and Metal stages, the bonus boards), the
+        # Training backdrop's three colours, and Results.
+        self.assertEqual(len(keys), 17, "battle wallpapers plus Results")
+        self.assertEqual(len([s for s in gen.SOURCES if s.battle]), 16,
+                         "sixteen battle wallpapers")
         for key in keys:
             with self.subTest(stage=key):
                 asset = self.by_key[key]
@@ -88,7 +91,8 @@ class NativeWallpaperTests(unittest.TestCase):
             r"\{\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+),\s*"
             r"(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*\"([^\"]+)\"\s*\}",
             text)
-        self.assertEqual(len(rows), 10, "header holds one row per asset")
+        self.assertEqual(len(rows), len(gen.SOURCES),
+                         "header holds one row per asset")
         registry = (self.repo / "src/nds/nds_reloc_assets.c").read_text()
         for asset_id, file_id, src_off, src_w, src_h, nat_w, nat_h, fmt, name in rows:
             with self.subTest(row=name):
