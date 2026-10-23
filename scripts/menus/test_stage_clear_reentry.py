@@ -74,6 +74,14 @@ static void sc1PStageClearMakeDamageTextSObjs(float y) { (void)y; sSC1PStageClea
 static void sc1PStageClearMakeDamageDigits(float y) { (void)y; sSC1PStageClearDamageMultiplierGObj = (GObj *)1; }
 static void sc1PStageClearUpdateBonusScore(void) { sSC1PStageClearScoreTextGObj = (GObj *)1; }
 static void sc1PStageClearMakeBonusTable(void) {}
+/* The wrapper's photo: the battle's last frame resampled into the source's
+ * framebuffer (ndsPlatformTransitionSnapshotToN64Frame), here a host array. */
+#include <string.h>
+typedef uint16_t u16;
+static u16 gSYFramebufferSets[1][231][320];
+static void *gSYSchedulerCurrentFramebuffer;
+static s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width, u32 height)
+{ (void)frame; (void)width; (void)height; return TRUE; }
 ''' + functions + r'''
 static void ndsBaseSC1PStageClearStartScene(void)
 {

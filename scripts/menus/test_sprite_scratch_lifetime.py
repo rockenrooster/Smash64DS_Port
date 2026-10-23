@@ -132,6 +132,8 @@ static void ndsPlatformVramReturnBankDNow(void)
     fprintf(stderr, "bank D return must not run without a lent BG3\n");
     exit(1);
 }
+/* P8 V5: bank C is never lent to textures here, so BG2 is always usable. */
+static s32 ndsPlatformVramBg2Usable(u32 write) { (void)write; return 1; }
 ''' + SCALE + "\n" + ADVANCE + "\n" + CLEARPIX + "\n" + RESERVE + "\n" + BEGIN + "\n" + COMMIT + "\n" + CLEAR + r'''
 static void check_window_cleared(u16 *base, u32 w, u32 h, u16 sentinel)
 {

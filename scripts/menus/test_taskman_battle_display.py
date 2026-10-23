@@ -32,12 +32,18 @@ def host_source(wrapper):
 #include <stdint.h>
 #include <string.h>
 typedef uint32_t u32;
-typedef struct { void *arena_start; size_t arena_size; } SceneSetup;
+/* The wrapper also sizes the Results/Challenger/Continue display lists. */
+typedef struct { u32 w0, w1; } Gfx;
+typedef struct { void *arena_start; size_t arena_size;
+                 size_t dl_buffer0_size, dl_buffer1_size; } SceneSetup;
+#define NDS_P2_MENU_SHELL 1
 typedef struct { SceneSetup scene_setup; int budgeted; } SYTaskmanSetup;
 typedef struct { u32 flags; } NdsSceneDesc;
 enum { FALSE = 0, TRUE = 1, NDS_SCENE_FLAG_ARENA_RESET = 1,
        NDS_SCENE_FLAG_MENU = 2, NDS_SCENE_FLAG_BATTLE = 4,
-       nSCKind1PIntro = 14, nSCKind1PGamePlayers = 17 };
+       nSCKind1PChallenger = 13, nSCKind1PIntro = 14,
+       nSCKind1PGamePlayers = 17, nSCKindVSResults = 24,
+       nSCKind1PContinue = 49 };
 static struct { u32 scene_curr; } gSCManagerSceneData;
 static char arena[32], old_arena[8];
 static NdsSceneDesc descriptor;
@@ -86,7 +92,7 @@ int main(void)
         {
             for (int entry = 0; entry < 2; entry++)
             {
-                SYTaskmanSetup setup = {{old_arena, sizeof(old_arena)}, budgeted};
+                SYTaskmanSetup setup = {{old_arena, sizeof(old_arena), 0, 0}, budgeted};
                 SYTaskmanSetup original = setup;
                 enables = entered = ran = exited = rebudgets = records = 0;
                 expect_rebudget = expected_battle && !budgeted;
