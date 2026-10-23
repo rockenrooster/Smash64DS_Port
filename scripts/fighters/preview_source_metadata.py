@@ -1244,6 +1244,13 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
 
     raw_end = entry["model_source_bytes"]
     pending = sorted(dl_spans, reverse=True)
+    # A costume accessory's list (Purin's bow and hats, Pikachu's hats:
+    # OWNER_ACCESSORY_PARTS) is no joint's display list, so the measured lists
+    # never reach it; costumes 1-3 draw it in the preview, and Purin's texels
+    # at 0x67D0 mapped to NULL there (untextured, as Link's boots were).
+    accessory = gen.OWNER_ACCESSORY_PARTS.get(key)
+    if accessory is not None:
+        pending.append(accessory[1])
     walked = set()
     while image_resource is not None and pending:
         pc = pending.pop()
