@@ -4101,7 +4101,7 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
 CFILES += nds_battle_hud.c
 # P3 local multiplayer (include/nds/nds_net.h).
-CFILES += nds_net_link.c nds_net_lab.c nds_net_session.c nds_net_lobby.c nds_net_ui.c nds_net_autopilot.c
+CFILES += nds_net_link.c nds_net_session.c nds_net_lobby.c nds_net_ui.c nds_net_autopilot.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER),1)
 CFILES += battleship_wpmanager_core.c
@@ -4178,15 +4178,6 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI),1)
 CFILES += battleship_fox_special_hi.c
 endif
 CFILES += battleship_ftmain.c
-ifeq ($(NDS_TASK9_FLOAT_CENSUS),1)
-CFILES += nds_task9_float_census.c
-endif
-ifeq ($(NDS_TASK9_STATE_HASH),1)
-CFILES += nds_task9_state_hash.c
-endif
-ifeq ($(NDS_TASK49_GX_DIFFER),1)
-CFILES += nds_task49_gx_differ.c
-endif
 # grModelSetupGroundDObjs is shared stage-model setup, not Mushroom Kingdom
 # specific: Congo Jungle builds its barrel cannon with it too
 # (grjungle.c:119). The gate is the OR of everyone who needs it, so the

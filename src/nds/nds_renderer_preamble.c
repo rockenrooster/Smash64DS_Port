@@ -14,7 +14,6 @@
 #include <nds/nds_gx_dma.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
-#include <nds/nds_task49_gx_differ.h>
 #include <nds/renderer_fighter_lean.h>
 #if NDS_P2_LINK
 const LookAt *ndsRendererAdapterCurrentLookAt(void);
@@ -177,9 +176,7 @@ static inline void ndsRendererTask29GXRecord(
     const u32 *words,
     u32 word_count)
 {
-    /* Task 49 GX-differ hook: the single writer touch on this TU for the
-     * differ. Records the per-owner stream word-for-word (body in the
-     * nds_task49_gx_differ TU; compiles to nothing at the default). */
+    /* The GX recorders' hook; no recorder is built. */
 }
 
 static inline void ndsRendererTask29GlEnable(int bits)
