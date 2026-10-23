@@ -39,8 +39,7 @@
 /* The source's particle effects (efmanager.c) and Quick Attack's angle
  * test (vector.c). */
 extern LBParticle *efManagerFlameRandomMakeEffect(Vec3f *pos);
-extern LBParticle *efManagerSparkleWhiteMultiMakeEffect(Vec3f *pos);
-extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 f32 syVectorAngleDiff3D(Vec3f *a, Vec3f *b);
 
@@ -269,7 +268,9 @@ static sb32 ndsP4PalutenaFlameProcUpdate(GObj *weapon_gobj)
         {
             func_800269C0_275C0(v->fgm);
         }
-        efManagerSparkleWhiteMultiExplodeMakeEffect(pos);
+        /* The plain white sparkle, as the burn's (owner 2026-10-23: with her
+         * new animations; it was the multi-explode burst). */
+        efManagerSparkleWhiteMakeEffect(pos);
     }
     else if ((t >= PAL_FLAME_BURN_AT) && (t < PAL_FLAME_BLAST_AT) &&
              (((t - PAL_FLAME_BURN_AT) % PAL_FLAME_BURN_EVERY) == 0))
@@ -277,7 +278,7 @@ static sb32 ndsP4PalutenaFlameProcUpdate(GObj *weapon_gobj)
         ndsP4PalutenaFlameHit(wp, PAL_FLAME_BURN_DAMAGE, PAL_FLAME_BURN_SIZE, 0, 100,
                               PAL_FLAME_BURN_KNOCKBACK_WEIGHT, 0, nSYAudioFGMBurnS);
         efManagerFlameRandomMakeEffect(pos);
-        efManagerSparkleWhiteMultiMakeEffect(pos);
+        efManagerSparkleWhiteMakeEffect(pos);
     }
     return (t >= (PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS - 1)) ? TRUE : FALSE;
 }
