@@ -493,7 +493,14 @@ QUAD_ATLAS_HEIGHT = 64
 # seats them at source resolution (5 cells x 1,024 texels).
 # The same day Yoshi's egg-explosion bank (YOSHI_SCRIPT_BANK) arrives: a 64x64
 # and a 32x32 cell, 5,120 texels at the one-frame cap, in a seventh block.
-QUAD_ATLAS_SHEETS_MAX = 7
+#
+# 2026-10-22 (owner: the explosion "looks a little different than the n64"):
+# SparkleWhiteMulti, the item/bomb explosion, is texture 29's ten RGBA32
+# frames -- fireball, red burn, smoke, star flash, rays -- and the one-frame
+# cap held frame 0, a yellow puff, for the whole effect. The owner picked
+# 24x24 (QUAD_CELL_SIZE); ten of those are 5,760 texels against the ~700 the
+# seven sheets leave, so an eighth proven-size 8 KiB block carries them.
+QUAD_ATLAS_SHEETS_MAX = 8
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after
@@ -739,7 +746,17 @@ QUAD_HELD_FRAME = {25: 2}
 # 482/639/587 of 1024 texels). Keyed by STRIDED id because admit_at decimates
 # extra candidates by their quad key; 4 frames of 8x8 cost 256 bytes and seat
 # in the 896-byte residual beside the existing set (same seating run).
-QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 224: 1, 225: 4}
+#
+# The explosion (texture 29) keeps all ten frames: its scripts step 0..8 a
+# tick apiece and 0x21 draws 9, so any decimation drops a whole stage of the
+# burn (see QUAD_ATLAS_SHEETS_MAX's 2026-10-22 note).
+QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 29: 10, 224: 1, 225: 4}
+
+# A cell size that is not a halving of the source, by texture. quad_cell_dims
+# only halves, and 32 -> 16 -> 8 has no step at 24; the owner chose 24x24 for
+# the explosion (0.75x) as the size that keeps its ten frames readable in one
+# 8 KiB sheet. The atlas bake area-averages these (area_average_cell).
+QUAD_CELL_SIZE = {29: 24}
 
 
 def quad_cell_dims(width: int, height: int,
@@ -2002,6 +2019,42 @@ def palette_grouped_pack(cells: list[dict],
     return None
 
 
+def area_average_cell(pixels: list[tuple[int, int, int, int]],
+                      src_w: int, src_h: int,
+                      cell_w: int, cell_h: int) -> list[tuple[int, int, int, int]]:
+    """A non-integer reduction (QUAD_CELL_SIZE): each cell texel averages the
+    source texels it covers, weighted by covered area -- the integer box
+    average below, generalised to fractional spans."""
+    def spans(src: int, dst: int, index: int) -> list[tuple[int, float]]:
+        start = index * src / dst
+        end = (index + 1) * src / dst
+        out = []
+        texel = int(start)
+        while texel < end and texel < src:
+            weight = min(end, texel + 1) - max(start, texel)
+            if weight > 0:
+                out.append((texel, weight))
+            texel += 1
+        return out
+
+    grid = []
+    for row in range(cell_h):
+        rows = spans(src_h, cell_h, row)
+        for column in range(cell_w):
+            columns = spans(src_w, cell_w, column)
+            total = [0.0, 0.0, 0.0, 0.0]
+            area = 0.0
+            for y, wy in rows:
+                for x, wx in columns:
+                    texel = pixels[y * src_w + x]
+                    weight = wy * wx
+                    for channel in range(4):
+                        total[channel] += texel[channel] * weight
+                    area += weight
+            grid.append(tuple(int(value / area + 0.5) for value in total))
+    return grid
+
+
 def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                      frames_by_texture: dict[int, list[list]],
                      extra_candidates: list[dict] | None = None) -> dict:
@@ -2052,6 +2105,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             cell_max = min(cell_max, rung)
             cell_w, cell_h = quad_cell_dims(texture["width"],
                                             texture["height"], cell_max)
+            if texture["id"] in QUAD_CELL_SIZE:
+                cell_w = cell_h = min(QUAD_CELL_SIZE[texture["id"]], rung)
             frame_list = quad_texture_frame_list(texture["id"],
                                                  texture["frames"])
             rows.append({
@@ -2218,6 +2273,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 f"quad atlas texture {cell['texture']} frame {cell['source']} "
                 f"has {len(pixels)} pixels, expected "
                 f"{cell['src_w'] * cell['src_h']}")
+        if (cell["src_w"] % cell["w"]) or (cell["src_h"] % cell["h"]):
+            box_averaged.append(area_average_cell(
+                pixels, cell["src_w"], cell["src_h"], cell["w"], cell["h"]))
+            continue
         step_x = cell["src_w"] // cell["w"]
         step_y = cell["src_h"] // cell["h"]
         preserve_sparkle_coverage = (

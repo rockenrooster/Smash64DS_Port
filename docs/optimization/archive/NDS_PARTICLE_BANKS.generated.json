@@ -397,11 +397,11 @@
         "width": 32
       },
       {
-        "bytes": 1024,
+        "bytes": 5760,
         "frames": 10,
-        "height": 32,
+        "height": 24,
         "texture": 29,
-        "width": 32
+        "width": 24
       },
       {
         "bytes": 1024,
@@ -593,19 +593,19 @@
         "width": 32
       }
     ],
-    "atlas_bytes": 57344,
+    "atlas_bytes": 65536,
     "atlas_height": 64,
     "atlas_width": 128,
-    "budget_bytes": 57344,
-    "bytes": 56640,
+    "budget_bytes": 65536,
+    "bytes": 61376,
     "cell_cap": 64,
     "excluded": [],
     "frame_cap": 1,
-    "frame_count": 61,
+    "frame_count": 70,
     "held_frames": {
       "25": 2
     },
-    "palette_bytes": 448,
+    "palette_bytes": 512,
     "palette_entries": 32,
     "palette_sheet_entries": [
       8,
@@ -614,11 +614,12 @@
       20,
       32,
       32,
+      32,
       32
     ],
     "palette_stride_bytes": 64,
     "sheet_bytes": 8192,
-    "sheets": 7
+    "sheets": 8
   },
   "reach": {
     "p1_seams": [

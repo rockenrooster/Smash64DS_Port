@@ -3112,10 +3112,12 @@ _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 /* 9 -> 10 on 2026-10-04: a sixth quad sheet seats the item flame and smoke
  * at source size. 10 -> 11 the same day: a seventh seats Yoshi's egg
- * explosion and Kirby's inhale wind, their fighter banks' first cells. */
+ * explosion and Kirby's inhale wind, their fighter banks' first cells.
+ * 11 -> 12 on 2026-10-22: an eighth seats the item explosion's ten frames
+ * (texture 29 at 24x24; it held frame 0 for the whole effect). */
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
                    NDS_WHISPY_NATIVE_TEXTURE_COUNT +
-                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 11u,
+                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 12u,
                "particle native textures would crowd the texture cache");
 static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
 static int sNdsRendererFoxBlasterGlowName;

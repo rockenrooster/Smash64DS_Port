@@ -553,7 +553,7 @@ $actualExcluded = @($report.quads.excluded |
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
-    ([int64]$report.quads.sheets -ne 7) -or
+    ([int64]$report.quads.sheets -ne 8) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
@@ -601,8 +601,11 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # Then the five new seams' textures (9's twin 26, 42, 43 and 1's ripple)
     # join and Dream Land's three cells leave (Whispy draws natively):
     # +1,792 B net, one frame and one row.
-    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 56640 } else { 55616 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 61 } else { 60 })) -or
+    # 2026-10-22: the explosion (texture 29) keeps all ten frames at 24x24
+    # (owner pick; was frame 0 alone at 32x32) in an eighth 8,192-byte sheet:
+    # +4,736 B and nine frames in both bakes; nothing else moves or leaves.
+    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 61376 } else { 60352 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 70 } else { 69 })) -or
     (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 56 } else { 55 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
