@@ -287,6 +287,8 @@ scoreboard as before (the 2026-08-02 failure modes); WORK P95 on the short
 worst-case sweep no worse (a sheet change costs one bind); main-RAM heap
 unchanged; a play ROM for the owner.
 
+**Measured (2026-10-23).** Every scripted frame at 0.75x in one atlas is 24 sheets, and texture VRAM cannot hold it beside the countdown: the census refused stage textures on every measured stage but Dream Land. The countdown's traffic/cloud atlases (57,344 B) were resident the whole match although drawn ~7 s. So: (A) they are released when the countdown's process ends; (B) the frames the base cells lack go in animation sheets after the nine base ones, uploaded one a frame once the countdown is gone, into banks A+B's holes (A+B are locked after battle setup), the lookup skipping sheets not yet resident. Taking every sheet a stage could hold (up to 17) starved the texture cache (Hyrule Temple heavy +146K WORK P95, two native failures), so the budget is the countdown's bytes: 7 sheets, in `QUAD_ANIMATION_PRIORITY` order, textures whole or not at all, and the frames a 30 Hz present cannot show left out (every second frame a script holds one tick). That animates the whole owner list but the two 64x64 dusts (DustDash, DustHeavy: 32,256 texels at 0.75x); they wait on the owner (0.5x, or more VRAM). Dream Land's leaf (Whispy native, 4 frames) and Ness's PK Fire / Yoshi's egg (fighter banks) also still hold frame 0.
+
 **Exit V:** every listed effect, and any other effect whose source animates,
 plays its scripted frames at 0.75x or better, or the owner has picked the
 remaining reductions.
