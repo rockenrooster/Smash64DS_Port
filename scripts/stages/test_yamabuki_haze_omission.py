@@ -25,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE_112 = (
     ROOT / "decomp/BattleShip-main/decomp/src/relocData/112_StageYamabukiFile2.c"
 )
-BUG_NOTES = ROOT / "docs/p2/BUG_NOTES.md"
+# The notes moved from docs/p2/ to docs/ (owner, 2026-10-22); either holds them.
+BUG_NOTES = next((path for path in (ROOT / "docs/BUG_NOTES.md", ROOT / "docs/p2/BUG_NOTES.md")
+                  if path.exists()), ROOT / "docs/BUG_NOTES.md")
 
 DRAW_FIELDS = ("triangle_count", "run_count", "source_vertex_count",
                "vertex_command_count", "source_command_count",

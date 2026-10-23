@@ -22,6 +22,7 @@ def test_native_wallpaper_affine_ownership(tmp_path):
     end = source.index("void ndsPlatformCommitOriginalSpriteOverlayTransform", start)
     queue = source[start:end]
     clear = function(source, "void ndsPlatformClearOriginalSpriteOverlayLayer(")
+    set_affine = function(source, "static void ndsPlatformSetBg2Affine(")
     harness = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -59,7 +60,19 @@ static u32 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(u32 layer)
 {
     return ++sOriginalSpriteOverlayEpoch[layer];
 }
-''' + queue + clear + r'''
+/* The shown-affine record, a held transition (none here) and the BG3 loan
+ * (never lent here). */
+static s32 sNdsBg2AffineShown[4];
+#define NDS_TRANSITION_HOLD_NONE 0u
+#define NDS_TRANSITION_HOLD_EXIT 2u
+static u32 sNdsTransitionHold = NDS_TRANSITION_HOLD_NONE;
+static u32 thaws;
+static void ndsPlatformTransitionThaw(void) { thaws++; }
+static u32 sOriginalSpriteOverlayBg3Lent, sOriginalSpriteOverlayBg3ReturnPending;
+static void ndsPlatformVramReturnBankDNow(void) { assert(0); }
+#define NDS_TRANSITION_SNAPSHOT_BANK_C 1u
+static u32 sNdsTransitionSnapshotBank;
+''' + set_affine + queue + clear + r'''
 int main(void)
 {
     assert(ndsPlatformQueueNativeWallpaperAffine(200, 201, -12, 13));
@@ -84,6 +97,7 @@ int main(void)
     ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
     ndsPlatformCommitNativeWallpaperAffine();
     assert(writes == 2 && registers[0] == 256 && registers[1] == 256);
+    assert(sNdsBg2AffineShown[0] == 256 && sNdsBg2AffineShown[3] == 0);
     assert(registers[2] == 0 && registers[3] == 0);
     assert(gNdsOriginalSpriteBg2ClearBytes == sizeof(pixels));
     assert(ndsPlatformQueueNativeWallpaperAffine(190, 191, 60, 61));

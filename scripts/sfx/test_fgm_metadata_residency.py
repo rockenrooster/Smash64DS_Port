@@ -64,6 +64,11 @@ static u32 sNdsAudioFgmEnvelopeBase;
 static unsigned cache_resets, read_calls, short_read, route_inits;
 static void ndsAudioFgmCacheReset(void) { ++cache_resets; }
 static void ndsAudioFgmDirectRouteInit(void) { ++route_inits; }
+/* The id map and the P4 contents' own pack follow the base pack; neither
+ * is this loader's residency question. */
+static unsigned id_maps, p4_packs;
+static void ndsAudioFgmBuildIdMap(void) { ++id_maps; }
+static void ndsAudioFgmLoadP4Pack(void) { ++p4_packs; }
 static size_t injected_read(void *out, size_t size, size_t count, FILE *f) {
     ++read_calls;
     if (short_read && read_calls == short_read) return fread(out, size, count-1, f);
@@ -87,6 +92,7 @@ int main(int argc, char **argv) {
     }
     ndsAudioFgmLoadFenced(); /* Reload fence must preserve resident handles. */
     if (cache_resets != 1 || read_calls != 3 || route_inits != 1 ||
+        id_maps != 1 || p4_packs != 1 ||
         gNdsAudioFgmSupportedCount != NDS_AUDIO_FGM_ENTRY_COUNT ||
         gNdsAudioFgmResidentBytes != NDS_AUDIO_FGM_CACHE_BYTES + sizeof(sNdsAudioFgmEntries) ||
         gNdsAudioFgmHandleCapacity != NDS_AUDIO_FGM_HANDLE_COUNT) return 5;
