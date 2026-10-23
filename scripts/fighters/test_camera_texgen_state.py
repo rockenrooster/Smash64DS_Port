@@ -189,6 +189,20 @@ const LookAt *ndsR2CameraCurrentLookAt(void)
     return &gBattleLookAt;
 }
 
+/* A Reflect camera (xobj kinds 12-17) builds its own LookAt from the view
+ * (syMatrixLookAtReflect); the host stand-in records the kind and writes a
+ * marker into the provider's static. */
+typedef struct { int32_t m[4][4]; } Mtx;
+static unsigned sReflectCalls, sReflectKind;
+static void ndsRendererAdapterReflectCameraView(const CObj *cobj, u32 kind,
+                                                Mtx *mtx, LookAt *look_at)
+{
+    (void)cobj; (void)mtx;
+    sReflectCalls++;
+    sReflectKind = kind;
+    look_at->l[0].l.dir[0] = 77;
+}
+
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND __KIND__
 #define EXPECT_L0X __L0X__
 #define EXPECT_L0Y __L0Y__
@@ -350,6 +364,22 @@ int main(void)
     cobj.xobjs[0] = &x0;
     cobj.xobjs[1] = ((void *)0);
     check_reset(ndsRendererAdapterCurrentLookAt(), "reset after battle");
+
+    /* L. A Reflect camera (kinds 12-17) returns its own LookAt, built from
+     * the view; kinds just outside the range keep the reset. */
+    x0.kind = 12;
+    got = ndsRendererAdapterCurrentLookAt();
+    CHECK(sReflectCalls == 1 && sReflectKind == 12, "reflect kind 12 built");
+    CHECK(got != ((void *)0) && got->l[0].l.dir[0] == 77, "reflect kind 12 value");
+    CHECK(got != &gBattleLookAt, "reflect is not the battle LookAt");
+    x0.kind = 17;
+    (void)ndsRendererAdapterCurrentLookAt();
+    CHECK(sReflectCalls == 2 && sReflectKind == 17, "reflect kind 17 built");
+    x0.kind = 11;
+    check_reset(ndsRendererAdapterCurrentLookAt(), "kind 11");
+    x0.kind = 18;
+    check_reset(ndsRendererAdapterCurrentLookAt(), "kind 18");
+    CHECK(sReflectCalls == 2, "kinds 11 and 18 are not Reflect");
 
     if (sFailures == 0) {
         printf("ALL PASS\n");
