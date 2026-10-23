@@ -299,7 +299,9 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
             /* Pay the single 84,480-byte NitroFS upload during battle setup.
              * The renderer owner replaces this setup affine from the live
              * camera before the first presented battle frame. Training draws
-             * its own backdrop (the static wallpaper). */
+             * its own backdrop (the static wallpaper). A VS battle's
+             * wallpaper tiles upload at its first submitted frame instead,
+             * into a lent bank C (P8 V5, nds_native_wallpaper.c). */
             (void)ndsNativeBattleWallpaperPreload(
                 (u32)gSCManagerBattleState->gkind);
         }

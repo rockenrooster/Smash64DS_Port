@@ -343,6 +343,11 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 {
     u32 submitted;
 
+    /* P8 V5: a VS battle's wallpaper, behind everything the frame drew. */
+    if (sNdsRendererHardwareSubmitted != FALSE)
+    {
+        ndsRendererHardwareEmitWallpaperTiles();
+    }
     ndsRendererHardwareEmitIFCommonClouds();
     submitted = sNdsRendererHardwareSubmitted;
     ndsRendererHardwareEndBatch();

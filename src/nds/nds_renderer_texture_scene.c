@@ -59,6 +59,8 @@ NDS_RENDERER_COLD void ndsRendererHardwareResetSceneTextureVram(void)
      * binding. glResetTextures then drops libnds's own texture and palette
      * metadata and rebuilds both block allocators. */
     ndsRendererHardwareDiscardTextureCache();
+    /* P8 V5: the wallpaper tiles' block goes with the allocators. */
+    ndsNativeWallpaperTilesForget();
     glResetTextures();
 #if NDS_VRAM_CENSUS_LIVE
     ndsVramCensusTagReset();   /* slice 2a lab tags: every name is gone */

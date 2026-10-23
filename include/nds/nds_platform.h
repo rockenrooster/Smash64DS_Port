@@ -100,6 +100,16 @@ s32 ndsPlatformTransitionSnapshotHoldsBg2(void);
  * battles whose exit takes the held frame over its wallpaper. */
 #define NDS_PLATFORM_SCENE_KIND_1P_GAME 52u
 #define NDS_PLATFORM_SCENE_KIND_1P_BONUS_STAGE 53u
+/* nSCKindVSBattle (battleship_scvsbattle.c asserts it): the scene whose
+ * wallpaper draws as texture tiles in a lent bank C (P8 V5). */
+#define NDS_PLATFORM_SCENE_KIND_VS_BATTLE 22u
+/* P8 V5: bank C as texture slot 2 while a VS battle draws its wallpaper as
+ * texture tiles (nds_native_wallpaper.c). Take: at the battle's first
+ * submitted frame, FALSE while another bank's held frame shows; Return: the
+ * battle exit asks, after the texture side released C and locked it. */
+s32 ndsPlatformVramTakeBankC(void);
+void ndsPlatformVramReturnBankC(void);
+s32 ndsPlatformVramBankCLent(void);
 /* The held frame resampled into a 320-wide N64 RGBA5551 framebuffer (the
  * 300x220 area at (10,10), words byte-swapped like the runtime files), for
  * a source photo reader; FALSE without a held frame. */

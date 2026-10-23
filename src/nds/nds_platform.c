@@ -265,6 +265,20 @@ __attribute__((used)) volatile u32 gNdsVramBankDLent;
 __attribute__((used)) volatile u32 gNdsVramBg3RefusedWrites;
 __attribute__((used)) volatile u32 gNdsVramBankDTakes;
 __attribute__((used)) volatile u32 gNdsVramBankDReturns;
+/* P8 V5: while a VS battle draws its wallpaper as texture tiles
+ * (nds_native_wallpaper.c), bank C -- BG2's bitmap everywhere else -- is the
+ * 3D engine's texture slot 2 from the battle's first submitted frame
+ * (ndsPlatformVramTakeBankC). BG2 stays hidden and refuses writes meanwhile
+ * (gNdsVramBg2RefusedWrites, the lossless gate: 0). The battle exit asks for
+ * C back and the return lands as D's does: at the next scene's first
+ * displayed 3D frame, or at its first BG2 write or clear. */
+static u32 sNdsVramBankCLent;
+static u32 sNdsVramBankCReturnPending;
+static void ndsPlatformVramReturnBankCNow(void);
+__attribute__((used)) volatile u32 gNdsVramBankCLent;
+__attribute__((used)) volatile u32 gNdsVramBankCTakes;
+__attribute__((used)) volatile u32 gNdsVramBankCReturns;
+__attribute__((used)) volatile u32 gNdsVramBg2RefusedWrites;
 /* See ndsPlatformSet3DLayerEnabled: an enable is ARMED here and committed by
  * ndsPlatformEndFrame only after a real GX frame was submitted, so BG0 can
  * never composite the previous 3D owner's retained frame. */
@@ -821,6 +835,29 @@ static u32 ndsPlatformOriginalSpriteOverlayClearPixels(void)
     return 256u * 256u;
 }
 
+/* P8 V5: BG2 while bank C is lent. Inside the battle a write is refused
+ * (counted when `write` -- a clear is not a picture); once its exit has asked
+ * C back the return lands first, under the transition cover, because the
+ * battle's last frame on screen draws its wallpaper tiles from C. */
+static s32 ndsPlatformVramBg2Usable(u32 write)
+{
+    if (sNdsVramBankCLent == 0u)
+    {
+        return TRUE;
+    }
+    if (sNdsVramBankCReturnPending == 0u)
+    {
+        if (write != 0u)
+        {
+            gNdsVramBg2RefusedWrites++;
+        }
+        return FALSE;
+    }
+    ndsPlatformTransitionThaw();
+    ndsPlatformVramReturnBankCNow();
+    return TRUE;
+}
+
 u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
                                                u32 *out_pitch,
                                                u32 *out_width,
@@ -849,6 +886,10 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
                 return NULL;
             }
             ndsPlatformVramReturnBankDNow();
+        }
+        if ((layer == 0u) && (ndsPlatformVramBg2Usable(1u) == FALSE))
+        {
+            return NULL;
         }
         if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
             (bg < 0))
@@ -890,6 +931,10 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
             return 0u;
         }
         ndsPlatformVramReturnBankDNow();
+    }
+    if ((layer == 0u) && (ndsPlatformVramBg2Usable(1u) == FALSE))
+    {
+        return 0u;
     }
     if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
         (bg < 0) ||
@@ -1050,7 +1095,8 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         {
             gNdsVramBg3RefusedWrites++;
         }
-        else if ((sOriginalSpriteOverlayLayerMask & (1u << layer)) != 0u)
+        else if (((layer != 0u) || (ndsPlatformVramBg2Usable(1u) != FALSE)) &&
+                 ((sOriginalSpriteOverlayLayerMask & (1u << layer)) != 0u))
         {
             int bg = (is_foreground != FALSE) ?
                 sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
@@ -1128,6 +1174,10 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
         }
         ndsPlatformVramReturnBankDNow();
     }
+    if ((is_foreground == FALSE) && (ndsPlatformVramBg2Usable(0u) == FALSE))
+    {
+        return;
+    }
     if (bg >= 0)
     {
         u32 clear_bytes =
@@ -1188,7 +1238,8 @@ static void ndsPlatformRevealOriginalSpriteOverlay(void)
     sOriginalSpriteOverlayRevealPending = 0u;
     /* A layer the scene gave up meanwhile stays as the mask left it. */
     pending &= sOriginalSpriteOverlayLayerMask;
-    if (((pending & 1u) != 0u) && (sOriginalSpriteOverlayBg >= 0))
+    if (((pending & 1u) != 0u) && (sOriginalSpriteOverlayBg >= 0) &&
+        (sNdsVramBankCLent == 0u))
     {
         bgShow(sOriginalSpriteOverlayBg);
     }
@@ -1254,7 +1305,11 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
     {
         if ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
         {
-            bgShow(sOriginalSpriteOverlayBg);
+            /* Not over a lent bank C: its return shows the layer. */
+            if (sNdsVramBankCLent == 0u)
+            {
+                bgShow(sOriginalSpriteOverlayBg);
+            }
         }
         else
         {
@@ -1410,6 +1465,89 @@ static void ndsPlatformVramReturnBankDNow(void)
     sOriginalSpriteOverlayBg3Wanted = 0u;
 }
 
+/* P8 V5: lend bank C to the 3D engine as texture slot 2 (libnds derives a
+ * texture's slot from its LCD address, so C must be slot 2) for a VS
+ * battle's wallpaper tiles, at the battle's first submitted frame. A frame
+ * the previous scene left held in C (ndsPlatformTransitionSnapshotMoveToC)
+ * ends here first, under the black cover, as the BG2 wallpaper's first write
+ * ended it; BG2 is then hidden and withheld until ndsPlatformVramReturnBankC.
+ * FALSE, C still BG2's, while another bank's held frame shows. */
+s32 ndsPlatformVramTakeBankC(void)
+{
+    if (sNdsVramBankCLent != 0u)
+    {
+        /* A battle straight after a battle: C never left the texture slot. */
+        sNdsVramBankCReturnPending = 0u;
+        return TRUE;
+    }
+    if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C)
+    {
+        ndsPlatformTransitionSnapshotAbort();
+    }
+    if (sNdsTransitionSnapshotBank != 0u)
+    {
+        return FALSE;
+    }
+    /* A held frame that shows BG2 ends before its bitmap goes. */
+    if ((sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE) &&
+        ((REG_DISPCNT & DISPLAY_BG2_ACTIVE) != 0u))
+    {
+        ndsPlatformTransitionThaw();
+    }
+    if (sOriginalSpriteOverlayBg >= 0)
+    {
+        bgHide(sOriginalSpriteOverlayBg);
+    }
+    sOriginalSpriteOverlayRevealPending &= ~1u;
+    vramSetBankC(VRAM_C_TEXTURE);
+    sNdsVramBankCLent = 1u;
+    gNdsVramBankCLent = 1u;
+    gNdsVramBankCTakes++;
+    return TRUE;
+}
+
+/* Battle exit: the texture side has released everything in C and locked it.
+ * The remap waits as D's does (ndsPlatformVramReturnBankD): the final battle
+ * frame may still be on screen, drawing its wallpaper from C. */
+void ndsPlatformVramReturnBankC(void)
+{
+    if (sNdsVramBankCLent != 0u)
+    {
+        sNdsVramBankCReturnPending = 1u;
+    }
+}
+
+s32 ndsPlatformVramBankCLent(void)
+{
+    return (sNdsVramBankCLent != 0u) ? TRUE : FALSE;
+}
+
+/* Give bank C back to BG2: remap, clear it whole (the texels it held are not
+ * an image) and show BG2 again if the scene asks for it. */
+static void ndsPlatformVramReturnBankCNow(void)
+{
+    sNdsVramBankCReturnPending = 0u;
+    if (sNdsVramBankCLent == 0u)
+    {
+        return;
+    }
+    vramSetBankC(VRAM_C_MAIN_BG_0x06000000);
+    if (sOriginalSpriteOverlayBg >= 0)
+    {
+        dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayBg),
+                         256u * 256u * sizeof(u16));
+    }
+    sNdsVramBankCLent = 0u;
+    gNdsVramBankCLent = 0u;
+    gNdsVramBankCReturns++;
+    if (((sOriginalSpriteOverlayLayerMask &
+          NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u) &&
+        (sOriginalSpriteOverlayBg >= 0))
+    {
+        bgShow(sOriginalSpriteOverlayBg);
+    }
+}
+
 #if defined(NDS_TICK_HUD) && NDS_TICK_HUD
 /* P2-2p8 Phase 1 slice 2a (lab only, reads only): the opaque (bit 15) pixels
  * of one overlay layer's visible 256x192 window -- layer 0 = BG2 (bank C,
@@ -1557,7 +1695,8 @@ static void ndsPlatformTransitionSnapshotRestore(void)
 /* A battle's load needs the texture bank the snapshot sits in (its texture
  * prepare, ~112 VBlanks before its first frame on the 1P intro -> stage
  * hop). Bank C is BG2's bitmap -- the battle wallpaper's and the menus'
- * overlay, never a texture slot -- and until the next scene is handed that
+ * overlay, a texture slot only from a VS battle's first frame
+ * (ndsPlatformVramTakeBankC) -- and until the next scene is handed that
  * bitmap (sNdsTransitionSnapshotBg2Touched) nothing in it is that scene's:
  * the held frame moves there, the main screen shows C instead (still display
  * mode 2, identical pixels), and A/B go back to their texture slots before
@@ -2027,8 +2166,10 @@ void ndsPlatformTransitionThaw(void)
 
 void ndsPlatformTransitionThawIf3DShown(void)
 {
-    /* No texture lives in C, and none is placed in D while a battle exit's
-     * frame keeps it LCD-mapped (libnds allocates only in banks mapped as
+    /* No texture lives in C while it is BG2's (a VS battle's loan of it,
+     * ndsPlatformVramTakeBankC, never overlaps a snapshot there: the take
+     * ends one first), and none is placed in D while a battle exit's frame
+     * keeps it LCD-mapped (libnds allocates only in banks mapped as
      * texture; a battle's take of D moves or ends it first,
      * ndsPlatformVramTakeBankD): a snapshot in either outlasts every upload
      * and the scene's texture VRAM reset. */
@@ -3706,6 +3847,19 @@ void ndsPlatformEndFrame(void)
 #if NDS_TICK_HUD
         DC_FlushAll();
 #endif
+    }
+    /* P8 V5: bank C the same way (the exit releases both banks). */
+    if ((submitted != 0u) && (sNdsVramBankCReturnPending != 0u))
+    {
+        ndsPlatformVramReturnBankCNow();
+    }
+    else if ((sNdsVramBankCLent != 0u) && (sNdsVramBankCReturnPending == 0u) &&
+             (&gNdsSceneManagerCurrIsBattle != NULL) &&
+             (gNdsSceneManagerCurrIsBattle == 0u) &&
+             (ndsFtrLeanAdmitBattleExit != NULL))
+    {
+        gNdsVramBankDMissedExits++;
+        ndsFtrLeanAdmitBattleExit();
     }
 #if defined(NDS_P2_1P_GAME) && NDS_P2_1P_GAME && \
     defined(NDS_P2_MENU_WALK) && NDS_P2_MENU_WALK && !NDS_TICK_HUD

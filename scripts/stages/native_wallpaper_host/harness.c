@@ -160,6 +160,66 @@ s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
     return FALSE;
 }
 
+/* P8 V5: no VS battle scene on the host (the tiles path is never taken), so
+ * its libnds and bank C seams stop the run if anything reaches them. */
+volatile u32 gNdsSceneManagerCurrKind = 0xffffffffu;
+gl_hidden_globals glGlobalData;
+
+static void hostNotHosted(const char *name)
+{
+    fprintf(stderr, "%s is not hosted\n", name);
+    exit(3);
+}
+
+int glLockVRAMBank(u16 *addr)
+{
+    (void)addr;
+    hostNotHosted("glLockVRAMBank");
+    return 0;
+}
+
+u32 vramBlock_allocateBlock(s_vramBlock *mb, u32 size, u8 align)
+{
+    (void)mb;
+    (void)size;
+    (void)align;
+    hostNotHosted("vramBlock_allocateBlock");
+    return 0u;
+}
+
+u32 vramBlock_deallocateBlock(s_vramBlock *mb, u32 index)
+{
+    (void)mb;
+    (void)index;
+    hostNotHosted("vramBlock_deallocateBlock");
+    return 0u;
+}
+
+u8 *vramBlock_getAddr(s_vramBlock *mb, u32 index)
+{
+    (void)mb;
+    (void)index;
+    hostNotHosted("vramBlock_getAddr");
+    return NULL;
+}
+
+s32 ndsPlatformVramTakeBankC(void)
+{
+    hostNotHosted("ndsPlatformVramTakeBankC");
+    return FALSE;
+}
+
+void ndsPlatformVramReturnBankC(void)
+{
+    hostNotHosted("ndsPlatformVramReturnBankC");
+}
+
+s32 ndsPlatformVramBankCLent(void)
+{
+    hostNotHosted("ndsPlatformVramBankCLent");
+    return FALSE;
+}
+
 /* The camera-driven origin (ndsWallpaperPerspQ) is not one of the harness
  * commands: its fixed-point helpers stop the run if anything reaches them. */
 int32_t ndsF32ToFixed(float value, unsigned int frac_bits)

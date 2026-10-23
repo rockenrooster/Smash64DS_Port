@@ -4,7 +4,8 @@
  * preloaded at match setup and moved each frame the way grwallpaper.c moves
  * it; the menus' wallpaper SObjs draw through it too. One BG2 image is
  * resident; rows stage in main RAM and reach VRAM as halfword stores (fread
- * never writes VRAM). */
+ * never writes VRAM). A VS battle's wallpaper is texture tiles in bank C
+ * instead (P8 V5, below), drawn by the renderer through the same affine. */
 
 #include <nds.h>
 #include <math.h>
@@ -334,8 +335,11 @@ void ndsNativeWallpaperInvalidate(void)
     (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
 }
 
+/* `fill_rows` rows of `pitch` take BG2's black (0x8000) first, the picture
+ * then its own rows. */
 static s32 ndsNativeWallpaperUpload(const NDSNativeWallpaper *asset,
-                                   u16 *dest, u32 pitch, const u16 *palette)
+                                   u16 *dest, u32 pitch, u32 fill_rows,
+                                   const u16 *palette)
 {
     NdsRelocAssetStream stream = { NULL };
     char path[96];
@@ -354,7 +358,7 @@ static s32 ndsNativeWallpaperUpload(const NDSNativeWallpaper *asset,
     {
         return FALSE;
     }
-    dmaFillHalfWords(0x8000u, dest, 256u * 192u * sizeof(u16));
+    dmaFillHalfWords(0x8000u, dest, pitch * fill_rows * sizeof(u16));
     for (y = 0u; y < asset->native_h; y++)
     {
         u32 x;
@@ -445,6 +449,145 @@ static s32 ndsNativeWallpaperAffine(const NDSNativeWallpaper *asset,
     return TRUE;
 }
 
+/* P8 V5: the VS battle's wallpaper tiles (nds_native_wallpaper.h). The
+ * 240x176 picture as one 256-wide image of 176 rows -- columns 240-255 BG2's
+ * black, as the bitmap held them -- whose row bands are the three textures:
+ * 90,112 B at the start of bank C for BG2's 131,072, the other 40,960 B the
+ * texture allocator's for the rest of the battle. Uploaded at the battle's
+ * first submitted frame through C's LCD mapping, row by row as BG2's; again
+ * after a texture reset. */
+#define NDS_WALLPAPER_TILE_ROWS 176u
+#define NDS_WALLPAPER_TILE_BYTES (256u * NDS_WALLPAPER_TILE_ROWS * 2u)
+#define NDS_WALLPAPER_BANK_C_LO 0x06840000u
+#define NDS_WALLPAPER_BANK_C_HI 0x06860000u
+/* libnds's own block search, as the fighter admission's carve regions. */
+u32 vramBlock_allocateBlock(s_vramBlock *mb, u32 size, u8 align);
+u32 vramBlock_deallocateBlock(s_vramBlock *mb, u32 index);
+u8 *vramBlock_getAddr(s_vramBlock *mb, u32 index);
+extern volatile u32 gNdsSceneManagerCurrKind __attribute__((weak));
+
+/* TEXIMAGE_PARAM's T size of each band: 128, 32 and 16 rows. */
+static const u8 kWallpaperTileSizeT[NDS_NATIVE_WALLPAPER_TILE_COUNT] =
+    { 4u, 2u, 1u };
+static NDSNativeWallpaperTiles sWallpaperTiles =
+    { { 0u, 0u, 0u }, { 0u, 128u, 160u, 176u }, 0, 0, 0, 0 };
+static const NDSNativeWallpaper *sWallpaperTilesWant;
+static const NDSNativeWallpaper *sWallpaperTilesResident;
+static u32 sWallpaperTilesBlock;
+static u32 sWallpaperTilesFallback;
+volatile u32 gNdsNativeWallpaperTileUploads;
+volatile u32 gNdsNativeWallpaperTileFailures;
+
+static s32 ndsNativeWallpaperTilesScene(void)
+{
+    return ((&gNdsSceneManagerCurrKind != NULL) &&
+            (gNdsSceneManagerCurrKind == NDS_PLATFORM_SCENE_KIND_VS_BATTLE) &&
+            (sWallpaperTilesFallback == 0u)) ? TRUE : FALSE;
+}
+
+void ndsNativeWallpaperTilesForget(void)
+{
+    sWallpaperTilesBlock = 0u;
+    sWallpaperTilesResident = NULL;
+    sWallpaperTilesWant = NULL;
+    sWallpaperTilesFallback = 0u;
+}
+
+void ndsNativeWallpaperTilesRelease(void)
+{
+    if ((sWallpaperTilesBlock != 0u) && (glGlobalData.vramBlocks[0] != NULL))
+    {
+        (void)vramBlock_deallocateBlock(glGlobalData.vramBlocks[0],
+                                        sWallpaperTilesBlock);
+    }
+    ndsNativeWallpaperTilesForget();
+}
+
+static s32 ndsNativeWallpaperTilesMake(const NDSNativeWallpaper *asset)
+{
+    s_vramBlock *mb = glGlobalData.vramBlocks[0];
+    vu8 *cr = (vu8 *)0x04000240u;
+    const s32 was_lent = ndsPlatformVramBankCLent();
+    u32 addr = 0u;
+    u32 i;
+    s32 ok;
+
+    if ((mb == NULL) || (ndsPlatformVramTakeBankC() == FALSE))
+    {
+        return FALSE;
+    }
+    if (sWallpaperTilesBlock == 0u)
+    {
+        /* C's start: A, B and D are held back for the search. */
+        const int saved = glGlobalData.vramLock[0];
+
+        glGlobalData.vramLock[0] = (saved | 1 | 2 | 8) & ~4;
+        sWallpaperTilesBlock =
+            vramBlock_allocateBlock(mb, NDS_WALLPAPER_TILE_BYTES, 3u);
+        glGlobalData.vramLock[0] = saved & ~4;
+    }
+    if (sWallpaperTilesBlock != 0u)
+    {
+        addr = (u32)(uintptr_t)vramBlock_getAddr(mb, sWallpaperTilesBlock);
+    }
+    ok = ((addr >= NDS_WALLPAPER_BANK_C_LO) &&
+          ((addr + NDS_WALLPAPER_TILE_BYTES) <= NDS_WALLPAPER_BANK_C_HI)) ?
+        TRUE : FALSE;
+    if (ok != FALSE)
+    {
+        const u8 c_cr = cr[2];
+
+        cr[2] = VRAM_ENABLE;
+        ok = ndsNativeWallpaperUpload(asset, (u16 *)(uintptr_t)addr, 256u,
+                                      NDS_WALLPAPER_TILE_ROWS, NULL);
+        cr[2] = c_cr;
+    }
+    if (ok == FALSE)
+    {
+        ndsNativeWallpaperTilesRelease();
+        /* A bank this call took holds nothing else yet: it goes back to
+         * BG2 for the fallback (its first write returns it). */
+        if (was_lent == FALSE)
+        {
+            glLockVRAMBank((u16 *)VRAM_C);
+            ndsPlatformVramReturnBankC();
+        }
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_NATIVE_WALLPAPER_TILE_COUNT; i++)
+    {
+        const u32 offset = (addr - 0x06800000u) +
+                           ((u32)sWallpaperTiles.rows[i] * 256u * 2u);
+
+        sWallpaperTiles.params[i] = (offset >> 3) | (5u << 20) |
+                                    ((u32)kWallpaperTileSizeT[i] << 23) |
+                                    (7u << 26);
+    }
+    sWallpaperTilesResident = asset;
+    gNdsNativeWallpaperTileUploads++;
+    return TRUE;
+}
+
+const NDSNativeWallpaperTiles *ndsNativeWallpaperTilesForFrame(void)
+{
+    const NDSNativeWallpaper *asset = sWallpaperTilesWant;
+
+    if ((asset == NULL) || (ndsNativeWallpaperTilesScene() == FALSE))
+    {
+        return NULL;
+    }
+    if ((sWallpaperTilesResident != asset) &&
+        (ndsNativeWallpaperTilesMake(asset) == FALSE))
+    {
+        /* This battle draws BG2's way from its next frame. */
+        gNdsNativeWallpaperTileFailures++;
+        sWallpaperTilesFallback = 1u;
+        sWallpaperAsset = NULL;
+        return NULL;
+    }
+    return &sWallpaperTiles;
+}
+
 s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
                           s32 origin_x, s32 origin_y,
                           u32 scale_x_q16, u32 scale_y_q16,
@@ -486,6 +629,16 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
     gNdsNativeWallpaperAffinePd = pd;
     gNdsNativeWallpaperAffineDx = dx;
     gNdsNativeWallpaperAffineDy = dy;
+    if ((asset->format == 0u) && (ndsNativeWallpaperTilesScene() != FALSE))
+    {
+        /* P8 V5: the renderer draws it at the frame boundary. */
+        sWallpaperTilesWant = asset;
+        sWallpaperTiles.pa = pa;
+        sWallpaperTiles.pd = pd;
+        sWallpaperTiles.dx = dx;
+        sWallpaperTiles.dy = dy;
+        return TRUE;
+    }
     dest = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &width,
                                                    &height, &epoch);
     if ((dest == NULL) || (pitch != 256u) || (width != 256u) || (height != 192u))
@@ -501,7 +654,8 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
          * frame's commit, so the new picture appears whole and under the
          * owner's tint of the same frame (Results tic 80). */
         ndsPlatformHideOriginalSpriteOverlayUntilCommit(FALSE);
-        if (ndsNativeWallpaperUpload(asset, dest, pitch, palette) == FALSE)
+        if (ndsNativeWallpaperUpload(asset, dest, pitch, 192u,
+                                     palette) == FALSE)
         {
             gNdsNativeWallpaperReadFailureCount++;
             return FALSE;
@@ -549,8 +703,10 @@ s32 ndsNativeBattleWallpaperPreload(u32 gkind)
     }
     /* The frame the previous scene left (the 1P intro's still) is held in
      * BG2's bank until the battle presents: the first presented draw pays
-     * the read instead, after the hold ends. */
-    if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
+     * the read instead, after the hold ends. (A VS battle's tiles are made
+     * at its first submitted frame, which ends that hold itself.) */
+    if ((ndsPlatformTransitionSnapshotHoldsBg2() != FALSE) &&
+        (ndsNativeWallpaperTilesScene() == FALSE))
     {
         NDS_DIAG(gNdsNativeBattleWallpaperDeferCount++);
         return TRUE;
@@ -607,8 +763,10 @@ s32 ndsNativeBattleWallpaperDraw(u32 gkind,
     gNdsNativeBattleWallpaperScaleQ16 = scale_q16;
     /* Not yet the presented draw while a held frame owns BG2's bank: the
      * stage owner's prepare runs before the frame's own wallpaper commit,
-     * which ends the hold (ndsPlatformTransitionSnapshotHoldsBg2). */
-    if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
+     * which ends the hold (ndsPlatformTransitionSnapshotHoldsBg2). A VS
+     * battle's tiles only record the frame's affine here. */
+    if ((ndsPlatformTransitionSnapshotHoldsBg2() != FALSE) &&
+        (ndsNativeWallpaperTilesScene() == FALSE))
     {
         NDS_DIAG(gNdsNativeBattleWallpaperDeferCount++);
         return TRUE;

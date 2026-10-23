@@ -1531,6 +1531,41 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
  * outlives the battle is the renderer's own fighter tint set, which VS Results
  * and the character select draw with: its tiles in D go here (slice 7,
  * ndsR2FighterTintReleaseRange). */
+/* P8 V5: bank C, lent from a VS battle's first frame for its wallpaper tiles
+ * (ndsPlatformVramTakeBankC), goes back as D does: locked first, so nothing
+ * new lands in it while the final frame may still draw from it; the cache
+ * entries, fighter tint tiles and the wallpaper tiles in it released; the
+ * remap waits for the next scene (ndsPlatformVramReturnBankC). After D's
+ * lock-word restore, which predates the loan. */
+#define NDS_FTR_ADMIT_C_LO 0x06840000u
+#define NDS_FTR_ADMIT_C_HI 0x06860000u
+NDS_RENDERER_COLD static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitExitBankC(void)
+{
+    u32 i;
+
+    if (ndsPlatformVramBankCLent() == FALSE)
+    {
+        return;
+    }
+    glLockVRAMBank((u16 *)VRAM_C);
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+        u32 addr = ndsFtrAdmitEntryAddress(entry);
+
+        if ((addr >= NDS_FTR_ADMIT_C_LO) && (addr < NDS_FTR_ADMIT_C_HI))
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+        }
+    }
+    (void)ndsR2FighterTintReleaseRange(NDS_FTR_ADMIT_C_LO, NDS_FTR_ADMIT_C_HI);
+    ndsNativeWallpaperTilesRelease();
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    ndsPlatformVramReturnBankC();
+}
+
 NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
 {
     u32 i;
@@ -1542,6 +1577,7 @@ NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
     NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.exit_runs++, gNdsFtrAdmitLab.done = 0u));
     if (sNdsFtrAdmitRegions == 0u)
     {
+        ndsFtrAdmitExitBankC();
         return;
     }
     /* Slice 2c: D is locked before anything in it is released, so a carve
@@ -1590,6 +1626,7 @@ NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     ndsPlatformVramReturnBankD();
+    ndsFtrAdmitExitBankC();
     sNdsFtrAdmitRegions = 0u;
     sNdsFtrAdmitLocked = 0u;
     NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.regions = 0u,

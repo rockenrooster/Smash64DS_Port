@@ -140,5 +140,6 @@
 #include "generated/nds_native_item_capsule.generated.inc"
 #include "nds_native_item_capsule.exec.inc"
 #include "nds_renderer_native_fighter_production.c"
+#include "nds_renderer_wallpaper.c"
 #include "nds_renderer_dispatch_profile.c"
 #include "nds_renderer_magnify.c"

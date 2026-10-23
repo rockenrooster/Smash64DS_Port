@@ -69,6 +69,9 @@ static void ndsSCVSBattlePrepareBeforeTimer(void);
 static u32 sNdsSCVSBattleEntryStartupTexturesRetired;
 static u32 sNdsSCVSBattleEntryRootsRetired;
 
+_Static_assert(nSCKindVSBattle == NDS_PLATFORM_SCENE_KIND_VS_BATTLE,
+               "nds_platform.h names the VS battle's scene kind");
+
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
 #define scVSBattleStartSuddenDeath ndsBaseSCVSBattleStartSuddenDeath

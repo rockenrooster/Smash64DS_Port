@@ -14,6 +14,7 @@
 #include <nds/nds_fox_gun.h>
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_native_wallpaper.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_reloc_assets.h>
