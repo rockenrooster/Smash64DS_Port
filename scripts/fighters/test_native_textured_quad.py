@@ -59,6 +59,14 @@ s32 test_depth=100, xs[6], zs[6];
 #define NDS_FIGHTER_PACKET_DMA_WAIT() ((void)0)
 #define ndsRendererHardwareEndBatch() ((void)0)
 #define ndsRendererHardwareBindTexture(a,b,c) (!fail_bind)
+/* The kernel's per-site texture memo binds through the same (failable) bind;
+ * a graded texture binds its own name. */
+typedef struct { u32 valid; } NDSRendererOwnerTextureMemo;
+#define ndsRendererHardwareBindTextureOwnerMemo(m,i,a,b,c) (!fail_bind)
+#define ndsRendererHardwareBindTextureName(s,n) (sNdsRendererHardwareBoundTextureName=(n), graded_binds++)
+/* The graded cache's recycle clock (one frame per submitted frame). */
+u32 sNdsRendererHardwareFrameSerial;
+#define NDS_DIAG(x) ((void)(x))
 #define ndsRendererHardwareAlpha(a,b) test_alpha
 #define ndsRendererHardwareColorSource(a) 0u
 #define ndsRendererHardwareUseMaterialColor(a) 0u
@@ -184,8 +192,15 @@ def test_sing_uses_live_guard_camera_bias(tmp_path):
     root = Path(__file__).resolve().parents[2]
     path = root / "src/nds/nds_native_textured_quad.exec.inc"
     marker = "static void __attribute__((unused)) ndsRendererNativeQuadGuardDepth("
-    body = marker + path.read_text().split(marker, 1)[1].split(
-        "\n/* `image` non-NULL selects the graded copy", 1)[0]
+    text = path.read_text()
+    start = text.index(marker)
+    depth, end = 0, text.index("{", start)
+    while True:
+        depth += {"{": 1, "}": -1}.get(text[end], 0)
+        end += 1
+        if depth == 0:
+            break
+    body = text[start:end]
     for owner in ("nds_native_purin_sing.exec.inc", "nds_native_samus_chargeshot.exec.inc"):
         assert "ndsRendererNativeQuadGuardDepth(&front_view," in (root / "src/nds" / owner).read_text()
     source = r'''
