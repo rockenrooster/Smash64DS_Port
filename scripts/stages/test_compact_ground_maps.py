@@ -55,6 +55,8 @@ import generate_nds_native_stage as stage_gen  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 O2R = cgm.DEFAULT_O2R_ROOT
 ASSETS_C = ROOT / "src" / "port" / "reloc_backend_assets.c"
+# The compact maps' table and seams moved here with the backend split (C1).
+RESOLVE_C = ROOT / "src" / "port" / "reloc_backend_resolve.c"
 MATRIX_C = ROOT / "src" / "port" / "renderer_adapter_matrix.c"
 SPRITE_C = ROOT / "src" / "port" / "sprite_preview_backend.c"
 SHIMS_C = ROOT / "src" / "port" / "reloc_backend_compat_shims.c"
@@ -63,6 +65,10 @@ MAKEFILE = ROOT / "Makefile"
 # gkind order -> descriptor name (scripts/stages/native_stage_descriptors)
 DESCRIPTORS = ("castle", "sector", "jungle", "zebes", "hyrule", "yoster",
                "dreamland", "yamabuki", "inishie")
+# The nine VS maps (gkinds 0-8). The 1P arenas and the bonus boards joined
+# cgm.MAPS on 2026-10-01 (659f1475c2c), each with its own header offset
+# (CompactMapSpec.wallpaper_slot); the VS-only claims below name these nine.
+VS_MAPS = [s for s in cgm.MAPS if s.gkind < 9]
 
 P1_TARGET = "smash64ds-battle-playable-hwtri"
 P2_TARGETS = ("smash64ds-p2-fourcpu-tickhud-hwtri", "smash64ds-p2-shell-hwtri",
@@ -130,17 +136,21 @@ class GeneratorTests(unittest.TestCase):
                              for path, built in cls.built.items()}
 
     def test_nine_maps_gkind_order_and_unique(self):
-        self.assertEqual([s.gkind for s in cgm.MAPS], list(range(9)))
-        self.assertEqual(len({s.map_file_id for s in cgm.MAPS}), 9)
-        self.assertEqual(len({s.container_file_id for s in cgm.MAPS}), 9)
+        self.assertEqual([s.gkind for s in VS_MAPS], list(range(9)))
+        self.assertEqual(len({s.map_file_id for s in VS_MAPS}), 9)
+        self.assertEqual(len({s.container_file_id for s in VS_MAPS}), 9)
+        # Every map, VS and 1P, is named once.
+        self.assertEqual(len({s.map_file_id for s in cgm.MAPS}), len(cgm.MAPS))
         self.assertEqual(cgm.STUB_BYTES, 776)
         self.assertEqual(cgm.STUB_GROWTH, 784)
         self.assertEqual(cgm.WALLPAPER_SLOT, 0x5C)
 
     def test_specs_match_the_wallpaper_generator(self):
         by_path = {s.o2r: s for s in wall.SOURCES if s.battle}
-        self.assertEqual(len(by_path), 9)
-        for spec in cgm.MAPS:
+        # Every VS map's container is a battle wallpaper (P5's stages add
+        # their own).
+        self.assertTrue({s.container_path for s in VS_MAPS} <= set(by_path))
+        for spec in VS_MAPS:
             with self.subTest(stage=spec.label):
                 src = by_path[spec.container_path]
                 self.assertEqual(src.file_id, spec.container_file_id)
@@ -154,7 +164,7 @@ class GeneratorTests(unittest.TestCase):
         0x269C8); that pair must be exactly the key the real wallpaper
         conversion emits for that stage."""
         by_path = {s.o2r: s for s in wall.SOURCES if s.battle}
-        for spec in cgm.MAPS:
+        for spec in VS_MAPS:
             with self.subTest(stage=spec.label):
                 asset = wall.convert_source(ROOT, by_path[spec.container_path])
                 runtime = (asset.source.file_id
@@ -165,7 +175,7 @@ class GeneratorTests(unittest.TestCase):
                                   cgm.CONTAINER_BITMAP_OFFSET))
 
     def test_all_nine_build_verify_and_lose_the_container(self):
-        for spec in cgm.MAPS:
+        for spec in VS_MAPS:
             with self.subTest(stage=spec.label):
                 compact, map_raw, container_raw = self.built[spec.map_path]
                 cgm.verify_compact_map(spec, map_raw, container_raw, compact)
@@ -196,7 +206,7 @@ class GeneratorTests(unittest.TestCase):
                         spec.container_file_id,
                         {r.asset_id for r in res.external.values()})
                     self.assertEqual(
-                        res.internal[cgm.WALLPAPER_SLOT],
+                        res.internal[spec.wallpaper_slot],
                         stage_gen.PointerRef(spec.map_file_id,
                                              compact.stub_sprite_offset))
                     self.assertEqual(
@@ -207,10 +217,10 @@ class GeneratorTests(unittest.TestCase):
                     # every other external fixup still points where it did
                     self.assertEqual(
                         {k: v for k, v in src.external.items()
-                         if k != cgm.WALLPAPER_SLOT}, dict(res.external))
+                         if k != spec.wallpaper_slot}, dict(res.external))
 
     def test_extern_tree_shrinks_by_exactly_the_container(self):
-        for spec in cgm.MAPS:
+        for spec in VS_MAPS:
             with self.subTest(stage=spec.label):
                 compact, _, _ = self.built[spec.map_path]
                 before = extern_tree_alloc(self.index, spec.map_file_id)
@@ -252,7 +262,7 @@ class GeneratorTests(unittest.TestCase):
     def test_source_sizes_are_the_pinned_packet_sizes(self):
         """P1's golden pin and the emitted rows stay the SOURCE sizes; the P2
         compact size is exactly pin + 784 for all nine (Dream Land included)."""
-        for spec, name in zip(cgm.MAPS, DESCRIPTORS):
+        for spec, name in zip(VS_MAPS, DESCRIPTORS):
             with self.subTest(stage=spec.label):
                 desc = stage_gen._resolve_stage(name)
                 ids = list(desc.adapter_asset_ids)
@@ -280,7 +290,7 @@ class GeneratorTests(unittest.TestCase):
         def number(token):
             return int(token.strip().rstrip("uU"), 0)
 
-        for spec, name in zip(cgm.MAPS, DESCRIPTORS):
+        for spec, name in zip(VS_MAPS, DESCRIPTORS):
             with self.subTest(stage=spec.label):
                 m = re.search(
                     r"sNdsRendererAdapterNativeStage%s = \{\s*"
@@ -302,7 +312,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.make = MAKEFILE.read_text(encoding="utf-8")
-        cls.assets = read_split(ASSETS_C)
+        cls.assets = read_split(ASSETS_C) + "\n" + read_split(RESOLVE_C)
 
     def test_default_flag_targets(self):
         m = re.search(r"(?m)^NDS_P2_COMPACT_GROUND_MAPS \?= \\\r?\n\t"
@@ -320,10 +330,12 @@ class MakefileAndSourceContractTests(unittest.TestCase):
                       "$(NDS_P2_COMPACT_GROUND_MAPS)'; \\", self.make)
 
     def test_staging_rules(self):
-        files = re.search(r"(?m)^NDS_COMPACT_GROUND_MAP_FILES := \\\r?\n"
-                          r"((?:\t.*\r?\n)+?)(?=\S)", self.make)
-        self.assertIsNotNone(files)
-        self.assertEqual(sorted(files.group(1).replace("\\", " ").split()),
+        files = re.findall(r"(?m)^NDS_COMPACT_GROUND_MAP_FILES [:+]= \\\r?\n"
+                           r"((?:\t.*\r?\n)+?)(?=\S)", self.make)
+        self.assertEqual(len(files), 2, "the VS list and the 1P list")
+        self.assertEqual(sorted(files[0].replace("\\", " ").split()),
+                         sorted(s.map_path for s in VS_MAPS))
+        self.assertEqual(sorted(" ".join(files).replace("\\", " ").split()),
                          sorted(s.map_path for s in cgm.MAPS))
         conts = re.search(r"(?m)^NDS_COMPACT_GROUND_MAP_CONTAINERS := \\\r?\n"
                           r"((?:\t.*\r?\n)+?)(?=\S)", self.make)
@@ -331,7 +343,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         listed = [w.replace("$(BATTLESHIP_O2R)/", "") for w in
                   conts.group(1).replace("\\", " ").split()]
         self.assertEqual(sorted(listed),
-                         sorted(s.container_path for s in cgm.MAPS))
+                         sorted({s.container_path for s in cgm.MAPS}))
         # the stamp is per BUILD and never inside the packed nitrofs/ directory
         self.assertIn("NDS_COMPACT_GROUND_MAPS_STAMP := $(PROJECT_ROOT)/"
                       "$(BUILD)/nds_compact_ground_maps.stamp", self.make)
@@ -358,31 +370,29 @@ class MakefileAndSourceContractTests(unittest.TestCase):
 
         self.assertEqual(macro("NDS_RELOC_COMPACT_GROUND_MAP_GROWTH"),
                          cgm.STUB_GROWTH)
-        self.assertEqual(macro("NDS_RELOC_COMPACT_GROUND_MAP_HEADER"),
-                         cgm.GROUND_HEADER_OFFSET)
         self.assertEqual(macro("NDS_RELOC_COMPACT_WALLPAPER_BITMAP"),
                          cgm.CONTAINER_BITMAP_OFFSET)
-        self.assertEqual(macro("NDS_RELOC_COMPACT_TRAINING_WALLPAPER_BYTES"),
-                         cgm.CONTAINER_SIZE)
         self.assertEqual(macro("NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE"),
                          cgm.CONTAINER_SPRITE_OFFSET)
         table = re.search(
             r"sNdsRelocCompactGroundMaps\[\] = \{\n(.*?)\n\};", self.assets,
             re.S)
         self.assertIsNotNone(table)
-        rows = re.findall(r"\{ (NDS_RELOC_ASSET_\w+), (NDS_RELOC_ASSET_\w+) \}",
-                          table.group(1))
-        self.assertEqual(len(rows), 9)
-        for spec, (map_name, wall_name) in zip(cgm.MAPS, rows):
+        rows = re.findall(r"\{ (NDS_RELOC_ASSET_\w+), (NDS_RELOC_ASSET_\w+), "
+                          r"(0x[0-9a-fA-F]+)u \}", table.group(1))
+        # The VS maps, then the 1P maps (NDS_P2_1P_GAME), in cgm.MAPS order.
+        self.assertEqual(len(rows), len(cgm.MAPS))
+        for spec, (map_name, wall_name, header) in zip(cgm.MAPS, rows):
             with self.subTest(stage=spec.label):
                 self.assertEqual(macro(map_name), spec.map_file_id)
                 self.assertEqual(macro(wall_name), spec.container_asset_id)
+                self.assertEqual(int(header, 16), spec.header_offset)
 
     def test_every_use_is_behind_the_flag(self):
         """The P1 build compiles none of this: each seam sits in a
         `#if defined(NDS_P2_COMPACT_GROUND_MAPS) && ...` region."""
         flag = "#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS"
-        for path in (ASSETS_C, MATRIX_C, SPRITE_C, SHIMS_C):
+        for path in (ASSETS_C, RESOLVE_C, MATRIX_C, SPRITE_C, SHIMS_C):
             stack = []
             for number, line in enumerate(
                     read_split(path).splitlines(), 1):
@@ -404,8 +414,6 @@ class MakefileAndSourceContractTests(unittest.TestCase):
                       SPRITE_C.read_text(encoding="utf-8"))
         self.assertIn("ndsRelocCompactGroundMapExpectedSize(desc->asset_ids[index]",
                       read_split(MATRIX_C))
-        self.assertIn("ndsRelocCompactGroundMapPrepareTraining(file, ground_data)",
-                      read_split(SHIMS_C))
 
 
 # --------------------------------------------------------------------------
@@ -528,6 +536,9 @@ static u32 sNdsRelocLoadedFilesEpoch = 1u;
 static u32 sNdsRelocSceneGeneration = 1u;
 
 static struct { u8 scene_curr, scene_prev; } gSCManagerSceneData;
+static u32 sNdsRelocHoleFileCount;
+static int ndsRelocRangeTouchesHole(const void *data, uintptr_t offset, size_t size)
+{ (void)data; (void)offset; (void)size; return FALSE; }
 enum { nSCKindOther = 3, nSCKind1PTrainingMode = 100 };
 
 static void *gLastAlloc;
@@ -693,22 +704,14 @@ int main(int argc, char **argv)
     key_asset = 0x12345u; key_off = bm_off;
     CHECK(ndsRelocCompactGroundMapWallpaperKey(&key_asset, &key_off) == FALSE, "an unrelated asset is refused");
 
-    /* Training Mode: its own wallpaper loads at wallpaper - 0x26c88 */
+    /* A rewritten `wallpaper` (Training replaces it with its own file's
+     * Sprite) no longer says compact, and the packet size check does not
+     * depend on that pointer. */
     {
         Sprite *original = gd->wallpaper;
-        gSCManagerSceneData.scene_curr = nSCKindOther;
-        before_count = gAllocCount;
-        ndsRelocCompactGroundMapPrepareTraining(lf->data, gd);
-        CHECK(gd->wallpaper == original && gAllocCount == before_count, "no region outside Training");
-        gSCManagerSceneData.scene_curr = nSCKind1PTrainingMode;
-        ndsRelocCompactGroundMapPrepareTraining(lf->data, gd);
-        CHECK(gAllocCount == before_count + 1u && gLastAllocSize == 0x26cd0u, "container-sized region");
-        CHECK((u8 *)gd->wallpaper - 0x26c88u == (u8 *)gLastAlloc, "training base = region base");
-        /* Training then replaces `wallpaper` with its own file's Sprite. The
-         * packet size check must not depend on that pointer. */
-        gd->wallpaper = (Sprite *)((u8 *)gLastAlloc + 0x26c88u);
-        CHECK(ndsRelocCompactGroundMapSprite(lf) == NULL, "after Training the pointer no longer says compact");
-        CHECK(ndsRelocCompactGroundMapExpectedSize(map_id, source_size) == source_size + 784u, "packet size still the compact one after Training rewrote wallpaper");
+        gd->wallpaper = (Sprite *)calloc(1, sizeof(Sprite));
+        CHECK(ndsRelocCompactGroundMapSprite(lf) == NULL, "after a rewrite the pointer no longer says compact");
+        CHECK(ndsRelocCompactGroundMapExpectedSize(map_id, source_size) == source_size + 784u, "packet size still the compact one after the rewrite");
         gd->wallpaper = original;
     }
 
@@ -724,10 +727,6 @@ int main(int argc, char **argv)
     CHECK(gNdsRelocCompactGroundMapCount == before_count, "source map not normalized as a stub");
     key_asset = map_id; key_off = (u32)((u8 *)gd->wallpaper - (u8 *)lf->data);
     CHECK(ndsRelocCompactGroundMapWallpaperKey(&key_asset, &key_off) == FALSE, "source map key not translated");
-    gSCManagerSceneData.scene_curr = nSCKind1PTrainingMode;
-    before_count = gAllocCount;
-    ndsRelocCompactGroundMapPrepareTraining(lf->data, gd);
-    CHECK(gAllocCount == before_count, "source map needs no training region");
 
     printf(failures ? "FAILED %d\n" : "ALL_OK\n", failures);
     return failures ? 1 : 0;
@@ -743,7 +742,7 @@ class CompactSeamCTests(unittest.TestCase):
         cls.compiler = find_host_i686_compiler()
         if cls.compiler is None:
             return
-        source = read_split(ASSETS_C)
+        source = read_split(ASSETS_C) + "\n" + read_split(RESOLVE_C)
         defines = "\n".join(re.findall(
             r"(?m)^#define NDS_RELOC_ASSET_\w+ +(?:0x[0-9a-fA-F]+|\d+)u?$",
             source))
@@ -781,7 +780,7 @@ class CompactSeamCTests(unittest.TestCase):
         cls.compile_output = result.stdout + result.stderr
         cls.compile_ok = result.returncode == 0
         cls.compact_dir = tmp / "compact"
-        for spec in cgm.MAPS:
+        for spec in VS_MAPS:
             compact = cgm.build_compact_map(spec, *read_pair(spec))
             cgm.write_atomic(cls.compact_dir / spec.map_path, compact.data)
             setattr(cls, "info_" + Path(spec.map_path).name, compact)
@@ -801,7 +800,7 @@ class CompactSeamCTests(unittest.TestCase):
         if self.compiler is None:
             self.skipTest("no i686 host compiler (llvm-mingw i686-w64-mingw32-clang)")
         self.assertTrue(self.compile_ok, self.compile_output)
-        for spec in cgm.MAPS:
+        for spec in VS_MAPS:
             with self.subTest(stage=spec.label):
                 info = getattr(self, "info_" + Path(spec.map_path).name)
                 args = [str(self.binary),
@@ -839,7 +838,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="smash64ds-compact-cli-") as tmp:
             result = subprocess.run(
                 [sys.executable, str(Path(cgm.__file__).resolve()),
-                 "--o2r-root", str(O2R), "--map", "reloc_stages/GRLastMap",
+                 "--o2r-root", str(O2R), "--map", "reloc_stages/GRBonus3Map",
                  "--output", str(Path(tmp) / "x")],
                 capture_output=True, text=True, timeout=60)
             self.assertNotEqual(result.returncode, 0)
