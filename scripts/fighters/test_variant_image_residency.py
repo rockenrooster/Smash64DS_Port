@@ -64,11 +64,6 @@ VARIANTS = [
     ("NPURIN", "NPurin"),
     ("NNESS", "NNess"),
 ]
-# Zako-wave-reachable image slots (NLUIGI rides NMARIO's packet).
-ZAKO_SLOTS = [
-    "NMARIO", "NFOX", "NDONKEY", "NSAMUS", "NLINK", "NYOSHI", "NCAPTAIN",
-    "NKIRBY", "NPIKACHU", "NPURIN", "NNESS",
-]
 
 
 def _read(path: Path) -> str:
@@ -114,15 +109,26 @@ class VariantImageResidencyTests(unittest.TestCase):
             self.assertEqual(
                 body.count(f"NDS_NATIVE_IMAGE_SLOT_{flag}"), 1)
 
-    def test_path_size_verify_blocks_for_all_variants(self):
-        src = _read(ASSETS_C)
+    def test_path_size_rows_for_all_variants(self):
+        # Each variant's paths and image types are one generated row; the
+        # renderer's path and byte lookups expand the rows (the byte count is
+        # the sizeof of the row's image type).
+        header = _read(HEADER_H)
         for flag, title in VARIANTS:
-            self.assertIn(f'"nitro:/fighters/{flag.lower()}_low.bin"', src)
-            self.assertIn(f'"nitro:/fighters/{flag.lower()}_high.bin"', src)
-            self.assertIn(f"sizeof(NDSNative{title}LowImage)", src)
-            self.assertIn(f"sizeof(NDSNative{title}HighImage)", src)
-            self.assertIn(f"NDS_NATIVE_IMAGE_{flag}_LOW_MEMBERS", src)
-            self.assertIn(f"NDS_NATIVE_IMAGE_{flag}_HIGH_MEMBERS", src)
+            self.assertRegex(
+                header,
+                rf"X\(NDS_NATIVE_IMAGE_SLOT_{flag},\s*\\\s*"
+                rf'NDS_NITRO_FIGHTERS "{flag.lower()}_high\.bin",\s*'
+                rf'NDS_NITRO_FIGHTERS "{flag.lower()}_low\.bin",\s*\\\s*'
+                rf"NDSNative{title}HighImage,\s*NDSNative{title}LowImage\)")
+            self.assertIn(f"NDS_NATIVE_IMAGE_{flag}_LOW_MEMBERS", header)
+            self.assertIn(f"NDS_NATIVE_IMAGE_{flag}_HIGH_MEMBERS", header)
+        src = _read(ASSETS_C)
+        self.assertIn(
+            "NDS_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_PATH_ROW)", src)
+        self.assertIn(
+            "NDS_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_BYTES_ROW)", src)
+        self.assertIn("(u32)sizeof(low_t) : (u32)sizeof(high_t)", src)
 
     def test_runtime_tables_conditional_macros(self):
         src = _read(ASSETS_C)
@@ -169,20 +175,19 @@ class VariantImageResidencyTests(unittest.TestCase):
         self.assertIn("ndsFTManagerPreloadVariantOwnerImages();", setup)
         helper = _function_body(
             src, "static void ndsFTManagerPreloadVariantOwnerImages")
-        # Stage gating mirrors the source: Zako waves need every polygon
-        # kind, Metal Mario's stage needs its own owner, nothing else pays.
+        # Stage gating mirrors the source: Zako waves arm the polygon image
+        # pool (fighter construction fills it, wave by wave), Metal Mario's
+        # stage loads its own owner, nothing else pays.
         self.assertIn("nSC1PGameStageZako", helper)
+        self.assertIn("ndsRendererNativeArmPolygonImagePool();", helper)
         self.assertIn("nSC1PGameStageMMario", helper)
-        for slot in ZAKO_SLOTS + ["MMARIO"]:
-            self.assertIn(f"NDS_NATIVE_IMAGE_SLOT_{slot}, 0u", helper)
-            self.assertIn(f"NDS_NATIVE_IMAGE_SLOT_{slot}, 1u", helper)
-            # Image and verification builds preload; pure static controls do not.
-            self.assertIn(f"#if NDS_NATIVE_OWNER_IMAGE_{slot}", helper)
+        self.assertIn("NDS_NATIVE_IMAGE_SLOT_MMARIO, 0u", helper)
+        self.assertIn("NDS_NATIVE_IMAGE_SLOT_MMARIO, 1u", helper)
+        self.assertIn("#if NDS_NATIVE_OWNER_IMAGE_MMARIO", helper)
         # NLuigi reuses the NMario packet: no slot of its own in the
-        # header, preloaded through NMARIO here and in MakeFighter.
+        # header, loaded through NMARIO at fighter construction.
         header = _read(HEADER_H)
         self.assertNotIn("NDS_NATIVE_IMAGE_SLOT_NLUIGI", header)
-        self.assertIn("NDS_NATIVE_IMAGE_SLOT_NMARIO", helper)
         ftmanager = src
         self.assertIn("nFTKindNLuigi", ftmanager)
         self.assertIn("NDS_NATIVE_IMAGE_SLOT_NMARIO", ftmanager)
@@ -191,42 +196,34 @@ class VariantImageResidencyTests(unittest.TestCase):
         sys.path.insert(0, str(REPO / 'scripts/menus'))
         from source_test_helpers import function
         helper = function(_read(FTMANAGER_C), 'ndsFTManagerPreloadVariantOwnerImages')
-        for imaged, verify in ((1, 0), (0, 1), (0, 0)):
+        for imaged in (1, 0):
             code = f'''#include <assert.h>
 typedef unsigned u32; typedef unsigned char u8;
-#define NDS_NATIVE_OWNER_IMAGE_NMARIO {imaged}
 #define NDS_NATIVE_OWNER_IMAGE_MMARIO {imaged}
-#define NDS_NATIVE_OWNER_IMAGE_VERIFY {verify}
-#define NDS_P2_NMARIO 1
-#define NDS_P2_MMARIO 1
-#define NDS_NATIVE_IMAGE_SLOT_NMARIO 13u
 #define NDS_NATIVE_IMAGE_SLOT_MMARIO 12u
 #define nSCKind1PGame 52
 #define nSC1PGameStageZako 13
 #define nSC1PGameStageMMario 8
 static struct {{ int scene_curr; u8 spgame_stage; }} gSCManagerSceneData;
-static unsigned calls, verifies, mask;
+static unsigned calls, arms, mask;
+static void ndsRendererNativeArmPolygonImagePool(void) {{ arms++; }}
 static int ndsRendererNativeEnsureOwnerImage(u32 slot,u32 detail) {{
     assert(detail < 2); calls++; mask |= 1u << slot; return 1;
-}}
-static int ndsRendererNativeVerifyOwnerImage(u32 slot,u32 detail) {{
-    assert(detail < 2); verifies++; return 1;
 }}
 ''' + helper + f'''
 int main(void) {{
     gSCManagerSceneData.spgame_stage=nSC1PGameStageZako;
     gSCManagerSceneData.scene_curr=17;
-    ndsFTManagerPreloadVariantOwnerImages(); assert(calls==0);
+    ndsFTManagerPreloadVariantOwnerImages(); assert(calls==0 && arms==0);
     gSCManagerSceneData.scene_curr=6;
-    ndsFTManagerPreloadVariantOwnerImages(); assert(calls==0);
+    ndsFTManagerPreloadVariantOwnerImages(); assert(calls==0 && arms==0);
     gSCManagerSceneData.scene_curr=52;
     ndsFTManagerPreloadVariantOwnerImages();
-    assert(calls=={2 if imaged or verify else 0});
-    assert(mask=={1 << 13 if imaged or verify else 0});
+    assert(calls==0 && arms==1);
     gSCManagerSceneData.spgame_stage=nSC1PGameStageMMario;
     ndsFTManagerPreloadVariantOwnerImages();
-    assert(calls=={4 if imaged or verify else 0});
-    assert(verifies=={4 if verify else 0});
+    assert(calls=={2 if imaged else 0} && arms==1);
+    assert(mask=={1 << 12 if imaged else 0});
     return 0;
 }}
 '''
@@ -303,6 +300,10 @@ int main(void) {{
                 encoding="utf-8")
             (tmp_path / "nds" / "nds_native_fighter_tables.h").write_text(
                 tables, encoding="utf-8")
+            # The generated header includes the lean-live flag header too.
+            (tmp_path / "nds" / "nds_ftr_lean_live.h").write_text(
+                (REPO / "include" / "nds" / "nds_ftr_lean_live.h").read_text(
+                    encoding="utf-8"), encoding="utf-8")
             (tmp_path / "gen.h").write_text(header, encoding="utf-8")
             probe_lines = [
                 "#include <stdio.h>",

@@ -37,7 +37,10 @@ def run_c(source):
         cpath = Path(tmp) / "fixture.c"
         binary = Path(tmp) / "fixture.exe"
         cpath.write_text(source)
+        # Without the Remix hats (NDS_P4_KIRBY_HATS_PRESENT) the admission's
+        # P4 locals go unused.
         result = subprocess.run([compiler, "-std=c11", "-O2", "-Wall", "-Werror",
+                                 "-Wno-unused-variable",
                                  str(cpath), "-o", str(binary)],
                                 capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
@@ -54,13 +57,20 @@ typedef uint8_t u8;
 typedef uint32_t u32;
 typedef int32_t s32;
 enum { FALSE = 0, TRUE = 1 };
+/* The renderer's cold-section tag and diagnostics counters (on). */
+#define NDS_RENDERER_COLD
+#define NDS_DIAG(x) (x)
 '''
 
 
 def test_match_bank_sharing_failure_and_scene_generation():
     source = read_split(ROOT / "src/nds/nds_renderer_assets.c")
     start = source.index("typedef struct NDSNativeKirbyHatImageSlot")
-    declarations = source[start:source.index("\n#endif", start)]
+    # The hat block ends at its #endif, or at the owner image path lookup that
+    # now follows the hat counters inside the same block.
+    ends = (source.find("\n#endif", start),
+            source.find("\nstatic const char *ndsRendererNativeOwnerImagePath", start))
+    declarations = source[start:min(e for e in ends if e >= 0)]
     fixture = COMMON + r'''
 #define NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS 4
 #define NDS_NATIVE_IMAGE_DETAILS 2
@@ -75,6 +85,11 @@ typedef struct { u32 root_offset; } NDSNativeRoot;
 typedef struct { unsigned id; } NdsRelocAssetStream;
 static u32 gNdsTaskmanHeapGeneration = 1;
 ''' + declarations + r'''
+/* The Remix hats' admission state (P4 S8/S15); no Remix hat here. */
+static u32 sNdsNativeKirbyP4HatCount, sNdsNativeKirbyP4HatWithLow;
+static u32 sNdsNativeKirbyP4DeferredCount, sNdsNativeKirbyP4DeferredBytes;
+static NDSNativeKirbyHatImageSlot
+    sNdsNativeKirbyP4HatWorking[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS];
 static _Alignas(16) u8 arena[32768];
 static unsigned cursor, allocations, opens, reads, closes, bindings;
 static unsigned io_disabled, reject_alloc, reject_open, reject_read, bad_abi, bad_bind;
@@ -136,7 +151,6 @@ int main(void) {
     assert(!ndsRendererNativePrepareKirbyHatMatch(mask, mask)); // begin required
     ndsRendererNativeBeginKirbyHatMatch();
     assert(!ndsRendererNativePrepareKirbyHatMatch(1, 0));
-    assert(!ndsRendererNativePrepareKirbyHatMatch(mask, 1u << 7));
     assert(ndsRendererNativePrepareKirbyHatMatch(mask, mask));
     assert(opens == 6 && reads == 6 && closes == 6 && allocations == 1);
     assert(sNdsNativeKirbyHatMatchCount == 6 && bindings == 6);
@@ -155,27 +169,37 @@ int main(void) {
     assert(ndsKirbyHatSlot(0, 0) != ndsKirbyHatSlot(0, 1));
     assert(ndsRendererNativeEnsureKirbyCopyHat(0, 10, 0));
     assert(ndsKirbyHatSlot(0, 0) != ndsKirbyHatSlot(1, 0));
-    assert(!ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0)); // no lazy load
     assert(!ndsRendererNativeEnsureKirbyCopyHat(4, 6, 0));
     assert(!ndsRendererNativeEnsureKirbyCopyHat(0, 6, 2));
     assert(opens == 6 && allocations == 1);
+    // P2-6: a power the match did not admit loads late into the slot's own
+    // working buffer (above the GObj floor) and binds as that slot's hat.
+    io_disabled = 0;
+    assert(ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0));
+    assert(ndsKirbyHatSlot(0, 0) == &sNdsNativeKirbyHatWorkingImages[0][0]);
+    assert(ndsKirbyHatSlot(1, 0) != ndsKirbyHatSlot(0, 0));
+    assert(gNdsNativeKirbyHatLateLoadCount == 1);
+    assert(opens == 7 && allocations == 2);
     // A following menu cannot return an arena pointer from the retired match.
     ++gNdsTaskmanHeapGeneration;
     memset(arena, 0xdd, sizeof(arena));
     assert(ndsKirbyHatSlot(0, 0) == &sNdsNativeKirbyHatWorkingImages[0][0]);
-    io_disabled = 0;
     cursor = 0;
     assert(ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0)); // bounded preview path
     assert(ndsKirbyHatSlot(0, 0)->valid);
     next_scene();
-    assert(!ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0)); // not admitted yet
     assert(ndsRendererNativePrepareKirbyHatMatch(0, 0));
     assert(sNdsNativeKirbyHatMatchCount == 0 && cursor == 0);
-    assert(!ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0));
     next_scene();
     assert(ndsRendererNativePrepareKirbyHatMatch(1u << 7, 0));
     assert(ndsRendererNativeEnsureKirbyCopyHat(0, 7, 0));
-    assert(!ndsRendererNativeEnsureKirbyCopyHat(0, 7, 1));
+    assert(ndsKirbyHatSlot(0, 0) == &sNdsNativeKirbyHatMatchImages[0]);
+    // A low hat outside the high mask: a content's power in a battle of three
+    // or four, where that Kirby stays low (nds_kirby_hat_residency.c).
+    next_scene();
+    assert(ndsRendererNativePrepareKirbyHatMatch(0, 1u << 7));
+    assert(ndsRendererNativeEnsureKirbyCopyHat(0, 7, 1));
+    assert(ndsKirbyHatSlot(0, 1) == &sNdsNativeKirbyHatMatchImages[0]);
     // Allocation/read/corrupt-image failures publish no partially ready bank.
     for (unsigned failure = 0; failure < 5; ++failure) {
         next_scene();
@@ -220,7 +244,22 @@ static void ndsKirbyHatResidencyHalt(u32 value) { reason = value; longjmp(failur
 static int ndsRendererNativePrepareKirbyHatMatch(u32 high, u32 low) {
     admitted_high = high; admitted_low = low; return !refuse;
 }
-''' + function(source, "ndsKirbyHatPrepareMatch") + r'''
+/* The players ndsFTManagerLowDetailOnly keeps low. */
+static unsigned low_only, kirby_slots_seen;
+static int ndsFTManagerLowDetailOnly(s32 player) { return (low_only >> player) & 1u; }
+/* No content plays here (nds_p4.c). */
+static int ndsP4KirbyPlayerHasPower(s32 player) { (void)player; return FALSE; }
+static u32 ndsP4KirbyHatMask(s32 player) { (void)player; return 0u; }
+static int ndsP4KirbyPlayerNoCopy(s32 player) { (void)player; return FALSE; }
+static u32 ndsP4KirbyMatchHats(u8 *hats, u32 size) { (void)hats; (void)size; return 0u; }
+static void ndsRendererNativeKirbyHatSetKirbySlots(u32 mask) { kirby_slots_seen = mask; }
+static void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 with_low) {
+    (void)hats; (void)count; (void)with_low;
+}
+''' + "\n".join(function(source, name) for name in (
+        "ndsKirbyHatBitForKind", "ndsKirbyHatCopyTable", "ndsKirbyHatPlayerMask",
+        "ndsKirbyHatCountKirbys", "ndsKirbyHatHighReachable", "ndsKirbyHatAdmit",
+        "ndsKirbyHatPrepareMatch")) + r'''
 int main(void) {
     const int parts[27] = {12,7,4,8,11,10,5,9,0,6,3,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4};
     for (unsigned i = 0; i < 27; ++i) {
@@ -234,19 +273,28 @@ int main(void) {
         for (unsigned slot = 0; slot < 4; ++slot) {
             unsigned kind = r % 12; r /= 12;
             battle.players[slot].fkind = kind;
-            kirby |= kind == 8;
+            kirby |= (unsigned)(kind == 8) << slot;
             if (kind != 8) mask |= 1u << parts[kind];
         }
         ndsKirbyHatPrepareMatch();
         assert(admitted_high == (kirby ? mask : 0));
         assert(admitted_low == admitted_high);
+        assert(!kirby || kirby_slots_seen == kirby);
     }
     battle.cp_count = 2;
     battle.players[0].fkind = 8;
     battle.players[1].fkind = 1;
     battle.players[2].pkind = battle.players[3].pkind = nFTPlayerKindNot;
     ndsKirbyHatPrepareMatch();
-    assert(admitted_high == (1u << 7) && admitted_low == 0);
+    // Every VS battle draws its fighters' low detail (owner 2026-10-01), so the
+    // hats load low in a match of two as well.
+    assert(admitted_high == (1u << 7) && admitted_low == (1u << 7));
+    // A Kirby kept low (a CPU of three or four, a wireless guest) keeps its
+    // hats low only (owner 2026-10-19).
+    low_only = 1u;
+    ndsKirbyHatPrepareMatch();
+    assert(admitted_high == 0 && admitted_low == (1u << 7));
+    low_only = 0u;
     battle.players[1].fkind = 26; // Giant DK aliases the normal DK copy row.
     ndsKirbyHatPrepareMatch();
     assert(admitted_high == (1u << 4));

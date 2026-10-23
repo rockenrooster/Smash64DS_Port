@@ -46,6 +46,14 @@ static NDSNativeRoot canonical_roots[2] = {{10},{20}};
 static NDSNativeFighterOwnerRuntime canonical = {NULL,canonical_roots,2};
 static const NDSNativeFighterOwnerRuntime *ndsRendererNativeFighterCanonicalOwnerForDetail(u32 s,u32 d)
  { (void)s;(void)d;return &canonical; }
+/* The P4 contents' root programs (nds_renderer_owner_tables.c): none here. */
+typedef struct { const NDSNativeFighterOwnerRuntime *owners[2]; const u8 *parents;
+ const u8 *cross; const u8 *bindings[2]; } NDSP4RootProgram;
+static const NDSP4RootProgram *ndsP4RootPrograms(u32 slot,u32 *count)
+ { (void)slot;*count=0;return NULL; }
+static u32 ndsP4SelectRootProgram(u32 s,u32 d,const u32 *r,u32 n,
+ const NDSP4RootProgram *p,u32 c,u32 *tried)
+ { (void)s;(void)d;(void)r;(void)n;(void)p;(void)c;(void)tried;return 0xff; }
 '''
     code += '\n#include "' + (ROOT / "src/nds/generated/nds_native_skeletons.generated.inc").as_posix() + '"\n'
     start = text.index("static const NDSNativeFighterOwnerRuntime *\nndsRendererNativeFighterOwnerForProgramDetail(")
@@ -94,18 +102,26 @@ typedef unsigned u32;
 #define NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1 23
 #define NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1 24
 #define NDS_NATIVE_IMAGE_SLOT_PIKACHU 5
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL NDS_NATIVE_IMAGE_OWNER_SLOTS
 enum { nFTKindMario=0,nFTKindFox=1,nFTKindPikachu=9 };
 enum { nFTPlayerKindDemo=3,nFTPartsDetailHigh=1,nFTPartsDetailLow=2 };
-enum { nSCKindVSBattle=22,nSCKindVSResults=24 };
-typedef struct { int fkind,pkind,detail; } FTDesc;
+enum { nSCKindPlayersVS=16,nSCKindVSBattle=22,nSCKindVSResults=24 };
+typedef struct { int fkind,pkind,player,detail; } FTDesc;
 static struct { int scene_curr; } gSCManagerSceneData;
 static u32 slots[4],details[4],count;
 int ndsRendererNativeEnsureOwnerImage(u32 s,u32 d) { slots[count]=s;details[count++]=d;return 1; }
+/* An electric attacker is in the match; Pikachu has an image (Mario and Fox
+ * draw from static tables); no content, nobody kept low. */
+static int ndsFTManagerMatchHasElectricAttacker(void) { return 1; }
+static u32 ndsFTManagerImageSlotForPlayer(int player,int fkind)
+ { (void)player;return (fkind==nFTKindPikachu)?NDS_NATIVE_IMAGE_SLOT_PIKACHU:NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL; }
+static int ndsP4ContentLowDetailOnly(int player) { (void)player;return 0; }
+static int ndsFTManagerLowDetailOnly(int player) { (void)player;return 0; }
 '''
     code += function((ROOT / "src/import/battleship_ftmanager.c").read_text(), "ndsFTManagerEnsureOwnerImages")
     code += r'''
 int main(void) {
- FTDesc d={nFTKindPikachu,nFTPlayerKindDemo,nFTPartsDetailHigh};
+ FTDesc d={nFTKindPikachu,nFTPlayerKindDemo,0,nFTPartsDetailHigh};
  gSCManagerSceneData.scene_curr=nSCKindVSResults;
  ndsFTManagerEnsureOwnerImages(&d);
  assert(count==1 && slots[0]==5 && details[0]==0);

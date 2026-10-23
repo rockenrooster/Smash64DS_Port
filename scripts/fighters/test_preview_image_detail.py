@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
-"""Host C execution of the real ftManagerMakeFighter image detail gate.
+"""Host C execution of the real fighter image detail gate.
 
-Measured result: this suite extracts ftManagerMakeFighter verbatim from
-src/import/battleship_ftmanager.c with source_test_helpers.function,
-compiles that exact body on the host with gcc or clang against lightweight
-FTDesc, GObj, base factory, ensure and verify recorder, scene data, and enum
-stubs, then runs the compiled body. No ROM, no emulator, and no live C edits
-take place. All build artifacts live in a temp dir. All logs are capped.
+Measured result: this suite extracts ndsFTManagerEnsureOwnerImages (the gate
+ftManagerMakeFighter calls) verbatim from src/import/battleship_ftmanager.c
+with source_test_helpers.function, compiles that exact body on the host with
+gcc or clang against lightweight FTDesc, ensure recorder, scene data, and
+enum stubs, then runs the compiled body. No ROM, no emulator, and no live C
+edits take place. All build artifacts live in a temp dir. All logs are
+capped.
 
 Source references checked here:
-  * src/import/battleship_ftmanager.c holds ftManagerMakeFighter.
+  * src/import/battleship_ftmanager.c holds the gate, and
+    ftManagerMakeFighter calls it.
   * include/ft/fighter.h defines nFTPlayerKindDemo and nFTPartsDetailLow.
   * include/sc/scene.h defines nSCKind1PGamePlayers and nSCKind1PIntro.
-  * include/nds/nds_renderer.h declares ndsRendererNativeEnsureOwnerImage
-    and ndsRendererNativeVerifyOwnerImage.
-  * Makefile carries the NDS_NATIVE_OWNER_IMAGE_VERIFY default of 0.
+  * include/nds/nds_renderer.h declares ndsRendererNativeEnsureOwnerImage.
   * decomp sc1pintro.c:998 selects LOW for some team opponents, while the 1P
     CSS maker preserves the default HIGH detail.
 
-Scope actually proven here (host cap: 2 compiler runs, 2 executions):
+Scope actually proven here (host cap: 1 compiler run, 1 execution):
   * the compiled body loads only detail 0 for CSS HIGH Demo, only detail 1
-    for intro LOW Demo, and only detail 0 for intro HIGH Demo.
-  * the compiled body loads both details for battle human, battle CPU, and
-    other Demo scenes, and loads nothing for a null descriptor.
-  * with NDS_NATIVE_OWNER_IMAGE_VERIFY set to 1, verify calls equal ensure
-    calls per case; with the flag set to 0, no verify calls happen while
-    ensure behavior stays the same.
+    for intro LOW Demo, and only detail 0 for intro HIGH Demo; the VS select
+    and Results Demo fighters load only their own detail.
+  * a HIGH VS battle fighter loads only detail 0, a LOW one both, and one
+    the battle keeps low (ndsFTManagerLowDetailOnly) only detail 1.
+  * another Demo scene loads both details, and a null descriptor nothing.
 
 Proposal, not measured here: real NitroFS image bytes, real renderer
 binding, and real CSS, intro, or battle runtime still belong to the ROM and
@@ -52,7 +51,7 @@ from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "menus"))
-from source_test_helpers import function, source  # noqa: E402
+from source_test_helpers import function  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = (ROOT / "src" / "import" / "battleship_ftmanager.c").read_text(
@@ -65,9 +64,6 @@ RENDERER_H = (ROOT / "include" / "nds" / "nds_renderer.h").read_text(
 GENERATED_H = (
     ROOT / "include" / "nds" / "generated" /
     "nds_native_fighter_image.generated.h").read_text(encoding="utf-8")
-MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
-RENDERER_NATIVE_COMMON = source(
-    ROOT / "src" / "nds" / "nds_renderer_native_common.c")
 INTRO_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "sc" /
            "sc1pmode" / "sc1pintro.c").read_text(encoding="utf-8")
 CSS_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "mn" /
@@ -87,14 +83,16 @@ def pin(pattern: str, text: str, label: str) -> None:
 
 
 def extract_wrapper() -> str:
-    fn = function(SRC, "ftManagerMakeFighter")
+    if "ndsFTManagerEnsureOwnerImages(desc);" not in function(
+            SRC, "ftManagerMakeFighter"):
+        raise AssertionError("ftManagerMakeFighter lost its image gate")
+    fn = function(SRC, "ndsFTManagerEnsureOwnerImages")
     for needle in ("ndsRendererNativeEnsureOwnerImage",
-                   "ndsRendererNativeVerifyOwnerImage",
                    "nSCKind1PGamePlayers",
                    "nSCKind1PIntro",
                    "nFTPlayerKindDemo",
                    "nFTPartsDetailLow",
-                   "ndsBaseFTManagerMakeFighter"):
+                   "ndsFTManagerLowDetailOnly"):
         if needle not in fn:
             raise AssertionError(f"extracted wrapper lost: {needle}")
     return fn
@@ -115,9 +113,7 @@ typedef int32_t s32;
 #define FALSE 0
 #endif
 
-typedef struct GObj { int _opaque; } GObj;
-typedef struct FTDesc { s32 fkind; s32 pkind; u8 detail; void *figatree_heap; } FTDesc;
-typedef struct FTData { size_t file_anim_size; } FTData;
+typedef struct FTDesc { s32 fkind; s32 pkind; s32 player; u8 detail; } FTDesc;
 
 /* Test declarations with actual port enum names. FTKind order mirrors
  * include/ft/fighter.h so the mapped test kind resolves to its slot. */
@@ -173,14 +169,15 @@ enum {
     nSCKind1PGamePlayers = 101,
     nSCKind1PIntro = 102,
     nSCKindVSBattle = 103,
-    nSCKindVSResults = 104
+    nSCKindVSResults = 104,
+    nSCKindPlayersVS = 105,
+    nSCKindPlayers1PTraining = 106,
+    nSCKind1PBonus1Players = 107,
+    nSCKind1PBonus2Players = 108,
+    nSCKindAutoDemo = 109
 };
 typedef struct { u8 scene_curr; u8 scene_prev; } SCCommonData;
 static SCCommonData gSCManagerSceneData;
-static FTData *dFTManagerDataFiles[nFTKindEnumCount + 1];
-static volatile u32 gNdsFTManagerFigatreeSlotKindCount;
-static volatile u32 gNdsFTManagerFigatreeSlotKindBytes;
-static volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 
 /* Enable every fkind branch so the mapped test kind always resolves. */
 #define NDS_P2_LUIGI 1
@@ -208,6 +205,7 @@ static volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 #define NDS_P2_NPURIN 1
 #define NDS_P2_NNESS 1
 #define NDS_P2_1P_GAME 1
+#define NDS_P2_MENU_SHELL 1
 
 /* Slot ids mirror the generated header values. */
 #define NDS_NATIVE_IMAGE_SLOT_LUIGI 0u
@@ -234,12 +232,26 @@ static volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 #define NDS_NATIVE_IMAGE_SLOT_NNESS 21u
 #define NDS_NATIVE_IMAGE_SLOT_BOSS 22u
 #define NDS_NATIVE_IMAGE_OWNER_SLOTS 23u
+#define NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1 23u
+#define NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1 24u
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL 25u
 
-/* Call-recording stubs for the image seams. */
+/* The gate's inputs: the test kind's slot, no electric attacker, no content,
+ * and the players the battle keeps low (s_low_only). */
+static u32 s_low_only;
+static int ndsFTManagerMatchHasElectricAttacker(void) { return FALSE; }
+static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
+{
+    (void)player;
+    return (fkind == nFTKindMMario) ? NDS_NATIVE_IMAGE_SLOT_MMARIO :
+                                      NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL;
+}
+static int ndsP4ContentLowDetailOnly(s32 player) { (void)player; return FALSE; }
+static int ndsFTManagerLowDetailOnly(s32 player) { return (s_low_only >> player) & 1u; }
+
+/* Call-recording stub for the image seam. */
 static u32 g_ensure[8];
 static u32 g_nensure;
-static u32 g_verify[8];
-static u32 g_nverify;
 
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
 {
@@ -249,22 +261,7 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     return TRUE;
 }
 
-s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
-{
-    (void)owner_slot;
-    if (g_nverify < 8u) { g_verify[g_nverify] = use_low_detail; }
-    g_nverify++;
-    return TRUE;
-}
-
-static GObj s_base_gobj;
-GObj *ndsBaseFTManagerMakeFighter(FTDesc *desc)
-{
-    (void)desc;
-    return &s_base_gobj;
-}
-
-GObj *ftManagerMakeFighter(FTDesc *desc);
+void ndsFTManagerEnsureOwnerImages(FTDesc *desc);
 '''
 
 HOST_MAIN = r'''
@@ -273,9 +270,7 @@ static int s_failures = 0;
 static void reset_calls(void)
 {
     g_nensure = 0u;
-    g_nverify = 0u;
     memset(g_ensure, 0, sizeof(g_ensure));
-    memset(g_verify, 0, sizeof(g_verify));
 }
 
 /* Independent expectations: each wanted list is a literal per case, never
@@ -294,22 +289,13 @@ static void check(const char *name, u32 scene, s32 pkind, int detail,
     d.pkind = pkind;
     d.detail = (u8)detail;
     p = is_null ? (FTDesc *)0 : &d;
-    (void)ftManagerMakeFighter(p);
+    ndsFTManagerEnsureOwnerImages(p);
     ok = (g_nensure == nwant);
     for (i = 0u; i < nwant && i < 8u; i++) {
         if (g_ensure[i] != want[i]) { ok = 0; }
     }
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-    if (g_nverify != g_nensure) { ok = 0; }
-    for (i = 0u; i < g_nensure && i < 8u; i++) {
-        if (g_verify[i] != g_ensure[i]) { ok = 0; }
-    }
-#else
-    if (g_nverify != 0u) { ok = 0; }
-#endif
-    printf("CASE %s: %s nensure=%u nverify=%u\n",
-           name, ok ? "PASS" : "FAIL",
-           (unsigned)g_nensure, (unsigned)g_nverify);
+    printf("CASE %s: %s nensure=%u\n",
+           name, ok ? "PASS" : "FAIL", (unsigned)g_nensure);
     if (!ok) { s_failures++; }
 }
 
@@ -324,11 +310,21 @@ int main(void)
           nFTPartsDetailLow, 0, 1u, only1);
     check("intro_high_demo", nSCKind1PIntro, nFTPlayerKindDemo,
           nFTPartsDetailHigh, 0, 1u, only0);
-    check("battle_human", nSCKindVSBattle, nFTPlayerKindMan,
-          nFTPartsDetailHigh, 0, 2u, both);
-    check("battle_cpu", nSCKindVSBattle, nFTPlayerKindCom,
+    check("results_high_demo", nSCKindVSResults, nFTPlayerKindDemo,
+          nFTPartsDetailHigh, 0, 1u, only0);
+    check("results_low_demo", nSCKindVSResults, nFTPlayerKindDemo,
+          nFTPartsDetailLow, 0, 1u, only1);
+    check("select_low_demo", nSCKindPlayersVS, nFTPlayerKindDemo,
+          nFTPartsDetailLow, 0, 1u, only1);
+    check("battle_high", nSCKindVSBattle, nFTPlayerKindMan,
+          nFTPartsDetailHigh, 0, 1u, only0);
+    check("battle_low", nSCKindVSBattle, nFTPlayerKindCom,
           nFTPartsDetailLow, 0, 2u, both);
-    check("other_demo", nSCKindVSResults, nFTPlayerKindDemo,
+    s_low_only = 1u;
+    check("battle_kept_low", nSCKindVSBattle, nFTPlayerKindCom,
+          nFTPartsDetailLow, 0, 1u, only1);
+    s_low_only = 0u;
+    check("other_demo", nSCKindAutoDemo, nFTPlayerKindDemo,
           nFTPartsDetailHigh, 0, 2u, both);
     check("null_desc", nSCKind1PGamePlayers, nFTPlayerKindDemo,
           nFTPartsDetailHigh, 1, 0u, both);
@@ -347,32 +343,27 @@ def pick_compiler() -> str:
     raise AssertionError("no host C compiler found (gcc, clang, or cc)")
 
 
-def compile_and_run(wrapper: str, verify: int, workdir: Path,
-                    compiler: str) -> str:
-    tag = f"verify{verify}"
-    source = workdir / f"preview_detail_{tag}.c"
-    program = workdir / (f"preview_detail_{tag}.exe"
-                         if os.name == "nt" else f"preview_detail_{tag}")
+def compile_and_run(wrapper: str, workdir: Path, compiler: str) -> str:
+    source = workdir / "preview_detail.c"
+    program = workdir / ("preview_detail.exe"
+                         if os.name == "nt" else "preview_detail")
     source.write_text(HARNESS_HEAD + "\n" + wrapper + "\n" + HOST_MAIN + "\n",
                       encoding="utf-8")
     built = subprocess.run(
-        [compiler, "-std=c99", "-O1", "-w",
-         f"-DNDS_NATIVE_OWNER_IMAGE_VERIFY={verify}",
-         str(source), "-o", str(program)],
+        [compiler, "-std=c99", "-O1", "-w", str(source), "-o", str(program)],
         capture_output=True, text=True, timeout=120)
     if built.returncode != 0:
         raise AssertionError(
-            f"host build failed ({tag}):\n"
+            "host build failed:\n"
             f"{bounded((built.stderr or '') + (built.stdout or ''))}")
     ran = subprocess.run([str(program)], capture_output=True, text=True,
                          timeout=60)
     out = ran.stdout or ""
     if ran.returncode != 0:
         raise AssertionError(
-            f"host run failed ({tag}):\n{bounded(out + (ran.stderr or ''))}")
+            f"host run failed:\n{bounded(out + (ran.stderr or ''))}")
     if "ALL PASS" not in out:
-        raise AssertionError(
-            f"missing ALL PASS ({tag}):\n{bounded(out)}")
+        raise AssertionError(f"missing ALL PASS:\n{bounded(out)}")
     return out
 
 
@@ -383,11 +374,8 @@ class PreviewImageDetailTests(unittest.TestCase):
         cls.compiler = pick_compiler()
         cls.workdir = Path(tempfile.mkdtemp(prefix="preview-detail-"))
         cls.addClassCleanup(shutil.rmtree, cls.workdir, True)
-        # Concrete cap: exactly 2 compiler runs and 2 executions.
-        cls.out_on = compile_and_run(cls.wrapper, 1, cls.workdir,
-                                     cls.compiler)
-        cls.out_off = compile_and_run(cls.wrapper, 0, cls.workdir,
-                                      cls.compiler)
+        # Concrete cap: exactly 1 compiler run and 1 execution.
+        cls.out = compile_and_run(cls.wrapper, cls.workdir, cls.compiler)
 
     def test_guard_symbols_are_actual_port_names(self):
         """Wrapper guards use enum names defined by the port headers."""
@@ -397,14 +385,10 @@ class PreviewImageDetailTests(unittest.TestCase):
         for symbol in ("nSCKind1PGamePlayers", "nSCKind1PIntro"):
             self.assertIn(symbol, SCENE_H, symbol)
             self.assertIn(symbol, self.wrapper, symbol)
-        for symbol in ("ndsRendererNativeEnsureOwnerImage",
-                       "ndsRendererNativeVerifyOwnerImage"):
-            self.assertIn(symbol, RENDERER_H, symbol)
-            self.assertIn(symbol, self.wrapper, symbol)
+        self.assertIn("ndsRendererNativeEnsureOwnerImage", RENDERER_H)
+        self.assertIn("ndsRendererNativeEnsureOwnerImage", self.wrapper)
         self.assertIn("NDS_NATIVE_IMAGE_OWNER_SLOTS", GENERATED_H)
         self.assertIn("NDS_NATIVE_IMAGE_OWNER_SLOTS", self.wrapper)
-        self.assertIn("NDS_NATIVE_OWNER_IMAGE_VERIFY", RENDERER_H)
-        self.assertIn("NDS_NATIVE_OWNER_IMAGE_VERIFY", SRC)
 
     def test_source_context_intro_low_and_css_default(self):
         """Intro LOW override exists while CSS keeps the default detail."""
@@ -414,47 +398,20 @@ class PreviewImageDetailTests(unittest.TestCase):
 
     def test_compiled_gated_demo_loads_single_detail(self):
         """Compiled body loads one image for gated Demo actors."""
-        for case in ("css_high_demo", "intro_low_demo", "intro_high_demo"):
-            self.assertIn(f"CASE {case}: PASS", self.out_on,
-                          bounded(self.out_on))
+        for case in ("css_high_demo", "intro_low_demo", "intro_high_demo",
+                     "results_high_demo", "results_low_demo",
+                     "select_low_demo"):
+            self.assertIn(f"CASE {case}: PASS", self.out, bounded(self.out))
+
+    def test_compiled_battle_loads_the_details_it_draws(self):
+        """HIGH VS fighters load detail 0, LOW both, kept-low detail 1."""
+        for case in ("battle_high", "battle_low", "battle_kept_low"):
+            self.assertIn(f"CASE {case}: PASS", self.out, bounded(self.out))
 
     def test_compiled_others_load_both_and_null_loads_none(self):
         """Compiled body loads both elsewhere and none for null."""
-        for case in ("battle_human", "battle_cpu", "other_demo",
-                     "null_desc"):
-            self.assertIn(f"CASE {case}: PASS", self.out_on,
-                          bounded(self.out_on))
-
-    def test_compiled_verify_flag_on_and_off(self):
-        """Verify matches ensure when on and stays silent when off."""
-        for case in ("css_high_demo", "intro_low_demo", "intro_high_demo",
-                     "battle_human", "battle_cpu", "other_demo",
-                     "null_desc"):
-            self.assertIn(f"CASE {case}: PASS", self.out_off,
-                          bounded(self.out_off))
-        self.assertIn("nensure=1 nverify=1", self.out_on)
-        self.assertIn("nensure=2 nverify=2", self.out_on)
-        self.assertIn("nensure=1 nverify=0", self.out_off)
-        self.assertIn("nensure=2 nverify=0", self.out_off)
-        self.assertIn("nensure=0 nverify=0", self.out_off)
-        pin(r"NDS_NATIVE_OWNER_IMAGE_VERIFY\s*\?=\s*0", MAKEFILE,
-            "verify Makefile default")
-
-    def test_normal_controls_have_distinct_dense_normal_scratch(self):
-        """Image-off VERIFY builds must not redeclare generated owner normals."""
-        for owner in ("Luigi", "Donkey", "Captain", "Samus", "Link",
-                      "Pikachu", "Yoshi", "Ness", "Purin", "Kirby"):
-            with self.subTest(owner=owner):
-                self.assertIn(f"sNdsNative{owner}FighterDenseNormalsBake[",
-                              RENDERER_NATIVE_COMMON)
-                self.assertIn(f"sNdsNative{owner}FighterDenseNormalsBakeLow[",
-                              RENDERER_NATIVE_COMMON)
-                self.assertNotRegex(
-                    RENDERER_NATIVE_COMMON,
-                    rf"static\s+u32\s+sNdsNative{owner}FighterDenseNormals\s*\[")
-                self.assertNotRegex(
-                    RENDERER_NATIVE_COMMON,
-                    rf"static\s+u32\s+sNdsNative{owner}FighterDenseNormalsLow\s*\[")
+        for case in ("other_demo", "null_desc"):
+            self.assertIn(f"CASE {case}: PASS", self.out, bounded(self.out))
 
 
 if __name__ == "__main__":

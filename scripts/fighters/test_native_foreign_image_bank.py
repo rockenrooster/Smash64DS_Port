@@ -31,6 +31,7 @@ typedef struct { u32 source_offset, data_offset, data_bytes; } NDSPreviewPackSpa
 ''' + row_type + r'''
 typedef struct {
     u32 generation;
+    u32 sorted_sections;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
     NDSBattleForeignImageRow *foreign_images;
@@ -48,8 +49,16 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileByAsset(u32 asset) {
     for (unsigned i=0;i<3;i++) if(files[i].asset_id==asset) return &files[i];
     return NULL;
 }
+/* The preview kinds: the original cast here, no content (nds_p4.c). */
+#define nFTKindMMario 13
+#define NDS_PREVIEW_P4_KINDS 0u
+static const void *ndsP4Fighter(u32 content) { (void)content; return NULL; }
+static u32 ndsP4SelContent(u32 kind) { (void)kind; return 0u; }
+/* A power's Remix hat textures (P4 S8): none here. */
+static s32 ndsP4KirbyHatTextureAsset(u32 asset_id) { (void)asset_id; return FALSE; }
 '''
-    for name in ("ndsPreviewRange", "ndsPreviewSection", "ndsPreviewFileOffset",
+    for name in ("ndsPreviewRange", "ndsPreviewKindIndex", "ndsPreviewSection",
+                 "ndsPreviewFileOffset",
                  "ndsBattleForeignImagesValid", "ndsRelocNativeForeignImageAddress"):
         body += function(source, name) + "\n"
     body += r'''
@@ -63,7 +72,7 @@ int main(void) {
     files[0]=(NDSRelocLoadedFile){328,compact_owner,8,16,7,{9,0}};
     files[1]=(NDSRelocLoadedFile){324,raw_owner,8,16,7,{0,0}};
     files[2]=(NDSRelocLoadedFile){338,raw_yoshi,128,16,7,{0,0}};
-    sNdsPreviewResidents[8]=(NDSPreviewResident){7,sections,spans,bank.rows,2};
+    sNdsPreviewResidents[8]=(NDSPreviewResident){7,0,sections,spans,bank.rows,2};
     assert(ndsBattleForeignImagesValid(bank.rows,2,40));
     assert(ndsRelocNativeForeignImageAddress(compact_owner,338,0x9ec8)==bank.payload);
     assert(ndsRelocNativeForeignImageAddress(compact_owner,338,0x9ef4)==bank.payload+36);

@@ -168,6 +168,7 @@ typedef enum NDSPlayersVSResidentAcquireResult {
 typedef struct NDSPlayersVSResidentBlock {
     SYMallocRegion arena;
     void *base;
+    u32 bytes;
     s32 fkind;
     u32 refs;
     void *load_cursor;
@@ -316,6 +317,35 @@ static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
 {
     (void)block; (void)fkind;
     return TRUE;
+}
+/* The block's span from the select's preview region (the fixture's blocks
+ * keep their own arenas, so the take succeeds), and a kind's FTData (no
+ * content here: the source table's). */
+static sb32 ndsMNPlayersVSPreviewBlockTake(NDSPlayersVSResidentBlock *block,
+                                           s32 fkind)
+{
+    (void)block; (void)fkind;
+    return TRUE;
+}
+static FTData *ndsCssPreviewKindData(s32 kind)
+{
+    return dFTManagerDataFiles[kind];
+}
+static u32 ndsCssPreviewKindContent(s32 kind) { (void)kind; return 0u; }
+static sb32 ndsFTManagerSetupPreviewFilesP4(u32 content)
+{
+    (void)content;
+    return FALSE;
+}
+/* The span goes back to the region on a failed load, and a ready block keeps
+ * only what its load used: the fixture's arenas are their own. */
+static void ndsMNPlayersVSPreviewBlockGive(NDSPlayersVSResidentBlock *block)
+{
+    (void)block;
+}
+static void ndsMNPlayersVSPreviewBlockTrim(NDSPlayersVSResidentBlock *block)
+{
+    (void)block;
 }
 static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     s32 fkind, SYMallocRegion *anim_region, u32 stage)
@@ -678,8 +708,17 @@ typedef struct NDSPreviewPackSpan {
 } NDSPreviewPackSpan;
 typedef struct NDSPreviewResident {
     u32 generation; u32 model_source_bytes;
+    u8 *half_base; const void *half;
+    u32 sorted_sections;
     NDSPreviewPackSection *sections; NDSPreviewPackSpan *spans;
 } NDSPreviewResident;
+/* The packs here carry no half-resolution table, and every kind is one of
+ * the original twelve (no content rows). */
+#define ndsPreviewHalfTable(load) ((void)(load), (const void *)0)
+static s32 ndsPreviewKindIndex(s32 kind)
+{
+    return ((kind >= 0) && (kind < 12)) ? kind : -1;
+}
 typedef struct NDSRelocAssetHeader {
     u32 file_id; u32 data_size; u32 reloc_intern_offset; u32 reloc_extern_offset;
 } NDSRelocAssetHeader;
@@ -906,7 +945,9 @@ int main(void)
 
 def pack_sources(mutation=None):
     state_enum = braced(PACK, r"enum \{\s*\n\s*NDS_FPC_STATE_FREE", True)
-    record = braced(PACK, r"typedef struct NDSPreviewPackLoad \{", True)
+    # The record is typedef'd ahead (its users precede it) and defined here.
+    record = ("typedef struct NDSPreviewPackLoad NDSPreviewPackLoad;\n" +
+              braced(PACK, r"^struct NDSPreviewPackLoad \{", True))
     step = function(PACK, "ndsRelocPreviewFighterLoadStep")
     if mutation is not None:
         anchor, patched = mutation

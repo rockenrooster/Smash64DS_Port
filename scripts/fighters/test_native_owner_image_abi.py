@@ -116,6 +116,10 @@ typedef uint32_t u32; typedef int32_t s32;
 #endif
 #define NDS_NATIVE_IMAGE_OWNER_SLOTS 1u
 #define NDS_NATIVE_IMAGE_DETAILS 2u
+/* The P4 owners follow the base ones (nds_p4_native.h); none here. */
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL NDS_NATIVE_IMAGE_OWNER_SLOTS
+/* No owner here shares one image between its two details. */
+#define NDS_NATIVE_OWNER_IMAGE_SHARED_DETAIL_ROWS(X)
 #ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
 #define NDS_NATIVE_OWNER_IMAGE_ABI_TAG __ABI_TAG__u
 #endif

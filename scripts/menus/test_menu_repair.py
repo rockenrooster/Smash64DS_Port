@@ -249,14 +249,19 @@ typedef int32_t s32;
 #define SCBATTLE_GAMERULE_TIME 1u
 #define nFTPlayerKindMan 0u
 #define nFTPlayerKindCom 1u
+#define nFTPlayerKindNot 2u
 #define GMCOMMON_PLAYERS_MAX 4u
 #define nSC1PGameStageCommonEnd 8u
 #define nIFPlayerTagKindHeart 5u
 #define NDS_P2_1P_GAME 0
 typedef struct {
     u8 fkind, pkind, costume, shade, team, handicap, level;
-    u8 stock_count, is_spgame_enemy, copy_kind;
+    u8 stock_count, is_spgame_enemy, copy_kind, p4_content;
 } NdsMatchFighterConfig;
+/* No P4 content here: the lookup finds none (include/nds/nds_p4.h). */
+typedef struct { s32 parent_kind; } NDSP4Fighter;
+static const NDSP4Fighter *ndsP4Fighter(u32 content) { (void)content; return NULL; }
+static u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 typedef struct {
     u8 gkind, game_type, spgame_stage;
     u32 game_rules;
@@ -533,12 +538,26 @@ u32 restored;
 void ndsMenuShellCssWalkRestoreGate(void) { ++restored; }
 void ndsMenuShellCssWalkTourSelect(u32 kind) { (void)kind; assert(0); }
 u32 ndsMenuShellCssFighterLocked(u32 kind) { (void)kind; return 0; }
+/* The VS select (not the 1P one), and its random chooser's lap: slot 0's
+ * token on the chooser cell takes a random selection. */
+typedef unsigned char u8;
+#define NDS_CSS_ONEP 0
+#define NDS_P4_SEL_RANDOM 31u
+#define nFTKindNull 0x1cu
+#define NDS_CSS_STATUS_GRAB 1u
+u8 sCssFkind[4];
+u32 sCssSelected[4], sCssStatus, gNdsMenuShellCssWalkChooserSel, chooser_picks;
+int sCssHeld = 1;
+int ndsMenuShellCssP4Cell(u32 sel) { (void)sel; return 5; }
+void ndsMenuShellCssCenterPuck(u32 slot, u32 sel) { (void)slot; (void)sel; }
+u32 ndsMenuShellCssSelectFighter(void) { ++chooser_picks; sCssFkind[0] = 7; return 1; }
 ''' + function(css, "ndsMenuShellCssWalkTourStep") + r'''
 int main(void) {
     assert(ndsMenuShellCssWalkTourStep() == TRUE);
     assert(restored == 1 && sCssWalkTourFinished && gNdsMenuShellCssWalkTourDoneCount == 1);
     assert(sMenuWalkCursor == 0 && sMenuWalkTimer == 0 && sMenuWalkHold == 0 && sMenuWalkHeld == 0);
     assert(sCssStartWait == 0); /* Ordinary controller input must still start the match. */
+    assert(chooser_picks == 1 && gNdsMenuShellCssWalkChooserSel == 7 && sCssHeld == 0);
     assert(ndsMenuShellCssWalkTourStep() == FALSE && restored == 1);
     return 0;
 }

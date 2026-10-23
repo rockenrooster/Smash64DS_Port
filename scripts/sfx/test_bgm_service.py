@@ -113,23 +113,23 @@ int main(void) {
     init->report=init->specs;command(NDS_BGM_INIT,setup);assert(last_reply==NDS_BGM_REPLY_ERROR);
     init->report=(uint32_t)(uintptr_t)report;command(NDS_BGM_INIT,setup);
     assert(last_reply==ndsBgmCommand(NDS_BGM_INIT,setup));
-    unsigned ack=replies;command(NDS_BGM_PLAY,1<<6);
+    unsigned ack=replies;command(NDS_BGM_PLAY,1<<NDS_BGM_INDEX_BITS);
     assert(replies==ack&&sState==NDS_BGM_PLAYING&&active[0]&&sReady==2&&report->chunks==1);
     assert(hardware_volume[0]==127&&report->track_id==12);
     fire(1);assert(sCurrent==1&&sPending==1);
     // Natural completion must not depend on servicing an empty refill first.
     fire(1);assert(sState==NDS_BGM_NATURAL&&report->natural_stops==1&&!active[0]&&!active[1]);pump();
-    command(NDS_BGM_PLAY,(2<<6)|1);fire(0);pump();
+    command(NDS_BGM_PLAY,(2<<NDS_BGM_INDEX_BITS)|1);fire(0);pump();
     assert(sleep_calls&&report->loops_played&&sState==NDS_BGM_PLAYING&&sReady);
     command(NDS_BGM_VOLUME,0x3c00);assert(hardware_volume[0]==63&&hardware_volume[1]==63);
     // New play can precede an old timer message. The old generation cannot refill it.
-    ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_PLAY,3<<6));fire(1);
+    ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_PLAY,3<<NDS_BGM_INDEX_BITS));fire(1);
     unsigned before=reads;pump();assert(sGeneration==3&&reads==before+5);
     command(NDS_BGM_STOP,4);assert(last_reply==ndsBgmCommand(NDS_BGM_STOP,4)&&!active[0]&&!active[1]);
-    command(NDS_BGM_PLAY,(5<<6)|1);fire(1);fire(1);
+    command(NDS_BGM_PLAY,(5<<NDS_BGM_INDEX_BITS)|1);fire(1);fire(1);
     assert(sState==NDS_BGM_FAILED&&report->seam_misses==1&&report->error==NDS_BGM_ERROR_UNDERRUN);pump();
     command(NDS_BGM_RESET,6);assert(!report->error_stops&&!report->reads);
-    fail_read=1;command(NDS_BGM_PLAY,7<<6);assert(sState==NDS_BGM_FAILED&&report->read_errors==1);fail_read=0;
+    fail_read=1;command(NDS_BGM_PLAY,7<<NDS_BGM_INDEX_BITS);assert(sState==NDS_BGM_FAILED&&report->read_errors==1);fail_read=0;
     command(NDS_BGM_RESET,8);
     // A volume run (the source's countdown sets it every tick) queues one
     // doorbell; the worker applies the latest value, and a STOP still fits.
@@ -137,7 +137,7 @@ int main(void) {
     ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_STOP,9));pump();
     assert(hardware_volume[0]==85&&hardware_volume[1]==85&&!report->event_drops);
     assert(last_reply==ndsBgmCommand(NDS_BGM_STOP,9)&&!sVolumeQueued);
-    for(unsigned i=0;i<16;++i)ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_PLAY,((10+i)<<6)|1));
+    for(unsigned i=0;i<16;++i)ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_PLAY,((10+i)<<NDS_BGM_INDEX_BITS)|1));
     ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_STOP,30));
     assert(report->event_drops==1&&last_reply==NDS_BGM_REPLY_ERROR&&sState==NDS_BGM_FAILED);
     assert(!irq_depth);

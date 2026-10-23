@@ -244,6 +244,8 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         header = images.render_header(contexts, _synthetic_hat_contexts())
         tables_h = (REPO / "include" / "nds" / "nds_native_fighter_tables.h"
                     ).read_text(encoding="utf-8")
+        lean_live_h = (REPO / "include" / "nds" / "nds_ftr_lean_live.h"
+                       ).read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory(prefix="pd_residency_") as tmp:
             tmp_path = Path(tmp)
             for hw, size in ((1, 10), (0, 16)):
@@ -258,6 +260,8 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                     encoding="utf-8")
                 (inc / "nds" / "nds_native_fighter_tables.h").write_text(
                     tables_h, encoding="utf-8")
+                (inc / "nds" / "nds_ftr_lean_live.h").write_text(
+                    lean_live_h, encoding="utf-8")
                 (inc / "gen.h").write_text(header, encoding="utf-8")
                 c_path = tmp_path / f"layout{hw}.c"
                 c_path.write_text(
@@ -337,16 +341,20 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         })
         self.assertEqual(set(ordinary), expected)
         self.assertEqual(len(ordinary), len(expected), "duplicate ordinary image bind")
-        self.assertEqual(len(hats), 1, "expected one deferred-hat image bind")
+        # The deferred hats bind in two places: the source hats and the P4
+        # contents' Remix hats (S8), one shape.
+        self.assertEqual(len(hats), 2, "expected two deferred-hat image binds")
         self.assertEqual(sorted(a[0] for a in p4),
                          ["sNdsNative##T_##FighterHighTables",
                           "sNdsNative##T_##FighterLowTables"])
-        hat_call = ",".join(hats[0]).replace("\\", "").replace("\r", "").replace("\n", "").replace(" ", "")
-        self.assertEqual(
-            hat_call,
-            "entry->tables,type_,base,prefix_",
-        )
+        for hat in hats:
+            hat_call = ",".join(hat).replace("\\", "").replace("\r", "").replace("\n", "").replace(" ", "")
+            self.assertEqual(
+                hat_call,
+                "entry->tables,type_,base,prefix_",
+            )
         self.assertIn("NDS_NATIVE_KIRBY_HAT_IMAGES(NDS_KIRBY_HAT_BIND_CASE)", src)
+        self.assertIn("NDS_P4_KIRBY_HAT_IMAGES(NDS_P4_KIRBY_HAT_BIND_CASE)", src)
         # No static PreparedDense symbol survives inside the bind function.
         fn_start = src.index("static void ndsRendererNativeBindOwnerImage")
         brace = src.index("{", fn_start)
@@ -360,11 +368,10 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                     break
         self.assertIn("}", src[brace:end + 1])
         self.assertNotIn("PreparedDense", src[brace:end + 1])
-        # ABI checks preserved: both layout sizes still asserted.
+        # ABI check preserved: the HW-light layout's size, the only layout
+        # since NDS_R2_FIGHTER_HW_LIGHT resolved to 1 (cb344c4671b).
         self.assertIn(
             "_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 10u", src)
-        self.assertIn(
-            "_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 16u", src)
         # Mario/Fox frozen static path untouched (no image, still static).
         self.assertIn("sNdsNativeFighterPreparedDense,", src)
         self.assertIn("sNdsNativeFighterPreparedDenseLow,", src)
