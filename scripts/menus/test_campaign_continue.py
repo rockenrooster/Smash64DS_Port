@@ -30,7 +30,9 @@ def host_source(wrapper):
         ("sc/scdef.h", "SC1PGameDifficulty")))
     header = (ROOT / "include/sc/scene.h").read_text()
     record_type = braced(header, r"typedef struct LBBackup1PRecord\s*\{", True)
-    scalar_names = set(re.findall(r"\bsMN1PContinue\w+", update + initialize))
+    # The scene's statics, and the DS wrapper's own (sNdsMN1PContinue*).
+    scalar_names = set(re.findall(r"\bs(?:Nds)?MN1PContinue\w+",
+                                  update + initialize + wrapper))
     scalar_names.discard("sMN1PContinueFighterDemoDesc")
     globals_c = "\n".join("static " + ("GObj *" if name.endswith("GObj") else "int ") + name + ";"
                           for name in sorted(scalar_names))
