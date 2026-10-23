@@ -43,6 +43,7 @@ typedef int32_t s32;
 #define FALSE 0
 #define TRUE 1
 #define NDS_ENTRY_EFFECT_TEXTURE_A3I5 3
+#define NDS_DIAG(...) do { __VA_ARGS__; } while (0)
 typedef struct {
     u32 ds_format, palette_entries, width, height;
     const u16 *palette;

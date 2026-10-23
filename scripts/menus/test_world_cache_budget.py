@@ -14,6 +14,8 @@ class WorldCacheBudgetTest(unittest.TestCase):
     def test_reserve_alignment_and_scene_retry(self):
         source=read_split(ROOT/'src/port/renderer_adapter_matrix.c')
         body='\n'.join(function(source,name) for name in (
+            'ndsRendererAdapterWorldCachePhase',
+            'ndsRendererAdapterWorldCacheReserve',
             'ndsRendererAdapterEnsureDObjWorldCache',
             'ndsRendererAdapterEnsureStageWorldCache'))
         # These allocator helpers only depend on the entries' sizes. The
@@ -30,6 +32,11 @@ typedef uint32_t u32; typedef int sb32;
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE 64u
+#define NDS_RENDERER_ADAPTER_WORLD_CACHE_GO_RESERVE (48u * 1024u)
+/* The phase: the VS countdown (1) or GO (2). */
+enum { nSCKindVSBattle = 22, nSCBattleGameStatusGo = 1 };
+static struct { int scene_curr; } gSCManagerSceneData = { nSCKindVSBattle };
+static struct { int game_status; } battle, *gSCManagerBattleState = &battle;
 typedef struct {unsigned char bytes[68];} NDSRendererAdapterDObjWorldCacheEntry;
 typedef struct {unsigned char bytes[72];} NDSRendererAdapterStageWorldCacheEntry;
 static NDSRendererAdapterDObjWorldCacheEntry *sNdsRendererAdapterDObjWorldCache;
@@ -78,6 +85,18 @@ int main(void) {
     reset(33312,0);
     CHECK(!ndsRendererAdapterEnsureStageWorldCache() && !allocations);
     CHECK(gSYTaskmanGeneralHeap.end-gSYTaskmanGeneralHeap.ptr==33312);
+    /* Refused under the countdown's reserve, retried once at GO under the
+     * smaller one; a second GO attempt does not retry. */
+    reset(65536+8704,0);
+    CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+    battle.game_status=nSCBattleGameStatusGo;
+    CHECK(ndsRendererAdapterEnsureDObjWorldCache() && allocations==1);
+    CHECK(gSYTaskmanGeneralHeap.end-gSYTaskmanGeneralHeap.ptr==65536);
+    reset(48*1024+8704-1,0);
+    CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+    gSYTaskmanGeneralHeap.end=arena+sizeof(arena);
+    CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+    battle.game_status=0;
     return 0;
 }
 '''

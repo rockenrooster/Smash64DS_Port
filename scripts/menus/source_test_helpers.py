@@ -192,7 +192,39 @@ def braced(source, pattern, semicolon=False):
 
 
 def function(source, name):
-    return braced(source, rf"^[\w *]+\b{name}\([^;]*?\)\s*\{{")
+    """A function's definition, verbatim but for NDS_RENDERER_COLD: that
+    macro only places ARM code (Thumb, -Os) and means nothing to a host
+    harness."""
+    return re.sub(r"\bNDS_RENDERER_COLD\s+", "", _definition(source, name))
+
+
+def _definition(source, name):
+    try:
+        return braced(source, rf"^[\w *]+\b{name}\([^;]*?\)\s*\{{")
+    except AssertionError:
+        pass
+    # The name at column 0 with its return type and attributes on the lines
+    # above (`NDS_RENDERER_COLD static s32 __attribute__((cold))` / `name(`):
+    # the definition starts at the first of those lines.
+    plain = clean(source)
+    head = re.search(rf"^{name}\([^;]*?\)\s*\{{", plain, re.M)
+    if head is None:
+        raise AssertionError(f"Missing source declaration: {name}")
+    start = head.start()
+    while start > 0:
+        previous = plain.rfind("\n", 0, start - 1) + 1
+        line = plain[previous:start - 1]
+        if (not line.strip()) or line.lstrip().startswith("#") or \
+                line.rstrip().endswith((";", "}", "{")):
+            break
+        start = previous
+    opening = plain.index("{", head.start())
+    depth = 1
+    end = opening + 1
+    while depth:
+        depth += (plain[end] == "{") - (plain[end] == "}")
+        end += 1
+    return source[start:end]
 
 
 def original_enum(path, name):
