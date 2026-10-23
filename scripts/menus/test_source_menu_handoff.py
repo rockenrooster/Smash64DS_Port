@@ -86,6 +86,7 @@ typedef int32_t s32;
 #define NDS_IMPORT_BATTLESHIP_VS_RESULTS 1
 #define NDS_IMPORT_BATTLESHIP_AUDIO_BGM 0
 #define NDS_SCENE_BOUNDARY_PASS 7u
+#define NDS_AUDIO_BGM_RESULTS_FAST_UPDATE_MAX 600u
 #define nSYTaskmanStatusLoadScene 3u
 #define nSYTaskmanStatusRunning 1u
 struct SYTaskFunction
@@ -99,6 +100,7 @@ static u32 gNdsRendererProfileFrameCount;
 static u32 gNdsFtPoseEvalTick;
 static u32 gNdsSceneBoundaryKind, gNdsSceneBoundaryResult;
 static struct { u32 scene_curr; } gSCManagerSceneData;
+static u32 gNdsSceneManagerCurrKind;
 /* -- recorders: every platform call the pump can make -- */
 static u32 rec_clear_bg2, rec_clear_bg3;
 static u32 rec_enable, rec_disable, rec_draw, rec_update, rec_record;
@@ -148,6 +150,12 @@ static void ndsPlatformRenderDebugHud(void) {}
 static void ndsPlatformEndFrame(void) {}
 static void ndsFinishTaskmanRun(void) {}
 static void ndsMNVSResultsRecordFrame(void) { rec_record++; ev('R'); }
+static void ndsSource2DEnterForScene(u32 scene) { (void)scene; }
+static void ndsTaskmanSampleLibcHeapNow(void) {}
+static void ndsPlatformTransitionHoldBegin(void) {}
+static void ndsPlatformTransitionThaw(void) {}
+static void ndsVideoSetTransitionBlackout(s32 blackout) { (void)blackout; }
+static void ndsAudioReleaseDeferredBGM(void) {}
 static u32 g_frames_before_load;
 static void script_update(struct SYTaskFunction *tfunc)
 {
@@ -199,20 +207,21 @@ int main(int argc, char **argv)
     const char *scenario = (argc > 1) ? argv[1] : "generic";
     if (strcmp(scenario, "generic") == 0)
     {
-        /* Native -> source entry, five frames then LoadScene. */
+        /* Native -> source entry, five updates, the fifth asks for the next
+         * scene and is not drawn (taskman.c:994). */
         reset_state();
         CHECK(run_entry(0u, 5u) != FALSE);
         CHECK(rec_clear_bg2 == 1u);
         CHECK(rec_clear_bg3 == 1u);
         CHECK(rec_update == 5u);
-        CHECK(rec_draw == 5u); /* source draws preserved, one per update */
+        CHECK(rec_draw == 4u); /* one draw per update that stays */
         CHECK(rec_record == 0u);
         CHECK(rec_enable == 1u);
         CHECK(rec_disable == 1u); /* LoadScene exit disables the overlay */
         /* Order: both clears, then enable, then draws, then disable. */
         CHECK(evlog[0] == '2' && evlog[1] == '3' && evlog[2] == 'E');
-        CHECK(evlog[3] == '4' && evlog[7] == '4');
-        CHECK(evlog[8] == 'D' && evlog[9] == '\0');
+        CHECK(evlog[3] == '4' && evlog[6] == '4');
+        CHECK(evlog[7] == 'D' && evlog[8] == '\0');
     }
     else if (strcmp(scenario, "results") == 0)
     {
@@ -222,8 +231,8 @@ int main(int argc, char **argv)
         CHECK(rec_clear_bg2 == 0u);
         CHECK(rec_clear_bg3 == 0u);
         CHECK(rec_update == 5u);
-        CHECK(rec_draw == 5u);
-        CHECK(rec_record == 5u); /* per-frame Results recorder preserved */
+        CHECK(rec_draw == 4u);
+        CHECK(rec_record == 5u); /* per-update Results recorder preserved */
         CHECK(gNdsFtPoseEvalTick != 0u); /* pose evaluation tick preserved */
         CHECK(evlog[0] == 'E'); /* enable first: no clear precedes it */
     }
@@ -239,7 +248,7 @@ int main(int argc, char **argv)
         reset_state();
         CHECK(run_entry(0u, 3u) != FALSE);
         CHECK(rec_clear_bg2 == 1u && rec_clear_bg3 == 1u);
-        CHECK(rec_draw == 3u);
+        CHECK(rec_draw == 2u);
     }
     else if (strcmp(scenario, "long") == 0)
     {
@@ -249,7 +258,7 @@ int main(int argc, char **argv)
         CHECK(rec_clear_bg2 == 1u);
         CHECK(rec_clear_bg3 == 1u);
         CHECK(rec_update == 50u);
-        CHECK(rec_draw == 50u);
+        CHECK(rec_draw == 49u);
     }
     else
     {

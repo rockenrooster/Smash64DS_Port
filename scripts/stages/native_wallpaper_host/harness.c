@@ -154,6 +154,30 @@ u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy)
     return TRUE;
 }
 
+/* No transition snapshot holds BG2 on the host. */
+s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
+{
+    return FALSE;
+}
+
+/* The camera-driven origin (ndsWallpaperPerspQ) is not one of the harness
+ * commands: its fixed-point helpers stop the run if anything reaches them. */
+int32_t ndsF32ToFixed(float value, unsigned int frac_bits)
+{
+    (void)value;
+    (void)frac_bits;
+    fprintf(stderr, "ndsF32ToFixed is not hosted\n");
+    exit(3);
+}
+
+int64_t ndsUtilsAtan2Q30(int64_t y, int64_t x)
+{
+    (void)y;
+    (void)x;
+    fprintf(stderr, "ndsUtilsAtan2Q30 is not hosted\n");
+    exit(3);
+}
+
 static void hostResolvePath(const char *path, char *out, size_t out_size)
 {
     const char *tail = path;

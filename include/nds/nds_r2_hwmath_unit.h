@@ -60,6 +60,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(__arm__)
+
 #define NDS_R2_HWMATH_DIVCNT       (*(volatile uint16_t *)0x04000280)
 #define NDS_R2_HWMATH_DIV_NUMER    (*(volatile int64_t *)0x04000290)
 #define NDS_R2_HWMATH_DIV_DENOM    (*(volatile int64_t *)0x04000298)
@@ -251,6 +253,92 @@ static inline uint32_t ndsR2HwMathSqrt64(uint64_t value)
     }
     return NDS_R2_HWMATH_SQRT_RESULT;
 }
+
+#else /* !__arm__ */
+
+/* HOST BUILDS (the test harnesses that compile production units) have no
+ * divider or root unit at 0x04000280. The portable forms below are the same
+ * arithmetic the header notes above establish for the unit: division
+ * truncates toward zero with the numerator-signed remainder (C99), a 64/32
+ * quotient's low word is the quotient narrowed, and the root is the exact
+ * floor. */
+
+static inline uint32_t ndsR2HwMathHostSqrt64(uint64_t value)
+{
+    uint64_t root = 0u;
+    uint64_t bit = (uint64_t)1u << 62;
+
+    while (bit > value)
+    {
+        bit >>= 2;
+    }
+    while (bit != 0u)
+    {
+        if (value >= root + bit)
+        {
+            value -= root + bit;
+            root = (root >> 1) + bit;
+        }
+        else
+        {
+            root >>= 1;
+        }
+        bit >>= 2;
+    }
+    return (uint32_t)root;
+}
+
+static inline int64_t ndsR2HwMathDivideLead(int64_t numerator,
+                                            int64_t denominator)
+{
+    return numerator / denominator;
+}
+
+static inline int64_t ndsR2HwMathDivideFast(int64_t numerator,
+                                            int64_t denominator)
+{
+    return numerator / denominator;
+}
+
+static inline int64_t ndsR2HwMathDivide6432(int64_t numerator,
+                                            int32_t denominator,
+                                            int32_t *remainder_out)
+{
+    if (remainder_out != NULL)
+    {
+        *remainder_out = (int32_t)(numerator % denominator);
+    }
+    return numerator / denominator;
+}
+
+static inline int64_t ndsR2HwMathDivide6432Fast(int64_t numerator,
+                                                int32_t denominator,
+                                                int32_t *remainder_out)
+{
+    return ndsR2HwMathDivide6432(numerator, denominator, remainder_out);
+}
+
+static inline uint32_t ndsR2HwMathSqrt64Lead(uint64_t value)
+{
+    return ndsR2HwMathHostSqrt64(value);
+}
+
+static inline uint32_t ndsR2HwMathSqrt64Fast(uint64_t value)
+{
+    return ndsR2HwMathHostSqrt64(value);
+}
+
+static inline int32_t ndsR2HwMathDiv64(int64_t numerator, int32_t denominator)
+{
+    return (int32_t)(numerator / denominator);
+}
+
+static inline uint32_t ndsR2HwMathSqrt64(uint64_t value)
+{
+    return ndsR2HwMathHostSqrt64(value);
+}
+
+#endif /* __arm__ */
 
 /* The two NDS_R2_CFX_* hooks, in the shape those macros want. The narrowing
  * cast is the portable form's own -- it takes the low 32 bits of the 64-bit

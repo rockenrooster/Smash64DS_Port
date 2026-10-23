@@ -28,6 +28,16 @@ static u32 sHostArenaUsed = 0u;
 static u32 sHostMallocCount = 0u;
 static const u8 *sHostLastBase = NULL;
 static u32 sHostLastSize = 0u;
+/* The loader sizes its renderer workspace (nds_renderer_native_pools.c, not
+ * hosted) and allocates it right after the slab: that allocation is counted
+ * but is not the slab the peeks read. */
+static u32 sHostNextIsWorkspace = 0u;
+
+u32 ndsRendererNativeStageWorkspaceBytes(u32 runs, u32 dense)
+{
+    sHostNextIsWorkspace = 1u;
+    return (runs * 32u) + (dense * 16u) + 4u;
+}
 
 /* The loader arms the renderer's warm-upload flag after a successful blob
  * load (nds_native_stage_blob.c); the owner that consumes it lives in
@@ -49,6 +59,11 @@ void *syTaskmanMalloc(size_t size, u32 align)
     }
     sHostArenaUsed = base + (u32)size;
     sHostMallocCount++;
+    if (sHostNextIsWorkspace != 0u)
+    {
+        sHostNextIsWorkspace = 0u;
+        return (void *)&sHostArena[base];
+    }
     sHostLastBase = &sHostArena[base];
     sHostLastSize = (u32)size;
     return (void *)&sHostArena[base];

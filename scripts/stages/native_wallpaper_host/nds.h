@@ -9,4 +9,10 @@
 
 void dmaFillHalfWords(u16 value, void *dest, u32 size);
 
+/* The runtime's ARM-state functions (`__attribute__((target("arm")))`) mean
+ * nothing to the host compiler: the attribute becomes `unused`. */
+#define target(isa) unused
+/* The Makefile's generated config header, counters-on arm. */
+#define NDS_DIAG(...) do { __VA_ARGS__; } while (0)
+
 #endif

@@ -194,12 +194,13 @@ class StageBlobLoaderTests(unittest.TestCase):
         self.check_packet_block(blocks["first"], name, self.blobs[name])
         self.check_packet_block(blocks["second"], name, self.blobs[name])
         # Caller lifetime: one static mirror, re-fetched per load; the reload
-        # strands exactly one arena body (mallocs == 2, new slab base).
+        # strands exactly one arena body and its workspace (each load takes
+        # the slab and the renderer workspace: mallocs == 4, new slab base).
         self.assertEqual(blocks["first"]["mirror"], blocks["second"]["mirror"],
                          "mirror moved between reloads")
         self.assertNotEqual(blocks["first"]["slab"], blocks["second"]["slab"],
                             "reload reused a stale slab")
-        self.assertEqual(blocks["second"]["mallocs"], "2", "reload malloc count")
+        self.assertEqual(blocks["second"]["mallocs"], "4", "reload malloc count")
 
     def test_generation_rewind_invalidates_and_reload_recovers(self):
         name = "yoster"
