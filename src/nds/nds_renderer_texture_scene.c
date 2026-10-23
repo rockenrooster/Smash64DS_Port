@@ -1134,6 +1134,35 @@ volatile u32 gNdsFtrOutsideLr[8][4] __attribute__((used));
 static u8 sNdsVramCensusBucketOf[NDS_VRAM_CENSUS_NAME_MAX];
 static u32 sNdsVramCensusPalSeen[NDS_VRAM_CENSUS_NAME_MAX / 32u];
 
+/* P8 V4: the bank map's rows -- every live texture name at the last capture:
+ * its texel address (the LCD alias 0x06800000.. of banks A-D), bytes,
+ * TEXIMAGE_PARAM format and size fields, owner bucket and the bytes of the
+ * palette it is the first to name. scripts/tools/vram_map.ps1 reads them at
+ * the census frame. */
+typedef struct NDSVramCensusMapRow
+{
+    u32 addr;
+    u32 bytes;
+    u16 name;
+    u8 bucket;
+    u8 format;
+    u16 pal_bytes;
+    u16 size;
+} NDSVramCensusMapRow;
+__attribute__((used)) NDSVramCensusMapRow gNdsVramCensusMap[NDS_VRAM_CENSUS_NAME_MAX];
+__attribute__((used)) volatile u32 gNdsVramCensusMapCount;
+/* And libnds's texture allocator blocks in address order: VRAM held without a
+ * texture name (the fighter admission's carve regions) is only here. */
+#define NDS_VRAM_CENSUS_BLOCK_MAX 512u
+typedef struct NDSVramCensusBlockRow
+{
+    u32 addr;
+    u32 bytes;
+    u32 used;
+} NDSVramCensusBlockRow;
+__attribute__((used)) NDSVramCensusBlockRow gNdsVramCensusBlockMap[NDS_VRAM_CENSUS_BLOCK_MAX];
+__attribute__((used)) volatile u32 gNdsVramCensusBlockCount;
+
 u32 ndsPlatformVramCensusOverlayOpaque(u32 layer);
 
 static u32 ndsVramCensusParamsBytes(u32 params)
@@ -1213,11 +1242,26 @@ static void ndsVramCensusBlocks(const s_vramBlock *block, u32 palettes,
     {
         out[7] += span_end[i] - span_start[i];
     }
+    if (palettes == 0u)
+    {
+        gNdsVramCensusBlockCount = 0u;
+    }
     for (b = block->firstBlock; (b != NULL) && (guard < 4096u);
          b = b->node[1], guard++)
     {
         u32 lo = (u32)(uintptr_t)b->AddrSet;
         u32 hi = lo + b->blockSize;
+
+        if ((palettes == 0u) &&
+            (gNdsVramCensusBlockCount < NDS_VRAM_CENSUS_BLOCK_MAX))
+        {
+            NDSVramCensusBlockRow *row =
+                &gNdsVramCensusBlockMap[gNdsVramCensusBlockCount++];
+
+            row->addr = lo;
+            row->bytes = b->blockSize;
+            row->used = (b->indexOut != 0u) ? 1u : 0u;
+        }
 
         if (b->indexOut == 0u)
         {
@@ -1355,6 +1399,7 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
         limit = NDS_VRAM_CENSUS_NAME_MAX;
     }
     gNdsVramCensus.name_limit = textures->cur_size;
+    gNdsVramCensusMapCount = 0u;
     for (name = 1u; name < limit; name++)
     {
         const gl_texture_data *tex =
@@ -1382,7 +1427,16 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
         if (bytes != 0u)
         {
             u32 addr = (u32)(uintptr_t)tex->vramAddr;
+            NDSVramCensusMapRow *row =
+                &gNdsVramCensusMap[gNdsVramCensusMapCount++];
 
+            row->addr = addr;
+            row->bytes = bytes;
+            row->name = (u16)name;
+            row->bucket = (u8)bucket;
+            row->format = (u8)((tex->texFormat >> 26) & 7u);
+            row->size = (u16)((tex->texFormat >> 20) & 0x3fu);
+            row->pal_bytes = 0u;
             snap->tex_names++;
             snap->tex_bytes += bytes;
             snap->tex_size_field += tex->texSize;
@@ -1410,6 +1464,11 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
                 snap->pal_names++;
                 snap->pal_bytes += pal->palSize;
                 snap->pal[bucket] += pal->palSize;
+                if ((bytes != 0u) && (gNdsVramCensusMapCount != 0u))
+                {
+                    gNdsVramCensusMap[gNdsVramCensusMapCount - 1u].pal_bytes =
+                        (u16)pal->palSize;
+                }
             }
         }
     }
