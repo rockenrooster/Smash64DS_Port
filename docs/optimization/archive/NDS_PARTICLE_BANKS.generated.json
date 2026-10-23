@@ -201,46 +201,46 @@
     ],
     "admitted_cells": [
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 0,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 1,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 3,
-        "height": 16,
+        "height": 12,
         "texture": 2,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 1,
-        "height": 16,
+        "height": 12,
         "texture": 3,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 4,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 3,
-        "height": 16,
+        "height": 12,
         "texture": 5,
-        "width": 16
+        "width": 12
       },
       {
         "bytes": 128,
@@ -250,137 +250,137 @@
         "width": 8
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 1,
-        "height": 16,
+        "height": 12,
         "texture": 8,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 512,
+        "bytes": 288,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 9,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 3,
-        "height": 32,
+        "height": 24,
         "texture": 10,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 11,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 6,
-        "height": 32,
+        "height": 24,
         "texture": 12,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 2,
-        "height": 16,
+        "height": 12,
         "texture": 13,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 3,
-        "height": 32,
+        "height": 24,
         "texture": 14,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 8,
-        "height": 16,
+        "height": 12,
         "texture": 15,
-        "width": 16
-      },
-      {
-        "bytes": 4096,
-        "frames": 7,
-        "height": 64,
-        "texture": 16,
-        "width": 64
-      },
-      {
-        "bytes": 4096,
-        "frames": 10,
-        "height": 64,
-        "texture": 17,
-        "width": 64
-      },
-      {
-        "bytes": 1024,
-        "frames": 3,
-        "height": 32,
-        "texture": 18,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 19,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 3,
-        "height": 32,
-        "texture": 20,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 21,
-        "width": 32
-      },
-      {
-        "bytes": 512,
-        "frames": 2,
-        "height": 16,
-        "texture": 22,
-        "width": 16
+        "width": 12
       },
       {
         "bytes": 2304,
-        "frames": 4,
+        "frames": 7,
         "height": 48,
-        "texture": 23,
+        "texture": 16,
         "width": 48
       },
       {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 24,
-        "width": 32
+        "bytes": 2304,
+        "frames": 10,
+        "height": 48,
+        "texture": 17,
+        "width": 48
       },
       {
-        "bytes": 256,
-        "frames": 15,
-        "height": 16,
-        "texture": 25,
-        "width": 16
-      },
-      {
-        "bytes": 256,
+        "bytes": 576,
         "frames": 3,
-        "height": 16,
+        "height": 24,
+        "texture": 18,
+        "width": 24
+      },
+      {
+        "bytes": 576,
+        "frames": 1,
+        "height": 24,
+        "texture": 19,
+        "width": 24
+      },
+      {
+        "bytes": 576,
+        "frames": 3,
+        "height": 24,
+        "texture": 20,
+        "width": 24
+      },
+      {
+        "bytes": 576,
+        "frames": 1,
+        "height": 24,
+        "texture": 21,
+        "width": 24
+      },
+      {
+        "bytes": 288,
+        "frames": 2,
+        "height": 12,
+        "texture": 22,
+        "width": 12
+      },
+      {
+        "bytes": 1296,
+        "frames": 4,
+        "height": 36,
+        "texture": 23,
+        "width": 36
+      },
+      {
+        "bytes": 576,
+        "frames": 1,
+        "height": 24,
+        "texture": 24,
+        "width": 24
+      },
+      {
+        "bytes": 144,
+        "frames": 15,
+        "height": 12,
+        "texture": 25,
+        "width": 12
+      },
+      {
+        "bytes": 144,
+        "frames": 3,
+        "height": 12,
         "texture": 26,
-        "width": 16
+        "width": 12
       },
       {
         "bytes": 128,
@@ -390,11 +390,11 @@
         "width": 16
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 20,
-        "height": 32,
+        "height": 24,
         "texture": 28,
-        "width": 32
+        "width": 24
       },
       {
         "bytes": 5760,
@@ -404,102 +404,102 @@
         "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 10,
-        "height": 32,
+        "height": 24,
         "texture": 30,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 3,
-        "height": 32,
+        "height": 24,
         "texture": 31,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 2,
-        "height": 16,
+        "height": 12,
         "texture": 32,
-        "width": 64
+        "width": 48
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 9,
-        "height": 32,
+        "height": 24,
         "texture": 33,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 8,
-        "height": 32,
+        "height": 24,
         "texture": 34,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 8,
-        "height": 32,
+        "height": 24,
         "texture": 35,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 8,
-        "height": 32,
+        "height": 24,
         "texture": 36,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 1,
-        "height": 16,
+        "height": 12,
         "texture": 37,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 3,
-        "height": 16,
+        "height": 12,
         "texture": 38,
-        "width": 16
+        "width": 12
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 9,
-        "height": 32,
+        "height": 24,
         "texture": 40,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 3,
-        "height": 32,
+        "height": 24,
         "texture": 41,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 4,
-        "height": 32,
+        "height": 24,
         "texture": 42,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 43,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 2,
-        "height": 16,
+        "height": 12,
         "texture": 44,
-        "width": 16
+        "width": 12
       },
       {
         "bytes": 5184,
@@ -516,60 +516,60 @@
         "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 288,
         "frames": 1,
-        "height": 16,
+        "height": 12,
         "texture": 128,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 6,
-        "height": 32,
+        "height": 24,
         "texture": 160,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 161,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 4096,
+        "bytes": 2304,
         "frames": 2,
-        "height": 64,
+        "height": 48,
         "texture": 176,
-        "width": 64
+        "width": 48
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 177,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 192,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 208,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 256,
+        "bytes": 144,
         "frames": 3,
-        "height": 16,
+        "height": 12,
         "texture": 209,
-        "width": 16
+        "width": 12
       },
       {
         "bytes": 64,
@@ -579,18 +579,18 @@
         "width": 8
       },
       {
-        "bytes": 1024,
+        "bytes": 576,
         "frames": 1,
-        "height": 32,
+        "height": 24,
         "texture": 224,
-        "width": 32
+        "width": 24
       },
       {
-        "bytes": 4096,
+        "bytes": 2304,
         "frames": 4,
-        "height": 32,
+        "height": 24,
         "texture": 225,
-        "width": 32
+        "width": 24
       }
     ],
     "animation_frames": {
@@ -620,6 +620,24 @@
         5,
         6,
         7
+      ],
+      "16": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "17": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
       ],
       "18": [
         1,
@@ -674,6 +692,10 @@
         7,
         8,
         9
+      ],
+      "31": [
+        1,
+        2
       ],
       "32": [
         1
@@ -738,27 +760,23 @@
       ]
     },
     "animation_sheets": 7,
-    "animation_texels": 44784,
+    "animation_texels": 60272,
     "atlas_bytes": 131072,
     "atlas_height": 64,
     "atlas_width": 128,
     "base_sheets": 9,
     "budget_bytes": 131072,
-    "bytes": 65536,
+    "bytes": 41904,
     "cell_cap": 64,
     "excluded": [],
     "frame_cap": 1,
-    "frame_count": 170,
+    "frame_count": 186,
     "held_frames": {
       "25": 2
     },
     "palette_bytes": 1024,
     "palette_entries": 32,
     "palette_sheet_entries": [
-      8,
-      20,
-      16,
-      20,
       32,
       32,
       32,
@@ -770,6 +788,10 @@
       32,
       32,
       32,
+      32,
+      32,
+      32,
+      17,
       32
     ],
     "palette_stride_bytes": 64,

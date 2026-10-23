@@ -713,6 +713,11 @@ QUAD_THUNDER_AMP_CELL_MAX = 16
 # worse, not better. Do not raise the cap without checking that lookup still
 # clamps.
 QUAD_FRAME_CAP = 6
+# The base set's own search keeps one frame a texture now that P8 loop V's
+# animation sheets carry every frame a script shows (build_animation_sheets):
+# at 0.75x (QUAD_BASE_SCALE) the base sheets could seat a higher cap, and its
+# evenly spaced frames would spend texels on frames no script shows.
+QUAD_BASE_FRAME_CAP = 1
 # WHICH source frame a one-cell texture holds. The search above settles at cap 1
 # and quad_frame_list then returns [0], so every multi-frame animation ships its
 # opening frame -- 19 of the 32 admitted textures (commit 3d002c39 names and
@@ -783,6 +788,16 @@ QUAD_CELL_SIZE = {29: 24, 45: 24}
 # stage textures on every measured stage but Dream Land), so the runtime
 # uploads them after the countdown releases its 57,344 bytes.
 QUAD_ANIMATED_SCALE = (3, 4)
+# The base cells too (owner 2026-10-23: "Anything not using 0.75x textures?"):
+# every cell still at its source size, 16 texels or more a side, packs at this
+# scale, so frame 0 matches the frames after it and the nine base sheets keep
+# room for animation frames (build_animation_sheets). Cells the rules above
+# already set smaller (QUAD_CELL_SIZE, the heal sparkle, ThunderAmp) keep theirs.
+QUAD_BASE_SCALE = (3, 4)
+# The two 64x64 dusts take 0.5x (owner 2026-10-23): at 0.75x their frames
+# are 48x48 cells, two to a 128x64 sheet, and the fourteen missing ones
+# needed about seven sheets by themselves; at 32x32 eight share a sheet.
+QUAD_ANIMATED_SCALE_BY_TEXTURE = {16: (1, 2), 17: (1, 2)}
 # The countdown frees 57,344 bytes of texture VRAM (its traffic and cloud
 # atlases), exactly seven 8 KiB sheets, and that is the budget: the
 # 2026-10-23 gate sweep with every animation sheet the stage could hold
@@ -794,8 +809,8 @@ QUAD_ANIMATION_SHEETS_MAX = 7
 # electricity (the owner's first row), the heavy hit, the shock and flash
 # rings, light dust and flames, fire, the coins, then the rest of the owner's
 # 2026-10-22 list; every other animated texture after these, by key. In this
-# order the seven sheets seat all of that list but the two 64x64 dusts
-# (DustDash 17, DustHeavy 16: 32,256 texels at 0.75x, half the budget).
+# order the seven sheets seat all of that list; the two 64x64 dusts
+# (DustDash 17, DustHeavy 16) at 0.5x (QUAD_ANIMATED_SCALE_BY_TEXTURE).
 QUAD_ANIMATION_PRIORITY = (33, 34, 35, 36, 28, 41, 30, 2, 15, 40, 25, 17, 5,
                            38, 44, 42, 16, 12, 46)
 
@@ -889,6 +904,20 @@ def quad_cell_dims(width: int, height: int,
         cell_w = max(1, cell_w // 2)
         cell_h = max(1, cell_h // 2)
     return cell_w, cell_h
+
+
+def quad_base_scale_row(row: dict) -> None:
+    """QUAD_BASE_SCALE for a candidate row still at its source size."""
+    src_w = row.get("source_width", row["width"])
+    src_h = row.get("source_height", row["height"])
+    if ((row["width"], row["height"]) != (src_w, src_h) or
+            min(src_w, src_h) < 16):
+        return
+    num, den = QUAD_BASE_SCALE
+    row["width"] = src_w * num // den
+    row["height"] = src_h * num // den
+    row["bytes"] = (row["width"] * row["height"] *
+                    row.get("packed_frames", len(row.get("frame_list", [0]))))
 
 
 def quad_frame_list(frames: int, cap: int = QUAD_FRAME_CAP) -> list[int]:
@@ -2138,8 +2167,53 @@ def palette_grouped_pack(cells: list[dict],
             start = end
             sheet += 1
         if start == len(coloured):
-            return placement
+            return fold_last_sheets(cells, placement)
     return None
+
+
+def fold_last_sheets(cells: list[dict], placement: dict) -> dict:
+    """Move the last sheet's cells into the free room of the sheets before
+    it while all of them fit, nearest sheet first (the hue order puts the
+    nearest colours there, the grey sheets last). 2026-10-23, P8 loop V: at
+    0.75x the frame-0 cells grouped into eight sheets, the eighth holding two
+    cells (704 texels) that the fourth grey sheet had room for, and that
+    sheet is one more for animation frames. A cell only joins another sheet's
+    palette; nothing else about it changes."""
+    full = (1 << QUAD_ATLAS_WIDTH) - 1
+    while True:
+        last = max(sheet for sheet, _, _ in placement.values())
+        if last == 0:
+            return placement
+        rows = [[0] * QUAD_ATLAS_HEIGHT for _ in range(last)]
+        for index, (sheet, origin_x, origin_y) in placement.items():
+            if sheet < last:
+                mask = ((1 << cells[index]["w"]) - 1) << origin_x
+                for row in range(origin_y, origin_y + cells[index]["h"]):
+                    rows[sheet][row] |= mask
+        moving = sorted((index for index, (sheet, _, _) in placement.items()
+                         if sheet == last),
+                        key=lambda index: (-cells[index]["w"] * cells[index]["h"],
+                                           index))
+        moved = {}
+        for index in moving:
+            cell = cells[index]
+            spot = None
+            for sheet in range(last - 1, -1, -1):
+                if all(row == full for row in rows[sheet]):
+                    continue
+                origin = first_fit_cell(rows[sheet], cell["w"], cell["h"])
+                if origin is not None:
+                    spot = (sheet, origin[0], origin[1])
+                    break
+            if spot is None:
+                return placement
+            sheet, origin_x, origin_y = spot
+            mask = ((1 << cell["w"]) - 1) << origin_x
+            for row in range(origin_y, origin_y + cell["h"]):
+                rows[sheet][row] |= mask
+            moved[index] = spot
+        placement = dict(placement)
+        placement.update(moved)
 
 
 def area_average_cell(pixels: list[tuple[int, int, int, int]],
@@ -2258,6 +2332,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     def candidate_set(rung: int) -> list[dict]:
         rows = build_candidates(rung)
         rows.extend(dict(row) for row in (extra_candidates or ()))
+        for row in rows:
+            quad_base_scale_row(row)
         # Measured-live first, then ascending size. Admission is greedy and the
         # sheet is now half what it was, so "smallest first" alone would fill it
         # with whatever happens to be small and let a texture a match actually
@@ -2347,12 +2423,12 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # live. If the sheet ever grows, this loop takes the better setting on its own
     # without anyone editing a constant.
     admitted, excluded = [], []
-    chosen_cap = QUAD_FRAME_CAP
+    chosen_cap = QUAD_BASE_FRAME_CAP
     chosen_rung = QUAD_CELL_LADDER[0]
     for rung in QUAD_CELL_LADDER:
         rows = candidate_set(rung)
         seated = False
-        for cap in range(QUAD_FRAME_CAP, 0, -1):
+        for cap in range(QUAD_BASE_FRAME_CAP, 0, -1):
             admitted, excluded = admit_at(rows, cap)
             chosen_cap = cap
             chosen_rung = rung
@@ -2608,12 +2684,15 @@ def build_animation_sheets(quads: dict, shown_frames: dict[int, list[int]],
     released, one a frame until texture VRAM refuses one, and until a sheet
     is resident its rows are skipped (the nearest earlier frame draws).
 
-    The sheets fill in QUAD_ANIMATION_PRIORITY order, each texture whole or
-    not at all: its cells first fit into the sheets so far, a new sheet when
-    none takes one, and a texture that would need an eighth sheet keeps its
-    base frames (the textures after it may still fit the holes).
+    The textures join in QUAD_ANIMATION_PRIORITY order, each whole or not at
+    all: one joins when the set so far plus its cells still packs (shelf_pack,
+    largest cells first) into the sheets the nine base ones leave plus the
+    countdown's seven; one that does not keeps its base frames, and the
+    textures after it may still fit. The set is then placed by palette
+    (palette_grouped_pack, as the base is) and its sheets ordered by the
+    best-ranked texture each holds: the first ones upload with the base set at
+    battle prepare, the rest after the countdown.
     """
-    num, den = QUAD_ANIMATED_SCALE
     missing: dict[int, list[int]] = {}
     cells_by_key: dict[int, list[dict]] = {}
     for row in quads["admitted"]:
@@ -2629,6 +2708,7 @@ def build_animation_sheets(quads: dict, shown_frames: dict[int, list[int]],
         if not frames:
             continue
         missing[key] = frames
+        num, den = QUAD_ANIMATED_SCALE_BY_TEXTURE.get(key, QUAD_ANIMATED_SCALE)
         src_w = row.get("source_width", row["width"])
         src_h = row.get("source_height", row["height"])
         cells_by_key[key] = [{"w": max(1, src_w * num // den),
@@ -2642,39 +2722,34 @@ def build_animation_sheets(quads: dict, shown_frames: dict[int, list[int]],
     priority = {key: index for index, key in enumerate(QUAD_ANIMATION_PRIORITY)}
     order = sorted(cells_by_key,
                    key=lambda key: (priority.get(key, len(priority)), key))
-    cells = []
-    placement = {}
-    sheets: list[list[int]] = []
+    sheets_max = (QUAD_ATLAS_SHEETS_MAX - quads["sheets"] +
+                  QUAD_ANIMATION_SHEETS_MAX)
+    chosen: list[int] = []
     for key in order:
-        trial = [list(rows) for rows in sheets]
-        spots = []
-        for cell in cells_by_key[key]:
-            spot = None
-            for sheet, rows in enumerate(trial):
-                origin = first_fit_cell(rows, cell["w"], cell["h"])
-                if origin is not None:
-                    spot = (sheet, origin[0], origin[1])
-                    break
-            if spot is None:
-                trial.append([0] * QUAD_ATLAS_HEIGHT)
-                origin = first_fit_cell(trial[-1], cell["w"], cell["h"])
-                spot = (len(trial) - 1, origin[0], origin[1])
-            sheet, origin_x, origin_y = spot
-            mask = ((1 << cell["w"]) - 1) << origin_x
-            for row in range(origin_y, origin_y + cell["h"]):
-                trial[sheet][row] |= mask
-            spots.append(spot)
-        if len(trial) > QUAD_ANIMATION_SHEETS_MAX:
+        trial = [cell for k in chosen + [key] for cell in cells_by_key[k]]
+        if shelf_pack(trial, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
+                      sheets_max) is None:
             del missing[key]
             continue
-        sheets = trial
-        for cell, spot in zip(cells_by_key[key], spots):
-            placement[len(cells)] = spot
-            cells.append(cell)
+        chosen.append(key)
+    cells = [cell for key in chosen for cell in cells_by_key[key]]
     if not cells:
         return {"sheets": 0, "atlas": b"", "palettes": [], "palette_block": b"",
                 "frames": [], "missing": {}, "texels": 0}
-    sheets_used = len(sheets)
+    placement = palette_grouped_pack(cells, frames_by_texture, sheets_max)
+    if placement is None:
+        placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
+                               sheets_max)
+    rank: dict[int, int] = {}
+    for index, (sheet, _, _) in placement.items():
+        key = cells[index]["texture"]
+        rank[sheet] = min(rank.get(sheet, len(priority) + 1),
+                          priority.get(key, len(priority)))
+    renumber = {sheet: new for new, sheet in
+                enumerate(sorted(rank, key=lambda sheet: (rank[sheet], sheet)))}
+    placement = {index: (renumber[sheet], x, y)
+                 for index, (sheet, x, y) in placement.items()}
+    sheets_used = len(renumber)
     atlas, palettes, palette_block, rows = encode_quad_sheets(
         cells, placement, sheets_used, frames_by_texture)
     base = quads["sheets"]
@@ -2692,8 +2767,14 @@ def merge_animation_sheets(quads: dict, animation: dict) -> dict:
     base_atlas = quads["payload"][:quads["atlas_bytes"]]
     base_palettes = quads["payload"][quads["atlas_bytes"]:]
     merged = dict(quads)
-    merged["base_sheets"] = quads["sheets"]
-    merged["animation_sheets"] = animation["sheets"]
+    # base_sheets is what uploads at battle prepare: the frame-0 sheets and
+    # the animation sheets that fit the nine's room; the rest wait for the
+    # countdown's 57,344 bytes.
+    merged["frame0_sheets"] = quads["sheets"]
+    merged["base_sheets"] = min(QUAD_ATLAS_SHEETS_MAX,
+                                quads["sheets"] + animation["sheets"])
+    merged["animation_sheets"] = (quads["sheets"] + animation["sheets"] -
+                                  merged["base_sheets"])
     merged["animation_frames"] = {str(key): frames for key, frames
                                   in sorted(animation["missing"].items())}
     merged["animation_texels"] = animation["texels"]

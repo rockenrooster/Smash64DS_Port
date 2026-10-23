@@ -558,9 +558,14 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # holding 92 frames of 25 textures the base cells lack, the ones a 30 Hz
     # present shows, at 0.75x (44,784 texels), in QUAD_ANIMATION_PRIORITY
     # order, uploaded after the countdown.
+    # Same day (owner: the dusts at 0.5x; "Anything not using 0.75x
+    # textures?"): frame 0 at 0.75x too, so the frame-0 cells take seven of
+    # the nine prepare sheets and the other two hold animation frames; the
+    # set packs largest cells first: 108 frames of 28 textures (60,272
+    # texels), the dusts' at 32x32.
     ([int64]$report.quads.base_sheets -ne 9) -or
     ([int64]$report.quads.animation_sheets -ne 7) -or
-    ([int64]$report.quads.animation_texels -ne 44784) -or
+    ([int64]$report.quads.animation_texels -ne 60272) -or
     ([int64]$report.quads.sheets -ne 16) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
@@ -615,9 +620,11 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # Then SparkleWhite (texture 45) likewise, nine frames at 24x24 in a ninth
     # sheet: +4,160 B and eight frames in both bakes.
     # 2026-10-23 (P8 loop V): `bytes` stays the base cells'; the animation
-    # sheets add 92 frame rows in both bakes.
-    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 65536 } else { 64512 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 170 } else { 169 })) -or
+    # sheets add 92 frame rows in both bakes. Same day, the base cells at
+    # 0.75x (QUAD_BASE_SCALE): 65,536 -> 41,904 B (Yoster off 41,328), and
+    # the animation rows 92 -> 108.
+    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 41904 } else { 41328 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 186 } else { 185 })) -or
     (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 56 } else { 55 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
@@ -655,17 +662,18 @@ if (($null -eq $ness) -or
     ([int64]$ness.texture_count -ne 2) -or
     ([int64]$ness.quad_stride -ne 160) -or
     ($nessCells.Count -ne 2) -or
-    (($nessCells | Where-Object { [int64]$_.bytes -ne 1024 }).Count -ne 0)) {
+    (($nessCells | Where-Object { [int64]$_.bytes -ne 576 }).Count -ne 0)) {
     throw ('Ness PK Fire particle bank changed: scripts=' +
         "$($ness.script_count) textures=$($ness.texture_count) stride=" +
         "$($ness.quad_stride) cells=$($nessCells.Count).")
 }
-# Yoshi's and Kirby's fighter banks: whole banks, every cell at source size.
+# Yoshi's and Kirby's fighter banks: whole banks, every cell at 0.75x of its
+# source (QUAD_BASE_SCALE, 2026-10-23) but Kirby's 8x8, which stays.
 foreach ($pin in @(
         @{ Name = 'yoshi'; Bytes = 336; Scripts = 4; Textures = 2; Stride = 176
-            Cells = @{ 176 = 4096; 177 = 1024 } },
+            Cells = @{ 176 = 2304; 177 = 576 } },
         @{ Name = 'kirby'; Bytes = 992; Scripts = 13; Textures = 3; Stride = 208
-            Cells = @{ 208 = 1024; 209 = 256; 210 = 64 } })) {
+            Cells = @{ 208 = 576; 209 = 144; 210 = 64 } })) {
     $bank = $report.($pin.Name)
     $cells = @($report.quads.admitted_cells | Where-Object {
             $pin.Cells.ContainsKey([int]$_.texture) })
@@ -702,9 +710,9 @@ $heal8 = @($report.quads.admitted_cells | Where-Object { [int64]$_.texture -eq 8
 if (($heal7.Count -ne 1) -or ($heal8.Count -ne 1) -or
     ([int64]$heal7[0].width -ne 8) -or ([int64]$heal7[0].height -ne 8) -or
     ([int64]$heal7[0].frames -ne 2) -or
-    ([int64]$heal8[0].width -ne 16) -or ([int64]$heal8[0].height -ne 16) -or
+    ([int64]$heal8[0].width -ne 12) -or ([int64]$heal8[0].height -ne 12) -or
     ([int64]$heal8[0].frames -ne 1)) {
-    throw 'Heal-sparkle quad closure changed; expected texture 7 8x8x2 and texture 8 16x16x1.'
+    throw 'Heal-sparkle quad closure changed; expected texture 7 8x8x2 and texture 8 12x12x1.'
 }
 # Every common texture a both-CPU match was measured drawing and the pack can
 # supply (1 has no image), plus Dream Land's leaf/dust sheet. If admission order
