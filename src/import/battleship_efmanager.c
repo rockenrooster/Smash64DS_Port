@@ -2534,6 +2534,33 @@ static s32 ndsEFManagerShieldTexelFill(u8 *pixels, u32 bytes, void *user_data)
     return TRUE;
 }
 
+/* src/nds/nds_renderer_fighter_vram.c: VRAM A+B unlocked for one upload. */
+s32 ndsFtrLeanAdmitOpenHoles(void);
+void ndsFtrLeanAdmitCloseHoles(void);
+
+/* One player's shield texture: an upload and a palette pointer. Same upload
+ * either way; only the format's palette width differs, and the generator
+ * emits the entry count that matches the texels it packed. */
+static s32 ndsEFManagerShieldPrepare(u32 slot, const u16 *palette)
+{
+#if NDS_SHIELD_TEX_A3I5
+    if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
+            ndsEFManagerShieldTexelFill, NULL,
+            &sNdsShieldTextureName[slot]) == FALSE)
+#else
+    if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
+            ndsEFManagerShieldTexelFill, NULL,
+            &sNdsShieldTextureName[slot]) == FALSE)
+#endif
+    {
+        sNdsShieldTextureName[slot] = 0u;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static u32 ndsEFManagerShieldTexture(s32 player)
 {
     /* NOTHING IS COMPUTED HERE. gNdsShieldPalettes is the combiner's own ramp
@@ -2550,21 +2577,18 @@ static u32 ndsEFManagerShieldTexture(s32 player)
         return sNdsShieldTextureName[slot];
     }
     palette = gNdsShieldPalettes[slot];
-    /* Same upload either way; only the format's palette width differs, and the
-     * generator emits the entry count that matches the texels it packed. */
-#if NDS_SHIELD_TEX_A3I5
-    if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
-            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
-            ndsEFManagerShieldTexelFill, NULL,
-            &sNdsShieldTextureName[slot]) == FALSE)
-#else
-    if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
-            NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,
-            ndsEFManagerShieldTexelFill, NULL,
-            &sNdsShieldTextureName[slot]) == FALSE)
-#endif
+    if (ndsEFManagerShieldPrepare(slot, palette) == FALSE)
     {
-        sNdsShieldTextureName[slot] = 0u;
+        /* The first shield of a match is made mid-battle, after the fighter
+         * admission locked VRAM A+B, and on a full stage nothing else is
+         * free: Dream Land with four heavy contents refused every shield
+         * (gate s67-s72, one native failure a match, 159 fallback draws).
+         * Take A+B's holes for this one upload, as the texture cache does. */
+        if (ndsFtrLeanAdmitOpenHoles() != FALSE)
+        {
+            (void)ndsEFManagerShieldPrepare(slot, palette);
+            ndsFtrLeanAdmitCloseHoles();
+        }
     }
     return sNdsShieldTextureName[slot];
 }
@@ -2679,8 +2703,13 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
             return;
         }
     }
+    /* The source proc, not a bare tree walk: its DObj names a DL-link list
+     * (FTManagerCommon 0x2F0), which only the DL-links walk reads, and its
+     * prim/env are what the native entry shield (0x248) takes its colour
+     * from. gcDrawDObjTreeForGObj handed the link list to the stage path as
+     * a display list, a native failure on every fallback frame. */
     gNdsShieldQuadFallbackCount++;
-    gcDrawDObjTreeForGObj(effect_gobj);
+    efManagerShieldProcDisplay(effect_gobj);
 }
 
 void efManagerInitEffects(void)
