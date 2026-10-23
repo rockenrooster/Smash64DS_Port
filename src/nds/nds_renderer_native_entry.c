@@ -55,11 +55,17 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
  * answer holds for the heap generation: the contents' special files load
  * once a scene and its bump heap never reuses an address within one (the
  * dead bytes a VS battle lends out are reused, but never as a display list
- * a DObj names). */
+ * a DObj names). A list probes up to NDS_ENTRY_P4_ADMIT_PROBES ways from its
+ * home way and takes the first empty one, or its home way when none is
+ * (P8, 2026-10-23: direct-mapped, two lists drawn in one frame could share a
+ * way and rescan the rows on every draw). */
 #define NDS_ENTRY_P4_ADMIT_MEMO 256u
-#define NDS_ENTRY_P4_ADMIT_NONE 0xffffu
+#define NDS_ENTRY_P4_ADMIT_PROBES 4u
+#define NDS_ENTRY_P4_ADMIT_NONE 0xffu
+_Static_assert(NDS_ENTRY_EFFECT_P4_ROOT_COUNT < NDS_ENTRY_P4_ADMIT_NONE,
+               "the admission memo keeps a P4 row in a byte");
 static const void *sNdsEntryP4AdmitMemoDl[NDS_ENTRY_P4_ADMIT_MEMO];
-static u16 sNdsEntryP4AdmitMemoRow[NDS_ENTRY_P4_ADMIT_MEMO];
+static u8 sNdsEntryP4AdmitMemoRow[NDS_ENTRY_P4_ADMIT_MEMO];
 static u32 sNdsEntryP4AdmitMemoGen;
 
 /* ENTRY ROOTS RETIRE (P7, 2026-10-21). A content's entry vehicles, gates and
@@ -128,7 +134,9 @@ static void ndsRendererEntryEffectP4AdmitRow(u32 p, u32 *owner_asset_id,
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
                                    u32 *root_offset, u32 *variant_count)
 {
-    const u32 way = ((u32)(uintptr_t)dl * 2654435761u) >> 24;
+    const u32 home = ((u32)(uintptr_t)dl * 2654435761u) >> 24;
+    u32 way = home;
+    u32 probe;
     u32 p;
 
     if (sNdsEntryP4AdmitMemoGen != gNdsTaskmanHeapGeneration + 1u)
@@ -136,19 +144,37 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
         memset(sNdsEntryP4AdmitMemoDl, 0, sizeof(sNdsEntryP4AdmitMemoDl));
         sNdsEntryP4AdmitMemoGen = gNdsTaskmanHeapGeneration + 1u;
     }
-    if ((dl != NULL) && (sNdsEntryP4AdmitMemoDl[way] == dl))
+    for (probe = 0u; (dl != NULL) && (probe < NDS_ENTRY_P4_ADMIT_PROBES);
+         probe++)
     {
-        p = sNdsEntryP4AdmitMemoRow[way];
-        if (p == NDS_ENTRY_P4_ADMIT_NONE)
+        const void *memo_dl = sNdsEntryP4AdmitMemoDl[way];
+
+        if (memo_dl == dl)
         {
-            return FALSE;
+            p = sNdsEntryP4AdmitMemoRow[way];
+            if (p == NDS_ENTRY_P4_ADMIT_NONE)
+            {
+                return FALSE;
+            }
+            ndsRendererEntryEffectP4AdmitRow(p, owner_asset_id, root_offset,
+                                             variant_count);
+            return TRUE;
         }
-        ndsRendererEntryEffectP4AdmitRow(p, owner_asset_id, root_offset,
-                                         variant_count);
-        return TRUE;
+        if (memo_dl == NULL)
+        {
+            break;
+        }
+        way = (way + 1u) & (NDS_ENTRY_P4_ADMIT_MEMO - 1u);
     }
-    sNdsEntryP4AdmitMemoDl[way] = dl;
-    sNdsEntryP4AdmitMemoRow[way] = NDS_ENTRY_P4_ADMIT_NONE;
+    if (probe == NDS_ENTRY_P4_ADMIT_PROBES)
+    {
+        way = home;
+    }
+    if (dl != NULL)
+    {
+        sNdsEntryP4AdmitMemoDl[way] = dl;
+        sNdsEntryP4AdmitMemoRow[way] = NDS_ENTRY_P4_ADMIT_NONE;
+    }
     for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
     {
         const NDSEntryEffectP4Root *row = &sNdsEntryEffectP4Roots[p];
@@ -182,7 +208,10 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
 
         if ((const u8 *)dl == root)
         {
-            sNdsEntryP4AdmitMemoRow[way] = (u16)p;
+            if (dl != NULL)
+            {
+                sNdsEntryP4AdmitMemoRow[way] = (u8)p;
+            }
             ndsRendererEntryEffectP4AdmitRow(p, owner_asset_id, root_offset,
                                              variant_count);
             return TRUE;
@@ -244,6 +273,13 @@ sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
     *root_offset = sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
     return TRUE;
 }
+
+/* ndsRendererEntryEffectRoot's memo of P4 roots by (asset, offset). */
+#define NDS_ENTRY_ROOT_MEMO_BITS 7u
+#define NDS_ENTRY_ROOT_MEMO_WAYS (1u << NDS_ENTRY_ROOT_MEMO_BITS)
+#define NDS_ENTRY_ROOT_MEMO_PROBES 8u
+_Static_assert(NDS_ENTRY_EFFECT_P4_ROOT_COUNT <= 256u,
+               "the root memo keeps a P4 row in a byte");
 #endif
 
 static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
@@ -298,13 +334,20 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     {
         /* The answer by (asset, offset) for the heap generation, whose match
          * fixes the contents the scan prefers (2026-10-13: four Sonics'
-         * entry planes paid 79K cycles a frame scanning the rows). */
-        static u32 memo_key[64];
-        static const NDSEntryEffectRoot *memo_root[64];
+         * entry planes paid 79K cycles a frame scanning the rows). Open
+         * addressing that never evicts (P8, 2026-10-23: on 64 direct-mapped
+         * ways Palutena's wings and light roots, drawn in one frame, shared
+         * ways and rescanned the rows every draw): a key probes from its
+         * home way to the first empty one, and a key that finds neither
+         * within the probe bound is scanned unmemoized. */
+        static u32 memo_key[NDS_ENTRY_ROOT_MEMO_WAYS];
+        static u8 memo_row[NDS_ENTRY_ROOT_MEMO_WAYS];
         static u32 memo_gen;
         const u32 key = (owner_asset_id << 16) ^ root_offset;
-        const u32 way = (key * 2654435761u) >> 26;
+        u32 way = (key * 2654435761u) >> (32u - NDS_ENTRY_ROOT_MEMO_BITS);
+        u32 empty = NDS_ENTRY_ROOT_MEMO_WAYS;
         const NDSEntryEffectRoot *first = NULL;
+        u32 probe;
         u32 p;
 
         if (memo_gen != gNdsTaskmanHeapGeneration + 1u)
@@ -312,9 +355,19 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
             memset(memo_key, 0, sizeof(memo_key));
             memo_gen = gNdsTaskmanHeapGeneration + 1u;
         }
-        if ((memo_key[way] == key + 1u) && (memo_root[way] != NULL))
+        for (probe = 0u; probe < NDS_ENTRY_ROOT_MEMO_PROBES; probe++)
         {
-            return memo_root[way];
+            if (memo_key[way] == key + 1u)
+            {
+                return &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST +
+                                             (u32)memo_row[way]];
+            }
+            if (memo_key[way] == 0u)
+            {
+                empty = way;
+                break;
+            }
+            way = (way + 1u) & (NDS_ENTRY_ROOT_MEMO_WAYS - 1u);
         }
         for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
         {
@@ -339,8 +392,12 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                 break;
             }
         }
-        memo_key[way] = key + 1u;
-        memo_root[way] = first;
+        if ((first != NULL) && (empty < NDS_ENTRY_ROOT_MEMO_WAYS))
+        {
+            memo_key[empty] = key + 1u;
+            memo_row[empty] = (u8)(first - &sNdsEntryEffectRoots[
+                                               NDS_ENTRY_EFFECT_P4_ROOT_FIRST]);
+        }
         return first;
     }
 #endif
