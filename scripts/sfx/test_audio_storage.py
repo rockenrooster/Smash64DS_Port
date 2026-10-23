@@ -191,6 +191,14 @@ static uint8_t sStorageBounce[512] __attribute__((aligned(32)));
 static NdsAudioStorageRequest sStorageRequest;
 static unsigned sStorageMutex, calls, fail_at;
 static uint32_t gNdsAudioStorageReads, gNdsAudioStorageBytes, gNdsAudioStorageBounceBytes;
+/* The FNT page cache: this image has no name table, so no read takes it. */
+#define NDS_STORAGE_FNT_PAGE_BYTES 512u
+static uint8_t sStorageFntPage[NDS_STORAGE_FNT_PAGE_BYTES];
+static uint32_t sStorageFntPageOffset;
+static int sStorageFntPageReady;
+static uint32_t gNdsAudioStorageFntPageHits, gNdsAudioStorageFntPageFills;
+static struct { uint32_t fnt_rom_offset, fnt_size; } env = {0u, 0u};
+#define g_envAppNdsHeader (&env)
 static void mutexLock(unsigned *m) { assert((*m)++ == 0); }
 static void mutexUnlock(unsigned *m) { assert(--(*m) == 0); }
 static int ndsAudioStorageCall(uint32_t operation, uint32_t offset, void *dst, uint32_t bytes) {
@@ -275,6 +283,12 @@ static NdsAudioStorageRequest sStorageRequest;
 static uint32_t sStorageSequence;
 static uint32_t gNdsAudioStorageRequests, gNdsAudioStorageFailures;
 static uint32_t gNdsAudioStorageWaitTicks64, gNdsAudioStorageWaitMaxTicks64, ticks;
+static uint32_t gNdsAudioStorageWaitMaxFrame, gNdsAudioStorageWaitMaxOffset;
+static uint32_t gNdsAudioStorageWaitMaxBytes, gNdsFrameCounter;
+/* READ_CARD leaves this handshake for the queued async reader. */
+static unsigned read_sync_calls;
+static int ndsAudioStorageReadSync(uint32_t offset, void *dst, uint32_t bytes)
+{ (void)offset; (void)dst; (void)bytes; read_sync_calls++; return 1; }
 static uint32_t tickGetCount(void) { return ticks += 7u; }
 static uint8_t output[64] __attribute__((aligned(32)));
 static unsigned order, failure, empty;
@@ -301,17 +315,22 @@ static void DC_InvalidateRange(void *address, size_t bytes) {
 int main(void) {
     memset(&sStorageRequest, 0xdd, sizeof(sStorageRequest));
     sStorageSequence = 0xffff;
-    assert(ndsAudioStorageCall(NDS_AUDIO_STORAGE_READ_CARD, 100, output, sizeof(output)));
+    /* An output-carrying request (the ROM map) through the handshake. */
+    assert(ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_MAP, 100, output, sizeof(output)));
     assert(order == 4 && sStorageRequest.sequence == 1 && !gNdsAudioStorageFailures);
     for (unsigned i = 0; i < sizeof(output); ++i) assert(output[i] == 0x65);
     for (failure = 1; failure <= 2; ++failure) {
         order = 0;
-        assert(!ndsAudioStorageCall(NDS_AUDIO_STORAGE_READ_CARD, 100, output, sizeof(output)));
+        assert(!ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_MAP, 100, output, sizeof(output)));
         assert(order == 4 && gNdsAudioStorageFailures == failure);
     }
     failure = 0; order = 0; empty = 1;
     assert(ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_CARD, 0, NULL, 0));
     assert(order == 2 && gNdsAudioStorageRequests == 4);
+    /* A card read never touches the handshake. */
+    order = 0;
+    assert(ndsAudioStorageCall(NDS_AUDIO_STORAGE_READ_CARD, 100, output, sizeof(output)));
+    assert(read_sync_calls == 1 && order == 0 && gNdsAudioStorageRequests == 4);
     return 0;
 }
 ''')

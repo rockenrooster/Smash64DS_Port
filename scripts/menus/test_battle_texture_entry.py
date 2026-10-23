@@ -22,7 +22,7 @@ def sources():
 
 def host_source(prepare, gate, vs):
     enums = original_enum("sc/scdef.h", "SCKind") + "\n" + original_enum("sc/scdef.h", "SC1PGameStageKind")
-    start_bgm = function(vs, "ndsSCVSBattleStartPlayBGM")
+    before_timer = function(vs, "ndsSCVSBattlePrepareBeforeTimer")
     source_go = function((DECOMP / "sc/sc1pmode/sc1pgame.c").read_text(), "sc1PGameSetGameStart")
     registry = (ROOT / "src/port/nds_scene_manager.c").read_text()
     cases = []
@@ -49,6 +49,10 @@ typedef uint32_t u32;
 typedef uint8_t u8;
 ''' + enums + r'''
 static struct { int scene_curr, spgame_stage; } gSCManagerSceneData;
+/* No battle state yet: Dream Land's static set is prepared, as on Dream Land. */
+enum { nGRKindPupupu = 6 };
+static struct { int gkind; } *gSCManagerBattleState;
+static u32 sNdsSCVSBattleEntryStartupTexturesRetired, sNdsSCVSBattleEntryRootsRetired;
 static u32 gNdsSceneManagerCurrIsBattle;
 static int bank_registered, at_go, resets, sSC1PGameIsStartStage;
 static char order[64];
@@ -67,9 +71,13 @@ static int ndsRendererHardwarePrepareParticleAtlas(void) { step('P'); return TRU
 static int ndsRendererHardwarePrepareImpactWaveTextures(void) { step('I'); return TRUE; }
 static int ndsRendererHardwarePrepareRebirthHaloTextures(void) { step('H'); return TRUE; }
 static int ndsRendererHardwarePrepareEntryEffectTextures(void) { step('E'); return TRUE; }
+static int ndsRendererHardwarePrepareDamageSlashTextures(void) { step('L'); return TRUE; }
+static int ndsRendererHardwarePrepareDamageFlyMDustTextures(void) { step('M'); return TRUE; }
+static int ndsRendererHardwarePrepareFoxGunTexture(void) { step('G'); return TRUE; }
+static void ndsFtrLeanAdmitSceneTexturesReady(void) { step('A'); }
 static void ndsSCVSBattleBeginScenePlacement(void) {}
 static void mpCollisionSetPlayBGM(void) {}
-''' + prepare + "\n" + start_bgm + "\n" + source_go + r'''
+''' + prepare + "\n" + before_timer + "\n" + source_go + r'''
 static void runner_entry(void)
 {
 ''' + gate + r'''
@@ -85,17 +93,17 @@ int main(void)
             gNdsSceneManagerCurrIsBattle = !!(cases[i].flags & NDS_SCENE_FLAG_BATTLE);
             order[0] = 0; resets = at_go = 0;
             bank_registered = 1; /* Source func_start has completed ground/bank setup. */
-            if (cases[i].kind == nSCKindVSBattle) ndsSCVSBattleStartPlayBGM();
+            if (cases[i].kind == nSCKindVSBattle) ndsSCVSBattlePrepareBeforeTimer();
             runner_entry();
             if (!gNdsSceneManagerCurrIsBattle) { CHECK(resets == 0); continue; }
-            CHECK(resets == 1 && !strcmp(order, "CDRSTPIHE"));
+            CHECK(resets == 1 && !strcmp(order, "CDRSTPILHEMGA"));
             /* Actual source GO callback: Metal/Zako defer only their music. */
             at_go = 1;
             const int stages[] = {nSC1PGameStageMMario, nSC1PGameStageZako, nSC1PGameStageLink};
             for (unsigned stage = 0; stage < sizeof(stages) / sizeof(stages[0]); stage++) {
                 gSCManagerSceneData.spgame_stage = stages[stage];
                 sc1PGameSetGameStart();
-                CHECK(resets == 1 && !strcmp(order, "CDRSTPIHE"));
+                CHECK(resets == 1 && !strcmp(order, "CDRSTPILHEMGA"));
             }
         }
     }
@@ -119,7 +127,11 @@ class BattleTextureEntryTest(unittest.TestCase):
             self.assertNotIn("ndsBattlePrepareSceneTextures", function(read_split(ROOT / path), name))
         for forbidden in ("gNdsMatchConfig", "gSCManagerTransferBattleState", "ndsR2AnimCachePreload"):
             self.assertNotIn(forbidden, prepare)
-        self.assertIn("ndsBattlePrepareSceneTextures();", function(vs, "ndsSCVSBattleStartPlayBGM"))
+        # VS prepares before its timer: textures and cartridge reads used to
+        # overlap the countdown and its audio (the owner's startup hitch).
+        self.assertIn("ndsBattlePrepareSceneTextures();",
+                      function(vs, "ndsSCVSBattlePrepareBeforeTimer"))
+        self.assertNotIn("ndsBattlePrepareSceneTextures", function(vs, "ndsSCVSBattleStartPlayBGM"))
 
     def test_order_and_reentry(self):
         vs, _harness, prepare, gate = sources()

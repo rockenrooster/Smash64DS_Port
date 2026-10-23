@@ -100,8 +100,13 @@ static u8 sSC1PGameEnemyVariations[30];
 static int rng_calls;
 static int syUtilsRandIntRange(int range) { CHECK(range > 0); rng_calls++; return 0; }
 static int ftParamGetCostumeCommonID(int kind, int costume) { (void)kind; return costume; }
+/* P7's challenger (it rides the source's first challenger rows); inactive. */
+#define NDS_P7_ANY 0xFFu
+typedef struct { u8 active, row, fkind, content, gkind; } NDSP7Challenger;
+static NDSP7Challenger gNdsP7Challenger;
 ''' + globals_c + "\n" + tables + "\n" + helpers + r'''
-typedef struct { struct { void *arena_start; size_t arena_size; } scene_setup;
+typedef struct { unsigned w0, w1; } Gfx;
+typedef struct { struct { void *arena_start; size_t arena_size; size_t dl_buffer1_size; } scene_setup;
                  void (*func_start)(void); } SYTaskmanSetup;
 static SYTaskmanSetup dSC1PGameTaskmanSetup;
 static struct { void *zbuffer; } dSC1PGameVideoSetup;
@@ -144,6 +149,8 @@ static void syAudioSetBGMVolume(int player, int volume)
 { CHECK(player == 0 && volume == 0x7800 && phase == 5); phase = 6; }
 static void func_800266A0_272A0(void) { CHECK(phase == 6); phase = 7; }
 static void gmRumbleInitPlayers(void) { CHECK(phase == 7); phase = 8; }
+/* The battle may have borrowed the frontend tail: reloaded last. */
+static void ndsFrontendOverlayRestoreTail(void) { CHECK(phase == 8); phase = 9; }
 static u32 gNdsSC1PGameBridgeStageRequested, gNdsSC1PGameBridgeAppliedCount;
 static int refused;
 static void ndsSC1PGameBridgeRefuse(u8 stage) { (void)stage; refused++; }
@@ -160,7 +167,7 @@ static void enter(int stage, int stock, int allies)
         expected_ally[i] = gSCManager1PGameBattleState.players[gSCManagerSceneData.ally_players[i]];
     starts = phase = rng_calls = refused = 0;
     sc1PGameStartScene();
-    CHECK(refused == 0 && starts == 1 && phase == 8);
+    CHECK(refused == 0 && starts == 1 && phase == 9);
     CHECK(gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count == stock);
     for (int i = 0; i < allies; i++) {
         Player *ally = &gSCManager1PGameBattleState.players[gSCManagerSceneData.ally_players[i]];
@@ -253,7 +260,12 @@ class CampaignBattleStateTest(unittest.TestCase):
         self.assertIn("#include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>", self.candidate)
         original = clean(function(source, "sc1PGameStartScene"))
         cleanup = "sc1PGameInitBonusStats();"
-        self.assertEqual(re.sub(r"\s+", "", wrapper[wrapper.index(cleanup):]),
+        # The source's own cleanup, then the DS reload of the frontend tail
+        # the battle may have borrowed.
+        restore = "ndsFrontendOverlayRestoreTail();"
+        tail = re.sub(r"\s+", "", wrapper[wrapper.index(cleanup):])
+        self.assertTrue(tail.endswith(restore + "}"), tail[-80:])
+        self.assertEqual(tail[:-len(restore + "}")] + "}",
                          re.sub(r"\s+", "", original[original.index(cleanup):]))
 
     def run_host(self, candidate):
