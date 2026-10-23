@@ -994,8 +994,8 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         rows += [
             f"#if {guard}",
             f"#define NDS_P4_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
-            f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, \"nitro:/fighters/{name}_high.bin\", "
-            f"\"nitro:/fighters/{name}_low.bin\", {images._image_type(name, 'high')}, "
+            f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, NDS_NITRO_FIGHTERS \"{name}_high.bin\", "
+            f"NDS_NITRO_FIGHTERS \"{name}_low.bin\", {images._image_type(name, 'high')}, "
             f"{images._image_type(name, 'low')})",
             "#else",
             f"#define NDS_P4_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X)",

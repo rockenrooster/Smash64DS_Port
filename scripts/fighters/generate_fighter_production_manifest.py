@@ -2077,9 +2077,8 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             lines.append(f"#define {macro_name}(X) \\")
             for index, (symbol, file_id, path) in enumerate(rows):
                 suffix = " \\" if index + 1 < len(rows) else ""
-                nitro_path = f"nitro:/reloc/{path}"
                 lines.append(
-                    f"    X({symbol}, 0x{file_id:x}u, \"{nitro_path}\"){suffix}"
+                    f"    X({symbol}, 0x{file_id:x}u, {nitro_path_expr(path)}){suffix}"
                 )
             lines.append("")
 
@@ -2103,9 +2102,8 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             lines.append(f"#define {macro_name}(X) \\")
             for index, (file_id, path) in enumerate(rows):
                 suffix = " \\" if index + 1 < len(rows) else ""
-                nitro_path = f"nitro:/reloc/{path}"
                 lines.append(
-                    f"    X(0x{file_id:x}u, \"{nitro_path}\"){suffix}"
+                    f"    X(0x{file_id:x}u, {nitro_path_expr(path)}){suffix}"
                 )
             lines.append("")
 
@@ -2215,10 +2213,10 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         for index, row in enumerate(rows):
             suffix = " \\" if index + 1 < len(rows) else ""
             lines.append(
-                "    X({symbol}, 0x{file_id:x}u, \"nitro:/reloc/{path}\"){suffix}".format(
+                "    X({symbol}, 0x{file_id:x}u, {path}){suffix}".format(
                     symbol=row["symbol"],
                     file_id=int(row["asset"]["id"]),
-                    path=row["asset"]["path"],
+                    path=nitro_path_expr(row["asset"]["path"]),
                     suffix=suffix,
                 )
             )
@@ -2230,10 +2228,10 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
     for index, row in enumerate(one_p_rows):
         suffix = " \\" if index + 1 < len(one_p_rows) else ""
         lines.append(
-            "    X({symbol}, 0x{file_id:x}u, \"nitro:/reloc/{path}\"){suffix}".format(
+            "    X({symbol}, 0x{file_id:x}u, {path}){suffix}".format(
                 symbol=row["symbol"],
                 file_id=int(row["asset"]["id"]),
-                path=row["asset"]["path"],
+                path=nitro_path_expr(row["asset"]["path"]),
                 suffix=suffix,
             )
         )
@@ -2263,6 +2261,26 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         "",
     ])
     return "\n".join(lines)
+
+
+# P8 R2 (include/nds/nds_reloc_assets.h): a runtime path is its NitroFS
+# directory's code macro and the leaf, so RAM does not hold the directory
+# prefix once per file; a directory without a code keeps the whole literal.
+NITRO_RELOC_DIR_MACROS = {
+    "reloc_animations": "NDS_NITRO_RELOC_ANIMATIONS",
+    "reloc_extern_data": "NDS_NITRO_RELOC_EXTERN_DATA",
+    "reloc_fighters_main": "NDS_NITRO_RELOC_FIGHTERS_MAIN",
+    "reloc_submotions": "NDS_NITRO_RELOC_SUBMOTIONS",
+}
+
+
+def nitro_path_expr(path: str) -> str:
+    """The C expression of reloc path `path` (relative to nitro:/reloc/)."""
+    directory, _, leaf = path.rpartition("/")
+    macro = NITRO_RELOC_DIR_MACROS.get(directory)
+    if macro is None or "/" in directory:
+        return f"\"nitro:/reloc/{path}\""
+    return f"{macro} \"{leaf}\""
 
 
 def main() -> int:

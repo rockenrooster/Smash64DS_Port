@@ -985,7 +985,10 @@ _HAND_SYMBOL_ROW_RE = re.compile(
 _RESOLVER_ROW_RE = re.compile(
     r"symbol\s*==\s*&\s*(ll\w+)\s*\)[^;{}]*\{\s*\*out_offset\s*=\s*"
     r"(NDS_RELOC_SYMBOL_\w+)\s*;")
-_NITROFS_PATH_RE = re.compile(r'"nitro:/reloc/(\w+)/(\w+)"')
+# A row's path is "nitro:/reloc/<dir>/<file>" or, since P8 R2, the directory's
+# code macro and the file (NDS_NITRO_RELOC_MENUS "MNCommon").
+_NITROFS_PATH_RE = re.compile(
+    r'(?:"nitro:/reloc/(\w+)/|NDS_NITRO_RELOC_(\w+) ")(\w+)"')
 _MAKE_STAGE_RE = re.compile(r"^\t(\w+)/(\w+)\s*\\?\s*$", re.MULTILINE)
 
 
@@ -1041,7 +1044,8 @@ def scan_port_reloc(repo_root: Path) -> PortRelocState:
             state.asset[container] = by_id[ident]
 
     assets_text = (repo_root / NITROFS_ASSETS_PATH).read_text(errors="replace")
-    for directory, container in _NITROFS_PATH_RE.findall(assets_text):
+    for directory, code, container in _NITROFS_PATH_RE.findall(assets_text):
+        directory = directory or "reloc_" + code.lower()
         state.nitrofs.add(container)
         state.o2r_dir.setdefault(container, directory)
     makefile = (repo_root / MAKEFILE_PATH).read_text(errors="replace")
@@ -1157,7 +1161,7 @@ def audit_imported_screen(repo_root: Path, screen: ImportedScreenSpec,
                 f"{NITROFS_ASSETS_PATH} row "
                 f'`{{ 0x{state.file_id.get(container, 0):x}, '
                 f'0x{state.file_id.get(container, 0):x}, '
-                f'"nitro:/reloc/{directory}/{container}" }},` -- {stage_cmd}'))
+                f'NDS_NITRO_{directory.upper()} "{container}" }},` -- {stage_cmd}'))
             continue
         if symbol not in state.offsets:
             deltas.append(Delta(

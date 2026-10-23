@@ -99,9 +99,14 @@ class NativeWallpaperTests(unittest.TestCase):
                 match = [a for a in self.assets if a.filename == name]
                 self.assertEqual(len(match), 1, f"{name}: one asset")
                 asset = match[0]
+                # The row's path: whole, or (P8 R2) its directory's code
+                # macro and the file.
+                directory, _, leaf = asset.source.o2r.rpartition("/")
                 registered = re.findall(
                     r'\{\s*(0x[0-9a-fA-F]+|\d+),\s*(0x[0-9a-fA-F]+|\d+),\s*'
-                    r'"nitro:/reloc/' + re.escape(asset.source.o2r) + r'"\s*\}',
+                    r'(?:"nitro:/reloc/' + re.escape(asset.source.o2r) + r'"|'
+                    r'NDS_NITRO_' + re.escape(directory.upper()) + r' "' +
+                    re.escape(leaf) + r'")\s*\}',
                     registry)
                 self.assertEqual(len(registered), 1, name)
                 self.assertEqual((int(asset_id, 0), int(file_id, 0)),

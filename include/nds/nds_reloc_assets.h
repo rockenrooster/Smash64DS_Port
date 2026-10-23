@@ -51,6 +51,37 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id);
 s32 ndsR2AnimCacheReserveCSSWorkingSet(void);
 extern volatile u32 gNdsR2AnimCacheHits;
 extern volatile u32 gNdsR2AnimCacheMisses;
+/* P8 R2: the asset, stage, music and fighter-image tables name a NitroFS
+ * file by its directory's code byte and its leaf (NDS_NITRO_RELOC_MENUS
+ * "MNCommon"), not the whole "nitro:/reloc/reloc_menus/MNCommon": their paths
+ * repeated a few directory prefixes hundreds of times in RAM. ndsNitroPath
+ * writes the whole path into `buf` (NDS_NITRO_PATH_MAX bytes) and returns it;
+ * a path that is already whole (its first byte printable) comes back as it
+ * is. ndsRelocAssetStreamOpen, every open in nds_reloc_assets.c and the music
+ * table's resolver take either form. */
+#define NDS_NITRO_PATH_MAX 96u
+#define NDS_NITRO_RELOC_MENUS "\001"
+#define NDS_NITRO_RELOC_MISC_NAMED "\002"
+#define NDS_NITRO_RELOC_MOVIES "\003"
+#define NDS_NITRO_RELOC_TRANSITIONS "\004"
+#define NDS_NITRO_RELOC_INTERFACE "\005"
+#define NDS_NITRO_RELOC_FIGHTERS_COMMON "\006"
+#define NDS_NITRO_RELOC_EXTERN_DATA "\007"
+#define NDS_NITRO_RELOC_FIGHTERS_MAIN "\010"
+#define NDS_NITRO_RELOC_STAGES "\011"
+#define NDS_NITRO_RELOC_BONUS "\012"
+#define NDS_NITRO_RELOC_SCENE "\013"
+#define NDS_NITRO_RELOC_ANIMATIONS "\014"
+#define NDS_NITRO_RELOC_EFFECTS "\015"
+#define NDS_NITRO_RELOC_ITEMS "\016"
+#define NDS_NITRO_RELOC_SUBMOTIONS "\017"
+#define NDS_NITRO_RELOC_P4 "\020"
+#define NDS_NITRO_STAGES "\021"
+#define NDS_NITRO_AUDIO "\022"
+#define NDS_NITRO_FIGHTERS "\023"
+#define NDS_NITRO_FIGHTERS_P4 "\024"
+#define NDS_NITRO_P4_AUDIO "\025"
+const char *ndsNitroPath(const char *path, char *buf);
 const char *ndsRelocAssetGetPath(u32 asset_id);
 s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header);
 s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,

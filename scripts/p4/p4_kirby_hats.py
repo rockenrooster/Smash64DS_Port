@@ -628,7 +628,7 @@ def main() -> int:
         for index, detail in enumerate(DETAILS):
             image_rows.append(f"    X({hat}u, {base}u, {index}u, {image_type(hat, detail)}, "
                               f"{image_prefix(hat, detail)}, "
-                              f"\"nitro:/fighters/p4/kirby_hat_{hat:02x}_{detail}.bin\")")
+                              f"NDS_NITRO_FIGHTERS_P4 \"kirby_hat_{hat:02x}_{detail}.bin\")")
     header += [r + (" \\" if i + 1 < len(image_rows) else "") for i, r in enumerate(image_rows)]
     header += ["", "#endif /* NDS_P4_KIRBY_HATS_GENERATED_H */", ""]
     (hats_dir / "nds_p4_kirby_hats.generated.h").write_text("\n".join(header), encoding="utf-8",

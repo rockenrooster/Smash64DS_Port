@@ -630,7 +630,8 @@ def render_header(
             f"#if {_owner_guard(name)}",
             f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
             f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, \\",
-            f"      \"nitro:/fighters/{name}_high.bin\", \"nitro:/fighters/{name}_low.bin\", \\",
+            f"      NDS_NITRO_FIGHTERS \"{name}_high.bin\", "
+            f"NDS_NITRO_FIGHTERS \"{name}_low.bin\", \\",
             f"      {_image_type(name, 'high')}, {_image_type(name, 'low')})",
             "#else",
             f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X)",
@@ -768,7 +769,7 @@ def render_header(
             )
             image_rows.append(
                 f"    X({modelpart_id}u, {detail_index}u, {type_name}, "
-                f"{macro_prefix}, \"nitro:/fighters/"
+                f"{macro_prefix}, NDS_NITRO_FIGHTERS \""
                 f"kirby_hat_{modelpart_id:02d}_{detail}.bin\")"
             )
     for index, row in enumerate(image_rows):

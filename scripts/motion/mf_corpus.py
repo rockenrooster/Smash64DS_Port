@@ -166,9 +166,13 @@ def generated_rows():
     plus the Mario/Fox pointer table in reloc_backend_assets.c."""
     rows = {}
     text = GEN_H.read_text()
-    for m in re.finditer(r"X\((ll\w+FileID),\s*(0x[0-9a-f]+)u(?:,\s*\"([^\"]*)\")?\)",
-                         text):
-        sym, aid, path = m.group(1), int(m.group(2), 16), m.group(3)
+    # A path is "nitro:/reloc/..." or, since P8 R2, its directory's code macro
+    # and the leaf (NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim000").
+    for m in re.finditer(r"X\((ll\w+FileID),\s*(0x[0-9a-f]+)u"
+                         r"(?:,\s*(?:NDS_NITRO_RELOC_(\w+)\s+)?\"([^\"]*)\")?\)", text):
+        sym, aid, path = m.group(1), int(m.group(2), 16), m.group(4)
+        if m.group(3) is not None:
+            path = "nitro:/reloc/reloc_%s/%s" % (m.group(3).lower(), path)
         rows.setdefault(sym, (aid, path))
     text = read_source(ASSETS_C)
     for m in re.finditer(r"&(llFT(?:Mario|Fox)Anim\w+FileID), /\* (\d+) \*/", text):

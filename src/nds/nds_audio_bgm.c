@@ -14,115 +14,116 @@
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>
 #include <nds/nds_bgm_ipc.h>
+#include <nds/nds_reloc_assets.h>
 #include <sys/audio.h>
 
-#define NDS_AUDIO_BGM_PATH_PUPUPU "nitro:/audio/bgm_pupupu_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_MARIO "nitro:/audio/bgm_win_mario_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_FOX "nitro:/audio/bgm_win_fox_ima.bin"
-#define NDS_AUDIO_BGM_PATH_RESULTS "nitro:/audio/bgm_results_ima.bin"
-#define NDS_AUDIO_BGM_PATH_MODE_SELECT "nitro:/audio/bgm_mode_select_ima.bin"
-#define NDS_AUDIO_BGM_PATH_BATTLE_SELECT "nitro:/audio/bgm_battle_select_ima.bin"
+#define NDS_AUDIO_BGM_PATH_PUPUPU NDS_NITRO_AUDIO "bgm_pupupu_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_MARIO NDS_NITRO_AUDIO "bgm_win_mario_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_FOX NDS_NITRO_AUDIO "bgm_win_fox_ima.bin"
+#define NDS_AUDIO_BGM_PATH_RESULTS NDS_NITRO_AUDIO "bgm_results_ima.bin"
+#define NDS_AUDIO_BGM_PATH_MODE_SELECT NDS_NITRO_AUDIO "bgm_mode_select_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BATTLE_SELECT NDS_NITRO_AUDIO "bgm_battle_select_ima.bin"
 #if NDS_P2_STAGE_YOSTER
-#define NDS_AUDIO_BGM_PATH_YOSTER "nitro:/audio/bgm_yoster_ima.bin"
+#define NDS_AUDIO_BGM_PATH_YOSTER NDS_NITRO_AUDIO "bgm_yoster_ima.bin"
 #endif
 #if NDS_P2_STAGE_CASTLE
-#define NDS_AUDIO_BGM_PATH_CASTLE "nitro:/audio/bgm_castle_ima.bin"
+#define NDS_AUDIO_BGM_PATH_CASTLE NDS_NITRO_AUDIO "bgm_castle_ima.bin"
 #endif
 #if NDS_P2_STAGE_ZEBES
-#define NDS_AUDIO_BGM_PATH_ZEBES "nitro:/audio/bgm_zebes_ima.bin"
+#define NDS_AUDIO_BGM_PATH_ZEBES NDS_NITRO_AUDIO "bgm_zebes_ima.bin"
 #endif
 #if NDS_P2_STAGE_HYRULE
-#define NDS_AUDIO_BGM_PATH_HYRULE "nitro:/audio/bgm_hyrule_ima.bin"
+#define NDS_AUDIO_BGM_PATH_HYRULE NDS_NITRO_AUDIO "bgm_hyrule_ima.bin"
 #endif
 #if NDS_P2_STAGE_YAMABUKI
-#define NDS_AUDIO_BGM_PATH_YAMABUKI "nitro:/audio/bgm_yamabuki_ima.bin"
+#define NDS_AUDIO_BGM_PATH_YAMABUKI NDS_NITRO_AUDIO "bgm_yamabuki_ima.bin"
 #endif
 #if NDS_P2_STAGE_INISHIE
-#define NDS_AUDIO_BGM_PATH_INISHIE "nitro:/audio/bgm_inishie_ima.bin"
+#define NDS_AUDIO_BGM_PATH_INISHIE NDS_NITRO_AUDIO "bgm_inishie_ima.bin"
 #endif
 #if NDS_P2_STAGE_SECTOR
-#define NDS_AUDIO_BGM_PATH_SECTOR "nitro:/audio/bgm_sector_ima.bin"
+#define NDS_AUDIO_BGM_PATH_SECTOR NDS_NITRO_AUDIO "bgm_sector_ima.bin"
 #endif
 #if NDS_P2_STAGE_JUNGLE
-#define NDS_AUDIO_BGM_PATH_JUNGLE "nitro:/audio/bgm_jungle_ima.bin"
+#define NDS_AUDIO_BGM_PATH_JUNGLE NDS_NITRO_AUDIO "bgm_jungle_ima.bin"
 #endif
 #if NDS_P2_STAGE_INISHIE
-#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY "nitro:/audio/bgm_inishie_hurry_ima.bin"
+#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY NDS_NITRO_AUDIO "bgm_inishie_hurry_ima.bin"
 #endif
-#define NDS_AUDIO_BGM_PATH_WIN_DEFAULT "nitro:/audio/bgm_win_default_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_METROID "nitro:/audio/bgm_win_metroid_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_DONKEY "nitro:/audio/bgm_win_donkey_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_KIRBY "nitro:/audio/bgm_win_kirby_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_MOTHER "nitro:/audio/bgm_win_mother_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_YOSHI "nitro:/audio/bgm_win_yoshi_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_FZERO "nitro:/audio/bgm_win_fzero_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_PMONSTERS "nitro:/audio/bgm_win_pmonsters_ima.bin"
-#define NDS_AUDIO_BGM_PATH_WIN_ZELDA "nitro:/audio/bgm_win_zelda_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_DEFAULT NDS_NITRO_AUDIO "bgm_win_default_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_METROID NDS_NITRO_AUDIO "bgm_win_metroid_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_DONKEY NDS_NITRO_AUDIO "bgm_win_donkey_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_KIRBY NDS_NITRO_AUDIO "bgm_win_kirby_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_MOTHER NDS_NITRO_AUDIO "bgm_win_mother_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_YOSHI NDS_NITRO_AUDIO "bgm_win_yoshi_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_FZERO NDS_NITRO_AUDIO "bgm_win_fzero_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_PMONSTERS NDS_NITRO_AUDIO "bgm_win_pmonsters_ima.bin"
+#define NDS_AUDIO_BGM_PATH_WIN_ZELDA NDS_NITRO_AUDIO "bgm_win_zelda_ima.bin"
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_BOSS_STAGE "nitro:/audio/bgm_boss_stage_ima.bin"
-#endif
-#if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_BOSS_ENTRY "nitro:/audio/bgm_boss_entry_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BOSS_STAGE NDS_NITRO_AUDIO "bgm_boss_stage_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_LAST "nitro:/audio/bgm_last_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BOSS_ENTRY NDS_NITRO_AUDIO "bgm_boss_entry_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_BONUS_STAGE "nitro:/audio/bgm_bonus_stage_ima.bin"
+#define NDS_AUDIO_BGM_PATH_LAST NDS_NITRO_AUDIO "bgm_last_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_STAGE_CLEAR "nitro:/audio/bgm_stage_clear_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BONUS_STAGE NDS_NITRO_AUDIO "bgm_bonus_stage_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_BONUS_STAGE_CLEAR "nitro:/audio/bgm_bonus_stage_clear_ima.bin"
+#define NDS_AUDIO_BGM_PATH_STAGE_CLEAR NDS_NITRO_AUDIO "bgm_stage_clear_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_GAME_CLEAR "nitro:/audio/bgm_game_clear_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BONUS_STAGE_CLEAR NDS_NITRO_AUDIO "bgm_bonus_stage_clear_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_BONUS_STAGE_FAILURE "nitro:/audio/bgm_bonus_stage_failure_ima.bin"
+#define NDS_AUDIO_BGM_PATH_GAME_CLEAR NDS_NITRO_AUDIO "bgm_game_clear_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_GAME_END_CHOICE "nitro:/audio/bgm_game_end_choice_ima.bin"
+#define NDS_AUDIO_BGM_PATH_BONUS_STAGE_FAILURE NDS_NITRO_AUDIO "bgm_bonus_stage_failure_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_GAME_OVER "nitro:/audio/bgm_game_over_ima.bin"
+#define NDS_AUDIO_BGM_PATH_GAME_END_CHOICE NDS_NITRO_AUDIO "bgm_game_end_choice_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_OPENING "nitro:/audio/bgm_opening_ima.bin"
+#define NDS_AUDIO_BGM_PATH_GAME_OVER NDS_NITRO_AUDIO "bgm_game_over_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_EXPLAIN "nitro:/audio/bgm_explain_ima.bin"
+#define NDS_AUDIO_BGM_PATH_OPENING NDS_NITRO_AUDIO "bgm_opening_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_INTRO "nitro:/audio/bgm_intro_ima.bin"
+#define NDS_AUDIO_BGM_PATH_EXPLAIN NDS_NITRO_AUDIO "bgm_explain_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_ZAKO "nitro:/audio/bgm_zako_ima.bin"
+#define NDS_AUDIO_BGM_PATH_INTRO NDS_NITRO_AUDIO "bgm_intro_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_METAL "nitro:/audio/bgm_metal_ima.bin"
+#define NDS_AUDIO_BGM_PATH_ZAKO NDS_NITRO_AUDIO "bgm_zako_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_ENDING "nitro:/audio/bgm_ending_ima.bin"
+#define NDS_AUDIO_BGM_PATH_METAL NDS_NITRO_AUDIO "bgm_metal_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_STAFFROLL "nitro:/audio/bgm_staffroll_ima.bin"
+#define NDS_AUDIO_BGM_PATH_ENDING NDS_NITRO_AUDIO "bgm_ending_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_MESSAGE "nitro:/audio/bgm_message_ima.bin"
+#define NDS_AUDIO_BGM_PATH_STAFFROLL NDS_NITRO_AUDIO "bgm_staffroll_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_CHALLENGER "nitro:/audio/bgm_challenger_ima.bin"
+#define NDS_AUDIO_BGM_PATH_MESSAGE NDS_NITRO_AUDIO "bgm_message_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_TRAINING_MODE "nitro:/audio/bgm_training_mode_ima.bin"
+#define NDS_AUDIO_BGM_PATH_CHALLENGER NDS_NITRO_AUDIO "bgm_challenger_ima.bin"
 #endif
 #if NDS_P2_1P_GAME
-#define NDS_AUDIO_BGM_PATH_DATA "nitro:/audio/bgm_data_ima.bin"
+#define NDS_AUDIO_BGM_PATH_TRAINING_MODE NDS_NITRO_AUDIO "bgm_training_mode_ima.bin"
 #endif
-#define NDS_AUDIO_BGM_PATH_HAMMER "nitro:/audio/bgm_hammer_ima.bin"
-#define NDS_AUDIO_BGM_PATH_STAR "nitro:/audio/bgm_star_ima.bin"
+#if NDS_P2_1P_GAME
+#define NDS_AUDIO_BGM_PATH_DATA NDS_NITRO_AUDIO "bgm_data_ima.bin"
+#endif
+#define NDS_AUDIO_BGM_PATH_HAMMER NDS_NITRO_AUDIO "bgm_hammer_ima.bin"
+#define NDS_AUDIO_BGM_PATH_STAR NDS_NITRO_AUDIO "bgm_star_ima.bin"
 #define NDS_AUDIO_BGM_NO_LOOP 0xffffffffu
 
 _Static_assert(NDS_AUDIO_BGM_RESIDENT_BYTES == 16392u,
@@ -986,8 +987,10 @@ static void ndsBgmInitialize(void)
     for (u32 i = 0; i < sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]); ++i)
     {
         const NDSAudioBgmTrack *track = &sNdsAudioBgmTracks[i];
-        if (strncmp(track->path, "nitro:/", 7u)) ndsAudioBgmControlHalt(2u);
-        int file = nitroromResolvePath(rom, NITROROM_ROOT_DIR, track->path + 7u);
+        char full[NDS_NITRO_PATH_MAX];
+        const char *path = ndsNitroPath(track->path, full);
+        if (strncmp(path, "nitro:/", 7u)) ndsAudioBgmControlHalt(2u);
+        int file = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path + 7u);
         if (file < 0 || file >= NITROROM_ROOT_DIR ||
             nitroromGetFileSize(rom, (u16)file) != track->asset_bytes)
             ndsAudioBgmControlHalt(3u);

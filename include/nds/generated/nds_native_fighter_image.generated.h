@@ -138,7 +138,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_LUIGI
 #define NDS_NATIVE_OWNER_IMAGE_ROW_LUIGI(X) \
     X(NDS_NATIVE_IMAGE_SLOT_LUIGI, \
-      "nitro:/fighters/luigi_high.bin", "nitro:/fighters/luigi_low.bin", \
+      NDS_NITRO_FIGHTERS "luigi_high.bin", NDS_NITRO_FIGHTERS "luigi_low.bin", \
       NDSNativeLuigiHighImage, NDSNativeLuigiLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_LUIGI(X)
@@ -146,7 +146,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_DONKEY
 #define NDS_NATIVE_OWNER_IMAGE_ROW_DONKEY(X) \
     X(NDS_NATIVE_IMAGE_SLOT_DONKEY, \
-      "nitro:/fighters/donkey_high.bin", "nitro:/fighters/donkey_low.bin", \
+      NDS_NITRO_FIGHTERS "donkey_high.bin", NDS_NITRO_FIGHTERS "donkey_low.bin", \
       NDSNativeDonkeyHighImage, NDSNativeDonkeyLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_DONKEY(X)
@@ -154,7 +154,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_CAPTAIN
 #define NDS_NATIVE_OWNER_IMAGE_ROW_CAPTAIN(X) \
     X(NDS_NATIVE_IMAGE_SLOT_CAPTAIN, \
-      "nitro:/fighters/captain_high.bin", "nitro:/fighters/captain_low.bin", \
+      NDS_NITRO_FIGHTERS "captain_high.bin", NDS_NITRO_FIGHTERS "captain_low.bin", \
       NDSNativeCaptainHighImage, NDSNativeCaptainLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_CAPTAIN(X)
@@ -162,7 +162,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_SAMUS
 #define NDS_NATIVE_OWNER_IMAGE_ROW_SAMUS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_SAMUS, \
-      "nitro:/fighters/samus_high.bin", "nitro:/fighters/samus_low.bin", \
+      NDS_NITRO_FIGHTERS "samus_high.bin", NDS_NITRO_FIGHTERS "samus_low.bin", \
       NDSNativeSamusHighImage, NDSNativeSamusLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_SAMUS(X)
@@ -170,7 +170,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_LINK
 #define NDS_NATIVE_OWNER_IMAGE_ROW_LINK(X) \
     X(NDS_NATIVE_IMAGE_SLOT_LINK, \
-      "nitro:/fighters/link_high.bin", "nitro:/fighters/link_low.bin", \
+      NDS_NITRO_FIGHTERS "link_high.bin", NDS_NITRO_FIGHTERS "link_low.bin", \
       NDSNativeLinkHighImage, NDSNativeLinkLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_LINK(X)
@@ -178,7 +178,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_PIKACHU
 #define NDS_NATIVE_OWNER_IMAGE_ROW_PIKACHU(X) \
     X(NDS_NATIVE_IMAGE_SLOT_PIKACHU, \
-      "nitro:/fighters/pikachu_high.bin", "nitro:/fighters/pikachu_low.bin", \
+      NDS_NITRO_FIGHTERS "pikachu_high.bin", NDS_NITRO_FIGHTERS "pikachu_low.bin", \
       NDSNativePikachuHighImage, NDSNativePikachuLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_PIKACHU(X)
@@ -186,7 +186,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_YOSHI
 #define NDS_NATIVE_OWNER_IMAGE_ROW_YOSHI(X) \
     X(NDS_NATIVE_IMAGE_SLOT_YOSHI, \
-      "nitro:/fighters/yoshi_high.bin", "nitro:/fighters/yoshi_low.bin", \
+      NDS_NITRO_FIGHTERS "yoshi_high.bin", NDS_NITRO_FIGHTERS "yoshi_low.bin", \
       NDSNativeYoshiHighImage, NDSNativeYoshiLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_YOSHI(X)
@@ -194,7 +194,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NESS
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NESS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NESS, \
-      "nitro:/fighters/ness_high.bin", "nitro:/fighters/ness_low.bin", \
+      NDS_NITRO_FIGHTERS "ness_high.bin", NDS_NITRO_FIGHTERS "ness_low.bin", \
       NDSNativeNessHighImage, NDSNativeNessLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NESS(X)
@@ -202,7 +202,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_PURIN
 #define NDS_NATIVE_OWNER_IMAGE_ROW_PURIN(X) \
     X(NDS_NATIVE_IMAGE_SLOT_PURIN, \
-      "nitro:/fighters/purin_high.bin", "nitro:/fighters/purin_low.bin", \
+      NDS_NITRO_FIGHTERS "purin_high.bin", NDS_NITRO_FIGHTERS "purin_low.bin", \
       NDSNativePurinHighImage, NDSNativePurinLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_PURIN(X)
@@ -210,7 +210,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_KIRBY
 #define NDS_NATIVE_OWNER_IMAGE_ROW_KIRBY(X) \
     X(NDS_NATIVE_IMAGE_SLOT_KIRBY, \
-      "nitro:/fighters/kirby_high.bin", "nitro:/fighters/kirby_low.bin", \
+      NDS_NITRO_FIGHTERS "kirby_high.bin", NDS_NITRO_FIGHTERS "kirby_low.bin", \
       NDSNativeKirbyHighImage, NDSNativeKirbyLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_KIRBY(X)
@@ -218,7 +218,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_MMARIO
 #define NDS_NATIVE_OWNER_IMAGE_ROW_MMARIO(X) \
     X(NDS_NATIVE_IMAGE_SLOT_MMARIO, \
-      "nitro:/fighters/mmario_high.bin", "nitro:/fighters/mmario_low.bin", \
+      NDS_NITRO_FIGHTERS "mmario_high.bin", NDS_NITRO_FIGHTERS "mmario_low.bin", \
       NDSNativeMMarioHighImage, NDSNativeMMarioLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_MMARIO(X)
@@ -226,7 +226,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NMARIO
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NMARIO(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NMARIO, \
-      "nitro:/fighters/nmario_high.bin", "nitro:/fighters/nmario_low.bin", \
+      NDS_NITRO_FIGHTERS "nmario_high.bin", NDS_NITRO_FIGHTERS "nmario_low.bin", \
       NDSNativeNMarioHighImage, NDSNativeNMarioLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NMARIO(X)
@@ -234,7 +234,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NFOX
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NFOX(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NFOX, \
-      "nitro:/fighters/nfox_high.bin", "nitro:/fighters/nfox_low.bin", \
+      NDS_NITRO_FIGHTERS "nfox_high.bin", NDS_NITRO_FIGHTERS "nfox_low.bin", \
       NDSNativeNFoxHighImage, NDSNativeNFoxLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NFOX(X)
@@ -242,7 +242,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NDONKEY
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NDONKEY(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NDONKEY, \
-      "nitro:/fighters/ndonkey_high.bin", "nitro:/fighters/ndonkey_low.bin", \
+      NDS_NITRO_FIGHTERS "ndonkey_high.bin", NDS_NITRO_FIGHTERS "ndonkey_low.bin", \
       NDSNativeNDonkeyHighImage, NDSNativeNDonkeyLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NDONKEY(X)
@@ -250,7 +250,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NSAMUS
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NSAMUS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NSAMUS, \
-      "nitro:/fighters/nsamus_high.bin", "nitro:/fighters/nsamus_low.bin", \
+      NDS_NITRO_FIGHTERS "nsamus_high.bin", NDS_NITRO_FIGHTERS "nsamus_low.bin", \
       NDSNativeNSamusHighImage, NDSNativeNSamusLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NSAMUS(X)
@@ -258,7 +258,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NLINK
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NLINK(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NLINK, \
-      "nitro:/fighters/nlink_high.bin", "nitro:/fighters/nlink_low.bin", \
+      NDS_NITRO_FIGHTERS "nlink_high.bin", NDS_NITRO_FIGHTERS "nlink_low.bin", \
       NDSNativeNLinkHighImage, NDSNativeNLinkLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NLINK(X)
@@ -266,7 +266,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NYOSHI
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NYOSHI(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NYOSHI, \
-      "nitro:/fighters/nyoshi_high.bin", "nitro:/fighters/nyoshi_low.bin", \
+      NDS_NITRO_FIGHTERS "nyoshi_high.bin", NDS_NITRO_FIGHTERS "nyoshi_low.bin", \
       NDSNativeNYoshiHighImage, NDSNativeNYoshiLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NYOSHI(X)
@@ -274,7 +274,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NCAPTAIN
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NCAPTAIN(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, \
-      "nitro:/fighters/ncaptain_high.bin", "nitro:/fighters/ncaptain_low.bin", \
+      NDS_NITRO_FIGHTERS "ncaptain_high.bin", NDS_NITRO_FIGHTERS "ncaptain_low.bin", \
       NDSNativeNCaptainHighImage, NDSNativeNCaptainLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NCAPTAIN(X)
@@ -282,7 +282,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NKIRBY
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NKIRBY(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NKIRBY, \
-      "nitro:/fighters/nkirby_high.bin", "nitro:/fighters/nkirby_low.bin", \
+      NDS_NITRO_FIGHTERS "nkirby_high.bin", NDS_NITRO_FIGHTERS "nkirby_low.bin", \
       NDSNativeNKirbyHighImage, NDSNativeNKirbyLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NKIRBY(X)
@@ -290,7 +290,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NPIKACHU
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NPIKACHU(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, \
-      "nitro:/fighters/npikachu_high.bin", "nitro:/fighters/npikachu_low.bin", \
+      NDS_NITRO_FIGHTERS "npikachu_high.bin", NDS_NITRO_FIGHTERS "npikachu_low.bin", \
       NDSNativeNPikachuHighImage, NDSNativeNPikachuLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NPIKACHU(X)
@@ -298,7 +298,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NPURIN
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NPURIN(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NPURIN, \
-      "nitro:/fighters/npurin_high.bin", "nitro:/fighters/npurin_low.bin", \
+      NDS_NITRO_FIGHTERS "npurin_high.bin", NDS_NITRO_FIGHTERS "npurin_low.bin", \
       NDSNativeNPurinHighImage, NDSNativeNPurinLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NPURIN(X)
@@ -306,7 +306,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_NNESS
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_NNESS, \
-      "nitro:/fighters/nness_high.bin", "nitro:/fighters/nness_low.bin", \
+      NDS_NITRO_FIGHTERS "nness_high.bin", NDS_NITRO_FIGHTERS "nness_low.bin", \
       NDSNativeNNessHighImage, NDSNativeNNessLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X)
@@ -314,7 +314,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if NDS_P2_1P_GAME
 #define NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_BOSS, \
-      "nitro:/fighters/boss_high.bin", "nitro:/fighters/boss_low.bin", \
+      NDS_NITRO_FIGHTERS "boss_high.bin", NDS_NITRO_FIGHTERS "boss_low.bin", \
       NDSNativeBossHighImage, NDSNativeBossLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X)
@@ -322,7 +322,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if 1
 #define NDS_NATIVE_OWNER_IMAGE_ROW_MARIO_SKELETON1(X) \
     X(NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1, \
-      "nitro:/fighters/mario_skeleton1_high.bin", "nitro:/fighters/mario_skeleton1_low.bin", \
+      NDS_NITRO_FIGHTERS "mario_skeleton1_high.bin", NDS_NITRO_FIGHTERS "mario_skeleton1_low.bin", \
       NDSNativeMario_Skeleton1HighImage, NDSNativeMario_Skeleton1LowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_MARIO_SKELETON1(X)
@@ -330,7 +330,7 @@ typedef struct NDSNativePreparedDenseVertex
 #if 1
 #define NDS_NATIVE_OWNER_IMAGE_ROW_FOX_SKELETON1(X) \
     X(NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1, \
-      "nitro:/fighters/fox_skeleton1_high.bin", "nitro:/fighters/fox_skeleton1_low.bin", \
+      NDS_NITRO_FIGHTERS "fox_skeleton1_high.bin", NDS_NITRO_FIGHTERS "fox_skeleton1_low.bin", \
       NDSNativeFox_Skeleton1HighImage, NDSNativeFox_Skeleton1LowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_FOX_SKELETON1(X)
@@ -13121,27 +13121,27 @@ typedef union NDSNativeKirbyHatAnyLowImage
 
 /* One source of truth for the runtime's path/size/bind switch. */
 #define NDS_NATIVE_KIRBY_HAT_IMAGES(X) \
-    X(3u, 0u, NDSNativeKirbyHat3HighImage, NDS_NATIVE_KIRBY_HAT_3_HIGH, "nitro:/fighters/kirby_hat_03_high.bin") \
-    X(3u, 1u, NDSNativeKirbyHat3LowImage, NDS_NATIVE_KIRBY_HAT_3_LOW, "nitro:/fighters/kirby_hat_03_low.bin") \
-    X(4u, 0u, NDSNativeKirbyHat4HighImage, NDS_NATIVE_KIRBY_HAT_4_HIGH, "nitro:/fighters/kirby_hat_04_high.bin") \
-    X(4u, 1u, NDSNativeKirbyHat4LowImage, NDS_NATIVE_KIRBY_HAT_4_LOW, "nitro:/fighters/kirby_hat_04_low.bin") \
-    X(5u, 0u, NDSNativeKirbyHat5HighImage, NDS_NATIVE_KIRBY_HAT_5_HIGH, "nitro:/fighters/kirby_hat_05_high.bin") \
-    X(5u, 1u, NDSNativeKirbyHat5LowImage, NDS_NATIVE_KIRBY_HAT_5_LOW, "nitro:/fighters/kirby_hat_05_low.bin") \
-    X(6u, 0u, NDSNativeKirbyHat6HighImage, NDS_NATIVE_KIRBY_HAT_6_HIGH, "nitro:/fighters/kirby_hat_06_high.bin") \
-    X(6u, 1u, NDSNativeKirbyHat6LowImage, NDS_NATIVE_KIRBY_HAT_6_LOW, "nitro:/fighters/kirby_hat_06_low.bin") \
-    X(7u, 0u, NDSNativeKirbyHat7HighImage, NDS_NATIVE_KIRBY_HAT_7_HIGH, "nitro:/fighters/kirby_hat_07_high.bin") \
-    X(7u, 1u, NDSNativeKirbyHat7LowImage, NDS_NATIVE_KIRBY_HAT_7_LOW, "nitro:/fighters/kirby_hat_07_low.bin") \
-    X(8u, 0u, NDSNativeKirbyHat8HighImage, NDS_NATIVE_KIRBY_HAT_8_HIGH, "nitro:/fighters/kirby_hat_08_high.bin") \
-    X(8u, 1u, NDSNativeKirbyHat8LowImage, NDS_NATIVE_KIRBY_HAT_8_LOW, "nitro:/fighters/kirby_hat_08_low.bin") \
-    X(9u, 0u, NDSNativeKirbyHat9HighImage, NDS_NATIVE_KIRBY_HAT_9_HIGH, "nitro:/fighters/kirby_hat_09_high.bin") \
-    X(9u, 1u, NDSNativeKirbyHat9LowImage, NDS_NATIVE_KIRBY_HAT_9_LOW, "nitro:/fighters/kirby_hat_09_low.bin") \
-    X(10u, 0u, NDSNativeKirbyHat10HighImage, NDS_NATIVE_KIRBY_HAT_10_HIGH, "nitro:/fighters/kirby_hat_10_high.bin") \
-    X(10u, 1u, NDSNativeKirbyHat10LowImage, NDS_NATIVE_KIRBY_HAT_10_LOW, "nitro:/fighters/kirby_hat_10_low.bin") \
-    X(11u, 0u, NDSNativeKirbyHat11HighImage, NDS_NATIVE_KIRBY_HAT_11_HIGH, "nitro:/fighters/kirby_hat_11_high.bin") \
-    X(11u, 1u, NDSNativeKirbyHat11LowImage, NDS_NATIVE_KIRBY_HAT_11_LOW, "nitro:/fighters/kirby_hat_11_low.bin") \
-    X(12u, 0u, NDSNativeKirbyHat12HighImage, NDS_NATIVE_KIRBY_HAT_12_HIGH, "nitro:/fighters/kirby_hat_12_high.bin") \
-    X(12u, 1u, NDSNativeKirbyHat12LowImage, NDS_NATIVE_KIRBY_HAT_12_LOW, "nitro:/fighters/kirby_hat_12_low.bin") \
-    X(13u, 0u, NDSNativeKirbyHat13HighImage, NDS_NATIVE_KIRBY_HAT_13_HIGH, "nitro:/fighters/kirby_hat_13_high.bin") \
-    X(13u, 1u, NDSNativeKirbyHat13LowImage, NDS_NATIVE_KIRBY_HAT_13_LOW, "nitro:/fighters/kirby_hat_13_low.bin")
+    X(3u, 0u, NDSNativeKirbyHat3HighImage, NDS_NATIVE_KIRBY_HAT_3_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_03_high.bin") \
+    X(3u, 1u, NDSNativeKirbyHat3LowImage, NDS_NATIVE_KIRBY_HAT_3_LOW, NDS_NITRO_FIGHTERS "kirby_hat_03_low.bin") \
+    X(4u, 0u, NDSNativeKirbyHat4HighImage, NDS_NATIVE_KIRBY_HAT_4_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_04_high.bin") \
+    X(4u, 1u, NDSNativeKirbyHat4LowImage, NDS_NATIVE_KIRBY_HAT_4_LOW, NDS_NITRO_FIGHTERS "kirby_hat_04_low.bin") \
+    X(5u, 0u, NDSNativeKirbyHat5HighImage, NDS_NATIVE_KIRBY_HAT_5_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_05_high.bin") \
+    X(5u, 1u, NDSNativeKirbyHat5LowImage, NDS_NATIVE_KIRBY_HAT_5_LOW, NDS_NITRO_FIGHTERS "kirby_hat_05_low.bin") \
+    X(6u, 0u, NDSNativeKirbyHat6HighImage, NDS_NATIVE_KIRBY_HAT_6_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_06_high.bin") \
+    X(6u, 1u, NDSNativeKirbyHat6LowImage, NDS_NATIVE_KIRBY_HAT_6_LOW, NDS_NITRO_FIGHTERS "kirby_hat_06_low.bin") \
+    X(7u, 0u, NDSNativeKirbyHat7HighImage, NDS_NATIVE_KIRBY_HAT_7_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_07_high.bin") \
+    X(7u, 1u, NDSNativeKirbyHat7LowImage, NDS_NATIVE_KIRBY_HAT_7_LOW, NDS_NITRO_FIGHTERS "kirby_hat_07_low.bin") \
+    X(8u, 0u, NDSNativeKirbyHat8HighImage, NDS_NATIVE_KIRBY_HAT_8_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_08_high.bin") \
+    X(8u, 1u, NDSNativeKirbyHat8LowImage, NDS_NATIVE_KIRBY_HAT_8_LOW, NDS_NITRO_FIGHTERS "kirby_hat_08_low.bin") \
+    X(9u, 0u, NDSNativeKirbyHat9HighImage, NDS_NATIVE_KIRBY_HAT_9_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_09_high.bin") \
+    X(9u, 1u, NDSNativeKirbyHat9LowImage, NDS_NATIVE_KIRBY_HAT_9_LOW, NDS_NITRO_FIGHTERS "kirby_hat_09_low.bin") \
+    X(10u, 0u, NDSNativeKirbyHat10HighImage, NDS_NATIVE_KIRBY_HAT_10_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_10_high.bin") \
+    X(10u, 1u, NDSNativeKirbyHat10LowImage, NDS_NATIVE_KIRBY_HAT_10_LOW, NDS_NITRO_FIGHTERS "kirby_hat_10_low.bin") \
+    X(11u, 0u, NDSNativeKirbyHat11HighImage, NDS_NATIVE_KIRBY_HAT_11_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_11_high.bin") \
+    X(11u, 1u, NDSNativeKirbyHat11LowImage, NDS_NATIVE_KIRBY_HAT_11_LOW, NDS_NITRO_FIGHTERS "kirby_hat_11_low.bin") \
+    X(12u, 0u, NDSNativeKirbyHat12HighImage, NDS_NATIVE_KIRBY_HAT_12_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_12_high.bin") \
+    X(12u, 1u, NDSNativeKirbyHat12LowImage, NDS_NATIVE_KIRBY_HAT_12_LOW, NDS_NITRO_FIGHTERS "kirby_hat_12_low.bin") \
+    X(13u, 0u, NDSNativeKirbyHat13HighImage, NDS_NATIVE_KIRBY_HAT_13_HIGH, NDS_NITRO_FIGHTERS "kirby_hat_13_high.bin") \
+    X(13u, 1u, NDSNativeKirbyHat13LowImage, NDS_NATIVE_KIRBY_HAT_13_LOW, NDS_NITRO_FIGHTERS "kirby_hat_13_low.bin")
 
 #endif /* NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H */

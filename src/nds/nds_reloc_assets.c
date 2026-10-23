@@ -92,199 +92,199 @@ volatile u32 gNdsRelocAssetFighterStreamMisses;
 volatile u32 gNdsRelocAssetFighterStreamFailures;
 
 static const NDSRelocAssetEntry sNdsRelocAssets[] = {
-    { 0, 0, "nitro:/reloc/reloc_menus/MNCommon" },
-    { 194, 194, "nitro:/reloc/reloc_misc_named/N64Logo" },
-    { 52, 52, "nitro:/reloc/reloc_movies/MVCommon" },
-    { 63, 63, "nitro:/reloc/reloc_transitions/MVOpeningRoomTransition" },
-    { 56, 56, "nitro:/reloc/reloc_movies/MVOpeningRoomScene1" },
-    { 57, 57, "nitro:/reloc/reloc_movies/MVOpeningRoomScene2" },
-    { 58, 58, "nitro:/reloc/reloc_movies/MVOpeningRoomScene3" },
-    { 59, 59, "nitro:/reloc/reloc_movies/MVOpeningRoomScene4" },
-    { 75, 75, "nitro:/reloc/reloc_movies/MVOpeningRunCrash" },
-    { 90, 90, "nitro:/reloc/reloc_movies/MVOpeningRoomWallpaper" },
-    { 53, 53, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet1" },
-    { 54, 54, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet2" },
-    { 37, 37, "nitro:/reloc/reloc_interface/IFCommonAnnounceCommon" },
-    { 0x57, 0x57, "nitro:/reloc/reloc_interface/IFCommonItem" },
-    { 65, 65, "nitro:/reloc/reloc_movies/MVOpeningCommon" },
-    { 55, 55, "nitro:/reloc/reloc_movies/MVOpeningRun" },
-    { 71, 71, "nitro:/reloc/reloc_movies/MVOpeningYamabuki" },
-    { 73, 73, "nitro:/reloc/reloc_movies/MVOpeningSector" },
-    { 167, 167, "nitro:/reloc/reloc_menus/MNTitle" },
-    { 168, 168, "nitro:/reloc/reloc_menus/MNTitleFireAnim" },
-    { 0xa6, 0xa6, "nitro:/reloc/reloc_interface/IFCommonPlayer" },
-    { 0x52, 0x52, "nitro:/reloc/reloc_interface/IFCommonGameStatus" },
-    { 0xa4, 0xa4, "nitro:/reloc/reloc_interface/IFCommonPlayerDamage" },
-    { 0xa5, 0xa5, "nitro:/reloc/reloc_interface/IFCommonTimer" },
-    { 0x24, 0x24, "nitro:/reloc/reloc_interface/IFCommonDigits" },
-    { 0xc5, 0xc5, "nitro:/reloc/reloc_interface/IFCommonBattlePause" },
-    { 0x26, 0x26, "nitro:/reloc/reloc_interface/IFCommonPlayerTags" },
-    { 0x19, 0x19, "nitro:/reloc/reloc_fighters_common/FTStocksZako" },
-    { 0x22, 0x22, "nitro:/reloc/reloc_menus/MNVSResults" },
-    { 0x1d, 0x1d, "nitro:/reloc/reloc_extern_data/MiscData029" },
-    { 0x138, 0x138, "nitro:/reloc/reloc_fighters_main/NNessModel" },
-    { 0xf1, 0xf1, "nitro:/reloc/reloc_fighters_main/NNessMain" },
-    { 0x132, 0x132, "nitro:/reloc/reloc_fighters_main/NPurinModel" },
-    { 0xea, 0xea, "nitro:/reloc/reloc_fighters_main/NPurinMain" },
-    { 0x133, 0x133, "nitro:/reloc/reloc_fighters_main/NPikachuModel" },
-    { 0xf5, 0xf5, "nitro:/reloc/reloc_fighters_main/NPikachuMain" },
-    { 0x131, 0x131, "nitro:/reloc/reloc_fighters_main/NKirbyModel" },
-    { 0xe7, 0xe7, "nitro:/reloc/reloc_fighters_main/NKirbyMain" },
-    { 0x137, 0x137, "nitro:/reloc/reloc_fighters_main/NCaptainModel" },
-    { 0xed, 0xed, "nitro:/reloc/reloc_fighters_main/NCaptainMain" },
-    { 0x130, 0x130, "nitro:/reloc/reloc_fighters_main/NYoshiModel" },
-    { 0xf8, 0xf8, "nitro:/reloc/reloc_fighters_main/NYoshiMain" },
-    { 0x136, 0x136, "nitro:/reloc/reloc_fighters_main/NLinkModel" },
-    { 0xe3, 0xe3, "nitro:/reloc/reloc_fighters_main/NLinkMain" },
-    { 0xdf, 0xdf, "nitro:/reloc/reloc_fighters_main/NLuigiMain" },
-    { 0x135, 0x135, "nitro:/reloc/reloc_fighters_main/NSamusModel" },
-    { 0xdb, 0xdb, "nitro:/reloc/reloc_fighters_main/NSamusMain" },
-    { 0x134, 0x134, "nitro:/reloc/reloc_fighters_main/NDonkeyModel" },
-    { 0xd6, 0xd6, "nitro:/reloc/reloc_fighters_main/NDonkeyMain" },
-    { 0x12f, 0x12f, "nitro:/reloc/reloc_fighters_main/NFoxModel" },
-    { 0xd3, 0xd3, "nitro:/reloc/reloc_fighters_main/NFoxMain" },
-    { 0x12d, 0x12d, "nitro:/reloc/reloc_fighters_main/NMarioModel" },
-    { 0xcf, 0xcf, "nitro:/reloc/reloc_fighters_main/NMarioMain" },
-    { 0x158, 0x158, "nitro:/reloc/reloc_fighters_main/BossModel" },
-    { 0xf9, 0xf9, "nitro:/reloc/reloc_fighters_main/BossMainMotion" },
-    { 0xfa, 0xfa, "nitro:/reloc/reloc_fighters_main/BossMain" },
-    { 0x12e, 0x12e, "nitro:/reloc/reloc_extern_data/MiscData302" },
-    { 0x159, 0x159, "nitro:/reloc/reloc_fighters_main/MasterHandIcon" },
+    { 0, 0, NDS_NITRO_RELOC_MENUS "MNCommon" },
+    { 194, 194, NDS_NITRO_RELOC_MISC_NAMED "N64Logo" },
+    { 52, 52, NDS_NITRO_RELOC_MOVIES "MVCommon" },
+    { 63, 63, NDS_NITRO_RELOC_TRANSITIONS "MVOpeningRoomTransition" },
+    { 56, 56, NDS_NITRO_RELOC_MOVIES "MVOpeningRoomScene1" },
+    { 57, 57, NDS_NITRO_RELOC_MOVIES "MVOpeningRoomScene2" },
+    { 58, 58, NDS_NITRO_RELOC_MOVIES "MVOpeningRoomScene3" },
+    { 59, 59, NDS_NITRO_RELOC_MOVIES "MVOpeningRoomScene4" },
+    { 75, 75, NDS_NITRO_RELOC_MOVIES "MVOpeningRunCrash" },
+    { 90, 90, NDS_NITRO_RELOC_MOVIES "MVOpeningRoomWallpaper" },
+    { 53, 53, NDS_NITRO_RELOC_MOVIES "MVOpeningPortraitsSet1" },
+    { 54, 54, NDS_NITRO_RELOC_MOVIES "MVOpeningPortraitsSet2" },
+    { 37, 37, NDS_NITRO_RELOC_INTERFACE "IFCommonAnnounceCommon" },
+    { 0x57, 0x57, NDS_NITRO_RELOC_INTERFACE "IFCommonItem" },
+    { 65, 65, NDS_NITRO_RELOC_MOVIES "MVOpeningCommon" },
+    { 55, 55, NDS_NITRO_RELOC_MOVIES "MVOpeningRun" },
+    { 71, 71, NDS_NITRO_RELOC_MOVIES "MVOpeningYamabuki" },
+    { 73, 73, NDS_NITRO_RELOC_MOVIES "MVOpeningSector" },
+    { 167, 167, NDS_NITRO_RELOC_MENUS "MNTitle" },
+    { 168, 168, NDS_NITRO_RELOC_MENUS "MNTitleFireAnim" },
+    { 0xa6, 0xa6, NDS_NITRO_RELOC_INTERFACE "IFCommonPlayer" },
+    { 0x52, 0x52, NDS_NITRO_RELOC_INTERFACE "IFCommonGameStatus" },
+    { 0xa4, 0xa4, NDS_NITRO_RELOC_INTERFACE "IFCommonPlayerDamage" },
+    { 0xa5, 0xa5, NDS_NITRO_RELOC_INTERFACE "IFCommonTimer" },
+    { 0x24, 0x24, NDS_NITRO_RELOC_INTERFACE "IFCommonDigits" },
+    { 0xc5, 0xc5, NDS_NITRO_RELOC_INTERFACE "IFCommonBattlePause" },
+    { 0x26, 0x26, NDS_NITRO_RELOC_INTERFACE "IFCommonPlayerTags" },
+    { 0x19, 0x19, NDS_NITRO_RELOC_FIGHTERS_COMMON "FTStocksZako" },
+    { 0x22, 0x22, NDS_NITRO_RELOC_MENUS "MNVSResults" },
+    { 0x1d, 0x1d, NDS_NITRO_RELOC_EXTERN_DATA "MiscData029" },
+    { 0x138, 0x138, NDS_NITRO_RELOC_FIGHTERS_MAIN "NNessModel" },
+    { 0xf1, 0xf1, NDS_NITRO_RELOC_FIGHTERS_MAIN "NNessMain" },
+    { 0x132, 0x132, NDS_NITRO_RELOC_FIGHTERS_MAIN "NPurinModel" },
+    { 0xea, 0xea, NDS_NITRO_RELOC_FIGHTERS_MAIN "NPurinMain" },
+    { 0x133, 0x133, NDS_NITRO_RELOC_FIGHTERS_MAIN "NPikachuModel" },
+    { 0xf5, 0xf5, NDS_NITRO_RELOC_FIGHTERS_MAIN "NPikachuMain" },
+    { 0x131, 0x131, NDS_NITRO_RELOC_FIGHTERS_MAIN "NKirbyModel" },
+    { 0xe7, 0xe7, NDS_NITRO_RELOC_FIGHTERS_MAIN "NKirbyMain" },
+    { 0x137, 0x137, NDS_NITRO_RELOC_FIGHTERS_MAIN "NCaptainModel" },
+    { 0xed, 0xed, NDS_NITRO_RELOC_FIGHTERS_MAIN "NCaptainMain" },
+    { 0x130, 0x130, NDS_NITRO_RELOC_FIGHTERS_MAIN "NYoshiModel" },
+    { 0xf8, 0xf8, NDS_NITRO_RELOC_FIGHTERS_MAIN "NYoshiMain" },
+    { 0x136, 0x136, NDS_NITRO_RELOC_FIGHTERS_MAIN "NLinkModel" },
+    { 0xe3, 0xe3, NDS_NITRO_RELOC_FIGHTERS_MAIN "NLinkMain" },
+    { 0xdf, 0xdf, NDS_NITRO_RELOC_FIGHTERS_MAIN "NLuigiMain" },
+    { 0x135, 0x135, NDS_NITRO_RELOC_FIGHTERS_MAIN "NSamusModel" },
+    { 0xdb, 0xdb, NDS_NITRO_RELOC_FIGHTERS_MAIN "NSamusMain" },
+    { 0x134, 0x134, NDS_NITRO_RELOC_FIGHTERS_MAIN "NDonkeyModel" },
+    { 0xd6, 0xd6, NDS_NITRO_RELOC_FIGHTERS_MAIN "NDonkeyMain" },
+    { 0x12f, 0x12f, NDS_NITRO_RELOC_FIGHTERS_MAIN "NFoxModel" },
+    { 0xd3, 0xd3, NDS_NITRO_RELOC_FIGHTERS_MAIN "NFoxMain" },
+    { 0x12d, 0x12d, NDS_NITRO_RELOC_FIGHTERS_MAIN "NMarioModel" },
+    { 0xcf, 0xcf, NDS_NITRO_RELOC_FIGHTERS_MAIN "NMarioMain" },
+    { 0x158, 0x158, NDS_NITRO_RELOC_FIGHTERS_MAIN "BossModel" },
+    { 0xf9, 0xf9, NDS_NITRO_RELOC_FIGHTERS_MAIN "BossMainMotion" },
+    { 0xfa, 0xfa, NDS_NITRO_RELOC_FIGHTERS_MAIN "BossMain" },
+    { 0x12e, 0x12e, NDS_NITRO_RELOC_EXTERN_DATA "MiscData302" },
+    { 0x159, 0x159, NDS_NITRO_RELOC_FIGHTERS_MAIN "MasterHandIcon" },
     /* The campaign's variants: Giant DK (his main; the rest is Donkey's) and
      * Metal Mario (main, motion, model; specials are Mario's). */
-    { 0xd7, 0xd7, "nitro:/reloc/reloc_fighters_main/GDonkeyMain" },
-    { 0xce, 0xce, "nitro:/reloc/reloc_fighters_main/MMarioMain" },
-    { 0xcd, 0xcd, "nitro:/reloc/reloc_fighters_main/MMarioMainMotion" },
-    { 0x12c, 0x12c, "nitro:/reloc/reloc_fighters_main/MMarioModel" },
-    { 0xf, 0xf, "nitro:/reloc/reloc_menus/MNScreenAdjust" },
-    { 0x88, 0x88, "nitro:/reloc/reloc_bonus/Bonus2Common" },
-    { 0xe, 0xe, "nitro:/reloc/reloc_bonus/BonusPicturePlatform" },
-    { 0xd, 0xd, "nitro:/reloc/reloc_bonus/BonusPicture" },
-    { 0xc, 0xc, "nitro:/reloc/reloc_misc_named/CharacterNames" },
-    { 0x18, 0x18, "nitro:/reloc/reloc_menus/MNPlayersDifficulty" },
-    { 0xfc, 0xfc, "nitro:/reloc/reloc_scene/SCExplainMain" },
-    { 0xc6, 0xc6, "nitro:/reloc/reloc_scene/SCExplainGraphics" },
-    { 0x1b, 0x1b, "nitro:/reloc/reloc_stages/GRWallpaperTrainingYellow" },
-    { 0x1c, 0x1c, "nitro:/reloc/reloc_stages/GRWallpaperTrainingBlue" },
-    { 0xfe, 0xfe, "nitro:/reloc/reloc_scene/SC1PTrainingMode" },
-    { 0xc4, 0xc4, "nitro:/reloc/reloc_menus/MNSoundTest" },
-    { 0x4e, 0x4e, "nitro:/reloc/reloc_menus/MNBackupClearHeaderOption" },
-    { 0x4d, 0x4d, "nitro:/reloc/reloc_menus/MNBackupClear" },
-    { 0x4, 0x4, "nitro:/reloc/reloc_menus/MNOption" },
-    { 0x10, 0x10, "nitro:/reloc/reloc_menus/MNCharacters" },
-    { 0x1f, 0x1f, "nitro:/reloc/reloc_menus/MNVSRecordMain" },
-    { 0x20, 0x20, "nitro:/reloc/reloc_menus/MNDataCommon" },
-    { 0x5, 0x5, "nitro:/reloc/reloc_menus/MNData" },
-    { 0xad, 0xad, "nitro:/reloc/reloc_menus/MNCongraYoshiTop" },
-    { 0xac, 0xac, "nitro:/reloc/reloc_menus/MNCongraYoshiBottom" },
-    { 0xb1, 0xb1, "nitro:/reloc/reloc_menus/MNCongraSamusTop" },
-    { 0xb0, 0xb0, "nitro:/reloc/reloc_menus/MNCongraSamusBottom" },
-    { 0xb5, 0xb5, "nitro:/reloc/reloc_menus/MNCongraPurinTop" },
-    { 0xb4, 0xb4, "nitro:/reloc/reloc_menus/MNCongraPurinBottom" },
-    { 0xaf, 0xaf, "nitro:/reloc/reloc_menus/MNCongraPikachuTop" },
-    { 0xae, 0xae, "nitro:/reloc/reloc_menus/MNCongraPikachuBottom" },
-    { 0xc1, 0xc1, "nitro:/reloc/reloc_menus/MNCongraNessTop" },
-    { 0xc0, 0xc0, "nitro:/reloc/reloc_menus/MNCongraNessBottom" },
-    { 0xbb, 0xbb, "nitro:/reloc/reloc_menus/MNCongraMarioTop" },
-    { 0xba, 0xba, "nitro:/reloc/reloc_menus/MNCongraMarioBottom" },
-    { 0xbd, 0xbd, "nitro:/reloc/reloc_menus/MNCongraLuigiTop" },
-    { 0xbc, 0xbc, "nitro:/reloc/reloc_menus/MNCongraLuigiBottom" },
-    { 0xb3, 0xb3, "nitro:/reloc/reloc_menus/MNCongraLinkTop" },
-    { 0xb2, 0xb2, "nitro:/reloc/reloc_menus/MNCongraLinkBottom" },
-    { 0xab, 0xab, "nitro:/reloc/reloc_menus/MNCongraKirbyTop" },
-    { 0xaa, 0xaa, "nitro:/reloc/reloc_menus/MNCongraKirbyBottom" },
-    { 0xbf, 0xbf, "nitro:/reloc/reloc_menus/MNCongraFoxTop" },
-    { 0xbe, 0xbe, "nitro:/reloc/reloc_menus/MNCongraFoxBottom" },
-    { 0xb9, 0xb9, "nitro:/reloc/reloc_menus/MNCongraDonkeyTop" },
-    { 0xb8, 0xb8, "nitro:/reloc/reloc_menus/MNCongraDonkeyBottom" },
-    { 0xb7, 0xb7, "nitro:/reloc/reloc_menus/MNCongraCaptainTop" },
-    { 0xb6, 0xb6, "nitro:/reloc/reloc_menus/MNCongraCaptainBottom" },
-    { 0x4c, 0x4c, "nitro:/reloc/reloc_movies/MVEnding" },
-    { 0xc3, 0xc3, "nitro:/reloc/reloc_scene/SCStaffroll" },
-    { 0x9, 0x9, "nitro:/reloc/reloc_menus/MNMessage" },
-    { 0x17, 0x17, "nitro:/reloc/reloc_menus/MNPlayers1PMode" },
-    { 0x4f, 0x4f, "nitro:/reloc/reloc_menus/MN1PContinue" },
-    { 0x2, 0x2, "nitro:/reloc/reloc_menus/MN1P" },
-    { 0xb, 0xb, "nitro:/reloc/reloc_scene/SC1PIntro" },
-    { 0xa, 0xa, "nitro:/reloc/reloc_scene/SC1PChallenger" },
-    { 0x97, 0x97, "nitro:/reloc/reloc_scene/SC1PStageClear3" },
-    { 0x51, 0x51, "nitro:/reloc/reloc_scene/SC1PStageClear2" },
-    { 0x50, 0x50, "nitro:/reloc/reloc_scene/SC1PStageClear1" },
-    { 0x23, 0x23, "nitro:/reloc/reloc_fighters_common/FTEmblemModels" },
-    { 0x28, 0x28, "nitro:/reloc/reloc_transitions/LBTransitionAeroplane" },
-    { 0x29, 0x29, "nitro:/reloc/reloc_transitions/LBTransitionCheck" },
-    { 0x2a, 0x2a, "nitro:/reloc/reloc_transitions/LBTransitionGakubuthi" },
-    { 0x2b, 0x2b, "nitro:/reloc/reloc_transitions/LBTransitionKannon" },
-    { 0x2c, 0x2c, "nitro:/reloc/reloc_transitions/LBTransitionStar" },
-    { 0x2d, 0x2d, "nitro:/reloc/reloc_transitions/LBTransitionSudare1" },
-    { 0x2e, 0x2e, "nitro:/reloc/reloc_transitions/LBTransitionSudare2" },
-    { 0x30, 0x30, "nitro:/reloc/reloc_transitions/LBTransitionBlock" },
-    { 0x31, 0x31, "nitro:/reloc/reloc_transitions/LBTransitionRotScale" },
-    { 0x32, 0x32, "nitro:/reloc/reloc_transitions/LBTransitionCurtain" },
-    { 0x33, 0x33, "nitro:/reloc/reloc_transitions/LBTransitionCamera" },
-    { 0xc7, 0xc7, "nitro:/reloc/reloc_misc_named/SYKseg1Validate" },
-    { 6, 6, "nitro:/reloc/reloc_menus/MNVSMode" },
-    { 0x11, 0x11, "nitro:/reloc/reloc_menus/MNPlayersCommon" },
-    { 0x12, 0x12, "nitro:/reloc/reloc_menus/MNPlayersGameModes" },
-    { 0x13, 0x13, "nitro:/reloc/reloc_menus/MNPlayersPortraits" },
-    { 0x14, 0x14, "nitro:/reloc/reloc_fighters_common/FTEmblemSprites" },
-    { 0x15, 0x15, "nitro:/reloc/reloc_menus/MNSelectCommon" },
-    { 0x16, 0x16, "nitro:/reloc/reloc_menus/MNPlayersSpotlight" },
-    { 0x1a, 0x1a, "nitro:/reloc/reloc_stages/GRWallpaperTrainingBlack" },
-    { 0x1e, 0x1e, "nitro:/reloc/reloc_menus/MNMaps" },
-    { 0x21, 0x21, "nitro:/reloc/reloc_menus/MNCommonFonts" },
-    { 0xff, 0xff, "nitro:/reloc/reloc_stages/GRPupupuMap" },
-    { 0x104, 0x104, "nitro:/reloc/reloc_stages/GRInishieMap" },
-    { 0x109, 0x109, "nitro:/reloc/reloc_stages/GRHyruleMap" },
-    { 0x1005f, 0x5f, "nitro:/reloc/reloc_stages/StageCastle" },
-    { 0x10058, 0x58, "nitro:/reloc/reloc_stages/StageDreamLand" },
-    { 0x71, 0x71, "nitro:/reloc/reloc_extern_data/ExternDataBank113" },
-    { 0x67, 0x67, "nitro:/reloc/reloc_extern_data/ExternDataBank103" },
-    { 0x68, 0x68, "nitro:/reloc/reloc_extern_data/ExternDataBank104" },
-    { 0x98, 0x98, "nitro:/reloc/reloc_extern_data/MiscDataBank152" },
+    { 0xd7, 0xd7, NDS_NITRO_RELOC_FIGHTERS_MAIN "GDonkeyMain" },
+    { 0xce, 0xce, NDS_NITRO_RELOC_FIGHTERS_MAIN "MMarioMain" },
+    { 0xcd, 0xcd, NDS_NITRO_RELOC_FIGHTERS_MAIN "MMarioMainMotion" },
+    { 0x12c, 0x12c, NDS_NITRO_RELOC_FIGHTERS_MAIN "MMarioModel" },
+    { 0xf, 0xf, NDS_NITRO_RELOC_MENUS "MNScreenAdjust" },
+    { 0x88, 0x88, NDS_NITRO_RELOC_BONUS "Bonus2Common" },
+    { 0xe, 0xe, NDS_NITRO_RELOC_BONUS "BonusPicturePlatform" },
+    { 0xd, 0xd, NDS_NITRO_RELOC_BONUS "BonusPicture" },
+    { 0xc, 0xc, NDS_NITRO_RELOC_MISC_NAMED "CharacterNames" },
+    { 0x18, 0x18, NDS_NITRO_RELOC_MENUS "MNPlayersDifficulty" },
+    { 0xfc, 0xfc, NDS_NITRO_RELOC_SCENE "SCExplainMain" },
+    { 0xc6, 0xc6, NDS_NITRO_RELOC_SCENE "SCExplainGraphics" },
+    { 0x1b, 0x1b, NDS_NITRO_RELOC_STAGES "GRWallpaperTrainingYellow" },
+    { 0x1c, 0x1c, NDS_NITRO_RELOC_STAGES "GRWallpaperTrainingBlue" },
+    { 0xfe, 0xfe, NDS_NITRO_RELOC_SCENE "SC1PTrainingMode" },
+    { 0xc4, 0xc4, NDS_NITRO_RELOC_MENUS "MNSoundTest" },
+    { 0x4e, 0x4e, NDS_NITRO_RELOC_MENUS "MNBackupClearHeaderOption" },
+    { 0x4d, 0x4d, NDS_NITRO_RELOC_MENUS "MNBackupClear" },
+    { 0x4, 0x4, NDS_NITRO_RELOC_MENUS "MNOption" },
+    { 0x10, 0x10, NDS_NITRO_RELOC_MENUS "MNCharacters" },
+    { 0x1f, 0x1f, NDS_NITRO_RELOC_MENUS "MNVSRecordMain" },
+    { 0x20, 0x20, NDS_NITRO_RELOC_MENUS "MNDataCommon" },
+    { 0x5, 0x5, NDS_NITRO_RELOC_MENUS "MNData" },
+    { 0xad, 0xad, NDS_NITRO_RELOC_MENUS "MNCongraYoshiTop" },
+    { 0xac, 0xac, NDS_NITRO_RELOC_MENUS "MNCongraYoshiBottom" },
+    { 0xb1, 0xb1, NDS_NITRO_RELOC_MENUS "MNCongraSamusTop" },
+    { 0xb0, 0xb0, NDS_NITRO_RELOC_MENUS "MNCongraSamusBottom" },
+    { 0xb5, 0xb5, NDS_NITRO_RELOC_MENUS "MNCongraPurinTop" },
+    { 0xb4, 0xb4, NDS_NITRO_RELOC_MENUS "MNCongraPurinBottom" },
+    { 0xaf, 0xaf, NDS_NITRO_RELOC_MENUS "MNCongraPikachuTop" },
+    { 0xae, 0xae, NDS_NITRO_RELOC_MENUS "MNCongraPikachuBottom" },
+    { 0xc1, 0xc1, NDS_NITRO_RELOC_MENUS "MNCongraNessTop" },
+    { 0xc0, 0xc0, NDS_NITRO_RELOC_MENUS "MNCongraNessBottom" },
+    { 0xbb, 0xbb, NDS_NITRO_RELOC_MENUS "MNCongraMarioTop" },
+    { 0xba, 0xba, NDS_NITRO_RELOC_MENUS "MNCongraMarioBottom" },
+    { 0xbd, 0xbd, NDS_NITRO_RELOC_MENUS "MNCongraLuigiTop" },
+    { 0xbc, 0xbc, NDS_NITRO_RELOC_MENUS "MNCongraLuigiBottom" },
+    { 0xb3, 0xb3, NDS_NITRO_RELOC_MENUS "MNCongraLinkTop" },
+    { 0xb2, 0xb2, NDS_NITRO_RELOC_MENUS "MNCongraLinkBottom" },
+    { 0xab, 0xab, NDS_NITRO_RELOC_MENUS "MNCongraKirbyTop" },
+    { 0xaa, 0xaa, NDS_NITRO_RELOC_MENUS "MNCongraKirbyBottom" },
+    { 0xbf, 0xbf, NDS_NITRO_RELOC_MENUS "MNCongraFoxTop" },
+    { 0xbe, 0xbe, NDS_NITRO_RELOC_MENUS "MNCongraFoxBottom" },
+    { 0xb9, 0xb9, NDS_NITRO_RELOC_MENUS "MNCongraDonkeyTop" },
+    { 0xb8, 0xb8, NDS_NITRO_RELOC_MENUS "MNCongraDonkeyBottom" },
+    { 0xb7, 0xb7, NDS_NITRO_RELOC_MENUS "MNCongraCaptainTop" },
+    { 0xb6, 0xb6, NDS_NITRO_RELOC_MENUS "MNCongraCaptainBottom" },
+    { 0x4c, 0x4c, NDS_NITRO_RELOC_MOVIES "MVEnding" },
+    { 0xc3, 0xc3, NDS_NITRO_RELOC_SCENE "SCStaffroll" },
+    { 0x9, 0x9, NDS_NITRO_RELOC_MENUS "MNMessage" },
+    { 0x17, 0x17, NDS_NITRO_RELOC_MENUS "MNPlayers1PMode" },
+    { 0x4f, 0x4f, NDS_NITRO_RELOC_MENUS "MN1PContinue" },
+    { 0x2, 0x2, NDS_NITRO_RELOC_MENUS "MN1P" },
+    { 0xb, 0xb, NDS_NITRO_RELOC_SCENE "SC1PIntro" },
+    { 0xa, 0xa, NDS_NITRO_RELOC_SCENE "SC1PChallenger" },
+    { 0x97, 0x97, NDS_NITRO_RELOC_SCENE "SC1PStageClear3" },
+    { 0x51, 0x51, NDS_NITRO_RELOC_SCENE "SC1PStageClear2" },
+    { 0x50, 0x50, NDS_NITRO_RELOC_SCENE "SC1PStageClear1" },
+    { 0x23, 0x23, NDS_NITRO_RELOC_FIGHTERS_COMMON "FTEmblemModels" },
+    { 0x28, 0x28, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionAeroplane" },
+    { 0x29, 0x29, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionCheck" },
+    { 0x2a, 0x2a, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionGakubuthi" },
+    { 0x2b, 0x2b, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionKannon" },
+    { 0x2c, 0x2c, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionStar" },
+    { 0x2d, 0x2d, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionSudare1" },
+    { 0x2e, 0x2e, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionSudare2" },
+    { 0x30, 0x30, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionBlock" },
+    { 0x31, 0x31, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionRotScale" },
+    { 0x32, 0x32, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionCurtain" },
+    { 0x33, 0x33, NDS_NITRO_RELOC_TRANSITIONS "LBTransitionCamera" },
+    { 0xc7, 0xc7, NDS_NITRO_RELOC_MISC_NAMED "SYKseg1Validate" },
+    { 6, 6, NDS_NITRO_RELOC_MENUS "MNVSMode" },
+    { 0x11, 0x11, NDS_NITRO_RELOC_MENUS "MNPlayersCommon" },
+    { 0x12, 0x12, NDS_NITRO_RELOC_MENUS "MNPlayersGameModes" },
+    { 0x13, 0x13, NDS_NITRO_RELOC_MENUS "MNPlayersPortraits" },
+    { 0x14, 0x14, NDS_NITRO_RELOC_FIGHTERS_COMMON "FTEmblemSprites" },
+    { 0x15, 0x15, NDS_NITRO_RELOC_MENUS "MNSelectCommon" },
+    { 0x16, 0x16, NDS_NITRO_RELOC_MENUS "MNPlayersSpotlight" },
+    { 0x1a, 0x1a, NDS_NITRO_RELOC_STAGES "GRWallpaperTrainingBlack" },
+    { 0x1e, 0x1e, NDS_NITRO_RELOC_MENUS "MNMaps" },
+    { 0x21, 0x21, NDS_NITRO_RELOC_MENUS "MNCommonFonts" },
+    { 0xff, 0xff, NDS_NITRO_RELOC_STAGES "GRPupupuMap" },
+    { 0x104, 0x104, NDS_NITRO_RELOC_STAGES "GRInishieMap" },
+    { 0x109, 0x109, NDS_NITRO_RELOC_STAGES "GRHyruleMap" },
+    { 0x1005f, 0x5f, NDS_NITRO_RELOC_STAGES "StageCastle" },
+    { 0x10058, 0x58, NDS_NITRO_RELOC_STAGES "StageDreamLand" },
+    { 0x71, 0x71, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank113" },
+    { 0x67, 0x67, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank103" },
+    { 0x68, 0x68, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank104" },
+    { 0x98, 0x98, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank152" },
     /* P2-4s1 Yoster closure (Makefile:4186-4190; IDs reloc_data.h:527,535). */
 #if NDS_P2_STAGE_YOSTER
-    { 0x107, 0x107, "nitro:/reloc/reloc_stages/GRYosterMap" },
-    { 0x1005d, 0x5d, "nitro:/reloc/reloc_stages/StageYoshi" },
-    { 0x6e, 0x6e, "nitro:/reloc/reloc_extern_data/ExternDataBank110" },
-    { 0x6f, 0x6f, "nitro:/reloc/reloc_extern_data/ExternDataBank111" },
-    { 0x9a, 0x9a, "nitro:/reloc/reloc_extern_data/MiscDataBank154" },
+    { 0x107, 0x107, NDS_NITRO_RELOC_STAGES "GRYosterMap" },
+    { 0x1005d, 0x5d, NDS_NITRO_RELOC_STAGES "StageYoshi" },
+    { 0x6e, 0x6e, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank110" },
+    { 0x6f, 0x6f, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank111" },
+    { 0x9a, 0x9a, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank154" },
 #endif
     /* P2-4s2 Castle. The wallpaper its map header references,
      * MVOpeningRoomWallpaper, is asset 90 and already rowed unconditionally
      * above, so only the map and its two banks are new. */
 #if NDS_P2_STAGE_CASTLE
-    { 0x103, 0x103, "nitro:/reloc/reloc_stages/GRCastleMap" },
-    { 0x6a, 0x6a, "nitro:/reloc/reloc_extern_data/ExternDataBank106" },
-    { 0x9c, 0x9c, "nitro:/reloc/reloc_extern_data/MiscDataBank156" },
+    { 0x103, 0x103, NDS_NITRO_RELOC_STAGES "GRCastleMap" },
+    { 0x6a, 0x6a, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank106" },
+    { 0x9c, 0x9c, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank156" },
 #endif
     /* P2-4s3 Congo Jungle. Its map declares exactly these three, checked
      * against the O2R header rather than assumed. */
 #if NDS_P2_STAGE_JUNGLE
-    { 0x105, 0x105, "nitro:/reloc/reloc_stages/GRJungleMap" },
-    { 0x1005c, 0x5c, "nitro:/reloc/reloc_stages/StageJungle" },
-    { 0x6c, 0x6c, "nitro:/reloc/reloc_extern_data/ExternDataBank108" },
-    { 0x9e, 0x9e, "nitro:/reloc/reloc_extern_data/MiscDataBank158" },
+    { 0x105, 0x105, NDS_NITRO_RELOC_STAGES "GRJungleMap" },
+    { 0x1005c, 0x5c, NDS_NITRO_RELOC_STAGES "StageJungle" },
+    { 0x6c, 0x6c, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank108" },
+    { 0x9e, 0x9e, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank158" },
 #endif
     /* P2-4s4 Planet Zebes, closure checked against the map header. */
 #if NDS_P2_STAGE_ZEBES
-    { 0x101, 0x101, "nitro:/reloc/reloc_stages/GRZebesMap" },
-    { 0x10059, 0x59, "nitro:/reloc/reloc_stages/StageZebes" },
-    { 0x69, 0x69, "nitro:/reloc/reloc_extern_data/ExternDataBank105" },
-    { 0x9d, 0x9d, "nitro:/reloc/reloc_extern_data/MiscDataBank157" },
+    { 0x101, 0x101, NDS_NITRO_RELOC_STAGES "GRZebesMap" },
+    { 0x10059, 0x59, NDS_NITRO_RELOC_STAGES "StageZebes" },
+    { 0x69, 0x69, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank105" },
+    { 0x9d, 0x9d, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank157" },
 #endif
     /* P2-4s6 Saffron City: the only stage map so far with two Misc banks. */
     /* P2-4s7 Mushroom Kingdom and P2-4s8 Sector Z. */
 #if NDS_P2_STAGE_INISHIE
-    { 0x1005b, 0x5b, "nitro:/reloc/reloc_stages/StageHyruleWallpaper" },
-    { 0x6b, 0x6b, "nitro:/reloc/reloc_extern_data/ExternDataBank107" },
-    { 0x9b, 0x9b, "nitro:/reloc/reloc_extern_data/MiscDataBank155" },
+    { 0x1005b, 0x5b, NDS_NITRO_RELOC_STAGES "StageHyruleWallpaper" },
+    { 0x6b, 0x6b, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank107" },
+    { 0x9b, 0x9b, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank155" },
 #endif
 #if NDS_P2_STAGE_SECTOR
-    { 0x106, 0x106, "nitro:/reloc/reloc_stages/GRSectorMap" },
-    { 0x10063, 0x63, "nitro:/reloc/reloc_stages/StageSector" },
-    { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-    { 0x99, 0x99, "nitro:/reloc/reloc_extern_data/MiscDataBank153" },
+    { 0x106, 0x106, NDS_NITRO_RELOC_STAGES "GRSectorMap" },
+    { 0x10063, 0x63, NDS_NITRO_RELOC_STAGES "StageSector" },
+    { 0x6d, 0x6d, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank109" },
+    { 0x99, 0x99, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank153" },
 #endif
     /* P2-6 step 7 (boss). Final Destination's runtime map (Last), its
      * geometry bank and the wallpaper container its header references; the
@@ -292,8 +292,8 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * file 96 is staged because the extern-tree loader refuses the map when
      * any dependency in its extern table is unrowed. */
 #if NDS_P2_1P_GAME
-    { 0x10a, 0x10a, "nitro:/reloc/reloc_stages/GRLastMap" },
-    { 0x72, 0x72, "nitro:/reloc/reloc_extern_data/ExternDataBank114" },
+    { 0x10a, 0x10a, NDS_NITRO_RELOC_STAGES "GRLastMap" },
+    { 0x72, 0x72, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank114" },
     /* THE O2R WALLPAPER CONTAINERS ARE MISLABELLED, CONSISTENTLY. The o2r
      * names its supplemental wallpaper files from a guess table
      * (decomp tools/generate_yamls.py SUPPLEMENTAL_NAMES): ROM file 91 is
@@ -305,118 +305,118 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * bonus boards'. The token is the truth and the name is only where the
      * bytes live, so each row pairs the ROM file id with the container that
      * HOLDS that id; do not "correct" a name to match the stage. */
-    { 0x10060, 0x60, "nitro:/reloc/reloc_stages/StageYamabukiWallpaper" },
+    { 0x10060, 0x60, NDS_NITRO_RELOC_STAGES "StageYamabukiWallpaper" },
     /* The other 1P arenas (reloc_backend_assets.c names each dependency). */
-    { 0x10d, 0x10d, "nitro:/reloc/reloc_stages/GRMetalMap" },
-    { 0x75, 0x75, "nitro:/reloc/reloc_extern_data/ExternDataBank117" },
-    { 0x10062, 0x62, "nitro:/reloc/reloc_stages/StageLastWallpaper" },
-    { 0x10e, 0x10e, "nitro:/reloc/reloc_stages/GRYosterSmallMap" },
-    { 0x76, 0x76, "nitro:/reloc/reloc_extern_data/ExternDataBank118" },
-    { 0x100, 0x100, "nitro:/reloc/reloc_stages/GRPupupuSmallMap" },
-    { 0x65, 0x65, "nitro:/reloc/reloc_extern_data/ExternDataBank101" },
-    { 0x64, 0x64, "nitro:/reloc/reloc_extern_data/ExternDataBank100" },
-    { 0x10c, 0x10c, "nitro:/reloc/reloc_stages/GRZakoMap" },
-    { 0x74, 0x74, "nitro:/reloc/reloc_extern_data/ExternDataBank116" },
-    { 0x10061, 0x61, "nitro:/reloc/reloc_stages/StageInishieWallpaper" },
+    { 0x10d, 0x10d, NDS_NITRO_RELOC_STAGES "GRMetalMap" },
+    { 0x75, 0x75, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank117" },
+    { 0x10062, 0x62, NDS_NITRO_RELOC_STAGES "StageLastWallpaper" },
+    { 0x10e, 0x10e, NDS_NITRO_RELOC_STAGES "GRYosterSmallMap" },
+    { 0x76, 0x76, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank118" },
+    { 0x100, 0x100, NDS_NITRO_RELOC_STAGES "GRPupupuSmallMap" },
+    { 0x65, 0x65, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank101" },
+    { 0x64, 0x64, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank100" },
+    { 0x10c, 0x10c, NDS_NITRO_RELOC_STAGES "GRZakoMap" },
+    { 0x74, 0x74, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank116" },
+    { 0x10061, 0x61, NDS_NITRO_RELOC_STAGES "StageInishieWallpaper" },
     /* The bonus boards (reloc_backend_assets.c names each dependency); 119
      * lives in the o2r container named StageMetalWallpaper, see above. */
-    { 0x10077, 0x77, "nitro:/reloc/reloc_stages/StageMetalWallpaper" },
-    { 0x78, 0x78, "nitro:/reloc/reloc_extern_data/ExternDataBank120" },
-    { 0x79, 0x79, "nitro:/reloc/reloc_extern_data/ExternDataBank121" },
-    { 0x7a, 0x7a, "nitro:/reloc/reloc_extern_data/ExternDataBank122" },
-    { 0x7b, 0x7b, "nitro:/reloc/reloc_extern_data/ExternDataBank123" },
-    { 0x10f, 0x10f, "nitro:/reloc/reloc_stages/GRBonus1MarioMap" },
-    { 0x7c, 0x7c, "nitro:/reloc/reloc_extern_data/ExternDataBank124" },
-    { 0x110, 0x110, "nitro:/reloc/reloc_stages/GRBonus1FoxMap" },
-    { 0x7d, 0x7d, "nitro:/reloc/reloc_extern_data/ExternDataBank125" },
-    { 0x111, 0x111, "nitro:/reloc/reloc_stages/GRBonus1DonkeyMap" },
-    { 0x7e, 0x7e, "nitro:/reloc/reloc_extern_data/ExternDataBank126" },
-    { 0x112, 0x112, "nitro:/reloc/reloc_stages/GRBonus1SamusMap" },
-    { 0x7f, 0x7f, "nitro:/reloc/reloc_extern_data/ExternDataBank127" },
-    { 0x113, 0x113, "nitro:/reloc/reloc_stages/GRBonus1LuigiMap" },
-    { 0x80, 0x80, "nitro:/reloc/reloc_extern_data/ExternDataBank128" },
-    { 0x114, 0x114, "nitro:/reloc/reloc_stages/GRBonus1LinkMap" },
-    { 0x81, 0x81, "nitro:/reloc/reloc_extern_data/ExternDataBank129" },
-    { 0x115, 0x115, "nitro:/reloc/reloc_stages/GRBonus1YoshiMap" },
-    { 0x82, 0x82, "nitro:/reloc/reloc_extern_data/ExternDataBank130" },
-    { 0x116, 0x116, "nitro:/reloc/reloc_stages/GRBonus1CaptainMap" },
-    { 0x83, 0x83, "nitro:/reloc/reloc_extern_data/ExternDataBank131" },
-    { 0x117, 0x117, "nitro:/reloc/reloc_stages/GRBonus1KirbyMap" },
-    { 0x84, 0x84, "nitro:/reloc/reloc_extern_data/ExternDataBank132" },
-    { 0x118, 0x118, "nitro:/reloc/reloc_stages/GRBonus1PikachuMap" },
-    { 0x85, 0x85, "nitro:/reloc/reloc_extern_data/ExternDataBank133" },
-    { 0x119, 0x119, "nitro:/reloc/reloc_stages/GRBonus1PurinMap" },
-    { 0x86, 0x86, "nitro:/reloc/reloc_extern_data/ExternDataBank134" },
-    { 0x11a, 0x11a, "nitro:/reloc/reloc_stages/GRBonus1NessMap" },
-    { 0x87, 0x87, "nitro:/reloc/reloc_extern_data/ExternDataBank135" },
-    { 0x11b, 0x11b, "nitro:/reloc/reloc_stages/GRBonus2MarioMap" },
-    { 0x89, 0x89, "nitro:/reloc/reloc_bonus/BonusDataBank137" },
-    { 0x11c, 0x11c, "nitro:/reloc/reloc_stages/GRBonus2FoxMap" },
-    { 0x8a, 0x8a, "nitro:/reloc/reloc_bonus/BonusDataBank138" },
-    { 0x11d, 0x11d, "nitro:/reloc/reloc_stages/GRBonus2DonkeyMap" },
-    { 0x8b, 0x8b, "nitro:/reloc/reloc_bonus/BonusDataBank139" },
-    { 0x11e, 0x11e, "nitro:/reloc/reloc_stages/GRBonus2SamusMap" },
-    { 0x8c, 0x8c, "nitro:/reloc/reloc_bonus/BonusDataBank140" },
-    { 0x11f, 0x11f, "nitro:/reloc/reloc_stages/GRBonus2LuigiMap" },
-    { 0x8d, 0x8d, "nitro:/reloc/reloc_bonus/BonusDataBank141" },
-    { 0x120, 0x120, "nitro:/reloc/reloc_stages/GRBonus2LinkMap" },
-    { 0x8e, 0x8e, "nitro:/reloc/reloc_bonus/BonusDataBank142" },
-    { 0x121, 0x121, "nitro:/reloc/reloc_stages/GRBonus2YoshiMap" },
-    { 0x8f, 0x8f, "nitro:/reloc/reloc_bonus/BonusDataBank143" },
-    { 0x122, 0x122, "nitro:/reloc/reloc_stages/GRBonus2CaptainMap" },
-    { 0x90, 0x90, "nitro:/reloc/reloc_bonus/BonusDataBank144" },
-    { 0x123, 0x123, "nitro:/reloc/reloc_stages/GRBonus2KirbyMap" },
-    { 0x91, 0x91, "nitro:/reloc/reloc_bonus/BonusDataBank145" },
-    { 0x124, 0x124, "nitro:/reloc/reloc_stages/GRBonus2PikachuMap" },
-    { 0x92, 0x92, "nitro:/reloc/reloc_bonus/BonusDataBank146" },
-    { 0x125, 0x125, "nitro:/reloc/reloc_stages/GRBonus2PurinMap" },
-    { 0x93, 0x93, "nitro:/reloc/reloc_bonus/BonusDataBank147" },
-    { 0x126, 0x126, "nitro:/reloc/reloc_stages/GRBonus2NessMap" },
-    { 0x94, 0x94, "nitro:/reloc/reloc_bonus/BonusDataBank148" },
-    { 0x127, 0x127, "nitro:/reloc/reloc_stages/GRBonus3Map" },
-    { 0x95, 0x95, "nitro:/reloc/reloc_bonus/BonusDataBank149" },
-    { 0xa2, 0xa2, "nitro:/reloc/reloc_extern_data/MiscData162" },
-    { 0x96, 0x96, "nitro:/reloc/reloc_bonus/BonusDataBank150" },
-    { 0xfd, 0xfd, "nitro:/reloc/reloc_extern_data/MiscData253" },
-    { 0xe6, 0xe6, "nitro:/reloc/reloc_extern_data/MiscData230" },
+    { 0x10077, 0x77, NDS_NITRO_RELOC_STAGES "StageMetalWallpaper" },
+    { 0x78, 0x78, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank120" },
+    { 0x79, 0x79, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank121" },
+    { 0x7a, 0x7a, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank122" },
+    { 0x7b, 0x7b, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank123" },
+    { 0x10f, 0x10f, NDS_NITRO_RELOC_STAGES "GRBonus1MarioMap" },
+    { 0x7c, 0x7c, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank124" },
+    { 0x110, 0x110, NDS_NITRO_RELOC_STAGES "GRBonus1FoxMap" },
+    { 0x7d, 0x7d, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank125" },
+    { 0x111, 0x111, NDS_NITRO_RELOC_STAGES "GRBonus1DonkeyMap" },
+    { 0x7e, 0x7e, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank126" },
+    { 0x112, 0x112, NDS_NITRO_RELOC_STAGES "GRBonus1SamusMap" },
+    { 0x7f, 0x7f, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank127" },
+    { 0x113, 0x113, NDS_NITRO_RELOC_STAGES "GRBonus1LuigiMap" },
+    { 0x80, 0x80, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank128" },
+    { 0x114, 0x114, NDS_NITRO_RELOC_STAGES "GRBonus1LinkMap" },
+    { 0x81, 0x81, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank129" },
+    { 0x115, 0x115, NDS_NITRO_RELOC_STAGES "GRBonus1YoshiMap" },
+    { 0x82, 0x82, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank130" },
+    { 0x116, 0x116, NDS_NITRO_RELOC_STAGES "GRBonus1CaptainMap" },
+    { 0x83, 0x83, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank131" },
+    { 0x117, 0x117, NDS_NITRO_RELOC_STAGES "GRBonus1KirbyMap" },
+    { 0x84, 0x84, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank132" },
+    { 0x118, 0x118, NDS_NITRO_RELOC_STAGES "GRBonus1PikachuMap" },
+    { 0x85, 0x85, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank133" },
+    { 0x119, 0x119, NDS_NITRO_RELOC_STAGES "GRBonus1PurinMap" },
+    { 0x86, 0x86, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank134" },
+    { 0x11a, 0x11a, NDS_NITRO_RELOC_STAGES "GRBonus1NessMap" },
+    { 0x87, 0x87, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank135" },
+    { 0x11b, 0x11b, NDS_NITRO_RELOC_STAGES "GRBonus2MarioMap" },
+    { 0x89, 0x89, NDS_NITRO_RELOC_BONUS "BonusDataBank137" },
+    { 0x11c, 0x11c, NDS_NITRO_RELOC_STAGES "GRBonus2FoxMap" },
+    { 0x8a, 0x8a, NDS_NITRO_RELOC_BONUS "BonusDataBank138" },
+    { 0x11d, 0x11d, NDS_NITRO_RELOC_STAGES "GRBonus2DonkeyMap" },
+    { 0x8b, 0x8b, NDS_NITRO_RELOC_BONUS "BonusDataBank139" },
+    { 0x11e, 0x11e, NDS_NITRO_RELOC_STAGES "GRBonus2SamusMap" },
+    { 0x8c, 0x8c, NDS_NITRO_RELOC_BONUS "BonusDataBank140" },
+    { 0x11f, 0x11f, NDS_NITRO_RELOC_STAGES "GRBonus2LuigiMap" },
+    { 0x8d, 0x8d, NDS_NITRO_RELOC_BONUS "BonusDataBank141" },
+    { 0x120, 0x120, NDS_NITRO_RELOC_STAGES "GRBonus2LinkMap" },
+    { 0x8e, 0x8e, NDS_NITRO_RELOC_BONUS "BonusDataBank142" },
+    { 0x121, 0x121, NDS_NITRO_RELOC_STAGES "GRBonus2YoshiMap" },
+    { 0x8f, 0x8f, NDS_NITRO_RELOC_BONUS "BonusDataBank143" },
+    { 0x122, 0x122, NDS_NITRO_RELOC_STAGES "GRBonus2CaptainMap" },
+    { 0x90, 0x90, NDS_NITRO_RELOC_BONUS "BonusDataBank144" },
+    { 0x123, 0x123, NDS_NITRO_RELOC_STAGES "GRBonus2KirbyMap" },
+    { 0x91, 0x91, NDS_NITRO_RELOC_BONUS "BonusDataBank145" },
+    { 0x124, 0x124, NDS_NITRO_RELOC_STAGES "GRBonus2PikachuMap" },
+    { 0x92, 0x92, NDS_NITRO_RELOC_BONUS "BonusDataBank146" },
+    { 0x125, 0x125, NDS_NITRO_RELOC_STAGES "GRBonus2PurinMap" },
+    { 0x93, 0x93, NDS_NITRO_RELOC_BONUS "BonusDataBank147" },
+    { 0x126, 0x126, NDS_NITRO_RELOC_STAGES "GRBonus2NessMap" },
+    { 0x94, 0x94, NDS_NITRO_RELOC_BONUS "BonusDataBank148" },
+    { 0x127, 0x127, NDS_NITRO_RELOC_STAGES "GRBonus3Map" },
+    { 0x95, 0x95, NDS_NITRO_RELOC_BONUS "BonusDataBank149" },
+    { 0xa2, 0xa2, NDS_NITRO_RELOC_EXTERN_DATA "MiscData162" },
+    { 0x96, 0x96, NDS_NITRO_RELOC_BONUS "BonusDataBank150" },
+    { 0xfd, 0xfd, NDS_NITRO_RELOC_EXTERN_DATA "MiscData253" },
+    { 0xe6, 0xe6, NDS_NITRO_RELOC_EXTERN_DATA "MiscData230" },
 #endif
 #if NDS_P2_STAGE_YAMABUKI
-    { 0x108, 0x108, "nitro:/reloc/reloc_stages/GRYamabukiMap" },
-    { 0x1005e, 0x5e, "nitro:/reloc/reloc_stages/StagePokemon" },
-    { 0x70, 0x70, "nitro:/reloc/reloc_extern_data/ExternDataBank112" },
-    { 0x9f, 0x9f, "nitro:/reloc/reloc_extern_data/MiscDataBank159" },
-    { 0xa0, 0xa0, "nitro:/reloc/reloc_extern_data/MiscDataBank160" },
+    { 0x108, 0x108, NDS_NITRO_RELOC_STAGES "GRYamabukiMap" },
+    { 0x1005e, 0x5e, NDS_NITRO_RELOC_STAGES "StagePokemon" },
+    { 0x70, 0x70, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank112" },
+    { 0x9f, 0x9f, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank159" },
+    { 0xa0, 0xa0, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank160" },
 #endif
-    { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
-    { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
-    { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },
-    { 0x128, 0x128, "nitro:/reloc/reloc_fighters_main/MarioModel" },
-    { 0x12a, 0x12a, "nitro:/reloc/reloc_fighters_main/MarioShieldPose" },
-    { 0xcc, 0xcc, "nitro:/reloc/reloc_fighters_main/MarioSpecial1" },
-    { 0x164, 0x164, "nitro:/reloc/reloc_fighters_main/MarioSpecial2" },
-    { 0x129, 0x129, "nitro:/reloc/reloc_fighters_main/MarioSpecial3" },
-    { 0xd1, 0xd1, "nitro:/reloc/reloc_fighters_main/FoxMain" },
-    { 0xd0, 0xd0, "nitro:/reloc/reloc_fighters_main/FoxMainMotion" },
-    { 0x139, 0x139, "nitro:/reloc/reloc_fighters_main/FoxModel" },
-    { 0x13a, 0x13a, "nitro:/reloc/reloc_fighters_main/FoxShieldPose" },
-    { 0xd2, 0xd2, "nitro:/reloc/reloc_fighters_main/FoxSpecial1" },
-    { 0x15a, 0x15a, "nitro:/reloc/reloc_fighters_main/FoxSpecial2" },
-    { 0xa1, 0xa1, "nitro:/reloc/reloc_fighters_main/FoxSpecial3" },
-    { 0x13c, 0x13c, "nitro:/reloc/reloc_fighters_main/FoxSpecial4" },
-    { 0x53, 0x53, "nitro:/reloc/reloc_effects/EFCommonEffects1" },
-    { 0x54, 0x54, "nitro:/reloc/reloc_effects/EFCommonEffects2" },
-    { 0x55, 0x55, "nitro:/reloc/reloc_effects/EFCommonEffects3" },
-    { 0xc9, 0xc9, "nitro:/reloc/reloc_extern_data/MiscData201" },
-    { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
-    { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
-    { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
+    { 0xa3, 0xa3, NDS_NITRO_RELOC_FIGHTERS_COMMON "FTManagerCommon" },
+    { 0xcb, 0xcb, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioMain" },
+    { 0xca, 0xca, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioMainMotion" },
+    { 0x128, 0x128, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioModel" },
+    { 0x12a, 0x12a, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioShieldPose" },
+    { 0xcc, 0xcc, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioSpecial1" },
+    { 0x164, 0x164, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioSpecial2" },
+    { 0x129, 0x129, NDS_NITRO_RELOC_FIGHTERS_MAIN "MarioSpecial3" },
+    { 0xd1, 0xd1, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxMain" },
+    { 0xd0, 0xd0, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxMainMotion" },
+    { 0x139, 0x139, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxModel" },
+    { 0x13a, 0x13a, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxShieldPose" },
+    { 0xd2, 0xd2, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxSpecial1" },
+    { 0x15a, 0x15a, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxSpecial2" },
+    { 0xa1, 0xa1, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxSpecial3" },
+    { 0x13c, 0x13c, NDS_NITRO_RELOC_FIGHTERS_MAIN "FoxSpecial4" },
+    { 0x53, 0x53, NDS_NITRO_RELOC_EFFECTS "EFCommonEffects1" },
+    { 0x54, 0x54, NDS_NITRO_RELOC_EFFECTS "EFCommonEffects2" },
+    { 0x55, 0x55, NDS_NITRO_RELOC_EFFECTS "EFCommonEffects3" },
+    { 0xc9, 0xc9, NDS_NITRO_RELOC_EXTERN_DATA "MiscData201" },
+    { 0x12b, 0x12b, NDS_NITRO_RELOC_EXTERN_DATA "MiscData299" },
+    { 0x13b, 0x13b, NDS_NITRO_RELOC_EXTERN_DATA "MiscData315" },
+    { 0x6d, 0x6d, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank109" },
     /* P2-3f48. The item subsystem's shared data and its only dependency.
      * MiscData086 also appears in Yoshi's generated dependency rows below;
      * ndsRelocAssetFindEntry returns the first match and both rows carry the
      * same path, so the duplicate is inert. It is listed here because the item
      * file needs it whether or not Yoshi is in the build. */
-    { 0xfb, 0xfb, "nitro:/reloc/reloc_items/ITCommonData" },
-    { 0x56, 0x56, "nitro:/reloc/reloc_extern_data/MiscData086" },
+    { 0xfb, 0xfb, NDS_NITRO_RELOC_ITEMS "ITCommonData" },
+    { 0x56, 0x56, NDS_NITRO_RELOC_EXTERN_DATA "MiscData086" },
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
@@ -500,6 +500,59 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #endif
 #undef NDS_RELOC_DEMO_ANIM_PATH_ENTRY
 };
+
+/* P8 R2: the directories a table path's first byte names (nds_reloc_assets.h
+ * NDS_NITRO_*), by code. */
+static const char *const sNdsNitroDirs[] = {
+    NULL,
+    "nitro:/reloc/reloc_menus/",
+    "nitro:/reloc/reloc_misc_named/",
+    "nitro:/reloc/reloc_movies/",
+    "nitro:/reloc/reloc_transitions/",
+    "nitro:/reloc/reloc_interface/",
+    "nitro:/reloc/reloc_fighters_common/",
+    "nitro:/reloc/reloc_extern_data/",
+    "nitro:/reloc/reloc_fighters_main/",
+    "nitro:/reloc/reloc_stages/",
+    "nitro:/reloc/reloc_bonus/",
+    "nitro:/reloc/reloc_scene/",
+    "nitro:/reloc/reloc_animations/",
+    "nitro:/reloc/reloc_effects/",
+    "nitro:/reloc/reloc_items/",
+    "nitro:/reloc/reloc_submotions/",
+    "nitro:/reloc/p4/",
+    "nitro:/stages/",
+    "nitro:/audio/",
+    "nitro:/fighters/",
+    "nitro:/fighters/p4/",
+    "nitro:/p4/audio/",
+};
+/* The opens below expand a table path here; they run under the filesystem
+ * lock or on the one loading thread, never two at once. */
+static char sNdsNitroPathScratch[NDS_NITRO_PATH_MAX];
+
+const char *ndsNitroPath(const char *path, char *buf)
+{
+    const u32 code = (path != NULL) ? (u8)path[0] : 0u;
+    const char *in;
+    u32 n = 0u;
+
+    if ((code == 0u) ||
+        (code >= (sizeof(sNdsNitroDirs) / sizeof(sNdsNitroDirs[0]))))
+    {
+        return path;
+    }
+    for (in = sNdsNitroDirs[code]; *in != '\0'; in++)
+    {
+        buf[n++] = *in;
+    }
+    for (in = path + 1; (*in != '\0') && (n + 1u < NDS_NITRO_PATH_MAX); in++)
+    {
+        buf[n++] = *in;
+    }
+    buf[n] = '\0';
+    return buf;
+}
 
 static u16 ndsReadLe16(const u8 *bytes)
 {
@@ -996,7 +1049,7 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
     memcpy(&full[sizeof(prefix) - 1u], name, len);
     full[sizeof(prefix) - 1u + len] = '\0';
     if ((entry == NULL) || (entry->path == NULL) ||
-        (strcmp(entry->path, full) != 0))
+        (strcmp(ndsNitroPath(entry->path, sNdsNitroPathScratch), full) != 0))
     {
         return 0u;
     }
@@ -1465,7 +1518,7 @@ static s32 ndsRelocAssetReadHeaderUnlocked(u32 asset_id, NDSRelocAssetHeader *ou
         return FALSE;
     }
 
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
@@ -1518,7 +1571,7 @@ static s32 ndsRelocAssetReadExternFileIDsUnlocked(u32 asset_id, u16 *out_file_id
         return FALSE;
     }
 
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
@@ -1601,7 +1654,7 @@ static s32 ndsRelocAssetLoadDataUnlocked(u32 asset_id, void *dst, size_t dst_cap
         return FALSE;
     }
 
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
@@ -1688,7 +1741,7 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
         gNdsRelocAssetOpenFailCount++;
         return FALSE;
     }
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;
@@ -2379,8 +2432,12 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
     size_t alloc_size;
 
     if ((gNdsRelocAssetDirectDispatch == 0u) ||
-        (entry == NULL) || (entry->path == NULL) ||
-        (strncmp(entry->path, "nitro:/", 7u) != 0))
+        (entry == NULL) || (entry->path == NULL))
+    {
+        return FALSE;
+    }
+    path = ndsNitroPath(entry->path, sNdsNitroPathScratch);
+    if (strncmp(path, "nitro:/", 7u) != 0)
     {
         return FALSE;
     }
@@ -2390,7 +2447,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
         gNdsRelocAssetDirectFailStep = 1u;
         return FALSE;
     }
-    path = entry->path + 7u;
+    path += 7u;
     nitro_id = ndsRelocAnimDirLookup(entry->asset_id);
     if (nitro_id < 0)
     {
@@ -2499,7 +2556,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
     }
     gNdsRelocAssetDirectFallbackCount++;
 
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         u32 retry;
@@ -2513,18 +2570,20 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
         {
             /* The path the lookup walked, so a corrupt string is one read
              * away from a poisoned directory cache. */
+            const char *failed = ndsNitroPath(entry->path,
+                                              sNdsNitroPathScratch);
             u32 n;
 
-            for (n = 0u; n < 63u && entry->path[n] != '\0'; n++)
+            for (n = 0u; n < 63u && failed[n] != '\0'; n++)
             {
-                gNdsRelocAssetOpenFailPath[n] = entry->path[n];
+                gNdsRelocAssetOpenFailPath[n] = failed[n];
             }
             gNdsRelocAssetOpenFailPath[n] = '\0';
         }
         for (retry = 0u; (retry < 4u) && (file == NULL); retry++)
         {
             NDS_DIAG(gNdsRelocAssetOpenRetryCount++);
-            file = fopen(entry->path, "rb");
+            file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
         }
         if (file == NULL)
         {
@@ -2664,10 +2723,13 @@ s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst, u32 bytes
  * and the measurement that motivated it: include/nds/nds_reloc_assets.h. */
 static s32 ndsRelocAssetStreamOpenUnlocked(NdsRelocAssetStream *stream, const char *path)
 {
+    char full[NDS_NITRO_PATH_MAX];
+
     if (stream == NULL)
     {
         return FALSE;
     }
+    path = ndsNitroPath(path, full);
     stream->file = NULL;
     stream->rom = NULL;
     stream->nitro_id = 0u;
@@ -2856,7 +2918,7 @@ static s32 ndsRelocAssetLoadHeaderAndDataUnlocked(u32 asset_id, void *dst,
         return FALSE;
     }
 
-    file = fopen(entry->path, "rb");
+    file = fopen(ndsNitroPath(entry->path, sNdsNitroPathScratch), "rb");
     if (file == NULL)
     {
         gNdsRelocAssetOpenFailCount++;

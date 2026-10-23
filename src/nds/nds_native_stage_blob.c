@@ -70,50 +70,50 @@ __attribute__((used)) volatile u32 gNdsNativeStageBlobActiveGKind =
  * Dream Land stays linked, and PupupuNew/Explain have no packet yet. */
 static const char *const sNdsNativeStageBlobPaths[NDS_NATIVE_STAGE_BLOB_GKIND_COUNT] =
 {
-    "nitro:/stages/native_stage_castle.bin", /* 0 nGRKindCastle */
-    "nitro:/stages/native_stage_sector.bin", /* 1 nGRKindSector */
-    "nitro:/stages/native_stage_jungle.bin", /* 2 nGRKindJungle */
-    "nitro:/stages/native_stage_zebes.bin", /* 3 nGRKindZebes */
-    "nitro:/stages/native_stage_hyrule.bin", /* 4 nGRKindHyrule */
-    "nitro:/stages/native_stage_yoster.bin", /* 5 nGRKindYoster */
+    NDS_NITRO_STAGES "native_stage_castle.bin", /* 0 nGRKindCastle */
+    NDS_NITRO_STAGES "native_stage_sector.bin", /* 1 nGRKindSector */
+    NDS_NITRO_STAGES "native_stage_jungle.bin", /* 2 nGRKindJungle */
+    NDS_NITRO_STAGES "native_stage_zebes.bin", /* 3 nGRKindZebes */
+    NDS_NITRO_STAGES "native_stage_hyrule.bin", /* 4 nGRKindHyrule */
+    NDS_NITRO_STAGES "native_stage_yoster.bin", /* 5 nGRKindYoster */
     NULL, /* 6 nGRKindPupupu: linked, never loaded */
-    "nitro:/stages/native_stage_yamabuki.bin", /* 7 nGRKindYamabuki */
-    "nitro:/stages/native_stage_inishie.bin", /* 8 nGRKindInishie */
-    "nitro:/stages/native_stage_pupupusmall.bin", /* 9 nGRKindPupupuSmall */
+    NDS_NITRO_STAGES "native_stage_yamabuki.bin", /* 7 nGRKindYamabuki */
+    NDS_NITRO_STAGES "native_stage_inishie.bin", /* 8 nGRKindInishie */
+    NDS_NITRO_STAGES "native_stage_pupupusmall.bin", /* 9 nGRKindPupupuSmall */
     NULL, /* 10 nGRKindPupupuNew */
     NULL, /* 11 nGRKindExplain */
-    "nitro:/stages/native_stage_yostersmall.bin", /* 12 nGRKindYosterSmall */
-    "nitro:/stages/native_stage_metal.bin", /* 13 nGRKindMetal */
-    "nitro:/stages/native_stage_zako.bin", /* 14 nGRKindZako */
-    "nitro:/stages/native_stage_bonus3.bin", /* 15 nGRKindBonus3 */
-    "nitro:/stages/native_stage_last.bin", /* 16 nGRKindLast */
-    "nitro:/stages/native_stage_bonus1_mario.bin", /* 17 */
-    "nitro:/stages/native_stage_bonus1_fox.bin", /* 18 */
-    "nitro:/stages/native_stage_bonus1_donkey.bin", /* 19 */
-    "nitro:/stages/native_stage_bonus1_samus.bin", /* 20 */
-    "nitro:/stages/native_stage_bonus1_luigi.bin", /* 21 */
-    "nitro:/stages/native_stage_bonus1_link.bin", /* 22 */
-    "nitro:/stages/native_stage_bonus1_yoshi.bin", /* 23 */
-    "nitro:/stages/native_stage_bonus1_captain.bin", /* 24 */
-    "nitro:/stages/native_stage_bonus1_kirby.bin", /* 25 */
-    "nitro:/stages/native_stage_bonus1_pikachu.bin", /* 26 */
-    "nitro:/stages/native_stage_bonus1_purin.bin", /* 27 */
-    "nitro:/stages/native_stage_bonus1_ness.bin", /* 28 */
-    "nitro:/stages/native_stage_bonus2_mario.bin", /* 29 */
-    "nitro:/stages/native_stage_bonus2_fox.bin", /* 30 */
-    "nitro:/stages/native_stage_bonus2_donkey.bin", /* 31 */
-    "nitro:/stages/native_stage_bonus2_samus.bin", /* 32 */
-    "nitro:/stages/native_stage_bonus2_luigi.bin", /* 33 */
-    "nitro:/stages/native_stage_bonus2_link.bin", /* 34 */
-    "nitro:/stages/native_stage_bonus2_yoshi.bin", /* 35 */
-    "nitro:/stages/native_stage_bonus2_captain.bin", /* 36 */
-    "nitro:/stages/native_stage_bonus2_kirby.bin", /* 37 */
-    "nitro:/stages/native_stage_bonus2_pikachu.bin", /* 38 */
-    "nitro:/stages/native_stage_bonus2_purin.bin", /* 39 */
-    "nitro:/stages/native_stage_bonus2_ness.bin", /* 40 */
+    NDS_NITRO_STAGES "native_stage_yostersmall.bin", /* 12 nGRKindYosterSmall */
+    NDS_NITRO_STAGES "native_stage_metal.bin", /* 13 nGRKindMetal */
+    NDS_NITRO_STAGES "native_stage_zako.bin", /* 14 nGRKindZako */
+    NDS_NITRO_STAGES "native_stage_bonus3.bin", /* 15 nGRKindBonus3 */
+    NDS_NITRO_STAGES "native_stage_last.bin", /* 16 nGRKindLast */
+    NDS_NITRO_STAGES "native_stage_bonus1_mario.bin", /* 17 */
+    NDS_NITRO_STAGES "native_stage_bonus1_fox.bin", /* 18 */
+    NDS_NITRO_STAGES "native_stage_bonus1_donkey.bin", /* 19 */
+    NDS_NITRO_STAGES "native_stage_bonus1_samus.bin", /* 20 */
+    NDS_NITRO_STAGES "native_stage_bonus1_luigi.bin", /* 21 */
+    NDS_NITRO_STAGES "native_stage_bonus1_link.bin", /* 22 */
+    NDS_NITRO_STAGES "native_stage_bonus1_yoshi.bin", /* 23 */
+    NDS_NITRO_STAGES "native_stage_bonus1_captain.bin", /* 24 */
+    NDS_NITRO_STAGES "native_stage_bonus1_kirby.bin", /* 25 */
+    NDS_NITRO_STAGES "native_stage_bonus1_pikachu.bin", /* 26 */
+    NDS_NITRO_STAGES "native_stage_bonus1_purin.bin", /* 27 */
+    NDS_NITRO_STAGES "native_stage_bonus1_ness.bin", /* 28 */
+    NDS_NITRO_STAGES "native_stage_bonus2_mario.bin", /* 29 */
+    NDS_NITRO_STAGES "native_stage_bonus2_fox.bin", /* 30 */
+    NDS_NITRO_STAGES "native_stage_bonus2_donkey.bin", /* 31 */
+    NDS_NITRO_STAGES "native_stage_bonus2_samus.bin", /* 32 */
+    NDS_NITRO_STAGES "native_stage_bonus2_luigi.bin", /* 33 */
+    NDS_NITRO_STAGES "native_stage_bonus2_link.bin", /* 34 */
+    NDS_NITRO_STAGES "native_stage_bonus2_yoshi.bin", /* 35 */
+    NDS_NITRO_STAGES "native_stage_bonus2_captain.bin", /* 36 */
+    NDS_NITRO_STAGES "native_stage_bonus2_kirby.bin", /* 37 */
+    NDS_NITRO_STAGES "native_stage_bonus2_pikachu.bin", /* 38 */
+    NDS_NITRO_STAGES "native_stage_bonus2_purin.bin", /* 39 */
+    NDS_NITRO_STAGES "native_stage_bonus2_ness.bin", /* 40 */
 #if NDS_P5
 #define NDS_P5_BLOB_PATH(g, cname, name, map_file, map_offset) \
-    [g] = "nitro:/stages/native_stage_" #name ".bin",
+    [g] = NDS_NITRO_STAGES "native_stage_" #name ".bin",
     NDS_P5_NATIVE_STAGE_ROWS(NDS_P5_BLOB_PATH)
 #undef NDS_P5_BLOB_PATH
 #endif

@@ -133,7 +133,7 @@ BACKEND_TOKEN_ANCHOR = ("    if (token == ndsRelocFileID(&llMNVSResultsFileID)) 
                         "return NDS_RELOC_ASSET_MN_VS_RESULTS;\n")
 BACKEND_KNOWN_ANCHOR = "    NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)\n"
 BACKEND_TABLE_START = "sNdsBattleInterfaceSpriteDescs[] = {"
-ASSETS_ANCHOR = '    { 0x22, 0x22, "nitro:/reloc/reloc_menus/MNVSResults" },\n'
+ASSETS_ANCHOR = '    { 0x22, 0x22, NDS_NITRO_RELOC_MENUS "MNVSResults" },\n'
 MAKE_LIST_ANCHOR = "NDS_VSBATTLE_RELOC_FILES := \\\n"
 MAKE_FOREACH_ANCHOR = ("\t$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),"
                        "$(NITROFS_DIR)/reloc/$(file)) \\\n")
@@ -339,7 +339,7 @@ class Plan:
 
     def assets_line(self) -> str:
         return (f"    {{ 0x{self.file_id:x}, 0x{self.file_id:x}, "
-                f'"nitro:/reloc/{self.dir}/{self.cname}" }},\n')
+                f'NDS_NITRO_{self.dir.upper()} "{self.cname}" }},\n')
 
     def make_entry(self) -> str:
         return f"{self.dir}/{self.cname}"

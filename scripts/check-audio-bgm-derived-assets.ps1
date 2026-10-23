@@ -234,13 +234,14 @@ if (-not $service.Contains('tickTaskStart(&sBgmTimers[') -or
 # Owner, docs/BUGS.md Audio: "ALL BGM should be IMA-ADPCM". The PCM16 stream
 # arm that carried Mushroom Kingdom from 2026-09-07 was retired 2026-09-22;
 # no track may name a raw asset or prepare a PCM16 hardware channel again.
-if ($runtime -match 'nitro:/audio/bgm_\w+\.raw' -or ($runtime + $service).Contains('SoundFmt_Pcm16')) {
+# (P8 R2: a track's path is its directory code and file, NDS_NITRO_AUDIO "bgm_...".)
+if ($runtime -match '(nitro:/audio/|NDS_NITRO_AUDIO ")bgm_\w+\.raw' -or ($runtime + $service).Contains('SoundFmt_Pcm16')) {
     throw 'A BGM track streams raw PCM; every BGM track must be an IMA-ADPCM packet stream.'
 }
 if ($runtime -notmatch '\{\s*nSYAudioBGMInishie,\s*NDS_AUDIO_BGM_PATH_INISHIE,' -or
-    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE "nitro:/audio/bgm_inishie_ima.bin"') -or
+    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE NDS_NITRO_AUDIO "bgm_inishie_ima.bin"') -or
     $runtime -notmatch '\{\s*nSYAudioBGMInishieHurry,\s*NDS_AUDIO_BGM_PATH_INISHIE_HURRY,' -or
-    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY "nitro:/audio/bgm_inishie_hurry_ima.bin"')) {
+    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY NDS_NITRO_AUDIO "bgm_inishie_hurry_ima.bin"')) {
     throw 'Mushroom Kingdom runtime rows do not stream the IMA pair.'
 }
 
