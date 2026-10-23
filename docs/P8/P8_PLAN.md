@@ -92,7 +92,8 @@ battle-frame watchdog, breadcrumbs: `nds_freeze_diagnostics.c`).
 Every turn:
 
 1. **Intake.** Read `docs/BUGS.md`, `docs/PLAYTEST_NOTES.md` and
-   `docs/OWNER_QUESTIONS.md` for new owner text. An owner row goes to the top.
+   `docs/OWNER_QUESTIONS.md` for new owner text. An owner row goes to the top;
+   loop V (particle animations, owner 2026-10-22) is the standing owner row.
 2. **Pick** the first open item in `P8_STATUS.md`, in this order: a crash,
    freeze or regression any run found; an owner row; the current phase item.
    After D, RAM (R) and CPU (P) batches alternate, the larger expected gain
@@ -202,6 +203,93 @@ wireless start on a slow card. Confetti stays parked until the owner says go.
 0 desyncs and 0 native failures; heap low-water >= 25,600 everywhere on the
 ship layout; every stack >= 25% free; pool growth flat; every owner row fixed
 or answered.
+
+## 2b. Loop V -- particle animations (owner, 2026-10-22: high priority)
+
+Owner: "Lets make a plan to fix this so we have actual animations now.
+resolution reductions may need to take place. 32x32>24x24 is approved
+automatically (0.75x reductions approved)." V runs first, beside S; R and P
+go on in its gaps (V spends texture VRAM, not main RAM).
+
+**The problem.** The particle quad atlas
+(`scripts/generate_nds_particle_banks.py` ->
+`include/nds/generated/nds_particle_banks.generated.h`, drawn by
+`nds_renderer_particles.c`) keeps one frame of most textures: the admission
+search settles at `QUAD_FRAME_CAP` 1, so the effect shows frame 0 for its
+whole life. The sheets are 8 KiB allocations, the only size texture VRAM has
+never refused (16 and 32 KiB failed for contiguity, 2026-08-02/03, and took
+the stage's texture resolve and the Results panel with them); the sheet count
+is the free variable (`QUAD_ATLAS_SHEETS_MAX`, 9 today). The runtime lookup
+(`ndsParticleQuadFrameFor`) returns the nearest earlier packed frame, so a
+decimated animation still plays its whole arc, at a lower rate.
+
+Done first: the item explosion (texture 29, `a45a48ffd2a`) and SparkleWhite
+(45, `cd0c687f4d5`), all frames at 24x24, sheets 8 and 9. Still on frame 0
+(the owner's list; DS frames / N64 frames):
+
+| effect | texture | frames |
+|---|---|---|
+| DamageElectric (electric hit) | 28 (32x32) | 1/20 |
+| DamageCoin (Mario's coins) | 25 (16x16) | 1/15 |
+| ImpactShock | 30 (32x32) | 1/10 |
+| DustDash (running dust) | 17 (64x64) | 1/10 |
+| DamageFire (fire hit) | 40 (32x32) | 1/9 |
+| DamageNormalLight (light hits) | 33-36 (32x32) | 1/8 to 1/9 |
+| FlameRandom/Static, DustLight/Collide/Expand | 15 (16x16) | 1/8 |
+| DustHeavy, DustHeavyDouble | 16 (64x64) | 1/7 |
+| FlameLR (fighter on fire) | 12 (32x32) | 1/6 |
+| ItemSpawnSwirl | 42 (32x32) | 1/4 |
+| DamageNormalHeavy | 41 (32x32) | 1/3 |
+| SetOff | 38 (16x16) | 1/3 |
+| ThunderAmp (Pikachu's Thunder burst) | 46 (64x64) | 1/3 |
+| FlashSmall/Middle/Large | 2 (16x16) | 1/3 |
+| FireGrind | 5 (16x16) | 1/3 |
+| EggBreak | 44 (16x16) | 1/2 |
+
+Every source frame of these is about 187,000 texels at source size and about
+105,000 at 0.75x (one byte a texel; the CI4 ones half): 13 to 23 more 8 KiB
+sheets against the nine resident. The two 64x64 dusts are 40% of it.
+
+**V0 The ledger (first).** (a) Per texture: the frames its reachable scripts
+actually step (the generator's script walk), its size and format, its cells
+today, and its texels at 1x and 0.75x. (b) Texture VRAM in battle on the gate
+ROM: `gNdsVramCensus` (free bytes, the largest free run, the minimum over the
+match, per-bucket peaks) on every VS stage with the heavy roster and on Hyrule
+Temple and Saffron City with mix A. Battle texture VRAM is banks A, B and D
+(D lent from BG3 for the match), holding the static battle corpus, the
+interface atlases, the particle sheets and the texture cache's stage and
+fighter textures. Output: how many 8 KiB sheets fit with one sheet's margin
+above the worst stage's peak. (c) The texture-cache name budget (the
+particle/Whispy/blaster static assert, 12 names today).
+
+**V1 Fit**, cheapest first, until every listed effect has its frames:
+1. Only the frames the scripts step ship (no unreachable frame).
+2. Every animated cell at 0.75x (approved): 32x32 -> 24x24, 64x64 -> 48x48,
+   16x16 -> 12x12, area-averaged (`QUAD_CELL_SIZE`).
+3. More 8 KiB sheets, inside V0's measured headroom.
+4. Even decimation of the longest animations (DamageElectric's 20, the coin's
+   15) before any further size cut: the full arc at a lower rate.
+5. Per-match residency if VRAM still falls short: only the textures this
+   match's fighters, items and stage can spawn (the generator's reach data),
+   loaded with the match like the fighter packs.
+6. Anything below 0.75x, or a decimation the eye can see, goes to the owner
+   with captures first.
+
+**V2 Bake** one family a batch (hits, dust, fire, electric, flashes, items):
+the generator's frame lists, cell sizes and sheet count; the runtime's name
+assert and per-sheet binds.
+
+**V3 Prove** each batch: captures of each effect beside the N64 frames (the
+generator's source decode), every scripted frame present and in order; the
+particle check's pins (`check-nds-particle-banks.ps1`); no texture resolve
+failure, no static texture violation, the stage prepare count and the Results
+scoreboard as before (the 2026-08-02 failure modes); WORK P95 on the short
+worst-case sweep no worse (a sheet change costs one bind); main-RAM heap
+unchanged; a play ROM for the owner.
+
+**Exit V:** every listed effect, and any other effect whose source animates,
+plays its scripted frames at 0.75x or better, or the owner has picked the
+remaining reductions.
 
 ## 3. Loop C -- readability and ease of development
 
@@ -380,10 +468,11 @@ counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 ## 6. Done
 
 1. Exit S, on the final HEAD.
-2. Exit C.
-3. Exit R.
-4. Exit P.
-5. A final play ROM, the full S1 matrix and the worst-case search on the final
+2. Exit V.
+3. Exit C.
+4. Exit R.
+5. Exit P.
+6. A final play ROM, the full S1 matrix and the worst-case search on the final
    HEAD, recorded in `P8_STATUS.md`.
 
 ## 7. Owner decisions (answered 2026-10-22)
@@ -404,6 +493,7 @@ counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 /goal run docs/P8/P8_PLAN.md (stability, readability, RAM and CPU hunting) as fast as possible; docs/P8/P8_STATUS.md is the cursor.
 Done when:
 Every owner row in BUGS.md and PLAYTEST_NOTES.md is fixed.
+Every particle effect whose source animates plays its scripted frames at 0.75x or better (loop V), or the owner has picked the rest.
 Stability matrix on the final HEAD (ship layout): every mode x every fighter, 30-min 4P all-items soaks, 2-4 console heavy mixes, 50 rematch laps, seeded fuzz, 16 KB heap-squeeze and slow-SD runs: 0 crashes, 0 freezes, 0 desyncs, 0 native failures; heap low-water >= 25,600; every stack >= 25% free; pool growth flat.
 No port-owned source over 4,000 lines; every port file has a purpose header; history names gone; Makefile split; live tools in scripts/tools with quick_check.ps1 green.
 Battle-resident RAM >= 128 KB below play-p7z (or every lever in P8_PLAN section 4 settled with numbers); Hyrule Temple keeps its whole stage program with the heavy roster and the four mixes.

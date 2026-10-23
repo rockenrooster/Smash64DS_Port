@@ -5,12 +5,12 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** R0/P0 and the R and P loops (owner order: C and D before
-the RAM hunt, both done). R0's ledger tool is `scripts/tools/ram_ledger.py`
-(`play-p8f`: image 2,925,948 B, -960 against `play-p7z`); R1 (the renderer's
-cold code as Thumb `-Os`) first. F, G (with the `nds_ftanim_track.c` stubs and
-their generated pack), H-2 and I interleave. The owner's art for Ike's and
-Palutena's congratulations screens is in `play-p8e`.
+**Next action:** loop V first (owner 2026-10-22, high priority: the particle
+effects that hold frame 0, plan section 2b): V0's ledger -- each texture's
+scripted frames and costs, and texture VRAM per stage (`gNdsVramCensus` on
+the gate ROM) -- then V1-V3 one effect family a batch. R1 (the renderer's
+cold code as Thumb) goes on in V's gaps: its profiles and the `s67` baseline
+gate are building. F, G2, H-2 and I interleave.
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -47,6 +47,8 @@ commit with explicit paths only.
 | G Makefile cleanup and split | open | proof: `make -n` identity |
 | H-2 the rest of the tools, `quick_check.ps1` | open | |
 | I docs routing, P7 close-out, archive | in progress | `AGENTS.md`, `HANDOFF.md` and `docs/README.md` route to P8 (the owner's pending README rows kept); P7's rows closed with their evidence (`ce376f1be3e`); next the `PERF_LEDGER.md` archive (`BUG_NOTES.md` waits: the owner's move from `docs/p2/` is uncommitted) |
+| V0 particle ledger: scripted frames and costs per texture; texture VRAM per stage | open | owner 2026-10-22 high priority (plan 2b); the item explosion (`a45a48ffd2a`) and SparkleWhite (`cd0c687f4d5`) already play all frames |
+| V1-V3 particle animations, one effect family a batch (hits, dust, fire, electric, flashes, items) | open | 0.75x approved; below that, or visible decimation, to the owner with captures |
 | S2 fault injection (squeeze, slow storage, long soak, laps, fuzz) | open | lab flags only |
 | S4 stalls (load ledger, storage waits, menu spikes) | open | |
 | S5 freeze report gaps | open | menus, loads, before the first frame; identity fields |
