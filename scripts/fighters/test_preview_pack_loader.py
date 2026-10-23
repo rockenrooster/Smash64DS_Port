@@ -11,8 +11,10 @@ Scope actually proven here (host cap: 3 FPCs, 2 compiler runs max):
     ndsPreviewRange, ndsPreviewValidateSections, ndsPreviewSectionContains,
     ndsPreviewSection,
     ndsPreviewFileOffset, ndsRelocNativeSourceSize, ndsRelocNativeRootOffset,
-    ndsRelocNativeAssetAddress (all from src/port/reloc_preview_pack.c).
-  * stubbed seams (NOT claimed as coverage): the NDSPreviewResident /
+    ndsRelocSceneShowsPreviewFighter, ndsRelocNativeAssetAddress (all from
+    src/port/reloc_preview_pack.c).
+  * stubbed seams (NOT claimed as coverage): ndsPreviewKindIndex (the
+    twelve originals only; no P4 or Metal Mario rows), the NDSPreviewResident /
     NDSRelocLoadedFile / Gfx / scene types, sNdsPreviewResidents table,
     sNdsRelocSceneGeneration, ndsRelocReadNative32 (portable memcpy),
     ndsRelocFindLoadedFileByData (small table scan), NitroFS FILE I/O,
@@ -79,10 +81,12 @@ pin(r"header\.fkind != \(u32\)fkind", SRC, "fkind check")
 pin(r"header\.main_asset_id != ndsRelocAssetIDForToken", SRC, "main id check")
 pin(r"header\.model_asset_id != ndsRelocAssetIDForToken", SRC, "model id check")
 pin(r"header\.file_bytes != \(u32\)file_size", SRC, "file size check")
-pin(r"ndsPreviewHash\(data, header\.data_bytes, 2166136261u\) != header\.data_hash",
-    SRC, "data hash check")
-pin(r"hash != header\.fixup_hash", SRC, "fixup hash check")
-pin(r"ndsPreviewHash\(spans.*!= header\.span_hash", SRC, "span hash check")
+# The loader hashes incrementally (one chunk a pump step), then compares.
+pin(r"load->hash = ndsPreviewHash\(load->data \+ load->cursor, chunk, load->hash\)"
+    r".*load->hash != load->data_hash", SRC, "data hash check")
+pin(r"load->hash = ndsPreviewHash\(pair, sizeof\(\*pair\), load->hash\)"
+    r".*load->hash != load->fixup_hash", SRC, "fixup hash check")
+pin(r"ndsPreviewHash\(load->spans.*!= load->span_hash", SRC, "span hash check")
 pin(r"0xdf000000u", SRC, "root ENDDL tag")
 pin(r"NDS_PREVIEW_PACK_NULL", SRC, "null target")
 pin(r"NDS_PREVIEW_PACK_MAGIC 0x31435046u", PACK_H, "FPC1 magic")
@@ -100,6 +104,7 @@ def extract_real():
         "sourcesize": function(SRC, "ndsRelocNativeSourceSize"),
         "rootoff": function(SRC, "ndsRelocNativeRootOffset"),
         "battle_scene": function(SRC, "ndsRelocUseBattleCoreFighterData"),
+        "shows": function(SRC, "ndsRelocSceneShowsPreviewFighter"),
         "assetaddr": function(SRC, "ndsRelocNativeAssetAddress"),
     }
     if "16777619u" not in out["hash"]:
@@ -137,6 +142,7 @@ typedef int32_t s32;
 #define NDS_PREVIEW_PACK_MAX_SECTIONS 4u
 #define NDS_PREVIEW_PACK_NULL 0xffffffffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
+#define NDS_RELOC_COMPACT_MODEL_HEADER 16u
 
 typedef struct NDSPreviewPackHeader {
     u32 magic, version, file_bytes, fkind, section_count, fixup_count,
@@ -163,18 +169,27 @@ typedef struct NDSRelocLoadedFile {
     u8 internal_fixups_applied; u8 external_fixups_applied;
     u8 format_fixups_applied; u8 fixups_applying; u8 offsets_are_relative;
     u8 reserved[3];
+    u16 compact_lo; u16 compact_hi;
 } NDSRelocLoadedFile;
 typedef struct NDSPreviewResident {
     u32 generation;
     u32 model_source_bytes;
+    u32 sorted_sections;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
 } NDSPreviewResident;
 
 static NDSPreviewResident sNdsPreviewResidents[12];
+/* Kind-row stub: the twelve originals only (production adds P4 contents and
+ * Metal Mario after them). */
+static s32 ndsPreviewKindIndex(s32 kind)
+{
+    return ((kind >= 0) && (kind < 12)) ? kind : -1;
+}
 static u32 sNdsRelocSceneGeneration = 7u;
 /* Stub scene gate values (test only; production uses the real scene enum). */
 enum { nSCKind1PGamePlayers = 0xA5u, nSCKindPlayersVS = 0xA6u, nSCKindVSResults = 0xA7u,
+       nSCKind1PBonus1Players = 0xA8u, nSCKind1PBonus2Players = 0xA9u,
        nSCKindOther = 0x00u };
 static struct { u8 scene_curr; u8 scene_prev; } gSCManagerSceneData;
 #define NDS_P2_COMPACT_BATTLE_FIGHTERS 1
@@ -488,6 +503,7 @@ def build_source():
         real["sourcesize"],
         real["rootoff"],
         real["battle_scene"],
+        real["shows"],
         real["assetaddr"],
         HOST_MAIN,
     ])
@@ -607,10 +623,13 @@ class PreviewPackLoaderTest(unittest.TestCase):
         """Pin the inline header/normalizer seams the C suite assumes."""
         for needle in ("ndsRelocNormalizeFighterAttributesFile(records[0])",
                        "ndsRelocNormalizeBattleInterfaceSprites(records[i])",
-                       "*fighter->p_file_main = records[0]->data",
-                       "*fighter->p_file_model = records[1]->data",
                        "sNdsRelocSceneGeneration"):
             self.assertIn(needle, SRC, needle)
+        # The publish step hands out the Main and Model sections of the one
+        # relocated pack allocation (ndsPreviewPackLoadPublish).
+        for pattern in (r"\*fighter->p_file_main =\s*\(u8 \*\)data \+ load->sections\[0\]\.data_offset;",
+                        r"\*fighter->p_file_model =\s*\(u8 \*\)data \+ load->sections\[1\]\.data_offset;"):
+            self.assertRegex(SRC, pattern)
 
 
 class CompactConsumerAdmissionTests(unittest.TestCase):
@@ -640,7 +659,7 @@ class CompactConsumerAdmissionTests(unittest.TestCase):
             text = source(ROOT / path)
             match = re.search(pattern, text)
             self.assertIsNotNone(match, path)
-            terms = [term.strip() for term in match[1].split("||")]
+            terms = [term.strip(" ()") for term in match[1].split("||")]
             self.assertTrue(all(re.fullmatch(r"NDS_[A-Z0-9_]+", term)
                                 for term in terms), path)
             for enabled, expected in configurations:

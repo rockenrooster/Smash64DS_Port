@@ -1,14 +1,14 @@
-"""Scene-owned software sprite scratch lifetime (HW heap config).
+"""Scene-owned sprite scratch lifetime.
 
-Main moved the 153600-byte HW sOriginalSpritePreview off permanent BSS onto
-the scene heap: pointer + generation, allocated once per using generation in
+The 153600-byte sOriginalSpritePreview lives on the scene heap, not in
+permanent BSS: pointer + generation, allocated once per using generation in
 ndsPlatformBeginOriginalSpritePreview; ndsPlatformClearOriginalSpritePreview
 resets extents without touching stale/freed memory; commit rejects a stale
-generation. SW keeps the static array. This test host-executes the ACTUAL
-production Begin/Clear bodies plus the real commit validity gate and scaler
-(extracted verbatim via source_test_helpers, not Python replicas) under both
--DNDS_RENDERER_HW_TRIANGLES=1 and =0, and audits live callers for holds that
-would block the change.
+generation. (The software-triangle build's static array went with that path,
+1c8636a6632.) This test host-executes the ACTUAL production Begin/Clear bodies
+plus the real commit validity gate and scaler (extracted verbatim via
+source_test_helpers, not Python replicas), and audits live callers for holds
+that would block the change.
 
 Measured benefit (narrow): a native CSS round with no SObj draw never takes
 the allocation path, so its scenes keep the freed BSS. This test does NOT
@@ -34,7 +34,6 @@ BEGIN = function(PROD, "ndsPlatformBeginOriginalSpritePreview")
 RESERVE = function(PROD, "ndsPlatformReserveOriginalSpritePreview")
 CLEAR = function(PROD, "ndsPlatformClearOriginalSpritePreview")
 COMMIT = function(PROD, "ndsPlatformCommitOriginalSpritePreviewLayer")
-COPY = function(PROD, "ndsPlatformCopyOriginalSpritePreviewNative")
 SCALE = function(PROD, "ndsPlatformScaleOriginalSpritePreviewNearest")
 ADVANCE = function(PROD, "ndsPlatformAdvanceOriginalSpriteOverlayEpoch")
 CLEARPIX = function(PROD, "ndsPlatformOriginalSpriteOverlayClearPixels")
@@ -59,7 +58,6 @@ typedef int32_t s32;
 #define SCREEN_HEIGHT 192
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "line %d: %s\n", __LINE__, #x); exit(1); } } while (0)
-#if NDS_RENDERER_HW_TRIANGLES
 static u16 *sOriginalSpritePreview;
 static u32 sOriginalSpritePreviewGeneration;
 volatile u32 gNdsTaskmanHeapGeneration;
@@ -85,9 +83,6 @@ void *syTaskmanMalloc(size_t size, u32 align)
     if (heap_next >= 4) { fprintf(stderr, "heap pool exhausted\n"); exit(1); }
     return heap_pool[heap_next++];
 }
-#else
-static u16 sOriginalSpritePreview[320u * 240u];
-#endif
 static u32 sOriginalSpritePreviewWidth;
 static u32 sOriginalSpritePreviewHeight;
 static s32 sOriginalSpritePreviewX;
@@ -95,9 +90,6 @@ static s32 sOriginalSpritePreviewY;
 static u32 sOriginalSpritePreviewReady;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
-#if !NDS_RENDERER_HW_TRIANGLES
-static u16 sOriginalSpriteDisplayPreview[320u * 240u];
-#endif
 static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 volatile u32 gNdsOriginalSpritePreviewReady;
 volatile u32 gNdsOriginalSpritePreviewCommitCount;
@@ -110,7 +102,6 @@ volatile u32 gNdsOriginalSpriteBg2FinalWriteBytes;
 volatile u32 gNdsOriginalSpriteBg3ClearBytes;
 volatile u32 gNdsOriginalSpriteBg3CopyBytes;
 volatile u32 gNdsOriginalSpriteBg3FinalWriteBytes;
-#if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
 static u32 sOriginalSpriteOverlayLayerMask = 0u;
@@ -128,8 +119,20 @@ static void dmaFillHalfWords(u16 value, void *dst, unsigned size)
     fprintf(stderr, "dmaFill must not run with mask 0\n");
     exit(1);
 }
-#endif
-''' + SCALE + "\n#if NDS_RENDERER_HW_TRIANGLES\n" + ADVANCE + "\n" + CLEARPIX + "\n#else\n" + COPY + "\n#endif\n" + RESERVE + "\n" + BEGIN + "\n" + COMMIT + "\n" + CLEAR + r'''
+/* The commit's transition and BG3-loan seams: no snapshot is held and BG3 is
+ * never lent here. */
+static u32 sOriginalSpriteOverlayBg3Lent;
+static u32 sOriginalSpriteOverlayBg3ReturnPending;
+volatile u32 gNdsVramBg3RefusedWrites;
+static void ndsPlatformTransitionThaw(void) {}
+static void ndsPlatformTransitionSnapshotLeaveBg2(void) {}
+static void ndsPlatformTransitionSnapshotLeaveBg3(void) {}
+static void ndsPlatformVramReturnBankDNow(void)
+{
+    fprintf(stderr, "bank D return must not run without a lent BG3\n");
+    exit(1);
+}
+''' + SCALE + "\n" + ADVANCE + "\n" + CLEARPIX + "\n" + RESERVE + "\n" + BEGIN + "\n" + COMMIT + "\n" + CLEAR + r'''
 static void check_window_cleared(u16 *base, u32 w, u32 h, u16 sentinel)
 {
     for (u32 r = 0; r < 240u; r++) {
@@ -145,7 +148,6 @@ static void check_window_cleared(u16 *base, u32 w, u32 h, u16 sentinel)
 }
 int main(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 pitch = 0;
     u16 *p, *q;
     u32 cc;
@@ -251,37 +253,15 @@ int main(void)
     CHECK(gNdsOriginalSpritePreviewCommitCount == cc + 1u);
     printf("HW PASS\n");
     return 0;
-#else
-    u32 pitch = 0;
-    u16 *p = ndsPlatformBeginOriginalSpritePreview(320u, 240u, 0, 0, &pitch);
-    CHECK(p != NULL && pitch == 320u);
-    CHECK(ndsPlatformBeginOriginalSpritePreview(1u, 1u, 0, 0, &pitch) == p);
-    CHECK(ndsPlatformBeginOriginalSpritePreview(0u, 240u, 0, 0, &pitch) == NULL);
-    CHECK(ndsPlatformBeginOriginalSpritePreview(321u, 240u, 0, 0, &pitch) == NULL);
-    for (unsigned i = 0; i < 320u * 240u; i++) p[i] = (u16)0x9E9E;
-    for (unsigned i = 0; i < 320u * 240u; i++) sOriginalSpriteDisplayPreview[i] = (u16)0x9E9E;
-    ndsPlatformClearOriginalSpritePreview();
-    CHECK(sOriginalSpritePreviewWidth == 0u && sOriginalSpritePreviewHeight == 0u);
-    CHECK(sOriginalSpriteDecodeCacheEpoch != 0u);
-    for (unsigned i = 0; i < 320u * 240u; i++) CHECK(p[i] == 0);
-    for (unsigned i = 0; i < 320u * 240u; i++) CHECK(sOriginalSpriteDisplayPreview[i] == 0);
-    memset(p, 0xA5, 320u * 240u * sizeof(u16));
-    CHECK(ndsPlatformBeginOriginalSpritePreview(64u, 48u, 0, 0, &pitch) == p);
-    check_window_cleared(p, 64u, 48u, (u16)0xA5A5);
-    printf("SW PASS\n");
-    return 0;
-#endif
 }
 '''
 
 
-def compile_and_run(compiler, directory, hw):
-    source = Path(directory) / ("scratch_hw.c" if hw else "scratch_sw.c")
-    program = Path(directory) / ("scratch_hw.exe" if hw else "scratch_sw.exe")
+def compile_and_run(compiler, directory):
+    source = Path(directory) / "scratch_hw.c"
+    program = Path(directory) / "scratch_hw.exe"
     source.write_text(host_source())
-    flags = ["-std=c11", "-Wall", "-Wextra",
-             f"-DNDS_RENDERER_HW_TRIANGLES={1 if hw else 0}",
-             str(source), "-o", str(program)]
+    flags = ["-std=c11", "-Wall", "-Wextra", str(source), "-o", str(program)]
     subprocess.run([compiler] + flags, check=True, capture_output=True,
                    text=True)
     result = subprocess.run([str(program)], capture_output=True, text=True)
@@ -291,9 +271,8 @@ def compile_and_run(compiler, directory, hw):
 class SpriteScratchLifetimeTest(unittest.TestCase):
     def test_production_shape_pins(self):
         self.assertEqual(SCRATCH_BYTES, 153600)
-        hw = PROD[PROD.index("#if NDS_RENDERER_HW_TRIANGLES"):]
-        self.assertIn("static u16 *sOriginalSpritePreview;", hw)
-        self.assertIn("static u32 sOriginalSpritePreviewGeneration;", hw)
+        self.assertIn("static u16 *sOriginalSpritePreview;", PROD)
+        self.assertIn("static u32 sOriginalSpritePreviewGeneration;", PROD)
         self.assertRegex(
             RESERVE,
             r"syTaskmanMalloc\(\s*NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH\s*\*"
@@ -304,39 +283,22 @@ class SpriteScratchLifetimeTest(unittest.TestCase):
         self.assertIn(
             "(sOriginalSpritePreviewGeneration != gNdsTaskmanHeapGeneration)",
             COMMIT)
-        # HW Clear resets extents only; the pixel memsets live under !HW.
-        gate = CLEAR.index("#if !NDS_RENDERER_HW_TRIANGLES")
-        self.assertLess(CLEAR.index("sOriginalSpritePreviewWidth = 0;"), gate)
-        self.assertLess(gate, CLEAR.index("sOriginalSpriteDecodeCacheEpoch++;"))
-        before, after = CLEAR[:gate], CLEAR[gate:]
-        self.assertNotIn("memset", before)
-        self.assertIn("memset(sOriginalSpritePreview, 0", after)
-        self.assertIn("memset(sOriginalSpriteDisplayPreview, 0", after)
-        # SW keeps the retained static array; no heap call outside the HW arm.
-        self.assertIn("static u16 sOriginalSpritePreview[", PROD)
-        for match in re.finditer(r"syTaskmanMalloc\(", PROD):
-            arm = PROD.rfind("#if NDS_RENDERER_HW_TRIANGLES", 0, match.start())
-            end = PROD.find("#else", arm)
-            self.assertNotEqual(arm, -1)
-            self.assertLess(match.start(), end)
+        # Clear resets extents and bumps the decode epoch; no pixel memory.
+        self.assertIn("sOriginalSpritePreviewWidth = 0;", CLEAR)
+        self.assertIn("sOriginalSpriteDecodeCacheEpoch++;", CLEAR)
+        self.assertNotIn("memset", CLEAR)
+        # No retained static frame: the scratch is the heap allocation only.
+        self.assertNotIn("static u16 sOriginalSpritePreview[", PROD)
+        self.assertNotIn("sOriginalSpriteDisplayPreview[", PROD)
 
     def test_host_hw_lifetime(self):
         compiler = next((shutil.which(c) for c in ("clang", "gcc", "cc")
                          if shutil.which(c)), None)
         self.assertIsNotNone(compiler, "Host C compiler required")
         with tempfile.TemporaryDirectory() as directory:
-            result = compile_and_run(compiler, directory, True)
+            result = compile_and_run(compiler, directory)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("HW PASS", result.stdout)
-
-    def test_host_sw_fallback(self):
-        compiler = next((shutil.which(c) for c in ("clang", "gcc", "cc")
-                         if shutil.which(c)), None)
-        self.assertIsNotNone(compiler, "Host C compiler required")
-        with tempfile.TemporaryDirectory() as directory:
-            result = compile_and_run(compiler, directory, False)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("SW PASS", result.stdout)
 
     def test_caller_blockers(self):
         """Production ROM code must not reacquire the retired software scratch."""

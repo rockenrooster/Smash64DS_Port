@@ -127,11 +127,12 @@ pin_absent(r"MAIN HARDWARE HOOK PATCH|\+void ndsPlatformUpdateFadeBlend|proposal
            HDR_TEXT, "header proposal patch comment")
 pin_absent(r"ndsLBFadeBlend", HDR_TEXT, "header blend API")
 # Final hook order in the platform: one push after all draws, before the one
-# register commit, in both EndFrame arms (hwtri + software framebuffer).
-pin(r"ndsLBFadePushHardwareFrame\(\);\s*\n\s*ndsVideoBlackoutCommit\(\);",
+# register commit, in the post-swap commit every EndFrame arm shares.
+pin(r"static void ndsPlatformPostSwapCommit\(void\)\s*\{[^}]*?"
+    r"ndsLBFadePushHardwareFrame\(\);.*?ndsVideoBlackoutCommit\(\);\s*sTicks\+\+;",
     PLATFORM, "push-before-commit order")
-if len(re.findall(r"ndsLBFadePushHardwareFrame\(\);", PLATFORM)) != 2:
-    raise AssertionError("platform must push in both EndFrame arms")
+if len(re.findall(r"ndsLBFadePushHardwareFrame\(\);", PLATFORM)) != 1:
+    raise AssertionError("platform must push once, in the shared post-swap commit")
 pin(r'#include <lb/lbfade_ds\.h>', PLATFORM, "platform fade include")
 # Backend keeps only the lifetime half: stale-latch discard at BeginFrame.
 pin(r"ndsLBFadeDiscardFrame\(\);", BACKEND, "backend discards")
@@ -463,6 +464,8 @@ class SourceFadeTest(unittest.TestCase):
             program = d / "source_fade.exe"
             built = subprocess.run(
                 [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
+                 # The Makefile's generated config header, counters-on arm.
+                 "-DNDS_DIAG(...)=do { __VA_ARGS__; } while (0)",
                  "-I", str(d / "stub"), "-I", str(ROOT / "include"),
                  str(TU), str(BLACKOUT_TU), str(d / "stub.c"),
                  str(d / "hostmain.c"), "-o", str(program)],
