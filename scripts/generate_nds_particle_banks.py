@@ -803,8 +803,12 @@ QUAD_ANIMATED_SCALE_BY_TEXTURE = {16: (1, 2), 17: (1, 2)}
 # 2026-10-23 gate sweep with every animation sheet the stage could hold
 # (up to 17) took the texture cache's own room and cost Hyrule Temple's
 # heavy roster +146K WORK P95 and two native failures. Seven sheets leave
-# the cache the free VRAM it had before loop V.
-QUAD_ANIMATION_SHEETS_MAX = 7
+# the cache the free VRAM it had before loop V. The eighth (P8 V5,
+# 2026-10-23) takes 8 KiB of the 40 KiB a VS battle's bank C loan adds
+# (nds_native_wallpaper.c) and seats the last three animated textures --
+# StockSnap (23), PK Fire (160) and Yoshi's egg (176); where C is not lent
+# (1P, Training) a refused eighth leaves them on frame 0, as before.
+QUAD_ANIMATION_SHEETS_MAX = 8
 # The order the animation sheets fill in: the hit flashes every hit shows,
 # electricity (the owner's first row), the heavy hit, the shock and flash
 # rings, light dust and flames, fire, the coins, then the rest of the owner's

@@ -563,10 +563,13 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # the nine prepare sheets and the other two hold animation frames; the
     # set packs largest cells first: 108 frames of 28 textures (60,272
     # texels), the dusts' at 32x32.
+    # P8 V5: an eighth animation sheet in the room a VS battle's bank C loan
+    # adds: 115 frames of all 31 animated textures (67,472 texels), StockSnap,
+    # PK Fire and Yoshi's egg joining.
     ([int64]$report.quads.base_sheets -ne 9) -or
-    ([int64]$report.quads.animation_sheets -ne 7) -or
-    ([int64]$report.quads.animation_texels -ne 60272) -or
-    ([int64]$report.quads.sheets -ne 16) -or
+    ([int64]$report.quads.animation_sheets -ne 8) -or
+    ([int64]$report.quads.animation_texels -ne 67472) -or
+    ([int64]$report.quads.sheets -ne 17) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
@@ -622,9 +625,10 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # 2026-10-23 (P8 loop V): `bytes` stays the base cells'; the animation
     # sheets add 92 frame rows in both bakes. Same day, the base cells at
     # 0.75x (QUAD_BASE_SCALE): 65,536 -> 41,904 B (Yoster off 41,328), and
-    # the animation rows 92 -> 108.
+    # the animation rows 92 -> 108. P8 V5: an eighth animation sheet seats
+    # StockSnap, PK Fire and Yoshi's egg: +7 rows in both bakes.
     ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 41904 } else { 41328 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 186 } else { 185 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 193 } else { 192 })) -or
     (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 56 } else { 55 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox

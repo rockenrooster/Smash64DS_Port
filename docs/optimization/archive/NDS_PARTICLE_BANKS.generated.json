@@ -629,6 +629,12 @@
         5,
         6
       ],
+      "160": [
+        1,
+        3,
+        4,
+        5
+      ],
       "17": [
         1,
         2,
@@ -638,6 +644,9 @@
         6,
         7,
         8
+      ],
+      "176": [
+        1
       ],
       "18": [
         1,
@@ -652,6 +661,10 @@
         2
       ],
       "209": [
+        1,
+        2
+      ],
+      "23": [
         1,
         2
       ],
@@ -759,22 +772,22 @@
         2
       ]
     },
-    "animation_sheets": 7,
-    "animation_texels": 60272,
-    "atlas_bytes": 131072,
+    "animation_sheets": 8,
+    "animation_texels": 67472,
+    "atlas_bytes": 139264,
     "atlas_height": 64,
     "atlas_width": 128,
     "base_sheets": 9,
-    "budget_bytes": 131072,
+    "budget_bytes": 139264,
     "bytes": 41904,
     "cell_cap": 64,
     "excluded": [],
     "frame_cap": 1,
-    "frame_count": 186,
+    "frame_count": 193,
     "held_frames": {
       "25": 2
     },
-    "palette_bytes": 1024,
+    "palette_bytes": 1088,
     "palette_entries": 32,
     "palette_sheet_entries": [
       32,
@@ -792,11 +805,12 @@
       32,
       32,
       17,
+      32,
       32
     ],
     "palette_stride_bytes": 64,
     "sheet_bytes": 8192,
-    "sheets": 16
+    "sheets": 17
   },
   "reach": {
     "p1_seams": [

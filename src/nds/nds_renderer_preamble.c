@@ -3113,12 +3113,14 @@ _Static_assert(NDS_PARTICLE_QUAD_BASE_SHEETS <= 9u,
 /* P8 loop V: the animation sheets after the base ones upload only after the
  * countdown has released its atlases, one a frame, into the 57,344 bytes it
  * frees -- seven sheets, so the texture cache keeps the room it had before
- * (the generator's QUAD_ANIMATION_SHEETS_MAX; nds_renderer_particles.c). */
+ * -- and an eighth into the 40,960 bytes a VS battle's bank C loan adds
+ * (P8 V5; the generator's QUAD_ANIMATION_SHEETS_MAX;
+ * nds_renderer_particles.c). */
 _Static_assert((NDS_PARTICLE_QUAD_ATLAS_SHEETS >=
                 NDS_PARTICLE_QUAD_BASE_SHEETS) &&
                    (NDS_PARTICLE_QUAD_ATLAS_SHEETS <=
-                    NDS_PARTICLE_QUAD_BASE_SHEETS + 7u),
-               "particle animation sheets past the countdown's 57,344 bytes");
+                    NDS_PARTICLE_QUAD_BASE_SHEETS + 8u),
+               "particle animation sheets past the countdown's and bank C's room");
 /* Main RAM, not the DTCM hot list: one word a sheet, and the sheet count
  * grows (P8 loop V) while the gate ROM's DTCM sits at its 12,288-byte
  * ceiling (linker/nds_hot_text.ld); the ninth sheet's word took it over. */
