@@ -2410,6 +2410,33 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
 }
 
 
+/* THE STAGE'S TEXTURES FIRST (S6, 2026-10-23). A blob stage's images
+ * upload at its owner's first prepare, the battle's sixth presented frame,
+ * after every scene owner -- the countdown's atlases, the particle sheets,
+ * the entry images -- has taken texture VRAM. Hyrule Castle with four
+ * contents (the heavy roster) then found no room for its 34th image: every
+ * prepare declined until the startup entry images retired two frames into
+ * GO, and the castle, whose ground lists are lent to the heap, drew nothing
+ * for the whole countdown. ndsBattlePrepareSceneTextures runs the owner's
+ * prepare here once, before those owners, so the stage's images are
+ * resident first; a late entry image that then finds no room is placed at
+ * GO (scVSBattleFuncUpdate), before any of them can draw. A prepare that
+ * declines here leaves the first frames' warm-up as it was. */
+void ndsBattleWarmNativeStageTextures(void)
+{
+    GObj *camera = ndsBattleCompatMainCameraGObj();
+
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (camera == NULL))
+    {
+        return;
+    }
+    if (ndsRendererAdapterPrepareNativeStageOwner(camera) != FALSE)
+    {
+        ndsRendererAdapterFinishNativeStageOwner();
+    }
+}
+
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
 

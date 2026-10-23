@@ -183,6 +183,8 @@ void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
  * project always takes. */
 /* include/nds/renderer_fighter_lean.h (slice 2c). */
 void ndsFtrLeanAdmitSceneTexturesReady(void);
+/* src/port/reloc_backend_stage_draw_loop.c (S6). */
+void ndsBattleWarmNativeStageTextures(void);
 
 void ndsBattlePrepareSceneTextures(void)
 {
@@ -201,6 +203,9 @@ void ndsBattlePrepareSceneTextures(void)
     {
         (void)ndsRendererHardwarePrepareBattleStaticTextures();
     }
+    /* A blob stage's own images before the owners below: on Hyrule Castle
+     * with four contents they left the stage none (S6). */
+    ndsBattleWarmNativeStageTextures();
     (void)ndsIFCommonNativeOamPrepareClouds();
     /* LAST, and the order is the fix rather than a preference.
      *

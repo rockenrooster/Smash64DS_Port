@@ -66,6 +66,7 @@ static void ndsIFCommonNativeOamReleaseCloudTextures(void) { step('C'); }
 static void ndsRendererHardwareDiscardParticleAtlas(void) { step('D'); }
 static void ndsRendererHardwareResetSceneTextureVram(void) { step('R'); resets++; }
 static int ndsRendererHardwarePrepareBattleStaticTextures(void) { step('S'); return TRUE; }
+static void ndsBattleWarmNativeStageTextures(void) { step('W'); }
 static int ndsIFCommonNativeOamPrepareClouds(void) { step('T'); return TRUE; }
 static int ndsRendererHardwarePrepareParticleAtlas(void) { step('P'); return TRUE; }
 static int ndsRendererHardwarePrepareImpactWaveTextures(void) { step('I'); return TRUE; }
@@ -96,14 +97,14 @@ int main(void)
             if (cases[i].kind == nSCKindVSBattle) ndsSCVSBattlePrepareBeforeTimer();
             runner_entry();
             if (!gNdsSceneManagerCurrIsBattle) { CHECK(resets == 0); continue; }
-            CHECK(resets == 1 && !strcmp(order, "CDRSTPILHEMGA"));
+            CHECK(resets == 1 && !strcmp(order, "CDRSWTPILHEMGA"));
             /* Actual source GO callback: Metal/Zako defer only their music. */
             at_go = 1;
             const int stages[] = {nSC1PGameStageMMario, nSC1PGameStageZako, nSC1PGameStageLink};
             for (unsigned stage = 0; stage < sizeof(stages) / sizeof(stages[0]); stage++) {
                 gSCManagerSceneData.spgame_stage = stages[stage];
                 sc1PGameSetGameStart();
-                CHECK(resets == 1 && !strcmp(order, "CDRSTPILHEMGA"));
+                CHECK(resets == 1 && !strcmp(order, "CDRSWTPILHEMGA"));
             }
         }
     }
