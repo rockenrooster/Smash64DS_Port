@@ -3272,7 +3272,17 @@ volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
  * punch, up to Yoshi's egg, which is also his entry); SKIP, nothing of this
  * scene can draw it: an absent content's image, or one only the original
  * cast's entry props name whose special files the scene never loaded (18.5 KB
- * in an all-P4 match; FoxSpecial3 also loads for Sector Z's fly-by). */
+ * in an all-P4 match; FoxSpecial3 also loads for Sector Z's fly-by).
+ *
+ * The same holds for the gameplay roots one fighter's file owns (owner
+ * 2026-10-23: a match loads only the textures it can need): Link's spin
+ * (LinkModel) and boomerang (LinkSpecial3), Fox's reflector (FoxSpecial2),
+ * Kirby's cutter and entry star (KirbySpecial2) and cutter wave (KirbyModel),
+ * Samus's grapple glow (SamusSpecial2), the Falcon Kick (CaptainSpecial2) and
+ * Punch (CaptainSpecial3) and Yoshi's egg (YoshiModel). Their effects read
+ * the file (efManagerMakeEffect), so with it not resident none can exist:
+ * 14,016 B of images in a match none of those six plays. A file a Kirby's
+ * copy needs comes in his own file closure, so it is resident with him. */
 NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
 {
     static const u8 entry_end[6] = {
@@ -3282,7 +3292,40 @@ NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
         NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST
     };
     static const u16 entry_asset[6] = { 356u, 161u, 355u, 349u, 350u, 353u };
+    static const u8 owner_first[9] = {
+        NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST
+    };
+    static const u8 owner_end[9] = {
+        NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_REFLECTOR_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_COUNT,
+        NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST +
+            NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_COUNT
+    };
+    static const u16 owner_asset[9] = {
+        324u, 325u, 346u, 348u, 328u, 349u, 350u, 333u, 338u
+    };
     u32 loaded = 0u;
+    u32 owned = 0u;
     u32 g;
     u32 i;
 
@@ -3294,6 +3337,16 @@ NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
         if (ndsRelocGetLoadedAssetView(entry_asset[i], &data, &size) != FALSE)
         {
             loaded |= 1u << i;
+        }
+    }
+    for (i = 0u; i < 9u; i++)
+    {
+        const void *data;
+        u32 size;
+
+        if (ndsRelocGetLoadedAssetView(owner_asset[i], &data, &size) != FALSE)
+        {
+            owned |= 1u << i;
         }
     }
     /* Bits a root sets: 1 early, 2 gameplay, 4 an entry prop not loaded. */
@@ -3318,16 +3371,28 @@ NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
         {
             late[slot] |= (((loaded >> f) & 1u) != 0u) ? 1u : 4u;
         }
-        else if (((root >= NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST) &&
-                  (root < NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST)) ||
-                 ((root >= NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) &&
-                  (root < NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST)))
-        {
-            late[slot] |= 2u;
-        }
         else
         {
-            late[slot] |= 1u;
+            for (f = 0u; (f < 9u) &&
+                         ((root < owner_first[f]) || (root >= owner_end[f]));
+                 f++)
+            {
+            }
+            if ((f < 9u) && (((owned >> f) & 1u) == 0u))
+            {
+                late[slot] |= 4u;
+            }
+            else if (((root >= NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST) &&
+                      (root < NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST)) ||
+                     ((root >= NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) &&
+                      (root < NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST)))
+            {
+                late[slot] |= 2u;
+            }
+            else
+            {
+                late[slot] |= 1u;
+            }
         }
     }
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
