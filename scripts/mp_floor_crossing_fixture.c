@@ -45,10 +45,11 @@ int smash64dsMPFloorCrossingFixture(void)
     {
         float hit_x = -9999.0F;
         float hit_y = -9999.0F;
-        int hit = ndsMPFloorSegmentCrossesDownwardKernel(
+        /* ud +1: a floor, crossed downward (the walls' caller's convention). */
+        int hit = ndsMPFCSegmentCrossesKernel(
             cases[i].px, cases[i].py, cases[i].qx, cases[i].qy,
             cases[i].ax, cases[i].ay, cases[i].bx, cases[i].by,
-            &hit_x, &hit_y);
+            1, &hit_x, &hit_y);
 
         if (hit != cases[i].expected_hit)
         {

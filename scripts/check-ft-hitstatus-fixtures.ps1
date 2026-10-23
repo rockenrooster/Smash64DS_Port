@@ -99,7 +99,12 @@ Assert-True ($foxRows.Count -eq 158) `
 
 $makefile = Get-Content $makefilePath -Raw
 $ndsRelocAssets = Get-Content $ndsRelocAssetsPath -Raw
-$relocBackendAssets = Get-Content $relocBackendAssetsPath -Raw
+# reloc_backend_assets.c continues in the slices reloc_backend.c includes
+# after it (readability Phase C); read them whole, in order.
+$relocBackendAssets = (@('reloc_backend_assets.c', 'reloc_backend_symbol_tables.c',
+    'reloc_backend_asset_ids.c', 'reloc_backend_resolve.c', 'reloc_backend_normalize.c',
+    'reloc_backend_extern_trees.c', 'reloc_backend_motion_cache.c', 'reloc_backend_force_load.c') |
+    ForEach-Object { Get-Content (Join-Path (Split-Path $relocBackendAssetsPath) $_) -Raw }) -join "`n"
 $foxTableMatch = [regex]::Match(
     $relocBackendAssets,
     '(?s)sNdsRelocFoxAnimFileIDs\[\]\s*=\s*\{(?<body>.*?)\};')
@@ -165,12 +170,14 @@ Assert-True ($ndsRelocAssets.Contains(
 Assert-True ($ndsRelocAssets.Contains(
         '#define NDS_RELOC_FOX_ANIM_LAST 0x31fu')) `
     'The Fox dynamic NitroFS path range has the wrong end.'
-Assert-True ($ndsRelocAssets.Contains(
-        '"nitro:/reloc/reloc_animations/FTFoxAnim%03lu"')) `
+# The path is formatted without printf now (ndsRelocFormatAnimPath: the prefix
+# below, the stem, three or more digits).
+Assert-True ($ndsRelocAssets.Contains('"nitro:/reloc/reloc_animations/"') -and
+        ($ndsRelocAssets -match 'ndsRelocFormatAnimPath\(path, sizeof\(path\),\s*"FTFoxAnim"')) `
     'The Fox dynamic NitroFS path owner is missing.'
 Assert-True ([regex]::IsMatch(
         $ndsRelocAssets,
-        '(?s)ndsRelocAssetLoadIntoZeroedHeap\(.*?memset\(dst, 0, alloc_size\);')) `
+        '(?s)ndsRelocAssetLoadIntoZeroedHeap\w*\(.*?memset\(dst, 0, alloc_size\);')) `
     'The collapsed fighter-animation loader no longer zeroes its destination before a payload read.'
 Assert-True ([regex]::IsMatch(
         $relocBackendAssets,
@@ -178,7 +185,11 @@ Assert-True ([regex]::IsMatch(
     'Failed fighter-animation loads can retain stale heap bytes.'
 
 
-$localShim = Get-Content $localShimPath -Raw
+# reloc_backend_compat_shims.c continues in its slices (readability Phase C).
+$localShim = (@('reloc_backend_compat_shims.c', 'reloc_backend_shims_fighter_status.c',
+    'reloc_backend_shims_fighter_effects.c', 'reloc_backend_shims_fighter_parts.c',
+    'reloc_backend_shims_map_collision.c') |
+    ForEach-Object { Get-Content (Join-Path (Split-Path $localShimPath) $_) -Raw }) -join "`n"
 $partAll = Get-FunctionSlice $localShim 'ftParamSetHitStatusPartAll' `
     'ftParamResetFighterDamageCollsAll'
 $partID = Get-FunctionSlice $localShim 'ftParamSetHitStatusPartID' `
