@@ -371,6 +371,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
      * cleans up after the upload's own bind. See
      * ndsRendererR2FighterTintLookup for why never inside a walk. */
     ndsRendererHardwareServiceFighterTintTiles();
+    /* Same reason: one particle animation sheet a frame, once the countdown
+     * has released its atlases (nds_renderer_particles.c). */
+    ndsRendererParticleAnimationPump();
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);

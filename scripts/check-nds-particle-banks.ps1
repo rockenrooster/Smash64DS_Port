@@ -553,7 +553,15 @@ $actualExcluded = @($report.quads.excluded |
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
-    ([int64]$report.quads.sheets -ne 9) -or
+    # 2026-10-23, P8 loop V: nine base sheets, uploaded at battle prepare as
+    # before, then seven animation sheets (the countdown's 57,344 bytes)
+    # holding 92 frames of 25 textures the base cells lack, the ones a 30 Hz
+    # present shows, at 0.75x (44,784 texels), in QUAD_ANIMATION_PRIORITY
+    # order, uploaded after the countdown.
+    ([int64]$report.quads.base_sheets -ne 9) -or
+    ([int64]$report.quads.animation_sheets -ne 7) -or
+    ([int64]$report.quads.animation_texels -ne 44784) -or
+    ([int64]$report.quads.sheets -ne 16) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
@@ -606,8 +614,10 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # +4,736 B and nine frames in both bakes; nothing else moves or leaves.
     # Then SparkleWhite (texture 45) likewise, nine frames at 24x24 in a ninth
     # sheet: +4,160 B and eight frames in both bakes.
+    # 2026-10-23 (P8 loop V): `bytes` stays the base cells'; the animation
+    # sheets add 92 frame rows in both bakes.
     ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 65536 } else { 64512 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 78 } else { 77 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 170 } else { 169 })) -or
     (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 56 } else { 55 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
@@ -1068,8 +1078,8 @@ if (($whispyAsset.Length -ne [int64]$whispy.asset_bytes) -or
 foreach ($token in @(
     '(uintptr_t)&lGRPupupuParticleScriptBankLo',
     'ndsRendererHardwareWhispyNativeName(pc->texture_id)',
-    'gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;',
-    'gNdsWhispyNativeTextureDrawCount++;',
+    'whispy_lean_source_frames |= 1u << pc->frame_id;',
+    'gNdsWhispyNativeTextureDrawCount += whispy_lean_draws',
     'gNdsWhispyNativeTextureMask |=',
     'NDS_WHISPY_NATIVE_TEXTURE_2_WIDTH',
     'draws the one generated DS-native source-frame-0 leaf')) {

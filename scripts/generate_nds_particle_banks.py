@@ -505,6 +505,9 @@ QUAD_ATLAS_HEIGHT = 64
 # frame 0 too. Nine 24x24 cells need 4,160 more texels, exactly what the
 # Yoster-on bake has left, so they never pack and the ladder would halve
 # 16/17/23/32 instead; a ninth block carries them.
+# The animation frames P8 loop V adds go in sheets of their own after these
+# (QUAD_ANIMATION_SHEETS_MAX); these nine are the base set, uploaded at battle
+# prepare as before.
 QUAD_ATLAS_SHEETS_MAX = 9
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
@@ -763,6 +766,119 @@ QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 29: 10, 45: 9, 224: 1, 225: 4}
 # the explosion (0.75x) as the size that keeps its ten frames readable in one
 # 8 KiB sheet, and the same for SparkleWhite's nine. The atlas bake area-averages these (area_average_cell).
 QUAD_CELL_SIZE = {29: 24, 45: 24}
+
+# P8 loop V (owner, 2026-10-22: "Lets make a plan to fix this so we have
+# actual animations now. resolution reductions may need to take place.
+# 32x32>24x24 is approved automatically (0.75x reductions approved)").
+# A texture whose reachable scripts step more frames than the rules above
+# pack ships EVERY SCRIPTED FRAME, each cell this fraction of the source per
+# axis (area_average_cell): 32 -> 24, 16 -> 12, 64 -> 48, 48 -> 36. The
+# frame cap above settled at one, so twenty-eight efcommon effects and three
+# fighter-bank ones showed frame 0 for their whole life (DamageElectric,
+# the coins, the dusts, the hit flashes, PK Fire...). The textures that
+# already pack all their frames (QUAD_MIN_PACKED_FRAMES) keep their cells.
+# The missing frames go in animation sheets after the base ones
+# (build_animation_sheets): texture VRAM cannot hold them beside the
+# countdown's atlases (2026-10-22 census: the 24-sheet single atlas refused
+# stage textures on every measured stage but Dream Land), so the runtime
+# uploads them after the countdown releases its 57,344 bytes.
+QUAD_ANIMATED_SCALE = (3, 4)
+# The countdown frees 57,344 bytes of texture VRAM (its traffic and cloud
+# atlases), exactly seven 8 KiB sheets, and that is the budget: the
+# 2026-10-23 gate sweep with every animation sheet the stage could hold
+# (up to 17) took the texture cache's own room and cost Hyrule Temple's
+# heavy roster +146K WORK P95 and two native failures. Seven sheets leave
+# the cache the free VRAM it had before loop V.
+QUAD_ANIMATION_SHEETS_MAX = 7
+# The order the animation sheets fill in: the hit flashes every hit shows,
+# electricity (the owner's first row), the heavy hit, the shock and flash
+# rings, light dust and flames, fire, the coins, then the rest of the owner's
+# 2026-10-22 list; every other animated texture after these, by key. In this
+# order the seven sheets seat all of that list but the two 64x64 dusts
+# (DustDash 17, DustHeavy 16: 32,256 texels at 0.75x, half the budget).
+QUAD_ANIMATION_PRIORITY = (33, 34, 35, 36, 28, 41, 30, 2, 15, 40, 25, 17, 5,
+                           38, 44, 42, 16, 12, 46)
+
+
+def script_frames(script: dict) -> set[int]:
+    """The frame ids a script's bytecode can set: a wait command with the
+    explicit-frame bit (`(command & 0xC0) == 0x40`, the frame id after the
+    optional long-wait byte) or opcode 0xBC (`base + span * rand[0, 1)`,
+    so base .. base + span - 1) -- lbparticle.c:1120, 1246. Empty when it
+    never sets one (the particle keeps frame 0)."""
+    frames = set()
+    for opcode, operands in script["commands"]:
+        if opcode < 0x80:
+            command = operands[0]
+            if (command & 0xC0) == 0x40:
+                index = 1 + (1 if command & 0x20 else 0)
+                if index < len(operands):
+                    frames.add(operands[index])
+        elif opcode == 0xBC and len(operands) >= 3:
+            base, span = operands[1], operands[2]
+            frames.add(base)
+            frames.update(range(base, base + span))
+    return frames
+
+
+def script_frame_holds(script: dict) -> tuple[dict[int, list[int]], set[int]]:
+    """Per frame a script sets, the ticks each setting holds it (the wait
+    that follows: `cmd & 0x1F`, long form `next + (that << 8)`); a setting
+    held 0 ticks is overwritten in the same tick and never drawn. Also the
+    frames 0xBC can pick at random."""
+    holds: dict[int, list[int]] = {}
+    random: set[int] = set()
+    pending = None
+    for opcode, operands in script["commands"]:
+        if opcode < 0x80:
+            command = operands[0]
+            timer = command & 0x1F
+            index = 1
+            if command & 0x20:
+                timer = operands[1] + (timer << 8)
+                index = 2
+            if (command & 0xC0) == 0x40 and index < len(operands):
+                pending = [operands[index]]
+            if pending is not None and timer > 0:
+                for frame in pending:
+                    holds.setdefault(frame, []).append(timer)
+                pending = None
+        elif opcode == 0xBC and len(operands) >= 3:
+            base, span = operands[1], operands[2]
+            pending = list(range(base, base + max(1, span)))
+            random.update(pending)
+    return holds, random
+
+
+def scripted_frame_holds(scripts: list[dict], stride: int = 0, live=None):
+    """Quad key -> (frame -> every hold it gets, frames picked at random)."""
+    out: dict[int, tuple[dict[int, list[int]], set[int]]] = {}
+    for script in scripts:
+        if live is not None and script["id"] not in live:
+            continue
+        holds, random = script_frame_holds(script)
+        key = stride + script["texture_id"]
+        merged, merged_random = out.setdefault(key, ({}, set()))
+        for frame, ticks in holds.items():
+            merged.setdefault(frame, []).extend(ticks)
+        merged_random |= random
+    return out
+
+
+def scripted_frames(scripts: list[dict], textures: list[dict], stride: int = 0,
+                    live=None) -> dict[int, list[int]]:
+    """Quad key (stride + texture id) -> the source frames the scripts in
+    `live` (default: all of them) show, frame 0 included."""
+    shown: dict[int, set[int]] = {}
+    for script in scripts:
+        if live is not None and script["id"] not in live:
+            continue
+        shown.setdefault(script["texture_id"], {0}).update(
+            script_frames(script))
+    frames_of = {texture["id"]: texture["frames"] for texture in textures}
+    return {stride + texture_id: sorted(frame for frame in frames
+                                        if frame < frames_of.get(texture_id, 0))
+            for texture_id, frames in shown.items()}
 
 
 def quad_cell_dims(width: int, height: int,
@@ -1958,7 +2074,8 @@ def shelf_pack(cells: list[dict], width: int, height: int,
 
 
 def palette_grouped_pack(cells: list[dict],
-                         frames_by_texture: dict[int, list[list]]):
+                         frames_by_texture: dict[int, list[list]],
+                         sheets_max: int = QUAD_ATLAS_SHEETS_MAX):
     """shelf_pack, with the sheets split by what their palettes must hold.
 
     Each sheet has ONE 32-entry palette. Most particle textures are grey
@@ -1990,7 +2107,7 @@ def palette_grouped_pack(cells: list[dict],
     grey = [index for index, key in enumerate(keys) if key is None]
     coloured = sorted((index for index, key in enumerate(keys)
                        if key is not None), key=lambda index: keys[index])
-    for grey_sheets in range(1, QUAD_ATLAS_SHEETS_MAX):
+    for grey_sheets in range(1, sheets_max):
         grey_placed = shelf_pack([cells[index] for index in grey],
                                  QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
                                  grey_sheets)
@@ -2000,7 +2117,7 @@ def palette_grouped_pack(cells: list[dict],
         sheet = grey_sheets
         start = 0
         while start < len(coloured):
-            if sheet >= QUAD_ATLAS_SHEETS_MAX:
+            if sheet >= sheets_max:
                 break
             # The longest hue-ordered run from `start` that fits this sheet.
             end = start
@@ -2270,6 +2387,37 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         raise SystemExit(f"quad atlas packed into {sheets_used} sheets, "
                          f"outside 1..{QUAD_ATLAS_SHEETS_MAX}")
 
+    atlas, palettes, palette_payload, frame_rows = encode_quad_sheets(
+        cells, placement, sheets_used, frames_by_texture)
+    used = sum(row["bytes"] for row in admitted)
+    return {
+        "payload": bytes(atlas) + bytes(palette_payload),
+        "admitted": admitted,
+        "excluded": excluded,
+        "frame_cap": chosen_cap,
+        "cell_cap": chosen_rung,
+        "frames": frame_rows,
+        "held_frames": {str(cell["texture"]): cell["source"]
+                        for cell in cells if cell["source"] != cell["frame"]},
+        "bytes": used,
+        "atlas_bytes": len(atlas),
+        "palette_offset": len(atlas),
+        "palette_entries": QUAD_ATLAS_PALETTE_ENTRIES,
+        "palette_sheet_entries": [len(palette) for palette in palettes],
+        "palette_stride_bytes": QUAD_ATLAS_PALETTE_ENTRIES * 2,
+        "palette_bytes": len(palette_payload),
+        "width": QUAD_ATLAS_WIDTH,
+        "height": QUAD_ATLAS_HEIGHT,
+        "sheets": sheets_used,
+        "sheet_bytes": QUAD_SHEET_BUDGET_BYTES,
+        "budget_bytes": QUAD_SHEET_BUDGET_BYTES * sheets_used,
+    }
+
+
+def encode_quad_sheets(cells: list[dict], placement: dict, sheets_used: int,
+                       frames_by_texture: dict[int, list[list]]):
+    """Reduce each cell from its source frame, build one palette a sheet and
+    encode the sheets: (atlas bytes, palettes, palette block, frame rows)."""
     # Two passes: the shared palette has to see every admitted texel first.
     box_averaged = []
     for cell in cells:
@@ -2383,7 +2531,6 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             "x": origin_x, "y": origin_y, "w": cell["w"], "h": cell["h"],
         })
     frame_rows.sort(key=lambda row: (row["texture"], row["frame"]))
-    used = sum(row["bytes"] for row in admitted)
     palette_payload = bytearray()
     for palette in palettes:
         if len(palette) > QUAD_ATLAS_PALETTE_ENTRIES:
@@ -2394,28 +2541,175 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             palette_payload += struct.pack("<H", to_bgr555(colour))
         palette_payload += bytes(
             2 * (QUAD_ATLAS_PALETTE_ENTRIES - len(palette)))
-    return {
-        "payload": bytes(atlas) + bytes(palette_payload),
-        "admitted": admitted,
-        "excluded": excluded,
-        "frame_cap": chosen_cap,
-        "cell_cap": chosen_rung,
-        "frames": frame_rows,
-        "held_frames": {str(cell["texture"]): cell["source"]
-                        for cell in cells if cell["source"] != cell["frame"]},
-        "bytes": used,
-        "atlas_bytes": len(atlas),
-        "palette_offset": len(atlas),
-        "palette_entries": QUAD_ATLAS_PALETTE_ENTRIES,
-        "palette_sheet_entries": [len(palette) for palette in palettes],
-        "palette_stride_bytes": QUAD_ATLAS_PALETTE_ENTRIES * 2,
-        "palette_bytes": len(palette_payload),
-        "width": QUAD_ATLAS_WIDTH,
-        "height": QUAD_ATLAS_HEIGHT,
-        "sheets": sheets_used,
-        "sheet_bytes": QUAD_SHEET_BUDGET_BYTES,
-        "budget_bytes": QUAD_SHEET_BUDGET_BYTES * sheets_used,
-    }
+    return atlas, palettes, palette_payload, frame_rows
+
+
+def presented_animation_frames(frames: list[int], have: set[int],
+                               holds: dict[int, list[int]],
+                               random: set[int]) -> list[int]:
+    """The missing frames a 30 Hz present can show. The battle presents
+    every second source tick, so a frame every script holds for one tick
+    is on screen only for particles of one tick parity, and leaving out
+    every second such frame shows the one before it for that tick instead:
+    the arc in the same time, a tick late at most. A frame set and
+    overwritten in the same tick (held 0) never draws at all. Frames 0xBC
+    picks at random stay."""
+    kept = []
+    available = set(have)
+    dropped_last = False
+    for frame in frames:
+        ticks = holds.get(frame)
+        if not ticks:
+            continue
+        if ((frame not in random) and (max(ticks) == 1) and
+                ((frame - 1) in available) and not dropped_last):
+            dropped_last = True
+            continue
+        kept.append(frame)
+        available.add(frame)
+        dropped_last = False
+    return kept
+
+
+def first_fit_cell(rows: list[int], cell_w: int, cell_h: int):
+    """(x, y) of the first free cell_w x cell_h run in one sheet's row
+    bitmaps (shelf_pack's search for one cell), or None."""
+    full = (1 << QUAD_ATLAS_WIDTH) - 1
+    for origin_y in range(QUAD_ATLAS_HEIGHT - cell_h + 1):
+        band = 0
+        for row in range(origin_y, origin_y + cell_h):
+            band |= rows[row]
+            if band == full:
+                break
+        if band == full:
+            continue
+        free = ~band & full
+        span = 1
+        while span < cell_w:
+            step = min(span, cell_w - span)
+            free &= free >> step
+            span += step
+        if free:
+            return (free & -free).bit_length() - 1, origin_y
+    return None
+
+
+def build_animation_sheets(quads: dict, shown_frames: dict[int, list[int]],
+                           frame_holds: dict,
+                           frames_by_texture: dict[int, list[list]]) -> dict:
+    """P8 loop V: the frames the base sheets lack, in sheets of their own.
+
+    An animated texture is one whose scripts show more frames than its base
+    cells hold (QUAD_MIN_PACKED_FRAMES' textures already hold all of theirs).
+    Each missing frame a 30 Hz present can show (presented_animation_frames)
+    is one cell at QUAD_ANIMATED_SCALE of the source. The base sheets, their
+    palettes and their rows are untouched: the runtime uploads the base at
+    battle prepare as before and these once the countdown's atlases are
+    released, one a frame until texture VRAM refuses one, and until a sheet
+    is resident its rows are skipped (the nearest earlier frame draws).
+
+    The sheets fill in QUAD_ANIMATION_PRIORITY order, each texture whole or
+    not at all: its cells first fit into the sheets so far, a new sheet when
+    none takes one, and a texture that would need an eighth sheet keeps its
+    base frames (the textures after it may still fit the holes).
+    """
+    num, den = QUAD_ANIMATED_SCALE
+    missing: dict[int, list[int]] = {}
+    cells_by_key: dict[int, list[dict]] = {}
+    for row in quads["admitted"]:
+        key = row["texture"]
+        shown = shown_frames.get(key, [])
+        if len(shown) <= 1 or QUAD_MIN_PACKED_FRAMES.get(key, 1) >= len(shown):
+            continue
+        have = set(row["frame_list"])
+        holds, random = frame_holds.get(key, ({}, set()))
+        frames = presented_animation_frames(
+            [frame for frame in shown if frame not in have], have, holds,
+            random)
+        if not frames:
+            continue
+        missing[key] = frames
+        src_w = row.get("source_width", row["width"])
+        src_h = row.get("source_height", row["height"])
+        cells_by_key[key] = [{"w": max(1, src_w * num // den),
+                              "h": max(1, src_h * num // den),
+                              "src_w": src_w, "src_h": src_h,
+                              "texture": key, "frame": frame,
+                              "source": frame} for frame in frames]
+    if not cells_by_key:
+        return {"sheets": 0, "atlas": b"", "palettes": [], "palette_block": b"",
+                "frames": [], "missing": {}, "texels": 0}
+    priority = {key: index for index, key in enumerate(QUAD_ANIMATION_PRIORITY)}
+    order = sorted(cells_by_key,
+                   key=lambda key: (priority.get(key, len(priority)), key))
+    cells = []
+    placement = {}
+    sheets: list[list[int]] = []
+    for key in order:
+        trial = [list(rows) for rows in sheets]
+        spots = []
+        for cell in cells_by_key[key]:
+            spot = None
+            for sheet, rows in enumerate(trial):
+                origin = first_fit_cell(rows, cell["w"], cell["h"])
+                if origin is not None:
+                    spot = (sheet, origin[0], origin[1])
+                    break
+            if spot is None:
+                trial.append([0] * QUAD_ATLAS_HEIGHT)
+                origin = first_fit_cell(trial[-1], cell["w"], cell["h"])
+                spot = (len(trial) - 1, origin[0], origin[1])
+            sheet, origin_x, origin_y = spot
+            mask = ((1 << cell["w"]) - 1) << origin_x
+            for row in range(origin_y, origin_y + cell["h"]):
+                trial[sheet][row] |= mask
+            spots.append(spot)
+        if len(trial) > QUAD_ANIMATION_SHEETS_MAX:
+            del missing[key]
+            continue
+        sheets = trial
+        for cell, spot in zip(cells_by_key[key], spots):
+            placement[len(cells)] = spot
+            cells.append(cell)
+    if not cells:
+        return {"sheets": 0, "atlas": b"", "palettes": [], "palette_block": b"",
+                "frames": [], "missing": {}, "texels": 0}
+    sheets_used = len(sheets)
+    atlas, palettes, palette_block, rows = encode_quad_sheets(
+        cells, placement, sheets_used, frames_by_texture)
+    base = quads["sheets"]
+    for row in rows:
+        row["sheet"] += base
+    return {"sheets": sheets_used, "atlas": bytes(atlas), "palettes": palettes,
+            "palette_block": bytes(palette_block), "frames": rows,
+            "missing": missing,
+            "texels": sum(cell["w"] * cell["h"] for cell in cells)}
+
+
+def merge_animation_sheets(quads: dict, animation: dict) -> dict:
+    """The base sheets, then the animation sheets, as one atlas: texels of
+    every sheet in order, then every sheet's palette in the same order."""
+    base_atlas = quads["payload"][:quads["atlas_bytes"]]
+    base_palettes = quads["payload"][quads["atlas_bytes"]:]
+    merged = dict(quads)
+    merged["base_sheets"] = quads["sheets"]
+    merged["animation_sheets"] = animation["sheets"]
+    merged["animation_frames"] = {str(key): frames for key, frames
+                                  in sorted(animation["missing"].items())}
+    merged["animation_texels"] = animation["texels"]
+    merged["sheets"] = quads["sheets"] + animation["sheets"]
+    merged["frames"] = sorted(quads["frames"] + animation["frames"],
+                              key=lambda row: (row["texture"], row["frame"]))
+    atlas = base_atlas + animation["atlas"]
+    palettes = base_palettes + animation["palette_block"]
+    merged["payload"] = atlas + palettes
+    merged["atlas_bytes"] = len(atlas)
+    merged["palette_offset"] = len(atlas)
+    merged["palette_bytes"] = len(palettes)
+    merged["palette_sheet_entries"] = (quads["palette_sheet_entries"] +
+                                       [len(p) for p in animation["palettes"]])
+    merged["budget_bytes"] = QUAD_SHEET_BUDGET_BYTES * merged["sheets"]
+    return merged
 
 
 def build_pupupu_bank(repo_root: Path,
@@ -3464,12 +3758,33 @@ def build_pack(repo_root: Path) -> dict:
     # NDS_R2_WHISPY_NATIVE_TEXTURES (default on, and required by the Whispy
     # AOT) its particles draw from their own three native textures and never
     # looked these 1,536 texels up. The space seats the full efcommon closure.
+    # The frames each texture's scripts show: the efcommon closure's, and
+    # every script of the banks packed whole (loop V, QUAD_ANIMATED_SCALE).
+    shown = scripted_frames(scripts, textures, 0, set(reachable))
+    for bank, stride in ((ness, NESS_QUAD_TEXTURE_STRIDE),
+                         (yoshi, YOSHI_QUAD_TEXTURE_STRIDE),
+                         (kirby, KIRBY_QUAD_TEXTURE_STRIDE),
+                         (item, ITEM_QUAD_TEXTURE_STRIDE),
+                         (yoster, YOSTER_QUAD_TEXTURE_STRIDE)):
+        if bank is not None:
+            shown.update(scripted_frames(bank["scripts"], bank["textures"],
+                                         stride))
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              yoster_candidates +
                              ness["quad_candidates"] +
                              yoshi["quad_candidates"] +
                              kirby["quad_candidates"] +
                              item["quad_candidates"] + source_quads)
+    holds = scripted_frame_holds(scripts, 0, set(reachable))
+    for bank, stride in ((ness, NESS_QUAD_TEXTURE_STRIDE),
+                         (yoshi, YOSHI_QUAD_TEXTURE_STRIDE),
+                         (kirby, KIRBY_QUAD_TEXTURE_STRIDE),
+                         (item, ITEM_QUAD_TEXTURE_STRIDE),
+                         (yoster, YOSTER_QUAD_TEXTURE_STRIDE)):
+        if bank is not None:
+            holds.update(scripted_frame_holds(bank["scripts"], stride))
+    quads = merge_animation_sheets(
+        quads, build_animation_sheets(quads, shown, holds, frames_by_texture))
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
@@ -3645,6 +3960,10 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH {pack["quads"]["width"]}u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT {pack["quads"]["height"]}u
 #define NDS_PARTICLE_QUAD_ATLAS_SHEETS {pack["quads"]["sheets"]}u
+/* The first NDS_PARTICLE_QUAD_BASE_SHEETS upload at battle prepare; the rest
+ * hold animation frames and upload once the countdown's atlases are released
+ * (P8 loop V). A row in a sheet not yet resident is skipped by the lookup. */
+#define NDS_PARTICLE_QUAD_BASE_SHEETS {pack["quads"]["base_sheets"]}u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES {pack["quads"]["sheet_bytes"]}u
 #define NDS_PARTICLE_QUAD_CELL_CAP {pack["quads"]["cell_cap"]}u
 #define NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION 1u
@@ -4336,6 +4655,13 @@ def render_report(pack: dict) -> dict:
             # derives the payload size from sheets x sheet_bytes + palette
             # rather than pinning a total that changes whenever coverage does.
             "sheets": pack["quads"]["sheets"],
+            # P8 loop V: the sheets uploaded at battle prepare, and after them
+            # the animation sheets with the frames each texture's base cells
+            # lack (uploaded after the countdown).
+            "base_sheets": pack["quads"]["base_sheets"],
+            "animation_sheets": pack["quads"]["animation_sheets"],
+            "animation_frames": pack["quads"]["animation_frames"],
+            "animation_texels": pack["quads"]["animation_texels"],
             "sheet_bytes": pack["quads"]["sheet_bytes"],
             "cell_cap": pack["quads"]["cell_cap"],
             "frame_count": len(pack["quads"]["frames"]),

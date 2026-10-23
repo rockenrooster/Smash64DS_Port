@@ -228,6 +228,22 @@ static void ndsIFCommonCountdownProcUpdate(GObj *interface_gobj)
         if (cd->timer >= I_SEC_TO_TICS(7))
         {
             gcEjectGObj(interface_gobj);
+            /* The lamps have slid off screen and do not draw again this
+             * scene: their atlases' 57,344 bytes of texture VRAM go back to
+             * the battle (P8 loop V). A later countdown re-prepares them
+             * (ndsIFCommonAddGObjProcess). */
+            ndsIFCommonNativeOamReleaseCloudTextures();
+            /* ...and the particle animation sheets take it, one a frame. */
+            ndsRendererParticleAnimationStart();
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_DIAG_COUNTERS) && NDS_DIAG_COUNTERS
+            {
+                /* Census lab ROMs (NDS_VRAM_CENSUS_LIVE): P8 V0's reserve. */
+                extern void ndsLabParticleReserveAfterCountdown(void);
+
+                ndsLabParticleReserveAfterCountdown();
+            }
+#endif
             return;
         }
         ndsIFCommonCountdownSlide(interface_gobj, -0.8833333F);
@@ -361,6 +377,9 @@ static GObjProcess *ndsIFCommonAddGObjProcess(
         {
             static const NDSIFCommonCountdown start = { 0 };
 
+            /* Idempotent: the battle prepared the lamps' atlases, and only a
+             * second countdown in one scene finds them released. */
+            (void)ndsIFCommonNativeOamPrepareClouds();
             sNdsIFCommonCountdown = start;
             proc = ndsIFCommonCountdownProcUpdate;
             kind = nGCProcessKindFunc;

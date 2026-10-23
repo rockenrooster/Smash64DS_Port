@@ -9,7 +9,17 @@
 #include <PR/gbi.h>
 #include <nds/nds_p4_contents.h>
 
-
+/* P8 R1: a renderer function no battle profile gives a cycle (setup,
+ * prepare, validate, learn, menus) is built as Thumb at -Os inside the
+ * renderer's ARM -O2 unity unit: half the bytes of ARM, the battle's hot
+ * code untouched. The set comes from the profile census over every VS
+ * stage with the cast, the heavy roster and the mixes. */
+#if defined(__arm__) && !defined(__thumb__)
+#define NDS_RENDERER_COLD \
+    __attribute__((cold, noinline, target("thumb"), optimize("Os")))
+#else
+#define NDS_RENDERER_COLD __attribute__((cold, noinline, optimize("Os")))
+#endif
 
 #ifndef NDS_SHIP_TELEMETRY
 #define NDS_SHIP_TELEMETRY 1
@@ -1513,6 +1523,13 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void);
  * exists for the callers that predate the split. */
 u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet);
 u32 ndsRendererHardwareParticleAtlasName(void);
+/* P8 loop V: the sheets the lookup may use (the base ones from battle
+ * prepare, then each animation sheet as it lands; 0 without an atlas), and
+ * the frame-end upload of the animation sheets the countdown's release
+ * starts (battleship_ifcommon.c). */
+extern volatile u32 gNdsParticleQuadResidentSheets;
+extern volatile u32 gNdsParticleAnimSheetFailCount;
+void ndsRendererParticleAnimationStart(void);
 /* Exact EFCommon texture 27: PAL16 16x8 with hardware T mirror, so UV T 0..16
  * reconstructs the source MASKT 16x16 flash without duplicated texels. */
 u32 ndsRendererHardwareFoxBlasterGlowName(void);

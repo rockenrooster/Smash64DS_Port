@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 78 individual frames. 9 sheets keep
- * every particle in 9 binds instead of 78.
+ * admitted set is 170 individual frames. 16 sheets keep
+ * every particle in 16 binds instead of 170.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -89,7 +89,11 @@
 #define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
-#define NDS_PARTICLE_QUAD_ATLAS_SHEETS 9u
+#define NDS_PARTICLE_QUAD_ATLAS_SHEETS 16u
+/* The first NDS_PARTICLE_QUAD_BASE_SHEETS upload at battle prepare; the rest
+ * hold animation frames and upload once the countdown's atlases are released
+ * (P8 loop V). A row in a sheet not yet resident is skipped by the lookup. */
+#define NDS_PARTICLE_QUAD_BASE_SHEETS 9u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES 8192u
 #define NDS_PARTICLE_QUAD_CELL_CAP 64u
 #define NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION 1u
@@ -143,9 +147,9 @@ extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
 extern const u8 gNdsFireballTexels[NDS_FIREBALL_TEX_BYTES];
 extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
                                      [NDS_FIREBALL_TEX_PALETTE_ENTRIES];
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 74304u
-#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 73728u
-#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 73728u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 132096u
+#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 131072u
+#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 131072u
 /* PER SHEET. The palette block is NDS_PARTICLE_QUAD_ATLAS_SHEETS tables of this
  * many entries laid end to end, so sheet N's table starts at
  * NDS_PARTICLE_QUAD_PALETTE_OFFSET + N * NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES
@@ -160,10 +164,10 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
  * bytes one shared table was already spending. */
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
-#define NDS_PARTICLE_QUAD_PALETTE_BYTES 576u
+#define NDS_PARTICLE_QUAD_PALETTE_BYTES 1024u
 #define NDS_PARTICLE_QUAD_TEXEL_BYTES 65536u
 #define NDS_PARTICLE_QUAD_COUNT 56u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 78u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 170u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 

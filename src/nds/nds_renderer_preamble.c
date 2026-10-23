@@ -3107,8 +3107,17 @@ static const NDSRendererHardwareTextureCacheEntry
  * measured 124-entry table above, while particle/Whispy/Fox native textures
  * are deliberately separate owners. Keep an explicit shipping-set cap so an
  * atlas-coverage change cannot grow the dedicated set unnoticed. */
-_Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 9u,
+_Static_assert(NDS_PARTICLE_QUAD_BASE_SHEETS <= 9u,
                "particle atlas sheets would crowd the texture cache");
+/* P8 loop V: the animation sheets after the base ones upload only after the
+ * countdown has released its atlases, one a frame, into the 57,344 bytes it
+ * frees -- seven sheets, so the texture cache keeps the room it had before
+ * (the generator's QUAD_ANIMATION_SHEETS_MAX; nds_renderer_particles.c). */
+_Static_assert((NDS_PARTICLE_QUAD_ATLAS_SHEETS >=
+                NDS_PARTICLE_QUAD_BASE_SHEETS) &&
+                   (NDS_PARTICLE_QUAD_ATLAS_SHEETS <=
+                    NDS_PARTICLE_QUAD_BASE_SHEETS + 7u),
+               "particle animation sheets past the countdown's 57,344 bytes");
 /* Main RAM, not the DTCM hot list: one word a sheet, and the sheet count
  * grows (P8 loop V) while the gate ROM's DTCM sits at its 12,288-byte
  * ceiling (linker/nds_hot_text.ld); the ninth sheet's word took it over. */
@@ -3119,7 +3128,7 @@ static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
  * 11 -> 12 on 2026-10-22: an eighth seats the item explosion's ten frames
  * (texture 29 at 24x24; it held frame 0 for the whole effect). 12 -> 13
  * the same day: a ninth seats SparkleWhite's nine (texture 45, 24x24). */
-_Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
+_Static_assert(NDS_PARTICLE_QUAD_BASE_SHEETS +
                    NDS_WHISPY_NATIVE_TEXTURE_COUNT +
                    NDS_R2_FOX_BLASTER_GLOW_AOT <= 13u,
                "particle native textures would crowd the texture cache");

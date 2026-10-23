@@ -2843,6 +2843,9 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
     const NDSParticleQuadFrame *earlier = NULL;
     const u8 texture_key = (u8)texture_id;
     const u8 frame_key = (u8)frame;
+    /* A row in an animation sheet not uploaded yet is not there (P8 loop V:
+     * gNdsParticleQuadResidentSheets, nds_renderer_particles.c). */
+    const u32 resident = gNdsParticleQuadResidentSheets;
     u32 index = gNdsParticleQuadFirstRow[texture_key];
 
     if (index == NDS_PARTICLE_QUAD_FIRST_ROW_NONE)
@@ -2856,6 +2859,10 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
 
         if (row->texture_id == texture_key)
         {
+            if (row->sheet >= resident)
+            {
+                continue;
+            }
             if (row->frame == frame_key)
             {
                 return row;
@@ -4157,19 +4164,27 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
 
 /* THE NATIVE FIREGRIND DRAW, folded into this pass's open GX batch.
  *
- * Texture 5 is admitted to the DS atlas at exactly one row -- frame 0 (frames
- * 1/2 decimate to it via the nearest-earlier-frame rule), so the source's
- * random per-tick frame pick already drew frame 0 every time. Cache that ONE
- * row's sheet/coords once; a FireGrind spark draw is then a direct pointer
- * dereference, not another 31-row atlas scan.
+ * Texture 5's three frames are each an atlas row (P8 loop V; until then only
+ * frame 0 was packed and every spark drew it). The source script picks one
+ * at random every tick (opcode 0xBC, base 0, span 3); the native pool has no
+ * script, so each spark takes (age, variant, slot) modulo 3 -- render only,
+ * the pool's simulation and the replay digest do not see it. The three rows'
+ * sheet/coords are cached once; a spark draw is then a pointer dereference,
+ * not another atlas scan.
  *
- * sNdsFireGrindFrameRow is NULL until the first frame the atlas is live;
+ * sNdsFireGrindFrameRows[] is NULL until the first frame the atlas is live;
  * resolved lazily so a build before the atlas is loaded never dereferences a
- * stale pointer. It points into the const gNdsParticleQuadFrames table, which
- * is program-lifetime, so it survives efParticleInitAll/scene resets unaided.
- * The sparks are drawn only from the GENLINK(0) camera pass (see the gate in
- * lbParticleDrawTextures). */
-static const NDSParticleQuadFrame *sNdsFireGrindFrameRow;
+ * stale pointer. They point into the const gNdsParticleQuadFrames table, which
+ * is program-lifetime, so they survive efParticleInitAll/scene resets unaided
+ * (a bake that packs fewer frames resolves the missing ones to the nearest
+ * earlier row). The sparks are drawn only from the GENLINK(0) camera pass
+ * (see the gate in lbParticleDrawTextures). */
+#define NDS_FIREGRIND_ATLAS_FRAMES 3u
+static const NDSParticleQuadFrame
+    *sNdsFireGrindFrameRows[NDS_FIREGRIND_ATLAS_FRAMES];
+/* The resident sheet count the rows were resolved against: frames 1/2 live
+ * in an animation sheet and resolve to frame 0 until it lands. */
+static u32 sNdsFireGrindFrameRowsResident;
 /* SIMULATE ONCE PER FRAME, FROM THE LINK-0 PASS. The source simulates particles
  * in lbParticleStructFuncRun (a once-per-frame GObj proc), separate from the
  * draw. This port can't inject into that GObj proc cleanly (lbparticle.c is
@@ -4789,27 +4804,40 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
          * lbParticleStructFuncRun owns that, once per frame. */
         if ((gobj->camera_mask & (1u << 0u)) != 0u)
         {
-            /* Texture 5's single admitted atlas row (frame 0; frames 1/2
-             * decimate to it) is cached so a spark is one pointer dereference,
-             * not another 31-row scan. */
-            if (sNdsFireGrindFrameRow == NULL)
+            /* Texture 5's atlas rows, cached so a spark is one pointer
+             * dereference, not another atlas scan. */
+            if ((sNdsFireGrindFrameRows[0] == NULL) ||
+                (sNdsFireGrindFrameRowsResident !=
+                 gNdsParticleQuadResidentSheets))
             {
-                sNdsFireGrindFrameRow = ndsParticleQuadFrameFor(5u, 0u);
+                u32 fg_frame;
+
+                for (fg_frame = 0u; fg_frame < NDS_FIREGRIND_ATLAS_FRAMES;
+                     fg_frame++)
+                {
+                    sNdsFireGrindFrameRows[fg_frame] =
+                        ndsParticleQuadFrameFor(5u, fg_frame);
+                }
+                sNdsFireGrindFrameRowsResident =
+                    gNdsParticleQuadResidentSheets;
             }
-            if (sNdsFireGrindFrameRow != NULL)
+            if (sNdsFireGrindFrameRows[0] != NULL)
             {
                 u32 fg_count;
                 const NDSFireGrindParticle *fg =
                     ndsFireGrindPool(&fg_count);
                 u32 fg_i;
-                u32 fg_texture_name =
-                    ndsRendererHardwareParticleAtlasNameForSheet(
-                        sNdsFireGrindFrameRow->sheet);
 
                 for (fg_i = 0u; fg_i < fg_count; fg_i++)
                 {
+                    const NDSParticleQuadFrame *fg_row =
+                        sNdsFireGrindFrameRows[
+                            ((u32)fg[fg_i].age + (u32)fg[fg_i].variant +
+                             fg_i) % NDS_FIREGRIND_ATLAS_FRAMES];
+
                     if (ndsRendererSubmitParticleQuad(
-                            fg_texture_name,
+                            ndsRendererHardwareParticleAtlasNameForSheet(
+                                fg_row->sheet),
                             &fg[fg_i].pos,
                             ndsFireGrindSize(fg[fg_i].variant),
                             ndsFireGrindColor(fg[fg_i].variant,
@@ -4817,10 +4845,10 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                             255u, 0u, 0u,
                             &right, &up,
                             0u,
-                            sNdsFireGrindFrameRow->x,
-                            sNdsFireGrindFrameRow->y,
-                            sNdsFireGrindFrameRow->width,
-                            sNdsFireGrindFrameRow->height) != FALSE)
+                            fg_row->x,
+                            fg_row->y,
+                            fg_row->width,
+                            fg_row->height) != FALSE)
                     {
                         emitted++;
                     }
