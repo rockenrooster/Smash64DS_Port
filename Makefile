@@ -120,31 +120,13 @@ endif
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
-# Diagnostic only, never on a published ROM: forces the NDS_DEV_LIVE_INPUT_PREVIEW
-# preset to run items ON at the highest rate, so an item-triggered Poke Ball
-# can be observed. That preset otherwise runs items off, which leaves the
-# item TRIGGER for the MBallRays row unexercised. See src/port/nds_match_config.c.
-NDS_HARNESS_ITEMS_ON ?= 0
-# Verifier-only on-demand presentation for the bounded fast battle harness.
-# Fast logic normally renders once after its entire update run, which is ideal
-# for state-only proofs but cannot verify source behavior that depends on one
-# live presentation between gameplay states.  When enabled, proof code may ask
-# the harness to submit the ordinary DS hardware renderer after the current
-# source tick. Shipping targets leave this off; the request changes presentation
-# only and never creates, releases, or mutates gameplay state.
-NDS_HARNESS_FAST_PRESENT_ON_REQUEST ?= 0
 # The DS hardware triangle path is the only one (2026-10-20, old machinery:
 # the software-triangle branches are gone from the sources). The define stays
 # in the config header for generated code that still tests it.
 override NDS_RENDERER_HW_TRIANGLES := 1
-NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
 NDS_TICK_HUD ?= 0
-# P2-2p8 Phase 2 B3/MINS. The old G3 effect packet/census code hashes every
-# emitted GX word and brackets per-vertex/per-triangle work. Keep that retired
-# experiment selectable so a tick-HUD performance ROM can compile it out.
-NDS_P2_EFFECT_CENSUS ?= 0
 # P2-2p8 A5: fixed-point proof that a fighter hurtbox test misses, ahead of the
 # decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
 # selects off/reject/shadow at runtime.
@@ -160,14 +142,6 @@ NDS_P2_JOINT_RESIDENT ?= $(if $(filter 1,$(NDS_P2_HURTBOX_REJECT)),$(if $(filter
 # (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
 # moved into ITCM (NDS_TASK37_ITCM_LIBC is 0 while this is 1). 0 restores them.
 NDS_FAST_MEM ?= 1
-# Cycle 98's FTR pre-walk census (identity hash of each draw's collection; its
-# counters are read only by a debugger) is a lab instrument: 1 compiles it into
-# tick-HUD builds, 0 (default) keeps it out of the gate's WORK-H (A9).
-NDS_FTR_PRE_WALK_CENSUS ?= 0
-# Phase 2 B3's per-GObj MISC split (MCAP capture / MPRO proc-display spans in
-# gcCaptureCameraGObj, four clock reads per displayed GObj) is a lab
-# instrument like the census above: 0 folds both into MCAM (A9).
-NDS_P2_MISC_SPLIT ?= 0
 # The lean fighter path's per-draw phase clocks (gNdsFtrLean head/guard/
 # kernel/patch/book/submit ticks and their parts, ~30 reads a frame per
 # fighter) are attribution: 1 compiles them into tick-HUD builds, 0 (default)
@@ -177,15 +151,6 @@ NDS_FTR_LEAN_PHASE_TICKS ?= 0
 # scripts/diagnostics/probe-native-render-scene.ps1) is a diagnostic: 1
 # compiles it in, 0 (default) keeps its per-frame margins out of every ROM.
 NDS_CAMERA_FRAME_WITNESS ?= 0
-# Dream Land's Whispy AOT tick counters (gNdsWhispyAOT*Ticks, read by
-# scripts/probe-whispy-native-aot.ps1 -TraceFrames): ~8 clock reads a frame
-# of attribution. 1 compiles them into tick-HUD builds; 0 (default) leaves
-# the symbols out, so the probe's -TraceFrames mode fails loudly.
-NDS_WHISPY_AOT_TICKS ?= 0
-# Cycle 86's per-fighter SRC split (SCAT/SHDT/SPRM/SINT/SPHD/SPHC/SCPU: two
-# clock reads around each fighter proc, every tick) -- the same kind of lab
-# attribution. 0 leaves those columns 0; GCRA/SRC are measured as before.
-NDS_TICK_HUD_SRC_SPLIT ?= 0
 # P2-2p8: ARM9 owns all 32 KB of shared WRAM (WRAMCNT = 0, a cacheable MPU
 # region at 0x03000000) and ARM7 links in its private WRAM
 # (linker/nds_arm7_ds7_arm9wram.ld); the fighters' FTStruct pool, pose
@@ -206,19 +171,6 @@ NDS_P2_ARM9_WRAM ?= 1
 # shipping ROM's heap: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
 # BUILD=<own dir> NDS_TEX_IDENT_SHADOW=1`.
 NDS_TEX_IDENT_SHADOW ?= 0
-# P2-2p8 Phase 3 (A7 memory): 1 keeps IFCommonGameStatus resident without the
-# twelve big GO / TIME UP / GAME SET letters' pixels (~120 KB of the 152 KB
-# file). The file is finalized at the top of the free arena, the letters are
-# baked there (GO into OBJ VRAM, both end messages into compressed RAM), and
-# only the rest of the file is kept (src/port/reloc_backend_assets.c,
-# src/nds/nds_ifcommon_oam.c). On by default since 2026-09-23 after its proofs
-# (artifacts/performance/2026-09-23_p2-2p8-if-gamestatus-compact/): four-CPU
-# replay digest identical, OBJ VRAM byte-identical for GO, TIME UP and GAME SET,
-# the first 1P battle loads, the shell loop passes. It costs 4,416 B of static
-# image -- one arena page off the all-content character select's margin (5,296 B
-# left at its animation reservation; see
-# artifacts/performance/2026-09-23_css-preview-heap/). 0 restores the plain load.
-NDS_IF_GAMESTATUS_COMPACT ?= 1
 # P2-2p8 T1 (A7 memory): 1 stages each of the nine VS ground maps (GR<Stage>Map)
 # as a COMPACT map -- the stage wallpaper's Sprite and Bitmap[44] table (776 B)
 # appended, MPGroundData.wallpaper pointing at them -- so the map's extern tree
@@ -251,8 +203,6 @@ NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 # _BLOB_RIGID_MASKS. Never in a shipping or gate build.
 NDS_LAB_STAGE_BINDING_CENSUS ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
-NDS_TASK29_GX_CENSUS ?= 0
-NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 # Task 49 GX equivalence differ capture (Part 2 instrument). Records the
 # per-owner GX stream word-for-word for host-side profile-0-vs-profile-1
 # diffing. Lab-only; built via command line, never in a shipping target.
@@ -351,14 +301,6 @@ NDS_DREAMLAND_DS_MESH ?= 0
 # whole projected-no-Z stage runs; the mask defaults to 0, so flag=1 with an
 # unset mask renders identically to flag=0. Lab instrument, never shipped.
 NDS_DREAMLAND_CARD_CULL ?= 0
-# Baked cull set, one bit per sNdsNativeStageRuns[] entry (MASK0 = runs 0-31,
-# MASK1 = runs 32-53). Baked rather than poked because the Task 36 replay
-# captures the stage stream once: a mask applied after capture would simply be
-# replayed away. E0 §5 candidate sets, cheapest screen coverage first:
-#   cheapest10: MASK0=0x000E03C0 MASK1=0x000C0800  -> 19 tris, 10.9%
-#   cheapest16: MASK0=0x037E03C0 MASK1=0x002C0800  -> 36 tris, 20.6%
-NDS_DREAMLAND_CARD_CULL_MASK0 ?= 0
-NDS_DREAMLAND_CARD_CULL_MASK1 ?= 0
 # Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
 # is the *instrumentation* level within profiles 1 and 2 and keeps its
 # existing values (0 lean, 1 phase timers, 2 full oracle).
@@ -366,7 +308,6 @@ NDS_DREAMLAND_CARD_CULL_MASK1 ?= 0
 #   1 = today's shipping translation path -- the correctness oracle
 #   2 = instrumented / semantic oracle build of that same path
 NDS_BATTLE_PROFILE ?= 1
-NDS_TASK22_WALLPAPER_RUN_LAB ?= 0
 # P2-2p8 joint-cap lab arm (owner 2026-09-16: test builds of experimental
 # optimizations are allowed). 0 = the shipping skeleton. N > 0 prunes every
 # common-part DObj whose container index is >= N at fighter setup, which is a
@@ -411,103 +352,12 @@ NDS_FTPARTS_FLAT_SLOTS ?= 4
 # walk, and the counter that would catch it (gNdsFtPartsFlatOverflows) has been
 # removed. Reverted.
 NDS_FTPARTS_FLAT_MAX ?= 96
-# P2-2p8 stall budget. 1 disables the ARM9 data cache for the whole run, so a
-# single match prices what the 4 KB dcache is worth today. This is the cheapest
-# decisive test of whether the frame's data traffic is reusable or compulsory:
-# with the cache off, `frame_off - frame_on` IS the cache's current value. Lab
-# only, and slow by construction. See artifacts/performance/2026-09-16_p2-2p8-
-# dcache-value/.
-NDS_LAB_NO_DCACHE ?= 0
 # P2-2p8 stall budget, falsifier. 1 makes gSYSinTable non-cacheable through its
 # own MPU region. The table is exactly 4,096 bytes -- the whole data cache --
 # and is indexed randomly, so it both misses constantly and evicts everything
 # else. Measured delta solves for the uncached-word cost that every VRAM
 # candidate in the ranking is quoted against.
-NDS_LAB_UNCACHED_SINTABLE ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
-# Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
-# fighter owner and how many of them recompute a value the prepared array
-# already holds. Lab only; it adds a 541-entry key array and per-iteration
-# counters, so it must never be on in a measured or published build.
-NDS_TASK90_SHADE_CENSUS ?= 0
-# Task 93 E0 lab probe. Counts texture-key rebuilds in
-# ndsRendererHardwareResolveOrBindTexture and records the key-hash request
-# sequence, so a front-cache is sized from the measured trace the way Task 90
-# sized the light-shade LUT. Lab only.
-NDS_TASK93_TEXKEY_CENSUS ?= 0
-# Task 107. Lab-only renderer-state redundancy census. Counts exact repeated
-# texture-tile republishes at the four surviving call sites and texture-bind
-# request/elision/revisit behavior. Default off: the arrays and bookkeeping do
-# not exist in shipping or ordinary performance builds.
-NDS_TASK107_RENDER_STATE_CENSUS ?= 0
-# Task 108. Lab-only dynamic decomposition of the three callbacks dispatched
-# from ftMainProcUpdateInterrupt. The census temporarily interposes the live
-# FTStruct callback pointers while that one proc is running and records the
-# exact (fighter kind, status, proc slot, original target) call/tick tuple.
-# Default off; no callback interposition or storage exists in shipping builds.
-NDS_TASK108_SITR_CALLBACK_CENSUS ?= 0
-# BUGS.md #10 lab probe. Holding SELECT draws every polygon two-sided, so the
-# owner can A/B culling in place at one fixed camera. The original culling
-# probe compared two separate captures and was judged on an image that did not
-# contain the bug; this exists so that mistake cannot repeat. Lab only.
-NDS_LAB_CULL_PROBE ?= 0
-# Which bits of the run index the tint probe shows. 0 = low three bits, 3 =
-# next three, so two captures name a run exactly out of the 67 there are.
-NDS_LAB_TINT_SHIFT ?= 0
-# BUGS.md #10 / P2-3r17 seam probe. At 1 it compiles a four-arm runtime probe
-# into the FIGHTER batch path -- both the production owner's
-# ndsRendererNativeBeginDirectBatch (modes 8/9) and mode 10's hierarchy batch --
-# cycled by SELECT and printed on HUD row 3:
-#
-#   0 shipped GX chain   1 POLY_CULL_NONE   2 POLY_CULL_FRONT
-#   3 strips off   4 BattleShip source-world matrices
-#
-# Arm 1 splits "the geometry never reached the GX" from "the GX culled it",
-# which no counter can tell apart. Arm 2 INVERTS the cull, so a probe that is
-# not reaching the geometry cannot be mistaken for one that is. Arm 3 only
-# exists when NDS_R2_STRIP_ROUTE compiled both fighter emitters in; it drives
-# gNdsR2FighterStripRoute. The final arm is the matrix-only P2-3r17 A/B: all
-# geometry/material/primitive state stays identical while Mario/DK switch from
-# the shipped GX local-chain compose to BattleShip's FTParts::mtx_translate.
-#
-# It is a RUNTIME cycle on purpose. Until 2026-08-25 this flag patched only the
-# hierarchy batch, which the production owner never calls, so the probe sat on a
-# path fighters do not take and a build that found nothing looked exactly like a
-# build that had tested something -- which is how the 2026-07-27 "culling
-# REFUTED" verdict was reached against an arm that never ran. One binary, one
-# camera, SELECT between the arms: pair it with capture-melonds.ps1's
-# -SelectPresses/-SecondOutput, or poke gNdsLabSeamArm with its -SetGlobals.
-#
-# REQUIRES NDS_R2_FIGHTER_PACKET=0 (a build error otherwise). The shipped
-# fighter draw is a DMA replay of a recorded GX stream, which ignores every arm
-# and makes two different arms produce byte-identical frames -- the same
-# "the probe found nothing" shape, one layer further in.
-#
-# AND A CULL ARM IS NOT AN ORACLE FOR MISSING GEOMETRY. Drawing both faces
-# fills a hole's COLOUR in without closing the hole, so an arm judged on "does
-# it look better" reports a fix that is not there (owner, 2026-08-25). Judge
-# only on whether the seam is gone, and only against a FRAME-LOCKED control:
-# capture timing on a live battle drifts pose run to run by far more than the
-# defect (measured 2026-08-25: eight captures at two fixed delays, every pair
-# hundreds of thousands of pixels apart).
-#
-# Fighters only -- un-culling the stage as well blows past the polygon limits
-# and hangs the ROM. Needs the battle FPS HUD for its arm indicator, and owns
-# SELECT (a build error otherwise).
-NDS_LAB_NO_CULL ?= 0
-# Task 91 E1 lab probe. Times the generic DObj tree walk and the native-owner
-# revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
-# ledger measures but cannot report for the Boundary configuration.
-NDS_TASK91_DRAW_PHASE_CENSUS ?= 0
-# R2-03 E43. E38's before/after span split is bracketed around
-# ndsRendererNativeApplyStateSpan, but ndsRendererNativeApplyStateDelta opens
-# with a per-delta census block -- E20's identical-operand arrays plus E25c's
-# effect histogram -- that sits INSIDE that bracket and runs 134.5 times a frame
-# on the before-span alone. docs/HANDOFF.md already warned the State bracket is
-# inflated by it. This arm keeps E38's brackets and compiles the per-delta block
-# out, so the bracket measures the replay's real work. E26 is sized against that
-# number, not against 33,708.
-NDS_R2_SPAN_LEAN_TIMING ?= 0
 # R2-03 E46. Places the whole fighter state-delta path in ITCM. The switch is
 # already there (0x01ff9934 in the census ELF); the span loop (0x02003a14) and
 # the Record* helpers it calls (0x0200d4e8) are not, so every one of the
@@ -634,29 +484,12 @@ NDS_R2_ANIM_CUT_ROUTE ?= 0
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
 NDS_R2_STRIP_ROUTE ?= 0
-# R2-03 E47. The native fighter owner derives its material colour and its
-# use-material predicate from `stats` per epoch, the way the generic path does,
-# instead of reading a baked policy flag and always taking prim_color. The
-# generic path picks env_color whenever the combiner outputs ENVIRONMENT and
-# returns 0 with no combiner at all, and its predicate is a function of the live
-# combiner -- so on hitlag frames, where Task 39's hurt flash is the only thing
-# that varies the epoch state (E34), the baked answer draws the struck fighter
-# dark maroon against the generic path's light grey (E32). Once per epoch,
-# 46.4/frame.
-NDS_R2_MATERIAL_DYNAMIC ?= 0
 # R2-03 E48 lab probe. Counts which branch of the generic colour path draws each
 # vertex, per presented frame, latched at one hitlag frame and one ordinary one.
 # Four hypotheses have been spent guessing at E32's regression (E36, E41, E42,
 # E47) and each cost a build; this measures the branch instead. Delete with the
 # experiment.
 NDS_R2_FLASH_PROBE ?= 0
-# R2-03 E61. Counting-only interposition on gcPlayDObjAnimJoint (the Task 95
-# mechanism), reporting the AObj kind mix, the anim_speed value set and the
-# NOANIM skip count. E60 priced this path at 146,942 ticks/frame inclusive and
-# 280 ticks per node; these three integers decide whether the repair is a
-# load-time pose table (which needs an integral frame index), a fixed-point
-# cubic, or neither. Delete with the experiment.
-NDS_R2_ANIM_CENSUS ?= 0
 # R2-03 E64. The cubic Hermite in gcPlayDObjAnimJoint evaluated in Q12 fixed
 # point instead of 14 soft-float operations. E60/E61 priced the cubic at 149.4
 # evaluations a frame x ~405 ticks = 60,509 ticks/frame, which is 99.6% of the
@@ -668,22 +501,6 @@ NDS_R2_ANIM_CENSUS ?= 0
 # replacements" as allowed, while the Task 9 state hash asserts the stronger
 # bit-exact property. Expect that hash to move.
 NDS_R2_CUBIC_FIXED ?= 0
-# R2-06 E8. Price ndsRelocFinalizeLoadedFile's five passes separately. E8 traced
-# 8 of the 9 over-gate frames to the 16 frames on which that function runs -- they
-# carry WORK-H median 1,113,152 against 974,080 clean, all of it in SRC, while the
-# clean-frame P95 of 1,056,640 is INSIDE the 1.12M gate by 63,360. So the milestone
-# turns on moving the relocation out of the gameplay frame, and which pass
-# dominates decides whether the repair is a post-fixup cache or one destination
-# buffer per resident animation. Instrument only, no behaviour change, lab default
-# off: it adds 8 words of BSS and this ROM's placement noise floor is 5,000-7,000,
-# so a run with it on is not comparable to an ordinary tick-HUD baseline.
-NDS_R2_RELOC_FIXUP_TIMING ?= 0
-# R2-06 E10. Price the ACTION CHANGE, which E8 showed is ~78% of the load-frame
-# premium -- the relocation is only 21.5%, so the gate lever is here rather than in
-# the reloc path. Brackets the two already-interposed animation-add wrappers
-# (gcAddDObjAnimJoint, gcAddAnimJointAll), splitting the O2R script normalization
-# from the decomp's own setup. Instrument only, lab default off.
-NDS_R2_LOADFRAME_TIMING ?= 0
 # Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. On the
 # historical direct-boot R2 targets it makes player 0 a level-3 CPU as well, so
 # both existing fighters attack continuously with no recorded input stream. P2-2
@@ -769,12 +586,8 @@ NDS_LAB_FOURCPU_TWO ?=
 # configuration.
 NDS_LAB_FOURCPU_SWEEP ?=
 NDS_LAB_FOURCPU_WORDS ?=
-# P3 lab: radio exchange at boot for the two-instance harness (src/nds/net/nds_net_lab.c).
-NDS_NET_LAB_PING ?= 0
-NDS_NET_LAB_PING_FRAMES ?= 600
 # P3 lab: two consoles agree a fixed two-human match at boot and play it in
 # lockstep; NDS_NET_LAB_INPUT scripts each console's pad.
-NDS_NET_LAB_MATCH ?= 0
 NDS_NET_LAB_INPUT ?= 0
 # P3 lab: drive the real menus through host/join, lobby, stage and rematch
 # on the two-instance harness (src/nds/net/nds_net_autopilot.c).
@@ -787,35 +600,17 @@ NDS_NET_LAB_DROP ?= 0
 # P3 lab: with the autopilot, ten matches whose descriptor the host fills in:
 # each VS stage in turn, two level-9 CPUs, every item at the highest rate.
 NDS_NET_LAB_SWEEP ?= 0
-# P3 lab: with the sweep, the matches cycle through Team Battle layouts (one
-# in Stock, where a guest's START takes a teammate's stock) and a free-for-all.
-NDS_NET_LAB_TEAMS ?= 0
 # P3 lab: with the sweep, NDS_NET_LAB_SWEEP_REPRO=N replays reported setup N
 # instead (nds_net_lobby.c, ndsNetLabSweepDescriptor). 0 = the sweep.
 NDS_NET_LAB_SWEEP_REPRO ?= 0
-# P3 lab: with the autopilot, NDS_NET_LAB_LEAVE=N makes the guest hold START
-# (its Leave command) from batch 600 of its Nth battle.
-NDS_NET_LAB_LEAVE ?= 0
-# P3 lab: with the autopilot, the guest's game freezes at batch 600 of its
-# first match, to exercise the freeze report (NDS_FREEZE_DIAGNOSTICS=1):
-# 1 = a spin, 2 = the game thread blocked on a mailbox. 0 = off.
-NDS_NET_LAB_HANG ?= 0
 # P3 lab: with the autopilot and the sweep, rooms without end: the roles swap
 # every room (host rotation), and the rooms cycle through lobby-only visits,
 # matches, rematches and a guest's Leave, with a libc heap sample per room.
 NDS_NET_LAB_SOAK ?= 0
-# P3 lab: with the autopilot, a guest's radio goes deaf for this many frames
-# the moment it accepts a START (halved each round, for its first
-# NDS_NET_LAB_STARTLOSS_ROUNDS rounds), as a burst of packet loss would on
-# hardware: the two-phase start must leave both consoles in the lobby or both
-# in the match. 0 = off.
-NDS_NET_LAB_STARTLOSS ?= 0
-NDS_NET_LAB_STARTLOSS_ROUNDS ?= 2
 # P3 lab (plan section 12, P3-0C): the four-fighter gate with the radio
 # running. Compiles gNdsNetLabGateRadio; set to 1 at boot, the battle opens a
 # room and runs the lockstep as a one-human net match, so the same ROM
 # measures with and without the radio.
-NDS_NET_LAB_GATE_RADIO ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 NDS_LAB_FOURCPU_SWEEP_P4 ?=
@@ -1422,34 +1217,6 @@ endif
 # of hardcoding one, so the match can never again be shorter than the run that
 # watches it, and it verifies the value in-guest rather than trusting this flag.
 NDS_R2_SOAK_MATCH_MINUTES ?= 0
-# The negative control for the shield anim-joint fix. ftParamUpdateAnimKeys
-# picks the parser from fp->anim_desc.flags.is_anim_joint for the WHOLE fighter
-# (decomp ft/ftparam.c:386), so a joint still holding a figatree while that flag
-# is set is read by the 32-bit parser -- the misread class attributed in
-# artifacts/performance/2026-08-13_c-anim-anomalies/ANOMALIES.md. This counts
-# that dispatch directly, which is strictly stronger than gNdsObjAnimRunawayCount:
-# the runaway counter only fires when the misread word happens to decode to an
-# ILLEGAL opcode, while a misread that lands on 0..23 corrupts silently.
-# Lab only -- it walks the loaded-file table per shielding joint -- and it costs
-# nothing when no fighter is shielding.
-NDS_ANIM_JOINT_AUDIT ?= 0
-# Qualification oracle for the normalized-ledger index (battleship_sys_objanim.c).
-# On EVERY index lookup it also runs the linear scan the index replaced and
-# compares the two answers, counting any disagreement. The index is only correct
-# because the ledger's keys are unique, and that is a property of the insert path
-# rather than of the lookup, so it is proven by running both and not by argument.
-# Lab only: it restores the whole cost the index removes, so a run carrying this
-# flag is a correctness run and can never be a gate figure.
-NDS_AOBJ_EVENT32_HASH_ORACLE ?= 0
-# The A/B/A third arm for that index, and it has to be a flag rather than a
-# rebuild: this build is byte-reproducible (build-c144-ctl and build-c145-ctl2,
-# same source, different directory, identical ROM SHA-256) and the tick-HUD
-# sampler is bit-deterministic, so re-running the control cannot bracket
-# anything. At 0 the lookup falls back to the linear scan it replaced while the
-# 8,192-byte index, its counters, and every section after them stay exactly
-# where the shipping arm puts them -- i.e. the candidate's PLACEMENT with the
-# control's BEHAVIOUR, which is the only arm that can tell the two apart.
-NDS_AOBJ_EVENT32_LEDGER_INDEX ?= 1
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -1460,62 +1227,11 @@ NDS_AOBJ_EVENT32_LEDGER_INDEX ?= 1
 # rgba instead of GFX_NORMAL at all four emit sites. Requires
 # NDS_R2_MATERIAL_DYNAMIC for the epoch predicate.
 NDS_R2_UNLIT_VERTEX_EPOCH ?= 0
-# R2-04 E2. Shadow copy of the FPS-HUD publish, from the same locals in the
-# same breath, to separate "something rewrites the primary afterwards" from
-# "the harness BUS_CLOCK constant is wrong". Lab probe.
-NDS_R204_FPSHUD_SHADOW ?= 0
-# Task 103 lab probe (docs/optimization/RASTER_AXIS_CAMPAIGN.md fork B).
-# Task 99 left the stage bucket ~89% fixed and Task 100 refuted the last
-# proposed currency for it, so ~331,300 ticks/frame are still unattributed.
-# Over 54 runs that is ~6,135 per run, which points at per-operation
-# scaffolding -- the currency Task 99 §4 named and nothing has isolated.
-#
-# Splits ndsRendererTask36ReplayRun into its three spans: the begin-run
-# scaffolding, the GFX_FIFO word-push loop, and the end-batch tail. That
-# distinguishes the two live explanations directly. If the cost is in the push
-# loop it is FIFO stall, which is geometry-side backpressure and would mean
-# Task 55 E2's "words are free" needs re-reading; if it is in begin/end, run
-# count is the currency and the lever is run structure.
-#
-# Deliberately measures in place rather than by removing runs: Task 99 arm C
-# culled 27 of 54 and measured +109,888 because that disarms the Task 36
-# capture-once replay. Counters are cumulative; sample with a two-stop delta.
-# Lab only, default 0.
-NDS_TASK103_STAGE_RUN_PHASE ?= 0
-# Task 104: elide the dead stats traffic on a Task 36 replay hit.
-#
-# The hit path cleared 1,292 bytes of `preflight_stats`, then overwrote all
-# 1,292 with `*stats = owner->segment_stats[i]`, to transport exactly one live
-# member -- `sync_command_count`, the only field read after the segment loop.
-# Every other member is overwritten before its next read, because the following
-# segment starts with `ndsRendererInitStats`.
-#
-# Task 84 E1 priced this struct at 2.74 ticks/byte: 1,292 bytes span ~41 cache
-# lines that the renderer evicts between segments. Three hit segments a frame
-# were paying the clear plus both sides of the copy -- ~3,876 bytes each.
-#
-# Task 103 E7 removed only the clear and realised 28% of its predicted saving:
-# the copy still touched those lines, so the misses relocated into it instead of
-# disappearing (Task 84 E1.4's mechanism). This removes both accesses together,
-# which is the difference between a miss that moves and a miss that vanishes.
-#
-# Measured KEEP, default on: STG P50 -22,016, WORK-H P50 -26,240, P95 -28,352,
-# FTR flat (-704), SRC flat (+1,088), VBlank 4-interval 39 -> 28. Kept as a flag
-# so the A/B stays reproducible.
-NDS_TASK104_STAGE_STATS_ELISION ?= 1
 # Task 106 E0: logical updates per presented frame. Ships at 2 (the source 60 Hz
 # simulation against a 30 Hz present). Building with 1 prices what a 30 Hz
 # simulation would save; it is a sizing arm only, uncompensated, and plays at
 # half speed. Do not publish a ROM built with 1.
 NDS_TASK106_UPDATES_PER_PRESENT ?= 2
-# Task 75 E0: count completed file loads and ride the per-frame delta on the
-# same census ring the Task 70 fallback counter uses. Answers Task 71 section
-# 5's open obligation -- one expensive SRC frame was profiled and found to be a
-# cartridge load, but it was never shown that every high-SRC frame is one.
-# Task 106 made that the gate's question: the SRC excursion survives halving the
-# update rate unchanged, so the tail is loading, not simulation.
-# Sample with -FallbackCensus -RingDump; lab only, default 0.
-NDS_TASK75_LOAD_CENSUS ?= 0
 # 2026-08-16: does the fighter DRAW CONTRACT actually change every frame?
 # FTR_LANE.md section 5 sized the capture pass at 34,307 tk/fr and called it a
 # CEILING, because the contract-change rate had never been measured and no
@@ -1538,18 +1254,6 @@ NDS_R2_FTR_CONTRACT_CENSUS ?= 0
 # poke reaches gNdsFtrDrawMemoRoute (its own 32-byte line), so an A/B is one
 # binary and two arms.
 NDS_R2_FTR_DRAW_MEMO ?= 1
-# P2-3r6 lab instrument: record the modelview/projection, poly format and
-# emitted triangle count of each Mario entry-pipe root into globals, where a
-# gdb stub read is sound. Default 0; the shipped ROM pays nothing.
-NDS_ENTRY_EFFECT_DIAG ?= 0
-# Second-entry (Sudden Death / rematch) MObj chain validator. Records the
-# fighter material chain before the counting pass and again immediately before
-# the writing pass, so "when does the list first become invalid" is measured
-# rather than inferred from wherever the overflow happened to surface. Bounded
-# node count, cycle detection, arena containment, owning DObj, and the taskman
-# heap generation at probe time. Lab only, default 0: it walks every chain twice
-# per DObj per frame and keeps a 64-entry seen list on the stack.
-NDS_R2_SECOND_ENTRY_DIAG ?= 0
 # P2-1b scene-loop walk. Number of menu -> battle -> results -> menu loops the
 # bounded scene tails in taskman_seam.c drive automatically before they park
 # again. 0 (the default, and the value every published and Boundary
@@ -1660,12 +1364,6 @@ NDS_R2_FIXED_SQRT ?= 1
 # 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
 # happening, which is how the switch plan's §3.3 says traffic work is judged.
 NDS_R2_STAGE_DMA ?= 0
-# R2-02 E3 falsifier, lab only. Hashes the prepared run and dense data the four
-# actor segments consume, once a frame, and counts the frames it changes on. It
-# outlived the cut it was written for: it proved the *prepared* data constant,
-# which was true and was never the question -- the actor segments' matrices are
-# what move. Kept because it is the cheap way to re-check that half.
-NDS_R2_STAGE_ACTORS_PROOF ?= 0
 # R2-02 E7. Composes the sixteen dynamic stage bindings from one hoisted
 # view-projection instead of rebuilding the camera operands per binding. The old
 # path cost 54,901 ticks/frame, 44.6% of the stage preflight, and the arithmetic
@@ -1811,13 +1509,6 @@ NDS_R2_STAGE_VALIDATE_STRIDE ?= 0
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_LIGHT ?= 0
-# R2-03 E34. Falsifier for E26. Hashes the complete renderer state each epoch
-# hands to its runs, per epoch index, and counts frames whose value differs from
-# the one already stored. E26's baked per-epoch state is only possible if that
-# hash is a function of the epoch index -- and ndsRendererNativeApplyMaterial
-# writes the same stats fields from a live input, so contamination can propagate
-# into later epochs. Lab only.
-NDS_R2_FIGHTER_EPOCH_STATE_PROOF ?= 0
 # R2-03 E32. Folds SSB64's hitlag shuffle into the fighter's world matrix
 # instead of switching the whole native owner off for the duration of every hit.
 # The source (ftdisplaymain.c:1205) is one PUSH + syMatrixTra(x, y, 0) + POP
@@ -1848,77 +1539,15 @@ NDS_TICK_HUD_SPANS_DEFAULT ?= 1
 # configuration that ships. Every other target keeps them; a probe that needs
 # them on a shipping build passes NDS_DIAG_COUNTERS=1.
 NDS_DIAG_COUNTERS ?= $(if $(filter smash64ds smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),0,1)
-# R2-03 E28 control arm. E16 left the software light preparation
-# (ndsRendererHardwarePrepareLitDirection's transform + sqrt + three divides,
-# and the shade LUT) running per lit epoch even though the hardware path skips
-# the only loop that reads them. E28 removes it; this restores it, so the cut
-# can be A/B'd against a control built from the same tree. Delete this flag with
-# the experiment.
-NDS_R2_FIGHTER_SOFT_LIGHT_KEEP ?= 0
-# R2-03 E18. Skips the fighter's per-vertex software lighting outright, so the
-# ceiling of E16's hardware-lighting cut can be measured rather than inferred
-# from a bracket that also contains the epoch preamble. Fighters draw with stale
-# colours -- lab only, never a playable configuration.
-NDS_R2_FIGHTER_SHADE_SKIP ?= 0
-# R2-03 E19. Same one-build pricing method as E18, applied to the epoch state
-# spans -- the next ranked item after the shade at ~52,000/frame. Skips the
-# recorded state-delta replay either side of the material. Lab only; the
-# fighters' render state goes wrong, which is the engagement proof.
-NDS_R2_FIGHTER_STATESPAN_SKIP ?= 0
 # R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
 # whole fighter end to end: the phase census partitions the draw, this measures
 # what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
 # built with this is not a playable configuration.
 NDS_R2_DRAW_SUPPRESS_MASK ?= 0
-NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
-NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
-# R2-07 R2b. Admit the VS Results wallpaper to the same hardware-affine BG the
-# Dream Land battle wallpaper already uses. R0h measured the Results background
-# layer at 1,746,558 ticks/frame across four software stages -- blit, 153,600-byte
-# clear, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- for a STATIC image.
-# The affine path decodes once into BG VRAM and then pushes four affine registers
-# per frame. Both arms were built and measured before it graduated: 10 VBlanks ->
-# 7, 5,601,900 -> 3,921,330 ticks/frame on the phase-aligned histogram, and the
-# census row for the software wallpaper vanishes rather than shrinking -- the
-# layer is gone, not cheaper. Owner approved the matched-tic capture pair on
-# 2026-07-30 ("the affine one looks perfect"), so it is on by default:
-#   artifacts/visibility/2026-07-30_r207-r2b-results-control-software.png
-#   artifacts/visibility/2026-07-30_r207-r2b-results-candidate-affine.png
-NDS_R2_RESULTS_AFFINE ?= 1
-# R2-07 R4b. Skip the whole foreground software compositor -- staging clear,
-# blits, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- on frames whose
-# foreground draw set is byte-identical to the image already resident in BG
-# VRAM. Two independent censuses put those four stages at 41.03%/44.38% of the
-# Results frame.
-#
-# GRADUATED 2026-07-30. Measured -2,245,333 ticks/frame (-28.6%), work -44.3%,
-# instructions -49.9%, and the output is PIXEL-IDENTICAL: 253,344 guest pixels
-# compared at Results tic 160 on a matched-source-tic pair, 0 differing, max
-# channel delta 0, while skipping 97.7% of foreground layers. Evidence at
-# artifacts/task37-census/r207-r4b-memo-on/ and
-# artifacts/visibility/2026-07-30_r207-r4b-results-tic160-{control,candidate}.png
-NDS_R2_RESULTS_LAYER_MEMO ?= 1
-# R2-07 R4d. Suppress the fallback main-loop present (main.c) on iterations where
-# a scene loop already presented. Measured 2026-07-30: VS Results runs 2.00
-# ndsPlatformEndFrame calls per source tic -- one from the scene loop
-# (taskman_seam.c:7049) that submits and flushes the frame, and one from the
-# main loop that submits nothing, so its flush is skipped but its unconditional
-# swiWaitForVBlank is not. The battle path runs 1.00 per logical frame, so this
-# is Results-only and every battle P95 in the campaign is unaffected.
-#
-# GRADUATED 2026-07-30. Matched-source A/B on smash64ds-results-lab-hwtri:
-# -560,190 ticks per source tic (-19.9%), 5.03 -> 4.03 VBlanks, which is exactly
-# one VBlank and exactly one swiWaitForVBlank. Fighter draw is unchanged
-# (1,709,228 -> 1,710,498, +0.07%) and GX submits/flushes stay at 1.00 per tic,
-# so nothing that renders was touched. The guest picture is PIXEL-IDENTICAL:
-# 240,000 guest-viewport pixels at Results tic 160, 0 differing, max channel
-# delta 0. Evidence at artifacts/performance/r4d-main-present-guard-{off,on}
-# -20260730.json and artifacts/visibility/2026-07-30_r207-r4d-results-tic160-*.png
-NDS_R2_MAIN_PRESENT_GUARD ?= 1
 # R2-07 R4c. Select the NATIVE FIGHTER OWNER on the Results path, the renderer
 # the match already uses. `no_oracle` is not a proof switch: it is what
 # reloc_backend_renderer_dl.c:12603 tests to enter the native owner, so it picks
@@ -1984,8 +1613,6 @@ NDS_TASK9_FLOAT_PHASE2 ?= 1
 NDS_TASK16_FLOAT_COMPARE ?= 0
 NDS_TASK16_FLOAT_I2F ?= 0
 NDS_TASK16_FLOAT_ADDSUB ?= 0
-NDS_TASK9_STATE_HASH ?= 0
-NDS_TASK20_STACK_PROFILE ?= 0
 NDS_TASK32_DRAW_HOT_TEXT ?= 0
 NDS_FIGHTER_ANIM_AUDIT ?= 0
 NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
@@ -2026,17 +1653,6 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
-# Draw the shield as one camera-facing quad instead of interpreting its source
-# model's display list. ON BY DEFAULT since 2026-09-18 -- see the block comment
-# in battleship_efmanager.c. Owner observed 2026-08-06 that the N64 shield is
-# always camera facing, and the source asset's drawing node is a 21-command DL
-# over four vertices, so both routes draw the same textured quad and only the
-# submit differs. The model route lost the owner's coverage on 2026-09-15
-# (banking 32bdb17c618 forced NDS_RENDERER_GEOM_ZBUFFER on the link-15 effect
-# submit, so the flat quad depth-competes with the fighter and draws behind
-# it), and its 36k p95 was never re-bought; the quad route covers the fighter
-# by depth bias at particle-draw cost. The tree draw stays as the fallback.
-NDS_R2_SHIELD_QUAD ?= 1
 # Draw Mario's fireball as one camera-facing quad instead of interpreting its
 # source model's display list. Owner-playtested and accepted 2026-08-07; ON BY
 # DEFAULT. See the block comment in reloc_backend_movement.c.
@@ -2085,14 +1701,6 @@ NDS_R2_FOX_BLASTER_GLOW_AOT ?= $(NDS_R2_FOX_BLASTER_QUAD)
 # body untouched. Geometry, texture and palette are resolved offline by
 # scripts/fox_gun_bake.py; nothing is walked or converted at runtime.
 NDS_R2_FOX_GUN_OVERLAY ?= 1
-# Dream Land fireball map collision without the generic BattleShip
-# mpProcessUpdateMain/wpMapProcAll path. The fast path uses a compact AOT copy of
-# Pupupu's seven source collision lines, sweeps the fireball diamond directly,
-# and publishes the same MPCollData mask/normal/line fields consumed by
-# wpMapCheckAllRebound. Other stages fall back to wpMapTestAll. Owner-playtested
-# and accepted 2026-08-07; ON BY DEFAULT. Engagement/fallback counters make an
-# accidental generic route visible.
-NDS_R2_FIREBALL_NATIVE_MAP_COLL ?= 1
 # FireGrind as a tiny DS-native effect: replaces the BattleShip root particle +
 # three generators + six interpreter sparks with a fixed pool of three source-
 # derived quads per fireball bounce, drawn inside the existing particle GX batch.
@@ -2129,12 +1737,6 @@ endif
 # collision pass reads them. 1.0 is source-exact; >1 enlarges the rebound feel.
 # Owner playtest 2026-08-07: the source fireball felt slightly too small.
 NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
-# Forces the Mario/Luigi fireball into the source's map-collision debug display
-# (wpDisplayMapCollisions, gated on display_mode == nDBDisplayModeMapCollision),
-# which draws the fireball's stage-collision diamond as two scaled boxes. The
-# visualization is built into wpdisplay.c -- this flag only sets the fireball's
-# display_mode at spawn so the existing path runs. For tuning the scale above.
-NDS_R2_FIREBALL_MAP_COLL_DEBUG ?= 0
 # ImpactWave native-mesh lab. The source effect remains the owner of spawn,
 # lifetime, AObj/MObj animation and colour/index semantics, but its hot draw
 # skips the generic N64 display-list/texture path: the 18 source vertices and 16
@@ -2152,48 +1754,10 @@ NDS_R2_IMPACT_WAVE_NATIVE ?= 1
 # roughly 259K effect-draw ticks per active presented frame, so ship it on by
 # default; setting it to 0 remains the source/interpreted control arm.
 NDS_R2_REBIRTH_HALO_NATIVE ?= 1
-# Accepted second RebirthHalo pass (2026-08-08): immutable AABB admission,
-# exact AOT RotY, split source projection/modelview on GX, and packed DMA vertex
-# submission. At the deterministic normal-+90 equivalent it differs from source
-# in 374/120000 pixels (0.312%), all on the platform's subpixel raster edges,
-# while effect-draw P50 falls 230240 -> 112224 ticks (-51.3%).
-NDS_R2_REBIRTH_HALO_FULL_OFFLOAD ?= 1
 # Bit per generated RebirthHalo group eligible for model-space GX submission.
 # 0x3f is the all-GX experiment; final acceptance may narrow this if the DS
 # transformer's subpixel rounding changes source coverage for a specific group.
 NDS_R2_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
-# Accepted GX route: keep source projection/modelview split on the DS and use
-# natural GX Z. A previous blue-screen rejection was invalid external capture
-# interference; the clean rerun is visually correct and measured above.
-NDS_R2_REBIRTH_HALO_SPLIT_MTX ?= 1
-# Optional companion to SPLIT_MTX: preserve the accepted renderer's synthetic
-# per-triangle painter Z by replacing only projection column Z with depth*W.
-# X/Y/W still use the true split modelview/projection hardware path.
-NDS_R2_REBIRTH_HALO_SPLIT_NOZ ?= 0
-# Packed vertex-stream mode. Software-lit COLOR words are the only live words;
-# packet topology/model-space geometry/texcoords are cached once and those live
-# colors are patched before the DMA submission.
-# 0 = ordinary GX MMIO writes, 1 = cached packed GXFIFO CPU push,
-# 2 = cached packed GXFIFO DMA0 push. Mode 2 is accepted: the packet transport
-# itself is pixel-identical to the split renderer and saves another ~37.5K P50.
-NDS_R2_REBIRTH_HALO_PACKED_FIFO ?= 2
-# Rebuild a packed packet from the accepted CPU-projected X/Y each draw instead
-# of requiring model-space GX submission. Lab-only: this prices FIFO/DMA savings
-# while retaining the exact software projection/raster contract.
-NDS_R2_REBIRTH_HALO_PACKED_PROJECTED ?= 0
-# DS lighting for the two source-lit RebirthHalo groups. Owner-approved after
-# visual inspection of the all-optimization lab ROM; keep it enabled by default.
-NDS_R2_REBIRTH_HALO_HW_LIGHT ?= 1
-# Lab-only cycle census for the native RebirthHalo hot path.  The counters are
-# cumulative and intentionally compiled out of production builds.
-NDS_R2_REBIRTH_HALO_PHASE_PROFILE ?= 0
-# RebirthHalo is positively identified by the effect-tree owner before its
-# immutable generated lists reach the generic DL adapter. Bypass loaded-file
-# discovery, segment-E material preparation, callbacks and interpreter setup;
-# the two lists on the same child also share one matrix/setup. Deterministic
-# post-KO A/B: 112,224 -> 82,304 effect ticks P50 with 0 changed DS pixels
-# versus the previously accepted software-light native route.
-NDS_R2_REBIRTH_HALO_FAST_ADAPTER ?= 1
 # SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
 # the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
 # 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
@@ -2281,28 +1845,6 @@ NDS_R2_COLLISION_FIXED ?= 0
 # (gNdsCfxRingEnable, read through a volatile so no fold can reach it), so arm A
 # and arm B are expected to have byte-identical .text.
 NDS_R2_COLLISION_FIXED_DISPATCH ?= $(NDS_R2_COLLISION_FIXED)
-# R2-07 slice 53 -- the CONSUMER half, and it exists to measure ONE number.
-#
-# Slice 52 converted the three PRODUCERS and measured an exchange rate of 1.001
-# whole match / 1.014 at rank-80: the fixed text costs exactly what the float it
-# deletes costs. The lane's remaining hope is RESIDENCY -- keeping the fixed
-# representation so the f32 boundary stops being paid -- and residency's price
-# is dominated by gmCollisionTestRectangle, whose per-call byte footprint the
-# 2026-08-15 captures could only bracket between 0.052 and 0.467 tk/byte/call, a
-# 9x spread that straddles the requirement.
-#
-# At 1 this compiles ndsR2CfxTestFighterDamage into the ring and lets the
-# src/import/battleship_gmcollision.c wrapper answer the fighter hurtbox test
-# from ndsR2CfxTestRectangle instead of calling the decomp float body. The
-# decision itself therefore moves into port code for the first time, which is
-# why it is a MEASURING flag with a default of 0 and not a shipping candidate.
-NDS_R2_COLLISION_FIXED_NARROW ?= 0
-# The falsifier arm for the line above, same mechanism and same reason as
-# NDS_R2_COLLISION_FIXED_DISPATCH: one initialised word of .data
-# (gNdsCfxNarrowEnable) read through a volatile, so both arms link byte-identical
-# text and scripts/compare-elf-sections.py can assert the pair differs in exactly
-# one byte.
-NDS_R2_COLLISION_FIXED_NARROW_DISPATCH ?= $(NDS_R2_COLLISION_FIXED_NARROW)
 # THE WARM-MAC EXCHANGE-RATE INSTRUMENT (include/nds/nds_r2_sim_mac_fixed.h).
 # LAB ONLY, DEFAULT 0, and at 0 the translation unit is not linked at all so a
 # published ROM stays byte-identical.
@@ -2357,44 +1899,14 @@ NDS_R2_HWMATH_BENCH ?= 0
 # Arm 0 is exactly what shipped before this date; arm 3 is exactly what ships
 # after it.
 NDS_R2_HWMATH_ROUTE ?= 0
-# 2026-08-16. ndsR2AnimValueQ into ITCM. The marginal-80 per-PC census charges
-# the kernel 26,664 tk/fr and 21,719 of that -- 81.4% -- is `icache_fill` on
-# 1,028 bytes entered 370.6 times a frame. That is the largest single
-# fidelity-neutral item on the board (0.296x of the +73,425 level) and the
-# arithmetic does not change, because only the address does. Paid for by
-# NDS_TASK9_FLOAT_MAIN_MEMBERS (332 B) plus the light-shade LUT builder (404 B),
-# both measured at ZERO executed instructions across the gate window.
-# 2026-09-27: 0. The P2 pose engine (nds_ft_pose.c) now evaluates every
-# fighter joint; the four-CPU census executed this kernel ZERO times, and its
-# 1,028 B went to ndsFtPosePlay.
-NDS_R2_ANIM_Q_ITCM_ON ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
 NDS_TASK44_STAGE_STEADY ?= 0
-# Task 37 census instrument. Opens the repo melonDS build's ARM9 per-PC profiler
-# over a fixed window of settled battle frames (reset at START, dump START+FRAMES
-# later) so the census measures the steady-state loop and not boot. Lab only:
-# never set in a published target, and it compiles to nothing at 0.
-# Task 68 lab: count how often the fighter draw abandons the native production
-# owner for the generic display-list interpreter. Default 0 -- enabling it adds
-# BSS, and this ROM is cache-placement sensitive enough (see Task 37) that the
-# extra bytes shift frame pacing. Any run with it on needs its own baseline.
-NDS_TASK68_FALLBACK_CENSUS ?= 0
-# Task 86: inline the 64-byte matrix struct copies GCC turns into memcpy calls.
-# KEEP: WORK-H P95 -18,432, P50 -14,208, better on 118/128 frames, 3-VBlank
-# frames 490 -> 499. Default on.
-NDS_TASK86_MATRIX_COPY ?= 1
-# Task 85: take an aligned load/store in the reloc native accessors instead of
-# a memcpy call. 51% of every memcpy call in the frame moves 2 or 4 bytes.
-# KEEP: SRC P95 -76,544, WORK-H P95 -40,384, VBlank histogram better on all
-# four measures. Default on.
-NDS_TASK85_ALIGNED_NATIVE_ACCESS ?= 1
 # Task 82 ITCM re-pack: evict the animated-CI4 texel path (dead while Dream
 # Land water is frozen) and admit five higher-stall functions. Placement only.
 # KEEP on measurement: WORK-H P95 -52,224 with both evictions; this ships the
 # owner's one-eviction variant. Default on.
-NDS_TASK82_ITCM_REPACK ?= 1
 NDS_TASK37_PROFILE ?= 0
 NDS_TASK37_PROFILE_START ?= 438
 NDS_TASK37_PROFILE_FRAMES ?= 128
@@ -2435,24 +1947,9 @@ NDS_TASK37_ITCM_PORT = $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
 # Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
 # Separates "ITCM residency breaks it" from "any layout change breaks it".
 NDS_TASK37_LAYOUT_PROBE ?= 0
-NDS_TASK37_LAYOUT_PROBE_ITCM ?= 0
-# Lab-only: drop the controller devices from the Task 9 state hash. They are
-# filled from the ARM7 on real time while fast-logic runs the ARM9 unpaced, so
-# they encode execution speed. Diagnostic for Task 37 only.
-NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
-# Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
-# Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
-NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
-# Verification-only cadence selector. 1 preserves the original Task 9 contract:
-# hash the complete active game state after every source update. Fighter-unit
-# determinism replays may raise this to sample that SAME complete state at a
-# fixed source-update cadence while still running the full one-minute match.
-NDS_TASK9_STATE_HASH_STRIDE ?= 1
 # Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
-NDS_TASK9_FTSTRUCT_SNAPSHOT ?= 0
-NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
@@ -3105,15 +2602,6 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
 # already treats all eleven as P1 seams and has packed their scripts and
 # textures (docs/optimization/archive/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
 NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
-# The attachment-position diagnostic for the two 2026-08-12 BUGS.md rows: Fox's
-# muzzle flash/beam Y, and where the burn flames land
-# (artifacts/bugs/2026-08-12_r2-07-position/CONTRACT.md). READ-ONLY -- it records
-# what the shipped code already computes and, beside it, what the source route
-# would have produced, and it changes no gameplay value. That is deliberate:
-# both rows consume gmCollisionGetFighterPartsWorldPosition, so the A-vs-B
-# reading has to be taken on code that still behaves like the ROM the owner
-# played, or the measurement describes the fix instead of the defect.
-NDS_R2_POSITION_PROBE ?= 0
 # NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
 # makers -- damage slash, impact wave, catch swirl and the three random spawn
 # showers -- plus the shield, rebirth halo and Fox reflector, and the reason it
@@ -3146,13 +2634,6 @@ NDS_R2_POSITION_PROBE ?= 0
 # which non-forced effects start being refused. Cut something that is actually
 # on the heap instead.
 NDS_R2_EFFECT_POOL ?= 12
-# Pull Dream Land's blast zones to a quarter so a passive both-CPU soak produces
-# KOs. Needed because the canonical one-minute match never yields one: measured
-# gNdsKOBurstAttemptCount == 0 over both a 2.5-minute and a 4.5-minute run on
-# 2026-08-01, which left "the KO burst freezes the game" untestable. Drives the
-# ordinary bound check in ftcommondead.c, so the burst, scoring and respawn all
-# run for real. NEVER ship this: these are the gameplay blast zones.
-NDS_R2_KO_STRESS ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -3442,7 +2923,6 @@ NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 # figure; nothing here estimates it.
 NDS_R2_FTANIM_TRACK ?= 0
 NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
-NDS_R2_FTANIM_TRACK_ORACLE ?= 0
 
 # P2-2p6 (owner ruling 2026-08-23: "do both"). The fighter pose engine,
 # `src/nds/nds_ft_pose.c`: the figatree script machine and the Q12 evaluator
@@ -6298,16 +5778,11 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BUILD_CONFIG_H'; \
 		echo '#define NDS_DEV_LIVE_INPUT_PREVIEW $(NDS_DEV_LIVE_INPUT_PREVIEW)'; \
 		echo '#define NDS_HARNESS_FAST_LOGIC $(NDS_HARNESS_FAST_LOGIC)'; \
-		echo '#define NDS_HARNESS_ITEMS_ON $(NDS_HARNESS_ITEMS_ON)'; \
-		echo '#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST $(NDS_HARNESS_FAST_PRESENT_ON_REQUEST)'; \
 		echo '#define NDS_RENDERER_HW_TRIANGLES $(NDS_RENDERER_HW_TRIANGLES)'; \
-		echo '#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY $(NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY)'; \
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
-		echo '#define NDS_P2_EFFECT_CENSUS $(NDS_P2_EFFECT_CENSUS)'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
-		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
 		echo '#define NDS_P2_COMPACT_GROUND_MAPS $(NDS_P2_COMPACT_GROUND_MAPS)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
 		echo '#define NDS_FTR_LEAN_RELAXED $(NDS_FTR_LEAN_RELAXED)'; \
@@ -6315,8 +5790,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
 		echo '#define NDS_LAB_STAGE_BINDING_CENSUS $(NDS_LAB_STAGE_BINDING_CENSUS)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
-		echo '#define NDS_TASK29_GX_CENSUS $(NDS_TASK29_GX_CENSUS)'; \
-		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		$(if $(NDS_TASK36_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK $(NDS_TASK36_RIGID_BINDING_MASK)'; ,) \
@@ -6324,48 +5797,24 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
 		echo '#define NDS_DREAMLAND_CARD_CULL $(NDS_DREAMLAND_CARD_CULL)'; \
-		echo '#define NDS_DREAMLAND_CARD_CULL_MASK0 $(NDS_DREAMLAND_CARD_CULL_MASK0)u'; \
-		echo '#define NDS_DREAMLAND_CARD_CULL_MASK1 $(NDS_DREAMLAND_CARD_CULL_MASK1)u'; \
 		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_TASK55_STAGE_GEOM $(NDS_TASK55_STAGE_GEOM)'; \
 		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
-		echo '#define NDS_TASK68_FALLBACK_CENSUS $(NDS_TASK68_FALLBACK_CENSUS)'; \
-		echo '#define NDS_TASK86_MATRIX_COPY $(NDS_TASK86_MATRIX_COPY)'; \
-		echo '#define NDS_TASK85_ALIGNED_NATIVE_ACCESS $(NDS_TASK85_ALIGNED_NATIVE_ACCESS)'; \
-		echo '#define NDS_TASK82_ITCM_REPACK $(NDS_TASK82_ITCM_REPACK)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
 		echo '#define NDS_TASK37_ITCM_PORT $(NDS_TASK37_ITCM_PORT)'; \
 		echo '#define NDS_TASK37_LAYOUT_PROBE $(NDS_TASK37_LAYOUT_PROBE)'; \
-		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
-		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
-		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
-		echo '#define NDS_TASK9_STATE_HASH_STRIDE $(NDS_TASK9_STATE_HASH_STRIDE)u'; \
-		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT $(NDS_TASK9_FTSTRUCT_SNAPSHOT)'; \
-		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE $(NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK37_PROFILE_PER_FRAME_REGION $(NDS_TASK37_PROFILE_PER_FRAME_REGION)'; \
 		echo '#define NDS_TASK37_PROFILE_RESULTS $(NDS_TASK37_PROFILE_RESULTS)'; \
-		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_LAB_JOINT_CAP $(NDS_LAB_JOINT_CAP)u'; \
 		echo '#define NDS_LAB_POSE_JOINT_CAP $(NDS_LAB_POSE_JOINT_CAP)u'; \
 		echo '#define NDS_FTPARTS_FLAT_SLOTS $(NDS_FTPARTS_FLAT_SLOTS)u'; \
 		echo '#define NDS_FTPARTS_FLAT_MAX $(NDS_FTPARTS_FLAT_MAX)u'; \
-		echo '#define NDS_LAB_NO_DCACHE $(NDS_LAB_NO_DCACHE)'; \
-		echo '#define NDS_LAB_UNCACHED_SINTABLE $(NDS_LAB_UNCACHED_SINTABLE)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
-		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
-		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
-		echo '#define NDS_TASK107_RENDER_STATE_CENSUS $(NDS_TASK107_RENDER_STATE_CENSUS)'; \
-		echo '#define NDS_TASK108_SITR_CALLBACK_CENSUS $(NDS_TASK108_SITR_CALLBACK_CENSUS)'; \
-		echo '#define NDS_LAB_CULL_PROBE $(NDS_LAB_CULL_PROBE)'; \
-		echo '#define NDS_LAB_TINT_SHIFT $(NDS_LAB_TINT_SHIFT)'; \
-		echo '#define NDS_LAB_NO_CULL $(NDS_LAB_NO_CULL)'; \
-		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
-		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_BATTLEPACK $(NDS_R2_BATTLEPACK)'; \
@@ -6373,7 +5822,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BATTLEPACK_KEEP_CACHE $(NDS_R2_BATTLEPACK_KEEP_CACHE)'; \
 		echo '#define NDS_R2_FTANIM_TRACK $(NDS_R2_FTANIM_TRACK)'; \
 		echo '#define NDS_R2_FTANIM_TRACK_DISPATCH $(NDS_R2_FTANIM_TRACK_DISPATCH)'; \
-		echo '#define NDS_R2_FTANIM_TRACK_ORACLE $(NDS_R2_FTANIM_TRACK_ORACLE)'; \
 		echo '#define NDS_FT_POSE $(NDS_FT_POSE)'; \
 		echo '#define NDS_FT_POSE_HOLD $(NDS_FT_POSE_HOLD)'; \
 		echo '#define NDS_FT_POSE_ORACLE $(NDS_FT_POSE_ORACLE)'; \
@@ -6382,29 +5830,16 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
-		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
-		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
 		echo '#define NDS_R2_CUBIC_FIXED $(NDS_R2_CUBIC_FIXED)'; \
-		echo '#define NDS_R2_RELOC_FIXUP_TIMING $(NDS_R2_RELOC_FIXUP_TIMING)'; \
-		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
-		echo '#define NDS_NET_LAB_PING $(NDS_NET_LAB_PING)'; \
-		echo '#define NDS_NET_LAB_PING_FRAMES $(NDS_NET_LAB_PING_FRAMES)'; \
-		echo '#define NDS_NET_LAB_MATCH $(NDS_NET_LAB_MATCH)'; \
 		echo '#define NDS_NET_LAB_INPUT $(NDS_NET_LAB_INPUT)'; \
 		echo '#define NDS_NET_LAB_LOBBY $(NDS_NET_LAB_LOBBY)'; \
 		echo '#define NDS_NET_LAB_DROP $(NDS_NET_LAB_DROP)'; \
 		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
-		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
 		echo '#define NDS_NET_LAB_SWEEP_REPRO $(NDS_NET_LAB_SWEEP_REPRO)'; \
-		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
-		echo '#define NDS_NET_LAB_HANG $(NDS_NET_LAB_HANG)'; \
 		echo '#define NDS_NET_LAB_SOAK $(NDS_NET_LAB_SOAK)'; \
-		echo '#define NDS_NET_LAB_STARTLOSS $(NDS_NET_LAB_STARTLOSS)'; \
-		echo '#define NDS_NET_LAB_STARTLOSS_ROUNDS $(NDS_NET_LAB_STARTLOSS_ROUNDS)'; \
-		echo '#define NDS_NET_LAB_GATE_RADIO $(NDS_NET_LAB_GATE_RADIO)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
@@ -6494,19 +5929,10 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_LINK_BOMB_TOUR $(NDS_P2_LINK_BOMB_TOUR)'; \
 		echo '#define NDS_P2_LINK_SPECIAL_TOUR $(NDS_P2_LINK_SPECIAL_TOUR)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
-		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
-		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \
-		echo '#define NDS_AOBJ_EVENT32_LEDGER_INDEX $(NDS_AOBJ_EVENT32_LEDGER_INDEX)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
-		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
-		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
-		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
-		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_R2_FTR_CONTRACT_CENSUS $(NDS_R2_FTR_CONTRACT_CENSUS)'; \
 		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
-		echo '#define NDS_ENTRY_EFFECT_DIAG $(NDS_ENTRY_EFFECT_DIAG)'; \
-		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
 		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
@@ -6519,7 +5945,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
-		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
 		echo '#define NDS_R2_STAGE_VIEWPROJ $(NDS_R2_STAGE_VIEWPROJ)'; \
 		echo '#define NDS_R2_STAGE_PREFLIGHT $(NDS_R2_STAGE_PREFLIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
@@ -6529,7 +5954,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_GX_COMPOSE $(NDS_R2_FIGHTER_GX_COMPOSE)'; \
 		echo '#define NDS_R2_STAGE_VALIDATE_STRIDE $(NDS_R2_STAGE_VALIDATE_STRIDE)'; \
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
-		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
 		echo '#define NDS_TICK_HUD_WINDOW $(NDS_TICK_HUD_WINDOW)u'; \
 		echo '#define NDS_BATTLE_FPS_HUD_DRAW $(NDS_BATTLE_FPS_HUD_DRAW)'; \
@@ -6541,20 +5965,12 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_DIAG(...) ((void)0)'; \
 		echo '#endif'; \
 		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
-		echo '#define NDS_R2_FIGHTER_EPOCH_STATE_PROOF $(NDS_R2_FIGHTER_EPOCH_STATE_PROOF)'; \
-		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
-		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
 		echo '#define NDS_R2_FIGHTER_PACKET $(NDS_R2_FIGHTER_PACKET)'; \
-		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
-		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
-		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
-		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
-		echo '#define NDS_R2_MAIN_PRESENT_GUARD $(NDS_R2_MAIN_PRESENT_GUARD)'; \
 		echo '#define NDS_R2_FIGHTER_NO_ORACLE $(NDS_R2_FIGHTER_NO_ORACLE)'; \
 		echo '#define NDS_FIGHTER_LEGACY_EXEC $(NDS_FIGHTER_LEGACY_EXEC)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
@@ -6570,34 +5986,21 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK16_FLOAT_COMPARE $(NDS_TASK16_FLOAT_COMPARE)'; \
 		echo '#define NDS_TASK16_FLOAT_I2F $(NDS_TASK16_FLOAT_I2F)'; \
 		echo '#define NDS_TASK16_FLOAT_ADDSUB $(NDS_TASK16_FLOAT_ADDSUB)'; \
-		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
-		echo '#define NDS_TASK20_STACK_PROFILE $(NDS_TASK20_STACK_PROFILE)'; \
 		echo '#define NDS_TASK32_DRAW_HOT_TEXT $(NDS_TASK32_DRAW_HOT_TEXT)'; \
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
-		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \
-		echo '#define NDS_R2_FIREBALL_NATIVE_MAP_COLL $(NDS_R2_FIREBALL_NATIVE_MAP_COLL)'; \
 		echo '#define NDS_R2_FIREGRIND_NATIVE $(NDS_R2_FIREGRIND_NATIVE)'; \
 		echo '#define NDS_R2_WHISPY_NATIVE_TEXTURES $(NDS_R2_WHISPY_NATIVE_TEXTURES)'; \
 		echo '#define NDS_R2_WHISPY_NATIVE_AOT $(NDS_R2_WHISPY_NATIVE_AOT)'; \
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
-		echo '#define NDS_R2_FIREBALL_MAP_COLL_DEBUG $(NDS_R2_FIREBALL_MAP_COLL_DEBUG)'; \
 		echo '#define NDS_R2_IMPACT_WAVE_NATIVE $(NDS_R2_IMPACT_WAVE_NATIVE)'; \
 		echo '#define NDS_R2_REBIRTH_HALO_NATIVE $(NDS_R2_REBIRTH_HALO_NATIVE)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_FULL_OFFLOAD $(NDS_R2_REBIRTH_HALO_FULL_OFFLOAD)'; \
 		echo '#define NDS_R2_REBIRTH_HALO_GX_GROUP_MASK $(NDS_R2_REBIRTH_HALO_GX_GROUP_MASK)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_SPLIT_MTX $(NDS_R2_REBIRTH_HALO_SPLIT_MTX)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_SPLIT_NOZ $(NDS_R2_REBIRTH_HALO_SPLIT_NOZ)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_PACKED_FIFO $(NDS_R2_REBIRTH_HALO_PACKED_FIFO)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_PACKED_PROJECTED $(NDS_R2_REBIRTH_HALO_PACKED_PROJECTED)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_HW_LIGHT $(NDS_R2_REBIRTH_HALO_HW_LIGHT)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_PHASE_PROFILE $(NDS_R2_REBIRTH_HALO_PHASE_PROFILE)'; \
-		echo '#define NDS_R2_REBIRTH_HALO_FAST_ADAPTER $(NDS_R2_REBIRTH_HALO_FAST_ADAPTER)'; \
 		echo '#define NDS_R2_FOX_CPU_DEFAULT $(NDS_R2_FOX_CPU_DEFAULT)'; \
 		echo '#define NDS_DEMO_FOX_CPU_LADDER $(NDS_DEMO_FOX_CPU_LADDER)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
@@ -6605,21 +6008,14 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
 		echo '#define NDS_P2_JOINT_RESIDENT $(NDS_P2_JOINT_RESIDENT)'; \
 		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
-		echo '#define NDS_FTR_PRE_WALK_CENSUS $(NDS_FTR_PRE_WALK_CENSUS)'; \
-		echo '#define NDS_P2_MISC_SPLIT $(NDS_P2_MISC_SPLIT)'; \
 		echo '#define NDS_FTR_LEAN_PHASE_TICKS $(NDS_FTR_LEAN_PHASE_TICKS)'; \
 		echo '#define NDS_CAMERA_FRAME_WITNESS $(NDS_CAMERA_FRAME_WITNESS)'; \
-		echo '#define NDS_WHISPY_AOT_TICKS $(NDS_WHISPY_AOT_TICKS)'; \
-		echo '#define NDS_TICK_HUD_SRC_SPLIT $(NDS_TICK_HUD_SRC_SPLIT)'; \
 		echo '#define NDS_P2_ARM9_WRAM $(NDS_P2_ARM9_WRAM)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
-		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
-		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \
 		echo '#define NDS_R2_SIM_MAC_SHADOW $(NDS_R2_SIM_MAC_SHADOW)'; \
 		echo '#define NDS_R2_CFX_HWMATH $(NDS_R2_CFX_HWMATH)'; \
 		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
 		echo '#define NDS_R2_HWMATH_ROUTE $(NDS_R2_HWMATH_ROUTE)'; \
-		echo '#define NDS_R2_ANIM_Q_ITCM_ON $(NDS_R2_ANIM_Q_ITCM_ON)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
@@ -6638,9 +6034,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
 		echo '#define NDS_R2_SOURCE_EFFECTS_PARTICLE $(NDS_R2_SOURCE_EFFECTS_PARTICLE)'; \
-		echo '#define NDS_R2_POSITION_PROBE $(NDS_R2_POSITION_PROBE)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
-		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \
@@ -8296,8 +7690,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_M2_DETAILED_LEDGER=$(NDS_RENDERER_M2_DETAILED_LEDGER)'
 	@printf '%s\n' 'BENCH_MAKE_M3_PHASE0_PROFILE=$(NDS_RENDERER_M3_PHASE0_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'
-	@printf '%s\n' 'BENCH_MAKE_TASK29_GX_CENSUS=$(NDS_TASK29_GX_CENSUS)'
-	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK49_GX_DIFFER=$(NDS_TASK49_GX_DIFFER)'
 	@printf '%s\n' 'BENCH_MAKE_TASK53_REPLAY_ARENA_FIX=$(NDS_TASK53_REPLAY_ARENA_FIX)'
 	@printf '%s\n' 'BENCH_MAKE_TASK55_STAGE_GEOM=$(NDS_TASK55_STAGE_GEOM)'
@@ -8310,10 +7702,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_ITCM_LEAVES=$(NDS_TASK37_ITCM_LEAVES)'
-	@printf '%s\n' 'BENCH_MAKE_TASK22_WALLPAPER_RUN_LAB=$(NDS_TASK22_WALLPAPER_RUN_LAB)'
 	@printf '%s\n' 'BENCH_MAKE_SCREEN_SPACE_CENSUS=$(NDS_RENDERER_SCREEN_SPACE_CENSUS)'
-	@printf '%s\n' 'BENCH_MAKE_RENDER_ECONOMY=$(NDS_RENDER_ECONOMY)'
-	@printf '%s\n' 'BENCH_MAKE_RENDER_ECONOMY_OWNER_MASK=$(NDS_RENDER_ECONOMY_OWNER_MASK)'
 	@printf '%s\n' 'BENCH_MAKE_RENDERER_BENCHMARK_MODE=$(NDS_RENDERER_BENCHMARK_MODE)'
 	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_FIGHTER_LEGACY_EXEC=$(NDS_FIGHTER_LEGACY_EXEC)'
@@ -8326,8 +7715,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_COMPARE=$(NDS_TASK16_FLOAT_COMPARE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_I2F=$(NDS_TASK16_FLOAT_I2F)'
 	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_ADDSUB=$(NDS_TASK16_FLOAT_ADDSUB)'
-	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
-	@printf '%s\n' 'BENCH_MAKE_TASK20_STACK_PROFILE=$(NDS_TASK20_STACK_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK32_DRAW_HOT_TEXT=$(NDS_TASK32_DRAW_HOT_TEXT)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SPRITES=$(NDS_TASK39_FX_SPRITES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_FLASH=$(NDS_TASK39_FX_FLASH)'
