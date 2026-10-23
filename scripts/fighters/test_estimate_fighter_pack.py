@@ -176,8 +176,11 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertEqual(e.CURRENT_RELAXED_W_CEILING_RAW, 291268)
         self.assertEqual(e.NATIVE_SHIELD_POSE_SHARED_MAIN_BYTES, 3113)
         self.assertEqual(e.NATIVE_SHIELD_POSE_DTCM_BSS_BYTES, 1408)
-        self.assertEqual(e.NATIVE_SHIELD_POSE_SOURCE_W_BYTES, 84612)
-        self.assertEqual(e.NATIVE_SHIELD_POSE_BLOB_BYTES, 25231)
+        # The manifest's eleven fighters (the 1P campaign's rows joined it,
+        # e2dfc06cf92 / 659f1475c2c; the review's sums were for its first set).
+        self.assertEqual(len(e.NATIVE_SHIELD_POSE_ASSETS), 11)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_SOURCE_W_BYTES, 124560)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_BLOB_BYTES, 36259)
         self.assertEqual(e.CURRENT_RELAXED_W_CEILING, 288155)
 
     def test_native_image_guards(self):
@@ -279,7 +282,11 @@ class TestResidentMotionMembers(unittest.TestCase):
                                          {}, "hwtri", costume_ids=(0,))
                    for name in ("Mario", "Fox")}
         _target, sets, _stop = e.enumerate_sets(ledgers, "b_worst")
-        self.assertEqual(sets[0][1], 2 * e.REPL_PACK_HEADER + 32)
+        # Plus each fighter's own ShieldPose blob (Mario's and Fox's rows
+        # joined the manifest with the 1P campaign work).
+        blobs = sum(int(e.NATIVE_SHIELD_POSE_ASSETS[name]["blob_bytes"])
+                    for name in ("Mario", "Fox"))
+        self.assertEqual(sets[0][1], 2 * e.REPL_PACK_HEADER + 32 + blobs)
 
 
 class TestSourceLayoutReconciliation(unittest.TestCase):
@@ -485,7 +492,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 30663,
             "removable": 173545,
-            "replacement": 78771,
+            "replacement": 83923,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -508,17 +515,19 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # Kirby copy hats are no longer carried inside the resident body
             # image. The estimator still charges the largest deferred hat for
             # each reachable detail so the capacity proof cannot count the
-            # residency win and silently drop the capability.
-            "native_census_both": 65464,
-            "native_census_low": 29448,
-            "native_census_deferred_hat": 11036,
-            "native_census_deferred_hat_high": 5856,
-            "native_census_deferred_hat_low": 5180,
+            # residency win and silently drop the capability. The largest
+            # hats: 8,552 B high, 7,636 B low (measured in the copy-hat
+            # comment of nds_renderer_owner_runtime.c, 2026-09-21).
+            "native_census_both": 70616,
+            "native_census_low": 31904,
+            "native_census_deferred_hat": 16188,
+            "native_census_deferred_hat_high": 8552,
+            "native_census_deferred_hat_low": 7636,
             "native_owner_static": False,
-            "w_profile_a_worst": 109434,
-            "w_profile_a_vram": 109322,
-            "w_profile_b_worst": 508698,
-            "w_profile_b_vram": 508586,
+            "w_profile_a_worst": 114586,
+            "w_profile_a_vram": 114474,
+            "w_profile_b_worst": 513850,
+            "w_profile_b_vram": 513738,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -575,7 +584,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 109434)
+            self.assertEqual(row["w_profile_a_worst"], 114586)
             self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
     def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
@@ -677,15 +686,15 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(self.census["Kirby"], {
             "High": 30160,
             "Low": 24268,
-            "DeferredHatHigh": 5856,
-            "DeferredHatLow": 5180,
+            "DeferredHatHigh": 8552,
+            "DeferredHatLow": 7636,
         })
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "both"),
-            65464)
+            70616)
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "low"),
-            29448)
+            31904)
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 
@@ -1022,8 +1031,10 @@ class TestLever72BaselineNativeCorpus(unittest.TestCase):
 
         worst, kinds = e.enumerate_sets_vram_worst(self.ledgers)
         self.assertEqual(set(kinds), set(self.ledgers))
-        self.assertEqual(worst, 291696)
-        self.assertEqual(e.CURRENT_RELAXED_W_CEILING - worst, -3541)
+        # Kirby's larger deferred hats (+5,152) and the other three fighters'
+        # native images (+812) since the review.
+        self.assertEqual(worst, 297660)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING - worst, -9505)
 
         # Rebuild a control with the migration disabled instead of trying to
         # reconstruct the old disposition costs by hand. Pointer-bearing

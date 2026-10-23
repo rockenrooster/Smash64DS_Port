@@ -720,7 +720,8 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
     # These surfaces are appended after the fire atlas, outside SURFACE_SOURCES.
     for table in ("ITEM_SWITCH_SURFACE_SPECS", "VS_OPTIONS_SURFACE_SPECS",
                   "OPTION_SURFACE_SPECS", "BACKUP_CLEAR_SURFACE_SPECS",
-                  "CHARACTERS_SURFACE_SPECS", "BONUS_CSS_SURFACE_SPECS"):
+                  "CHARACTERS_SURFACE_SPECS", "BONUS_CSS_SURFACE_SPECS",
+                  "NET_START_SURFACE_SPECS"):
         for spec in getattr(module, table, ()):
             target = out.setdefault(f"SURFACE_{spec.token}", set())
             for part in spec.parts:

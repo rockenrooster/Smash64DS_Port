@@ -53,14 +53,6 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon(Time|Stock)SelectorSprite",
-      "reason": "The selector frames around that same duplicated time/stock control.",
-      "ruling": "P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
       "key": "re:llMNPlayersCommon[2-4]P(Puck|Text)Sprite",
       "reason": "The human tokens and panel tags for players 2-4. P2-2 is a single-console shell with one controller/cursor; extra occupied slots are CPUs, so the source never selects 2P/3P/4P human art. Those assets become reachable only when additional controller ownership exists.",
       "ruling": "P2-2 single-console scope; BattleShip mnPlayersVSUpdateControllerOrders / player-kind behavior",
@@ -209,6 +201,22 @@
       "reason": "The pick flash: mnPlayers1PBonusMakePortraitFlash (:1622-1638) blinks the white square behind the chosen portrait every tic for 16 tics (thread :1599-1619, flash camera priority 50 between the fire boxes' 60 and the portraits' 40). The native owner does not present it, exactly as it does not for the 1P select, whose source draws the identical flash; each blink edge would be a NitroFS re-blit of a portrait cell. The VS select's CSS_FLASH_* families are the template if it ships.",
       "ruling": "No ruling yet (2026-10-02 native bonus select draft): shared with the 1P select's native owner, which omits the same flash.",
       "status": "open"
+    },
+    {
+      "screen": "css",
+      "kind": "extra",
+      "key": "re:SURFACE_BONUS_DIGIT_\\d",
+      "reason": "THE RECORD PANELS OF THE SELECTS THAT SHARE THIS SCREEN. The native character select also runs the 1P select, the Training select and the bonus practice selects (79065e15b75, P7 C4); the IFCommon digits are those selects' own numbers -- the 1P select's high score (mnPlayers1PGameMakeNumber, mnplayers1pgame.c:203) and the bonus select's best time, targets and total (mnPlayers1PBonusMakeBestTime :1033, MakeHiScore :1171, MakeTotalTime :1187, through mnPlayers1PBonusMakeNumber :181), drawn by nds_menu_shell_css_panels.c only in those scene kinds. The VS select's source (mnplayersvs.c) never draws them, and neither does this screen in VS.",
+      "ruling": "Read out of the source: the digits belong to the 1P and bonus selects this native screen also runs.",
+      "status": "ruled"
+    },
+    {
+      "screen": "css",
+      "kind": "extra",
+      "key": "SURFACE_CSS_MODE_TRAINING",
+      "reason": "THE TRAINING SELECT'S MODE LABEL. The Training select runs on this native character select (P7 C4); its source draws llMNPlayersGameModesTrainingModeTextSprite as its own mode label (mnplayers1ptraining.c:873), and the native screen shows it only in that scene kind. The VS select's source never draws it.",
+      "ruling": "Read out of the source: the label belongs to the Training select this native screen also runs.",
+      "status": "ruled"
     }
   ]
 }

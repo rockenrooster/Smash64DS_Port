@@ -3437,10 +3437,15 @@ if P4_CSS is not None and "none_portrait" in P4_CSS:
 # a token must NOT claim wholesale.  Name only the source symbol this token
 # genuinely adds so the audit can prove the shipped flash without weakening its
 # normal lexical falsifier.
+# The P4 grid flashes every cell (CSS_FLASH_CELL<n>_*), the original grid
+# four fighters. Every cell index a grid can have (p4_css.py's
+# NDS_P4_CSS_CELLS, 33 now): the audit imports this module without the
+# build's NDS_P4_CSS spec.
 AUDIT_TOKEN_SYMBOLS = {
     f"SURFACE_CSS_FLASH_{fighter}_{state}_READY{ready}":
         {"llMNPlayersPortraitsWhiteSquareSprite"}
-    for fighter in ("MARIO", "FOX", "LUIGI", "LINK")
+    for fighter in (("MARIO", "FOX", "LUIGI", "LINK") +
+                    tuple(f"CELL{_cell:02d}" for _cell in range(64)))
     for state in ("OFF", "ON")
     for ready in (0, 1)
 }
