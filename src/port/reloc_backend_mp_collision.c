@@ -217,7 +217,7 @@ static u32 sNdsMPWallMissReadyGen;
 static MPGeometryData *sNdsMPEnsureFastGeometry;
 static const void *sNdsMPEnsureFastGround;
 
-void ndsMPCollisionInvalidateTopology(void)
+NDS_COLD void ndsMPCollisionInvalidateTopology(void)
 {
     u32 kind;
 
@@ -583,7 +583,7 @@ u32 gNdsMPLineKindHits;
 u32 gNdsMPLineKindFills;
 
 
-static void ndsMPVertexF32Reset(void)
+NDS_COLD static void ndsMPVertexF32Reset(void)
 {
     u32 i;
 
@@ -875,7 +875,7 @@ static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
  * Castle). The point is taken at Q12 (round to nearest, 2^-12 units); a
  * coordinate past the Q12 range keeps the float expression. */
 /* ndsMPFloorDistQ12's float form, for a point past the Q12 range. */
-static f32 __attribute__((noinline, cold))
+NDS_COLD static f32 __attribute__((noinline, cold))
 ndsMPFloorDistFloat(f32 object_x, f32 object_y, s32 v1x, s32 v1y, s32 v2x,
                     s32 v2y)
 {
@@ -1108,7 +1108,7 @@ static sb32 ndsMPLineIDIsCeil(s32 line_id)
         TRUE : FALSE;
 }
 
-static void ndsStageCollisionLoopCountLines(void)
+NDS_COLD static void ndsStageCollisionLoopCountLines(void)
 {
     MPLineInfo *line_info;
     u32 yakumono_count;

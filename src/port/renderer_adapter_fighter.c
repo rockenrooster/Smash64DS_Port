@@ -139,7 +139,7 @@ void ndsFighterDisplayContractSetRenderMode(u32 mode1, u32 mode2)
     }
 }
 
-void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a)
+NDS_COLD void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a)
 {
     if (sNdsFighterDisplayContract.active != 0u)
     {
@@ -148,7 +148,7 @@ void ndsFighterDisplayContractSetEnvColor(u8 r, u8 g, u8 b, u8 a)
     }
 }
 
-void ndsFighterDisplayContractSetPrimColor(u8 r, u8 g, u8 b, u8 a)
+NDS_COLD void ndsFighterDisplayContractSetPrimColor(u8 r, u8 g, u8 b, u8 a)
 {
     if (sNdsFighterDisplayContract.active != 0u)
     {
@@ -3269,7 +3269,7 @@ static sb32 ndsIntroTransientNeedsBindChange(GObj *bound, GObj *incoming)
     return (bound != incoming) ? TRUE : FALSE;
 }
 
-void ndsFighterIntroTransientReset(void)
+NDS_COLD void ndsFighterIntroTransientReset(void)
 {
     sNdsIntroTransientBoundGObj = NULL;
     sNdsFighterDrawPlan[NDS_INTRO_TRANSIENT_SCRATCH_SLOT].valid = 0u;

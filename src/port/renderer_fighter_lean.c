@@ -206,7 +206,7 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
  * applied at the first fighter note. Slice 7 made admission 2 every image's
  * initialiser -- gNdsFtrLeanAdmit above -- so the creation-time path this
  * existed to exercise is the default path.) */
-void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
+NDS_COLD void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail, u32 content)
 {
     ndsFtrLeanAdmitSync();
@@ -236,7 +236,7 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
  * fighter uploads after GO, exactly word 0's). The scene preparation calls
  * this last instead: the fighters are made, the scene's own textures are
  * placed, and the first frame has not been drawn. */
-void ndsFtrLeanAdmitSceneTexturesReady(void)
+NDS_COLD void ndsFtrLeanAdmitSceneTexturesReady(void)
 {
     ndsFtrLeanAdmitSync();
     if ((gSCManagerBattleState != NULL) &&

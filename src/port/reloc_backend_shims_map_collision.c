@@ -2,7 +2,7 @@
  * (ground data, yakumono lines and bounds, map objects), rumble and the RDP
  * lights. A slice of reloc_backend.c. */
 
-void ftParamLockPlayerControl(GObj *fighter_gobj)
+NDS_COLD void ftParamLockPlayerControl(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -16,7 +16,7 @@ void ftParamLockPlayerControl(GObj *fighter_gobj)
     fp->is_control_disable = TRUE;
 }
 
-void ftParamUnlockPlayerControl(GObj *fighter_gobj)
+NDS_COLD void ftParamUnlockPlayerControl(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -69,7 +69,7 @@ void ftParamTryUpdateItemMusic(void)
 
 
 
-GObj *ftShadowMakeShadow(GObj *fighter_gobj)
+NDS_COLD GObj *ftShadowMakeShadow(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
     return NULL;
@@ -127,7 +127,7 @@ __attribute__((used)) volatile u32 gNdsNativeStageLentLayerSkips;
 #define NDS_P5_DEAD_SPAN_ROWS(X)
 #endif
 
-void ndsNativeStageLendDeadSpans(u32 gkind)
+NDS_COLD void ndsNativeStageLendDeadSpans(u32 gkind)
 {
     static const struct
     {
@@ -185,7 +185,7 @@ void ndsNativeStageLendDeadSpans(u32 gkind)
     }
 }
 
-void mpCollisionInitGroundData(void)
+NDS_COLD void mpCollisionInitGroundData(void)
 {
     ndsMPCollisionInvalidateTopology();
     gMPCollisionGroundData = NULL;
@@ -405,7 +405,7 @@ static GObj *ndsBattleCompatMainCameraGObj(void)
     return gGMCameraGObj;
 }
 
-void ndsGRCompatibilityNonPupupuSetup(void)
+NDS_COLD void ndsGRCompatibilityNonPupupuSetup(void)
 {
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindPupupu) &&
@@ -417,7 +417,7 @@ void ndsGRCompatibilityNonPupupuSetup(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
-void mpCollisionClearYakumonoAll(void)
+NDS_COLD void mpCollisionClearYakumonoAll(void)
 {
     s32 count;
     s32 i;
@@ -497,7 +497,7 @@ static void ndsMPBoundsInclude(MPBounds *bounds, f32 vx, f32 vy,
     }
 }
 
-static void ndsMPBoundsIncludeYakumonoLines(
+NDS_COLD static void ndsMPBoundsIncludeYakumonoLines(
     NDSMPO2RHalfwordView line_info, DObj *dobj, MPBounds *bounds,
     sb32 use_translate, sb32 current_style)
 {
@@ -678,7 +678,7 @@ static void ndsMPBoundsIncludeYakumonoExtent(
     }
 }
 
-void mpCollisionInitYakumonoAll(void)
+NDS_COLD void mpCollisionInitYakumonoAll(void)
 {
     MPBounds bounds_moved;
     MPBounds bounds_static;
@@ -1157,7 +1157,7 @@ void mpCollisionSetYakumonoOffID(s32 line_id)
  * src/import/battleship_efground.c carries ef/efground.c whole. The witness
  * stub that used to sit here set gNdsPupupuGroundDeferredMask bit 7. */
 
-s32 mpCollisionGetMapObjCountKind(s32 kind)
+NDS_COLD s32 mpCollisionGetMapObjCountKind(s32 kind)
 {
     u32 i;
     u32 count = 0u;
@@ -1270,7 +1270,7 @@ void mpCollisionGetMapObjPositionID(s32 id, Vec3f *pos)
     }
 }
 
-void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos)
+NDS_COLD void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos)
 {
     if (pos != NULL)
     {
@@ -1392,7 +1392,7 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
 sb32 mpCollisionGetLRCommonRWall(s32 line_id, Vec3f *object_pos,
                                  f32 *dist, u32 *flags, Vec3f *angle);
 
-sb32 mpCollisionCheckProjectRWall(Vec3f *position, s32 *project_line_id,
+NDS_COLD sb32 mpCollisionCheckProjectRWall(Vec3f *position, s32 *project_line_id,
                                   f32 *ga_dist, u32 *stand_coll_flags,
                                   Vec3f *angle)
 {
@@ -1476,7 +1476,7 @@ sb32 mpCollisionCheckProjectRWall(Vec3f *position, s32 *project_line_id,
     return TRUE;
 }
 
-void mpCollisionSetPlayBGM(void)
+NDS_COLD void mpCollisionSetPlayBGM(void)
 {
     if (gMPCollisionGroundData != NULL)
     {
@@ -1490,12 +1490,12 @@ void mpCollisionSetPlayBGM(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
 }
 
-void gmRumbleMakeActor(void)
+NDS_COLD void gmRumbleMakeActor(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
 
-void gmRumbleInitPlayers(void)
+NDS_COLD void gmRumbleInitPlayers(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
@@ -1506,20 +1506,20 @@ __attribute__((weak)) void itManagerInitItems(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
 
-void syDebugSetFuncPrint(void (*function)(void))
+NDS_COLD void syDebugSetFuncPrint(void (*function)(void))
 {
     (void)function;
 }
 
-void syDebugStartRmonThread5Hang(void)
+NDS_COLD void syDebugStartRmonThread5Hang(void)
 {
 }
 
-void scManagerFuncPrint(void)
+NDS_COLD void scManagerFuncPrint(void)
 {
 }
 
-void syRdpSetViewport(Vp *viewport, f32 ulx, f32 uly, f32 lrx, f32 lry)
+NDS_COLD void syRdpSetViewport(Vp *viewport, f32 ulx, f32 uly, f32 lrx, f32 lry)
 {
     f32 h;
     f32 v;
@@ -1542,7 +1542,7 @@ void syRdpSetViewport(Vp *viewport, f32 ulx, f32 uly, f32 lrx, f32 lry)
 
 void (*dSYRdpFuncLights)(Gfx **);
 
-void syRdpSetFuncLights(void (*func_lights)(Gfx **))
+NDS_COLD void syRdpSetFuncLights(void (*func_lights)(Gfx **))
 {
     dSYRdpFuncLights = func_lights;
     ndsFighterDisplayContractResetSceneLight();

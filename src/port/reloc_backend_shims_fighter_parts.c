@@ -573,7 +573,7 @@ void ftCommonDownBounceProcUpdate(GObj *fighter_gobj)
     return;
 }
 
-sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
+NDS_COLD sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownBounceCheckUpOrDown(fighter_gobj);
 }
@@ -590,7 +590,7 @@ void ftCommonDownStandProcInterrupt(GObj *fighter_gobj)
     return;
 }
 
-void ftCommonDownStandSetStatus(GObj *fighter_gobj)
+NDS_COLD void ftCommonDownStandSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
     return;
@@ -628,7 +628,7 @@ sb32 ftCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj)
     return ndsBaseFTCommonDownAttackCheckInterruptDownBounce(fighter_gobj);
 }
 
-void ftCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj)
+NDS_COLD void ftCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFallSetStatusFromCliffWait(fighter_gobj);
     return;
@@ -1638,7 +1638,7 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
 }
 
 
-void ftParamInitGame(void)
+NDS_COLD void ftParamInitGame(void)
 {
     extern void ftMainClearGroundElementsAll(void);
 
@@ -1661,7 +1661,7 @@ void ftParamInitGame(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
-void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
+NDS_COLD void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
 {
     s32 i;
 
@@ -1708,7 +1708,7 @@ void ftParamInitPlayerBattleStats(s32 player, GObj *fighter_gobj)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
 
-void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
+NDS_COLD void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
 {
     (void)fighter_gobj;
     (void)script;
@@ -1790,7 +1790,7 @@ static const u8 dNdsFTParamCostumeTeam[nFTKindEnumCount][3] =
  * these return the exact source bytes; out of range they return the colour
  * unchanged, which is the policy the previous shim already used, rather than
  * reading past a 189-byte table. */
-s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
+NDS_COLD s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
 {
     if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
         (color < 0) || (color >= 4))
@@ -1800,7 +1800,7 @@ s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
     return (s32)dNdsFTParamCostumeRoyal[fkind][color];
 }
 
-s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
+NDS_COLD s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
 {
     if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
         (color < 0) || (color >= 3))

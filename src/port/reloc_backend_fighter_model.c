@@ -590,7 +590,7 @@ static FTStruct *ndsFighterManagerLiveStruct(u32 slot)
 /* renderer_adapter_fighter.c, included after this file. */
 void ndsFighterRendererInvalidateSlotDrawCaches(u32 slot);
 
-void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
+NDS_COLD void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
 {
     FTStruct *fp;
 

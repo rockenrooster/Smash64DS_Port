@@ -314,7 +314,7 @@ static u32 ndsFireballTexture(s32 palette_index)
  * results screen restarts the match, and a name held across restarts would
  * grow the texture cache by one per fireball palette every time. Called from
  * efManagerInitEffects beside the shield's identical release. */
-void ndsWeaponReleaseBakedTextures(void)
+NDS_COLD void ndsWeaponReleaseBakedTextures(void)
 {
     u32 slot;
 
@@ -2169,7 +2169,7 @@ volatile u32 gNdsVSResultsEmblemTriangleCount;
 
 extern void *ndsVSResultsEmblemGObj(void);
 
-sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
+NDS_COLD sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
                                            void *display_gobj,
                                            s32 link_id)
 {
@@ -2422,7 +2422,7 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
  * resident first; a late entry image that then finds no room is placed at
  * GO (scVSBattleFuncUpdate), before any of them can draw. A prepare that
  * declines here leaves the first frames' warm-up as it was. */
-void ndsBattleWarmNativeStageTextures(void)
+NDS_COLD void ndsBattleWarmNativeStageTextures(void)
 {
     GObj *camera = ndsBattleCompatMainCameraGObj();
 

@@ -90,7 +90,7 @@ static u32 ndsFighterManagerStatusBit(u32 token)
     return 0u;
 }
 
-static void ndsFighterManagerRefreshProof(void)
+NDS_COLD static void ndsFighterManagerRefreshProof(void)
 {
     u32 mask = 0u;
 
@@ -198,7 +198,7 @@ static u32 ndsPupupuStageAssetBit(u32 asset_id)
  * covers both rather than one per stage, so the six still to come add a line
  * each. The bit numbering is stable: a mask read off a running build names
  * which files were fixed up. */
-static u32 ndsOptInStageAssetBit(u32 asset_id)
+NDS_COLD static u32 ndsOptInStageAssetBit(u32 asset_id)
 {
     if (asset_id == NDS_RELOC_ASSET_GR_YOSTER_MAP) return 1u << 0;
     if (asset_id == NDS_RELOC_ASSET_STAGE_YOSHI) return 1u << 1;
@@ -269,7 +269,7 @@ static u32 ndsFighterMarioFoxDependencyBit(u32 asset_id)
     return 0;
 }
 
-static void ndsRelocRecordExternalFixupSuccess(u32 source_asset_id,
+NDS_COLD static void ndsRelocRecordExternalFixupSuccess(u32 source_asset_id,
                                                u32 dep_asset_id)
 {
     if (ndsPupupuStageAssetBit(source_asset_id) != 0u)
@@ -1112,7 +1112,7 @@ static sb32 ndsRelocP2FighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
 
 /* Once, at the first lookup: a shell sort of two u16 index arrays (no
  * allocation; the keys are unique with the row index, so the order is fixed). */
-static void __attribute__((noinline, cold))
+NDS_COLD static void __attribute__((noinline, cold))
 ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
 {
     static const u16 gaps[] = { 701u, 301u, 132u, 57u, 23u, 10u, 4u, 1u };
@@ -2113,7 +2113,7 @@ static u32 ndsRelocEvent32CapacityGKind(void)
     return 0xffffffffu;
 }
 
-static void ndsRelocPrepareSceneCache(void)
+NDS_COLD static void ndsRelocPrepareSceneCache(void)
 {
     u32 scene = (u32)gSCManagerSceneData.scene_curr;
     u32 evicted_files = 0u;
@@ -2637,7 +2637,7 @@ static void ndsRelocUpdateMemoryLedger(void)
     }
 }
 
-void ndsRelocRecordSceneMemory(const SYTaskmanSceneSetup *setup)
+NDS_COLD void ndsRelocRecordSceneMemory(const SYTaskmanSceneSetup *setup)
 {
     /* Final source-heap state, sampled before the next scene rewinds it.
      * Use the actual DS setup passed to taskman; the old diagnostic fields

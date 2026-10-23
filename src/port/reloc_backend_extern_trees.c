@@ -678,7 +678,7 @@ static s32 ndsRelocSeenAsset(u32 *seen, u32 seen_count, u32 asset_id)
     return FALSE;
 }
 
-static s32 ndsRelocAddSeenAsset(u32 *seen, u32 *seen_count, u32 asset_id)
+NDS_COLD static s32 ndsRelocAddSeenAsset(u32 *seen, u32 *seen_count, u32 asset_id)
 {
     if ((seen == NULL) || (seen_count == NULL))
     {
@@ -698,7 +698,7 @@ static s32 ndsRelocAddSeenAsset(u32 *seen, u32 *seen_count, u32 asset_id)
     return TRUE;
 }
 
-static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
+NDS_COLD static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
                                           u32 *seen_count)
 {
     NDSRelocAssetHeader header;
@@ -753,7 +753,7 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
 /* ndsRelocExternTreeAllocSize less every file already loaded: the tree
  * loader takes a loaded file as it is (ndsRelocLoadExternTreeAsset), so this
  * is the heap a tree load still writes. */
-static size_t ndsRelocExternTreeUnloadedSizeFor(u32 asset_id, u32 *seen,
+NDS_COLD static size_t ndsRelocExternTreeUnloadedSizeFor(u32 asset_id, u32 *seen,
                                                 u32 *seen_count)
 {
     NDSRelocAssetHeader header;
@@ -801,7 +801,7 @@ static size_t ndsRelocExternTreeUnloadedSizeFor(u32 asset_id, u32 *seen,
 
 /* The stage select's preview loads a stage's packet assets a tic apiece,
  * then its map file's tree: that load needs only this much heap. */
-size_t ndsRelocExternTreeUnloadedSize(const void *file_id)
+NDS_COLD size_t ndsRelocExternTreeUnloadedSize(const void *file_id)
 {
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0u;
@@ -814,7 +814,7 @@ size_t ndsRelocExternTreeUnloadedSize(const void *file_id)
  * loads a tree: into a heap taken from the current region, named in the
  * scene's status buffer (ndsRelocEnsureLoadedAsset is the battle's preload,
  * after its tree loads, and may take a harness buffer instead). */
-s32 ndsRelocLoadAssetTree(u32 asset_id)
+NDS_COLD s32 ndsRelocLoadAssetTree(u32 asset_id)
 {
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0u;
@@ -921,7 +921,7 @@ static size_t ndsRelocP2FindGeneratedPayloadSize(
     return 0u;
 }
 
-static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
+NDS_COLD static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
 {
     size_t size = ndsRelocP2FindGeneratedPayloadSize(
         sNdsP2BaseFighterPayloadSizes,
@@ -996,7 +996,7 @@ static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
     return 0u;
 }
 
-static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
+NDS_COLD static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
                                                        uintptr_t *heap_ptr)
 {
     NDSRelocLoadedFile *loaded;
@@ -1668,7 +1668,7 @@ void ndsRelocExternTreeSliceCancel(void *cursor)
     ndsRelocExternTreeSliceCleanupCurrent(slice);
 }
 
-void ndsRelocReleaseSceneStatusBuffers(void)
+NDS_COLD void ndsRelocReleaseSceneStatusBuffers(void)
 {
     sNdsRelocStatusBuffer = NULL;
     sNdsRelocStatusBufferCount = 0;
@@ -1678,7 +1678,7 @@ void ndsRelocReleaseSceneStatusBuffers(void)
     sNdsRelocForceStatusBufferMax = 0;
 }
 
-void lbRelocInitSetup(LBRelocSetup *setup)
+NDS_COLD void lbRelocInitSetup(LBRelocSetup *setup)
 {
     sNdsRelocInitCount++;
     ndsRelocPrepareSceneCache();
@@ -1788,7 +1788,7 @@ static size_t ndsRelocP2FindGeneratedAllocSize(
     return 0u;
 }
 
-static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
+NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
 {
     size_t size;
 
@@ -1906,7 +1906,7 @@ static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     return 0u;
 }
 
-size_t lbRelocGetFileSize(const void *file_id)
+NDS_COLD size_t lbRelocGetFileSize(const void *file_id)
 {
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
@@ -1967,7 +1967,7 @@ volatile u32 gNdsRelocExternHeapLoadFailCount __attribute__((used));
 volatile u32 gNdsRelocExternHeapLastLoadFailAsset __attribute__((used));
 volatile u32 gNdsRelocExternHeapOkCount __attribute__((used));
 
-void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
+NDS_COLD void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 {
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
@@ -2022,7 +2022,7 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 /* What ndsRelocLoadExternTreeAssetID would take for `asset_id`: 0 when it is
  * already resident. The VS select sizes a content's preview block by it (S15).
  * Not for a fighter Main file: its size walk can load a guard-pose package. */
-u32 ndsRelocExternTreeAssetBytes(u32 asset_id)
+NDS_COLD u32 ndsRelocExternTreeAssetBytes(u32 asset_id)
 {
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0u;
@@ -2035,7 +2035,7 @@ u32 ndsRelocExternTreeAssetBytes(u32 asset_id)
     return (u32)ndsRelocExternTreeAllocSize(asset_id, seen, &seen_count);
 }
 
-s32 ndsRelocLoadExternTreeAssetID(u32 asset_id)
+NDS_COLD s32 ndsRelocLoadExternTreeAssetID(u32 asset_id)
 {
     u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     u32 seen_count = 0u;

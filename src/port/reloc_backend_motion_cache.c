@@ -532,7 +532,7 @@ volatile u32 gNdsR2AnimCacheRejectedTrackOverflow;
 
 /* Record a refusal once per distinct asset. Linear scan: the set is tiny and
  * this only runs on the failure path, which is by definition rare. */
-static void ndsR2AnimNoteRejected(u32 asset_id, u32 size)
+NDS_COLD static void ndsR2AnimNoteRejected(u32 asset_id, u32 size)
 {
     u32 i;
 
@@ -732,7 +732,7 @@ static void ndsR2AnimPinsDropHeap(const void *heap)
 
 /* The fighter is being destroyed (ndsFtPoseRelease): its heap is not a place
  * a later rescue may write. */
-void ndsR2AnimPinsDropGObj(GObj *gobj)
+NDS_COLD void ndsR2AnimPinsDropGObj(GObj *gobj)
 {
     u32 i;
 
@@ -827,7 +827,7 @@ static const u8 *ndsR2AnimPinTake(void *heap, const NDSR2AnimCacheEntry *cached,
     return NULL;
 }
 
-static void ndsR2AnimCacheArenaDropForReset(void)
+NDS_COLD static void ndsR2AnimCacheArenaDropForReset(void)
 {
     ndsR2AnimPrefetchDrain();
     /* Every pinned clip leaves the arena first (a rewound scene's pins are
@@ -1449,7 +1449,7 @@ static u32 ndsR2AnimCacheSetupBytes(void)
  * 48 KiB free behind itself. The lean pool sizes itself to what is left. */
 #define NDS_R2_ANIM_CACHE_CSS_KEEP_FREE (104u * 1024u)
 
-static sb32 ndsR2AnimCacheArenaEnsureSetupWith(u32 keep_free)
+NDS_COLD static sb32 ndsR2AnimCacheArenaEnsureSetupWith(u32 keep_free)
 {
     void *block;
     u32 bytes;
@@ -1503,7 +1503,7 @@ s32 ndsR2AnimCacheReserveCSSWorkingSet(void)
 
 /* Bump allocation from the cache's own arena. Returns NULL on overflow, which is
  * the whole point: see the comment on NDS_R2_ANIM_CACHE_ARENA_BYTES. */
-static void *ndsR2AnimCacheArenaAlloc(u32 size)
+NDS_COLD static void *ndsR2AnimCacheArenaAlloc(u32 size)
 {
     u32 aligned;
 
@@ -1625,7 +1625,7 @@ static void ndsBattlePackResidencyRearm(void)
     }
 }
 
-static void ndsBattlePackResidencyFail(void)
+NDS_COLD static void ndsBattlePackResidencyFail(void)
 {
     /* Hand the reserve to the raw cache rather than stranding 288 KiB of arena
      * on a degraded run -- but ONLY while the cache has taken nothing yet, or
@@ -2326,7 +2326,7 @@ static void ndsR2AnimPrefetchRetire(const u8 *lo, const u8 *hi)
     }
 }
 
-void ndsR2AnimPrefetchDrain(void)
+NDS_COLD void ndsR2AnimPrefetchDrain(void)
 {
     u32 i;
 
@@ -2913,7 +2913,7 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
  * image is therefore identical to the one the miss path snapshots.
  *
  * Every failure degrades to the on-demand load. */
-static void ndsR2AnimWarmLoadOne(u32 asset_id)
+NDS_COLD static void ndsR2AnimWarmLoadOne(u32 asset_id)
 {
     NDSRelocAssetHeader header;
     size_t alloc_size;
@@ -3032,7 +3032,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
  * NitroFS reads after native-owner images moved to setup.  Reuse the battle
  * cache rather than inventing a CSS cache: a later force load then follows the
  * exact cache-hit path already verified for gameplay. */
-s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
+NDS_COLD s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
 {
     u32 token;
     u32 asset_id;
@@ -3073,7 +3073,7 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
  * and drains those chunks BEFORE mpCollisionSetPlayBGM, so the old audio budget
  * no longer limits total startup work and the visible countdown inherits no
  * warm-load I/O. */
-void ndsR2AnimCachePreloadMatch(void)
+NDS_COLD void ndsR2AnimCachePreloadMatch(void)
 {
     ndsRendererAdapterPrepareWorldCaches();
     memset(sNdsR2AnimStoredThisMatch, 0, sizeof(sNdsR2AnimStoredThisMatch));
@@ -3198,7 +3198,7 @@ void ndsR2AnimCachePreloadStep(void)
  * plus the 18-chunk BattlePack stream, with large margin. If a future change
  * breaks that invariant, fail open into the old on-demand path rather than hang
  * before the match. */
-s32 ndsR2AnimCachePreloadFinish(void)
+NDS_COLD s32 ndsR2AnimCachePreloadFinish(void)
 {
     u32 steps = 0u;
 

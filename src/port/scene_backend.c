@@ -26,6 +26,8 @@
 #include <mn/menu.h>
 #include <mv/movie.h>
 #include <nds/nds_boot.h>
+/* NDS_COLD marks the functions no battle profile runs: -Os (P8 R1). */
+#include <nds/nds_cold.h>
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>

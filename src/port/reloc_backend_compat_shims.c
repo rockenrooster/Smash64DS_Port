@@ -1374,7 +1374,7 @@ void ndsAudioReleaseDeferredBGM(void)
     }
 }
 
-void syAudioStopBGMAll(void)
+NDS_COLD void syAudioStopBGMAll(void)
 {
     sNdsDeferredBgmPlayer = -1;
     ndsAudioBgmStopAll();
@@ -1411,7 +1411,7 @@ void syAudioUpdateBGMState(void)
             AL_PLAYING : AL_STOPPED;
 }
 
-void func_800266A0_272A0(void)
+NDS_COLD void func_800266A0_272A0(void)
 {
     ndsAudioFgmStopAll();
 }
@@ -1442,7 +1442,7 @@ void *func_800269C0_275C0(u16 fgm_id)
     return ndsPlayFGMAtPan(fgm_id, 64u);
 }
 
-s32 syAudioCheckBGMPlaying(s32 sngplayer)
+NDS_COLD s32 syAudioCheckBGMPlaying(s32 sngplayer)
 {
     s32 is_playing = ((sNdsDeferredBgmPlayer >= 0) &&
                       (sngplayer == sNdsDeferredBgmPlayer)) ? TRUE :
@@ -1452,7 +1452,7 @@ s32 syAudioCheckBGMPlaying(s32 sngplayer)
     return is_playing;
 }
 
-void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
+NDS_COLD void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
 {
     if ((sNdsDeferredBgmPlayer >= 0) && (sngplayer == sNdsDeferredBgmPlayer))
     {
@@ -1489,12 +1489,12 @@ sb32 syAudioGetSettingsUpdated(void)
     return FALSE;
 }
 
-void syAudioSetFXType(u8 type)
+NDS_COLD void syAudioSetFXType(u8 type)
 {
     (void)type;
 }
 
-sb32 syAudioGetRestarting(void)
+NDS_COLD sb32 syAudioGetRestarting(void)
 {
     return FALSE;
 }
@@ -1546,7 +1546,7 @@ static s32 ndsFTTexturePartDetail(const FTTexturePartContainer *container,
                                     (u32)detail_index);
 }
 
-void ftParamInitTexturePartAll(GObj *fighter_gobj)
+NDS_COLD void ftParamInitTexturePartAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     FTTexturePartStatus *texturepart_status;
@@ -1600,7 +1600,7 @@ void ftParamInitTexturePartAll(GObj *fighter_gobj)
     fp->is_texturepart_modify = TRUE;
 }
 
-void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
+NDS_COLD void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     FTAttributes *attr;
@@ -2449,7 +2449,7 @@ void ftParamProcStopEffect(GObj *fighter_gobj)
  * lives; what ITCM buys is the fetch of the loop around them. */
 /* 2026-09-27: out of ITCM (the flat walk serves every call in the
  * four-CPU census; this recursive fallback executed zero times). */
-static void ndsFTParamsInvalidateFighterParts(
+NDS_COLD static void ndsFTParamsInvalidateFighterParts(
     DObj *joint, sb32 reset_mode)
 {
     DObj *child;
@@ -3187,7 +3187,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
     }
 }
 
-void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj)
+NDS_COLD void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj)
 {
     /* BattleShip ftcommonshieldbreakfly.c owns this state transition.  The
      * previous DS approximation nulled ProcUpdate, substituted the generic
@@ -3202,7 +3202,7 @@ void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj)
     ndsBaseFTCommonShieldBreakFlyCommonSetStatus(fighter_gobj);
 }
 
-void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
+NDS_COLD void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
 {
     if (ftGetStruct(fighter_gobj) == NULL)
     {

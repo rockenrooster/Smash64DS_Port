@@ -36,7 +36,7 @@ typedef struct NDSFighterDLAllDrawCollection {
 #define NDS_FIGHTER_DL_ALL_FAIL_NO_VALID_TRIS 0x20u
 #define NDS_FIGHTER_DL_ALL_FAIL_UNKNOWN 0x80000000u
 
-static void ndsFighterCollectAllDObjsWithDLRecursive(
+NDS_COLD static void ndsFighterCollectAllDObjsWithDLRecursive(
     DObj *dobj, NDSFighterDLAllDrawCollection *collection,
     u32 *traversal_index)
 {

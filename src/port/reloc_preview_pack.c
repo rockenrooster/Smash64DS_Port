@@ -12,7 +12,7 @@
 #include <nds/nds_scene_manager.h>
 #include <stdio.h>
 
-u32 ndsRelocUseBattleCoreFighterData(void)
+NDS_COLD u32 ndsRelocUseBattleCoreFighterData(void)
 {
 #if NDS_P2_COMPACT_BATTLE_FIGHTERS
     return (gNdsSceneManagerCurrIsBattle != 0u) ||
@@ -486,7 +486,7 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     return (const u8 *)base + mapped;
 }
 
-const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
+NDS_COLD const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
                                              u32 offset)
 {
     NDSRelocLoadedFile *owner = ndsRelocFindLoadedFileByData((void *)base);
@@ -1343,7 +1343,7 @@ typedef struct NDSRelocDeferredEntry
 } NDSRelocDeferredEntry;
 static NDSRelocDeferredEntry sNdsRelocDeferredEntries[NDS_P4_CONTENT_LIMIT];
 
-void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
+NDS_COLD void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
 {
     NDSRelocDeferredEntry *d;
     NDSRelocLoadedFile *main_loaded;
@@ -1384,7 +1384,7 @@ void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
     return dep->data;
 }
 
-s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
+NDS_COLD s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 {
     NDSBattleExternHeader header;
     NDSBattleExternRow rows[NDS_BATTLE_EXTERN_MAX];
@@ -1584,7 +1584,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 #endif
 
 #if !NDS_P2_COMPACT_BATTLE_FIGHTERS
-void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
+NDS_COLD void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
 {
     (void)content;
     (void)keep_free;

@@ -169,7 +169,7 @@ void lbCommonAddTreeDObjsAnimAll(DObj *root_dobj,
 }
 
 /* BattleShip lbcommon.c:1199-1208, restricted to the supplied subtree. */
-void lbCommonPlayTreeDObjsAnim(DObj *root_dobj)
+NDS_COLD void lbCommonPlayTreeDObjsAnim(DObj *root_dobj)
 {
     DObj *current_dobj = root_dobj;
 
@@ -180,7 +180,7 @@ void lbCommonPlayTreeDObjsAnim(DObj *root_dobj)
     }
 }
 
-void lbCommonSetDObjTransformsForTreeDObjs(DObj *root_dobj,
+NDS_COLD void lbCommonSetDObjTransformsForTreeDObjs(DObj *root_dobj,
                                            DObjDesc *dobjdesc)
 {
     DObj *current_dobj = root_dobj;
@@ -500,7 +500,7 @@ sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
     return ndsBaseFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
 }
 
-void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
+NDS_COLD void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100StartSetStatus(fighter_gobj);
     return;
@@ -693,7 +693,7 @@ sb32 ftCommonKneeBendCheckInterruptRun(GObj *fighter_gobj)
     return ndsBaseFTCommonKneeBendCheckInterruptRun(fighter_gobj);
 }
 
-sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
+NDS_COLD sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonTurnRunCheckInterruptRun(fighter_gobj);
 }
@@ -881,7 +881,7 @@ void ftCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag)
     return;
 }
 
-sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
+NDS_COLD sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonRunBrakeCheckInterruptRun(fighter_gobj);
 }
@@ -956,7 +956,7 @@ void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
     return;
 }
 
-void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
+NDS_COLD void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
                                     s32 *jump_vel_y, sb32 is_shorthop)
 {
     ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x, jump_vel_y, is_shorthop);
@@ -1196,7 +1196,7 @@ void ftPhysicsClampAirVelX(FTStruct *fp, f32 clamp)
     }
 }
 
-void ftPhysicsClampAirVelY(FTStruct *fp, f32 clamp)
+NDS_COLD void ftPhysicsClampAirVelY(FTStruct *fp, f32 clamp)
 {
     if (fp == NULL)
     {
@@ -1929,7 +1929,7 @@ void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
  * item joint through the 0x52 matrix and never pickable again: a barrel or
  * crate knocked out of a lifting fighter's hands (ftCommonHeavyGetProcDamage)
  * followed the damage animation instead of falling, rolling or breaking. */
-void ftSetupDropItem(FTStruct *fp)
+NDS_COLD void ftSetupDropItem(FTStruct *fp)
 {
     Vec3f vel;
 
@@ -2525,7 +2525,7 @@ void ftCommonDamageSetDustEffectInterval(FTStruct *fp)
     return;
 }
 
-f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
+NDS_COLD f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
 {
     return ndsBaseFTCommonDamageGetKnockbackAngle(angle_i, ga, knockback);
 }
@@ -2594,7 +2594,7 @@ void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
     return;
 }
 
-void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
+NDS_COLD void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageSetDamageColAnim(fighter_gobj);
     return;
@@ -2634,13 +2634,13 @@ void ftParamUpdate1PGameDamageStats(FTStruct *fp, s32 damage_player,
     }
 }
 
-void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
+NDS_COLD void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonFuraSleepSetStatus(fighter_gobj);
     return;
 }
 
-void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj)
+NDS_COLD void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj)
 {
     ndsBaseFTCommonTwisterSetStatus(fighter_gobj, tornado_gobj);
     return;

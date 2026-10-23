@@ -75,7 +75,7 @@ u8 lbCommonGetBitmapDecodeNibble(u8 index)
     return nibbles[index];
 }
 
-void lbCommonDecodeBitmapSiz4b(u8 *bitmap_csr, u8 *bitmap_buf,
+NDS_COLD void lbCommonDecodeBitmapSiz4b(u8 *bitmap_csr, u8 *bitmap_buf,
                                u8 *bitmap_start)
 {
     size_t input_size;
@@ -1235,7 +1235,7 @@ sb32 gcParseGObjScript(void (*func)(GObjScript))
 
 /* sys/rdp.c default viewport contract. Keep this project-owned copy narrow
  * until importing the full RDP reset display-list path is safe. */
-void syRdpSetDefaultViewport(Vp *vp)
+NDS_COLD void syRdpSetDefaultViewport(Vp *vp)
 {
     if (vp == NULL)
     {
@@ -1262,7 +1262,7 @@ void syRdpSetDefaultViewport(Vp *vp)
  * Keep this as a narrow DS shim: imported gcDrawAll owns camera ordering, and
  * this file only lets the selected camera capture path reach one original
  * display callback before the real display-list translator is available. */
-void gcInitDLs(void)
+NDS_COLD void gcInitDLs(void)
 {
 }
 
@@ -1271,7 +1271,7 @@ void gcSetCameraMatrixMode(s32 val)
     (void)val;
 }
 
-void gcSetMatrixFuncList(syMtxProcess *proc_mtx)
+NDS_COLD void gcSetMatrixFuncList(syMtxProcess *proc_mtx)
 {
     (void)proc_mtx;
 }

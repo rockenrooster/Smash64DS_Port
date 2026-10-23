@@ -66,7 +66,7 @@ static void __attribute__((noinline, noclone)) ndsResetDiagnosticWords(
     }
 }
 
-void ndsResetStartupDiagnostics(void)
+NDS_COLD void ndsResetStartupDiagnostics(void)
 {
     NDS_DIAG_RESET0(gNdsSceneBoundaryResult);
     NDS_DIAG_RESET0(gNdsSceneBoundaryKind);

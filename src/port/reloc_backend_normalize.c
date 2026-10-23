@@ -540,7 +540,7 @@ _Static_assert(offsetof(FTAttributes, heavyget_sfx) == 0xe8u,
 _Static_assert(offsetof(FTAttributes, halo_size) == 0xecu,
                "FTAttributes heavy-get padding layout changed");
 
-static void ndsRelocSwapNativeU16WordLanes(void *word)
+NDS_COLD static void ndsRelocSwapNativeU16WordLanes(void *word)
 {
     u8 *bytes = word;
     u16 first = ndsRelocReadNative16(bytes);
@@ -1574,7 +1574,7 @@ volatile u32 gNdsRelocHeapDeclineCount;
 
 static u32 sNdsRelocEnsureKeepFree;
 
-static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
+NDS_COLD static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
 {
     NDSRelocLoadedFile *loaded;
     size_t asset_size;
@@ -1649,7 +1649,7 @@ static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
     return loaded;
 }
 
-static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
+NDS_COLD static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
 {
     if (ndsP4LabSkipsDependency(owner_asset, dep_asset) != FALSE)
     {
@@ -3359,7 +3359,7 @@ static s32 ndsRelocMVCommonMObjSubFlagsLookNative(u32 flags)
            (flags == (MOBJ_FLAG_PRIMCOLOR | MOBJ_FLAG_LIGHT1));
 }
 
-static void ndsRelocRecordMObjSubNormalize(
+NDS_COLD static void ndsRelocRecordMObjSubNormalize(
     const NDSRelocLoadedFile *loaded, const MObjSub *mobjsub)
 {
     u32 flags;
@@ -3431,7 +3431,7 @@ static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
     ndsRelocRecordMObjSubNormalize(loaded, mobjsub);
 }
 
-static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
+NDS_COLD static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
                                           u32 offset,
                                           u32 head_count)
 {

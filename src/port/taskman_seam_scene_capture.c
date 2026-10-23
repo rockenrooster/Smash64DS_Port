@@ -141,7 +141,7 @@ static void ndsRunBoundedTaskmanUpdates(struct SYTaskFunction *tfunc)
     }
 }
 
-void ndsOpeningRoomCapturePencilsCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCapturePencilsCountsBefore(void)
 {
     if ((sNdsOpeningRoomPencilsCountsCaptured != 0) ||
         (gNdsOpeningRoomFirstEventDataResult !=
@@ -157,7 +157,7 @@ void ndsOpeningRoomCapturePencilsCountsBefore(void)
     sNdsOpeningRoomPencilsCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCapturePencilsCreation(void)
+NDS_COLD void ndsOpeningRoomCapturePencilsCreation(void)
 {
     u32 mask = 0;
     DObj *dobj;
@@ -285,7 +285,7 @@ static sb32 ndsOpeningRoomContainsDLGObj(GObj *target)
     return FALSE;
 }
 
-void ndsOpeningRoomRecordOverlayEject(void *gobj)
+NDS_COLD void ndsOpeningRoomRecordOverlayEject(void *gobj)
 {
     GObj *overlay_gobj = (GObj*)gobj;
     u32 mask = 0;
@@ -314,7 +314,7 @@ void ndsOpeningRoomRecordOverlayEject(void *gobj)
     }
 }
 
-void ndsOpeningRoomRecordSunlightEject(void *gobj)
+NDS_COLD void ndsOpeningRoomRecordSunlightEject(void *gobj)
 {
     GObj *sunlight_gobj = (GObj*)gobj;
     u32 mask = 0;
@@ -343,7 +343,7 @@ void ndsOpeningRoomRecordSunlightEject(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureCloseUpOverlayCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureCloseUpOverlayCountsBefore(void)
 {
     if (sNdsOpeningRoomCloseUpOverlayCountsCaptured != 0)
     {
@@ -354,7 +354,7 @@ void ndsOpeningRoomCaptureCloseUpOverlayCountsBefore(void)
     sNdsOpeningRoomCloseUpOverlayCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureCloseUpOverlayCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureCloseUpOverlayCreation(void *gobj)
 {
     GObj *overlay_gobj = (GObj*)gobj;
     u32 mask = 0;
@@ -396,7 +396,7 @@ void ndsOpeningRoomCaptureCloseUpOverlayCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureSunlightCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureSunlightCountsBefore(void)
 {
     if (sNdsOpeningRoomSunlightCountsCaptured != 0)
     {
@@ -409,7 +409,7 @@ void ndsOpeningRoomCaptureSunlightCountsBefore(void)
     sNdsOpeningRoomSunlightCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureOutsideCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureOutsideCountsBefore(void)
 {
     if (sNdsOpeningRoomOutsideCountsCaptured != 0)
     {
@@ -422,7 +422,7 @@ void ndsOpeningRoomCaptureOutsideCountsBefore(void)
     sNdsOpeningRoomOutsideCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureHazeCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureHazeCountsBefore(void)
 {
     if (sNdsOpeningRoomHazeCountsCaptured != 0)
     {
@@ -435,7 +435,7 @@ void ndsOpeningRoomCaptureHazeCountsBefore(void)
     sNdsOpeningRoomHazeCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureOutsideCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureOutsideCreation(void *gobj)
 {
     GObj *outside_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -484,7 +484,7 @@ void ndsOpeningRoomCaptureOutsideCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureHazeCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureHazeCreation(void *gobj)
 {
     GObj *haze_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -533,7 +533,7 @@ void ndsOpeningRoomCaptureHazeCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureSunlightCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureSunlightCreation(void *gobj)
 {
     GObj *sunlight_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -582,7 +582,7 @@ void ndsOpeningRoomCaptureSunlightCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureDeskCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureDeskCountsBefore(void)
 {
     if (sNdsOpeningRoomDeskCountsCaptured != 0)
     {
@@ -595,7 +595,7 @@ void ndsOpeningRoomCaptureDeskCountsBefore(void)
     sNdsOpeningRoomDeskCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureDeskCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureDeskCreation(void *gobj)
 {
     GObj *desk_gobj = (GObj*)gobj;
     u32 mask = 0;
@@ -642,7 +642,7 @@ void ndsOpeningRoomCaptureDeskCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureSpotlightCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureSpotlightCountsBefore(void)
 {
     if (sNdsOpeningRoomSpotlightCountsCaptured != 0)
     {
@@ -657,7 +657,7 @@ void ndsOpeningRoomCaptureSpotlightCountsBefore(void)
     sNdsOpeningRoomSpotlightCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureSpotlightCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureSpotlightCreation(void *gobj)
 {
     GObj *spotlight_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -741,7 +741,7 @@ void ndsOpeningRoomCaptureSpotlightCreation(void *gobj)
     }
 }
 
-static sb32 ndsOpeningRoomCObjViewportIsSet(CObj *cobj)
+NDS_COLD static sb32 ndsOpeningRoomCObjViewportIsSet(CObj *cobj)
 {
     return ((cobj != NULL) &&
             (cobj->viewport.vp.vscale[0] == 600) &&
@@ -752,7 +752,7 @@ static sb32 ndsOpeningRoomCObjViewportIsSet(CObj *cobj)
             (cobj->viewport.vp.vtrans[2] == 511));
 }
 
-void ndsOpeningRoomCaptureScene1CameraCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureScene1CameraCountsBefore(void)
 {
     if (sNdsOpeningRoomScene1CameraCountsCaptured != 0)
     {
@@ -766,7 +766,7 @@ void ndsOpeningRoomCaptureScene1CameraCountsBefore(void)
     sNdsOpeningRoomScene1CameraCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureScene1CameraCreation(void)
+NDS_COLD void ndsOpeningRoomCaptureScene1CameraCreation(void)
 {
     GObj *main_gobj = sMVOpeningRoomMainCameraGObj;
     GObj *fighter_gobj = sMVOpeningRoomFighterCameraGObj;
@@ -863,7 +863,7 @@ void ndsOpeningRoomCaptureScene1CameraCreation(void)
     }
 }
 
-void ndsOpeningRoomCaptureScene2CameraEjectBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureScene2CameraEjectBefore(void)
 {
     if (sNdsOpeningRoomScene2CameraEjectCaptured != 0)
     {
@@ -878,7 +878,7 @@ void ndsOpeningRoomCaptureScene2CameraEjectBefore(void)
     sNdsOpeningRoomScene2CameraEjectCaptured = 1;
 }
 
-void ndsOpeningRoomRecordScene2CameraEject(void)
+NDS_COLD void ndsOpeningRoomRecordScene2CameraEject(void)
 {
     GObj *main_gobj = sNdsOpeningRoomScene2EjectMainCameraGObj;
     GObj *fighter_gobj = sNdsOpeningRoomScene2EjectFighterCameraGObj;
@@ -921,7 +921,7 @@ void ndsOpeningRoomRecordScene2CameraEject(void)
     }
 }
 
-void ndsOpeningRoomCaptureScene2CameraCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureScene2CameraCountsBefore(void)
 {
     if (sNdsOpeningRoomScene2CameraCountsCaptured != 0)
     {
@@ -935,7 +935,7 @@ void ndsOpeningRoomCaptureScene2CameraCountsBefore(void)
     sNdsOpeningRoomScene2CameraCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureScene2CameraCreation(void)
+NDS_COLD void ndsOpeningRoomCaptureScene2CameraCreation(void)
 {
     GObj *main_gobj = sMVOpeningRoomMainCameraGObj;
     GObj *fighter_gobj = sMVOpeningRoomFighterCameraGObj;
@@ -1028,7 +1028,7 @@ void ndsOpeningRoomCaptureScene2CameraCreation(void)
     }
 }
 
-void ndsOpeningRoomCaptureCloseUpOverlayCameraCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureCloseUpOverlayCameraCountsBefore(void)
 {
     if (sNdsOpeningRoomCloseUpOverlayCameraCountsCaptured != 0)
     {
@@ -1041,7 +1041,7 @@ void ndsOpeningRoomCaptureCloseUpOverlayCameraCountsBefore(void)
     sNdsOpeningRoomCloseUpOverlayCameraCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureCloseUpOverlayCameraCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureCloseUpOverlayCameraCreation(void *gobj)
 {
     GObj *camera_gobj = (GObj*)gobj;
     CObj *cobj;
@@ -1098,7 +1098,7 @@ void ndsOpeningRoomCaptureCloseUpOverlayCameraCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureWallpaperCameraCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureWallpaperCameraCountsBefore(void)
 {
     if (sNdsOpeningRoomWallpaperCameraCountsCaptured != 0)
     {
@@ -1111,7 +1111,7 @@ void ndsOpeningRoomCaptureWallpaperCameraCountsBefore(void)
     sNdsOpeningRoomWallpaperCameraCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureWallpaperCameraCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureWallpaperCameraCreation(void *gobj)
 {
     GObj *camera_gobj = (GObj*)gobj;
     CObj *cobj;
@@ -1173,7 +1173,7 @@ void ndsOpeningRoomCaptureWallpaperCameraCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureLogoCameraCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureLogoCameraCountsBefore(void)
 {
     if (sNdsOpeningRoomLogoCameraCountsCaptured != 0)
     {
@@ -1187,7 +1187,7 @@ void ndsOpeningRoomCaptureLogoCameraCountsBefore(void)
     sNdsOpeningRoomLogoCameraCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureLogoCameraCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureLogoCameraCreation(void *gobj)
 {
     GObj *camera_gobj = (GObj*)gobj;
     CObj *cobj;
@@ -1261,7 +1261,7 @@ void ndsOpeningRoomCaptureLogoCameraCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureLogoCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureLogoCountsBefore(void)
 {
     if (sNdsOpeningRoomLogoCountsCaptured != 0)
     {
@@ -1276,7 +1276,7 @@ void ndsOpeningRoomCaptureLogoCountsBefore(void)
     sNdsOpeningRoomLogoCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureLogoCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureLogoCreation(void *gobj)
 {
     GObj *logo_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -1357,7 +1357,7 @@ void ndsOpeningRoomCaptureLogoCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomRecordLogoEject(void *gobj)
+NDS_COLD void ndsOpeningRoomRecordLogoEject(void *gobj)
 {
     GObj *logo_gobj = (GObj*)gobj;
     u32 mask = 0;
@@ -1385,7 +1385,7 @@ void ndsOpeningRoomRecordLogoEject(void *gobj)
     }
 }
 
-void ndsOpeningRoomCaptureBossShadowCountsBefore(void)
+NDS_COLD void ndsOpeningRoomCaptureBossShadowCountsBefore(void)
 {
     if (sNdsOpeningRoomBossShadowCountsCaptured != 0)
     {
@@ -1399,7 +1399,7 @@ void ndsOpeningRoomCaptureBossShadowCountsBefore(void)
     sNdsOpeningRoomBossShadowCountsCaptured = 1;
 }
 
-void ndsOpeningRoomCaptureBossShadowCreation(void *gobj)
+NDS_COLD void ndsOpeningRoomCaptureBossShadowCreation(void *gobj)
 {
     GObj *boss_shadow_gobj = (GObj*)gobj;
     DObj *dobj;
@@ -1461,7 +1461,7 @@ void ndsOpeningRoomCaptureBossShadowCreation(void *gobj)
     }
 }
 
-void ndsOpeningRoomRecordBossShadowEject(void *gobj)
+NDS_COLD void ndsOpeningRoomRecordBossShadowEject(void *gobj)
 {
     GObj *boss_shadow_gobj = (GObj*)gobj;
     u32 mask = 0;

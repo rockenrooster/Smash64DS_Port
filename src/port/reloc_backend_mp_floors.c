@@ -1379,13 +1379,13 @@ typedef struct NDSStageMPWallHitScoutResultSnapshot {
  * zero floors, board no platforms and leave Board the Platforms unwinnable. The
  * ensure is idempotent and early-outs on a geometry it has already built, which
  * is exactly what the two existing call sites rely on. */
-s32 mpCollisionGetLineCountType(s32 line_type)
+NDS_COLD s32 mpCollisionGetLineCountType(s32 line_type)
 {
     ndsMPCollisionEnsureLineGroups();
     return gMPCollisionLineGroups[line_type].line_count;
 }
 
-void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids)
+NDS_COLD void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids)
 {
     s32 i;
 
@@ -1396,7 +1396,7 @@ void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids)
     }
 }
 
-void mpCollisionSetBGM(void)
+NDS_COLD void mpCollisionSetBGM(void)
 {
     gMPCollisionBGMCurrent = gMPCollisionBGMDefault = gMPCollisionGroundData->bgm_id;
 }

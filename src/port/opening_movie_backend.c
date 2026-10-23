@@ -811,7 +811,7 @@ static void ndsOpeningRoomEmitMaterialBranch(DObj *dobj)
     ndsOpeningRoomCaptureFirstEmittedBranch(first_branch, first_generated);
 }
 
-static u32 ndsOpeningRoomReadPointerArrayEntry(void **array, u32 index)
+NDS_COLD static u32 ndsOpeningRoomReadPointerArrayEntry(void **array, u32 index)
 {
     if ((array == NULL) || (index >= 64u) ||
         (ndsOpeningRoomPointerRangeInLoadedFiles(
@@ -822,7 +822,7 @@ static u32 ndsOpeningRoomReadPointerArrayEntry(void **array, u32 index)
     return (u32)(uintptr_t)array[index];
 }
 
-static u32 ndsOpeningRoomMakeTextureMObjMask(const MObj *mobj,
+NDS_COLD static u32 ndsOpeningRoomMakeTextureMObjMask(const MObj *mobj,
                                              u32 effective_flags,
                                              u32 *out_sprite_curr,
                                              u32 *out_sprite_next)
@@ -1195,7 +1195,7 @@ static ub8 ndsOpeningRoomDObjDrawableForCallback(DObj *dobj,
     }
 }
 
-static u32 ndsOpeningRoomMakeDObjMeta(DObj *dobj, Gfx *dl)
+NDS_COLD static u32 ndsOpeningRoomMakeDObjMeta(DObj *dobj, Gfx *dl)
 {
     u32 meta = 0;
 
@@ -1234,7 +1234,7 @@ static ub8 ndsOpeningRoomCallbackWalksDObjTree(u32 callback_marker)
         TRUE : FALSE;
 }
 
-static DObj *ndsOpeningRoomFindDObjCandidateRecurse(DObj *dobj,
+NDS_COLD static DObj *ndsOpeningRoomFindDObjCandidateRecurse(DObj *dobj,
                                                     u32 callback_marker,
                                                     ub8 require_mobj,
                                                     Gfx **out_dl,
@@ -1416,7 +1416,7 @@ static void ndsOpeningRoomRecordTextureMaterialDObj(GObj *gobj,
     }
 }
 
-static void ndsOpeningRoomRecordTextureMaterialRecurse(GObj *gobj,
+NDS_COLD static void ndsOpeningRoomRecordTextureMaterialRecurse(GObj *gobj,
                                                        DObj *dobj,
                                                        u32 callback_marker,
                                                        u32 *visited)
@@ -1767,7 +1767,7 @@ void func_80017DBC(GObj *gobj)
         gobj, (cobj->flags & COBJ_FLAG_IDENTIFIER) ? TRUE : FALSE);
 }
 
-void func_80017EC0(GObj *gobj)
+NDS_COLD void func_80017EC0(GObj *gobj)
 {
     CObj *cobj;
 
@@ -1853,6 +1853,6 @@ void gcDrawDObjDLHead1(GObj *gobj)
         NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1);
 }
 
-void scManagerRunPrintGObjStatus(void)
+NDS_COLD void scManagerRunPrintGObjStatus(void)
 {
 }

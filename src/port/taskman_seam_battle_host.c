@@ -929,7 +929,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
  * become file statics here because the loop that owns them now lives in
  * another translation unit; the arithmetic is unchanged. */
 
-void ndsR2HostBattlePrepare(void)
+NDS_COLD void ndsR2HostBattlePrepare(void)
 {
     ndsStageCollisionLoopPrepareRuntime();
     ndsAudioAssetLoadFenced();
@@ -1537,7 +1537,7 @@ void ndsR2HostBattlePresent(void)
     ndsBattlePlayableFinalizePresentedIteration();
 }
 
-void ndsR2HostBattleFinish(void)
+NDS_COLD void ndsR2HostBattleFinish(void)
 {
     /* The last led frame swaps in before the scene moves on. */
     ndsBattlePlayableRetireLed();

@@ -192,10 +192,10 @@ def braced(source, pattern, semicolon=False):
 
 
 def function(source, name):
-    """A function's definition, verbatim but for NDS_RENDERER_COLD: that
-    macro only places ARM code (Thumb, -Os) and means nothing to a host
-    harness."""
-    return re.sub(r"\bNDS_RENDERER_COLD\s+", "", _definition(source, name))
+    """A function's definition, verbatim but for NDS_COLD and
+    NDS_RENDERER_COLD (include/nds/nds_cold.h): those markers only place
+    ARM code (Thumb, -Os) and mean nothing to a host harness."""
+    return re.sub(r"\bNDS_(?:RENDERER_)?COLD\s+", "", _definition(source, name))
 
 
 def _definition(source, name):

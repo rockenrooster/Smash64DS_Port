@@ -405,7 +405,7 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
     return NULL;
 }
 
-void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
+NDS_COLD void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
                             const u32 *hi, u32 count)
 {
     const NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
@@ -462,7 +462,7 @@ void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
     return loaded->data;
 }
 
-s32 ndsRelocAddressInLentSpan(const void *ptr)
+NDS_COLD s32 ndsRelocAddressInLentSpan(const void *ptr)
 {
     const uintptr_t addr = (uintptr_t)ptr;
     u32 f;
@@ -563,7 +563,7 @@ static s32 ndsRelocPointerRangeInBuffer(const void *base, size_t data_size,
             (size <= (size_t)(data_size - (addr - start)))) ? TRUE : FALSE;
 }
 
-static s32 ndsRelocFindStatusNodeContaining(LBFileNode *nodes, s32 count,
+NDS_COLD static s32 ndsRelocFindStatusNodeContaining(LBFileNode *nodes, s32 count,
                                             const void *ptr, size_t size,
                                             const void **out_base,
                                             size_t *out_size)
@@ -961,7 +961,7 @@ static void *ndsRelocCompactModelCell(const NDSRelocLoadedFile *loaded,
 
 /* Where a fixup into `loaded` lands: the source offset, or for a compact
  * model's unbacked display list its cell (NULL when it has none). */
-static void *ndsRelocLoadedFileTarget(const NDSRelocLoadedFile *loaded,
+NDS_COLD static void *ndsRelocLoadedFileTarget(const NDSRelocLoadedFile *loaded,
                                       u32 offset)
 {
     if ((loaded->reserved[2] != 0u) &&
@@ -1148,7 +1148,7 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(
  * which keys its cells by file provenance (nds_source2d.c) -- draws it. The
  * asset id is outside the ROM's and the P4 files'; nothing in it needs fixing
  * up. */
-s32 ndsRelocRegisterSyntheticFile(u32 asset_id, void *data, u32 size)
+NDS_COLD s32 ndsRelocRegisterSyntheticFile(u32 asset_id, void *data, u32 size)
 {
     NDSRelocAssetHeader header;
     NDSRelocLoadedFile *loaded;
@@ -1642,7 +1642,7 @@ static s32 ndsRelocPointerInHeapRange(const void *base, size_t size,
     return ((addr >= start) && (addr < end)) ? TRUE : FALSE;
 }
 
-void ndsRelocReleaseHeapRange(void *base, size_t size)
+NDS_COLD void ndsRelocReleaseHeapRange(void *base, size_t size)
 {
     u32 i = 0u;
     s32 status_i;

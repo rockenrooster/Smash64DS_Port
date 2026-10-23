@@ -2,7 +2,7 @@
  * authoritative records, the status buffer files, the compact IFCommonGameStatus
  * load, lbRelocLoadFilesExtern and file data. A slice of reloc_backend.c. */
 
-void ndsRelocFinishSceneSetup(void)
+NDS_COLD void ndsRelocFinishSceneSetup(void)
 {
     if ((gNdsSceneManagerCurrIsBattle != 0u) &&
         (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
@@ -547,7 +547,7 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     return file;
 }
 
-void *lbRelocGetStatusBufferFile(const void *file_id)
+NDS_COLD void *lbRelocGetStatusBufferFile(const void *file_id)
 {
     u32 token = ndsRelocFileID(file_id);
     u32 asset_id = ndsRelocAssetIDForToken(token);
@@ -613,7 +613,7 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
  * taking a raw file id instead of a pointer to one: Sector Z looks its own
  * map file up this way (grsector.c:1094). Like its twin it is lookup-only --
  * the source never allocates on a miss and neither does this. */
-void *lbRelocGetForceStatusBufferFile(u32 id)
+NDS_COLD void *lbRelocGetForceStatusBufferFile(u32 id)
 {
     u32 asset_id = ndsRelocAssetIDForToken(id);
     void *file;
@@ -979,7 +979,7 @@ static void *ndsRelocLoadIfGameStatusCompact(u32 token, u32 asset_id,
     return image;
 }
 
-size_t lbRelocGetAllocSize(u32 *ids, u32 len)
+NDS_COLD size_t lbRelocGetAllocSize(u32 *ids, u32 len)
 {
     size_t total = 0;
     u32 i;
@@ -1007,7 +1007,7 @@ size_t lbRelocGetAllocSize(u32 *ids, u32 len)
     return total;
 }
 
-size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
+NDS_COLD size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
 {
     u32 i;
     u32 mask = 0;
@@ -1234,7 +1234,7 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
  * that image, and lbRelocGetFileSize answers sizeof(Sprite) for a resident
  * file. VS Results sized Ganondorf's podium heap by a resident span 8,080 B
  * and the 10,784-byte opening clip overran his DObjs (owner, 2026-10-11). */
-size_t ndsRelocFullLoadSize(const void *file_id)
+NDS_COLD size_t ndsRelocFullLoadSize(const void *file_id)
 {
     u32 asset_id = ndsRelocAssetIDForToken(ndsRelocFileID(file_id));
     size_t bytes = ndsRelocAssetAllocSize(asset_id);

@@ -1201,7 +1201,7 @@ __attribute__((used)) volatile u32 gNdsRelocSceneFileBufferDeclineCount;
 __attribute__((used)) volatile u32 gNdsRelocSceneFileBufferBytes =
     NDS_RELOC_SCENE_FILE_BUFFER_SIZE;
 
-static u8 *ndsRelocSceneFileBuffer(void)
+NDS_COLD static u8 *ndsRelocSceneFileBuffer(void)
 {
     if ((sNdsRelocSceneFileBufferPtr != NULL) &&
         (sNdsRelocSceneFileBufferGeneration == gNdsTaskmanHeapGeneration))

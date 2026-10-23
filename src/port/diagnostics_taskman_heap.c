@@ -24,7 +24,7 @@ struct _reent;
 extern struct _reent *__getreent(void);
 extern NDSNewlibMallinfo _mallinfo_r(struct _reent *reent);
 
-NDSNewlibMallinfo mallinfo(void)
+NDS_COLD NDSNewlibMallinfo mallinfo(void)
 {
     return _mallinfo_r(__getreent());
 }

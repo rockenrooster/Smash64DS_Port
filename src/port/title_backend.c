@@ -71,7 +71,7 @@ static void ndsOpeningActionPreviewHoldFrames(u32 frames)
     }
 }
 
-static void ndsOpeningMovieBridgeTo(u32 next_scene)
+NDS_COLD static void ndsOpeningMovieBridgeTo(u32 next_scene)
 {
     u32 scene_kind = gSCManagerSceneData.scene_curr;
 
@@ -181,47 +181,47 @@ NDS_SCENE_STUB(scExplainStartScene)
 NDS_SCENE_STUB(scStaffrollStartScene)
 #endif
 
-void mvOpeningRunStartScene(void)
+NDS_COLD void mvOpeningRunStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningCliff);
 }
 
-void mvOpeningCliffStartScene(void)
+NDS_COLD void mvOpeningCliffStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningYamabuki);
 }
 
-void mvOpeningYamabukiStartScene(void)
+NDS_COLD void mvOpeningYamabukiStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningJungle);
 }
 
-void mvOpeningJungleStartScene(void)
+NDS_COLD void mvOpeningJungleStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningYoster);
 }
 
-void mvOpeningYosterStartScene(void)
+NDS_COLD void mvOpeningYosterStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningSector);
 }
 
-void mvOpeningSectorStartScene(void)
+NDS_COLD void mvOpeningSectorStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningStandoff);
 }
 
-void mvOpeningStandoffStartScene(void)
+NDS_COLD void mvOpeningStandoffStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningClash);
 }
 
-void mvOpeningClashStartScene(void)
+NDS_COLD void mvOpeningClashStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindOpeningNewcomers);
 }
 
-void mvOpeningNewcomersStartScene(void)
+NDS_COLD void mvOpeningNewcomersStartScene(void)
 {
     ndsOpeningMovieBridgeTo(nSCKindTitle);
 }

@@ -4,7 +4,7 @@
  * start). gdb probes read them; NDS_DIAG writes compile out of every live
  * build. A slice of diagnostics.c, not a translation unit of its own. */
 
-void ndsCollisionRuntimeDiagnosticsReset(void)
+NDS_COLD void ndsCollisionRuntimeDiagnosticsReset(void)
 {
     NDSCollisionRuntimeDiagnostics reset = { 0 };
 

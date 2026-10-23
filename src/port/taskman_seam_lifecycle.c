@@ -105,7 +105,7 @@ static void ndsReuseBoundedOpeningRoomPreview(void)
     ndsOpeningMoviePresentFrame();
 }
 
-void ndsOpeningMovieRecordRoomHandoff(u32 tick, u32 next_scene)
+NDS_COLD void ndsOpeningMovieRecordRoomHandoff(u32 tick, u32 next_scene)
 {
     gNdsOpeningMovieRoomHandoffTick = tick;
     gNdsOpeningMovieRoomHandoffScene = next_scene;
@@ -113,13 +113,13 @@ void ndsOpeningMovieRecordRoomHandoff(u32 tick, u32 next_scene)
         NDS_OPENING_MOVIE_ROOM_HANDOFF_PASS;
 }
 
-void ndsOpeningPortraitsRecordStart(void)
+NDS_COLD void ndsOpeningPortraitsRecordStart(void)
 {
     NDS_DIAG(gNdsOpeningPortraitsDispatchCount++);
     gNdsOpeningPortraitsStartResult = NDS_OPENING_PORTRAITS_START_PASS;
 }
 
-void ndsOpeningPortraitsRecordFuncStart(void)
+NDS_COLD void ndsOpeningPortraitsRecordFuncStart(void)
 {
     gNdsOpeningPortraitsFuncStartResult =
         NDS_OPENING_PORTRAITS_FUNC_START_PASS;
@@ -142,19 +142,19 @@ void ndsOpeningPortraitsRecordRunTick(void)
     }
 }
 
-void ndsOpeningMarioRecordStart(void)
+NDS_COLD void ndsOpeningMarioRecordStart(void)
 {
     NDS_DIAG(gNdsOpeningMarioDispatchCount++);
     gNdsOpeningMarioStartResult = NDS_OPENING_MARIO_START_PASS;
 }
 
-void ndsOpeningMarioRecordFuncStart(void)
+NDS_COLD void ndsOpeningMarioRecordFuncStart(void)
 {
     gNdsOpeningMarioFuncStartResult =
         NDS_OPENING_MARIO_FUNC_START_PASS;
 }
 
-void ndsOpeningMarioRecordFighterDeferred(void)
+NDS_COLD void ndsOpeningMarioRecordFighterDeferred(void)
 {
     gNdsOpeningMarioFighterDeferredTick =
         (u32)sMVOpeningMarioTotalTimeTics;
@@ -162,7 +162,7 @@ void ndsOpeningMarioRecordFighterDeferred(void)
         NDS_OPENING_MARIO_FIGHTER_DEFER_PASS;
 }
 
-void ndsOpeningMarioRecordRunTick(void)
+NDS_COLD void ndsOpeningMarioRecordRunTick(void)
 {
     gNdsOpeningMarioTickCount = (u32)sMVOpeningMarioTotalTimeTics;
     if (sMVOpeningMarioTotalTimeTics > 0)
@@ -193,7 +193,7 @@ static sb32 ndsOpeningIsImportedNameScene(u32 scene_kind)
     return (ndsOpeningNameSceneMask(scene_kind) != 0) ? TRUE : FALSE;
 }
 
-void ndsOpeningNameRecordStart(u32 scene_kind)
+NDS_COLD void ndsOpeningNameRecordStart(u32 scene_kind)
 {
     u32 mask = ndsOpeningNameSceneMask(scene_kind);
 
@@ -202,13 +202,13 @@ void ndsOpeningNameRecordStart(u32 scene_kind)
     gNdsOpeningNameSceneDispatchMask |= mask;
 }
 
-void ndsOpeningNameRecordFuncStart(u32 scene_kind)
+NDS_COLD void ndsOpeningNameRecordFuncStart(u32 scene_kind)
 {
     gNdsOpeningNameSceneLastKind = scene_kind;
     gNdsOpeningNameSceneFuncStartMask |= ndsOpeningNameSceneMask(scene_kind);
 }
 
-void ndsOpeningNameRecordFighterDeferred(u32 scene_kind, u32 tick)
+NDS_COLD void ndsOpeningNameRecordFighterDeferred(u32 scene_kind, u32 tick)
 {
     gNdsOpeningNameSceneLastKind = scene_kind;
     gNdsOpeningNameSceneLastTick = tick;
@@ -216,7 +216,7 @@ void ndsOpeningNameRecordFighterDeferred(u32 scene_kind, u32 tick)
         ndsOpeningNameSceneMask(scene_kind);
 }
 
-void ndsOpeningNameRecordRunTick(u32 scene_kind, u32 tick)
+NDS_COLD void ndsOpeningNameRecordRunTick(u32 scene_kind, u32 tick)
 {
     gNdsOpeningNameSceneLastKind = scene_kind;
     gNdsOpeningNameSceneLastTick = tick;

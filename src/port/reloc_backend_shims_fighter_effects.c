@@ -1607,7 +1607,7 @@ __attribute__((used)) volatile u32 gNdsFTPartsSetupBadDesc;
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadContainer;
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadDetail;
 
-void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
+NDS_COLD void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                                     FTCommonPartContainer *commonparts_container,
                                     s32 detail_curr, DObj **dobjs,
                                     u32 *setup_parts, u8 tk1, u8 tk2,

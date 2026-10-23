@@ -11,15 +11,9 @@
 
 /* P8 R1: a renderer function no battle profile gives a cycle (setup,
  * prepare, validate, learn, menus) is built as Thumb at -Os inside the
- * renderer's ARM -O2 unity unit: half the bytes of ARM, the battle's hot
- * code untouched. The set comes from the profile census over every VS
- * stage with the cast, the heavy roster and the mixes. */
-#if defined(__arm__) && !defined(__thumb__)
-#define NDS_RENDERER_COLD \
-    __attribute__((cold, noinline, target("thumb"), optimize("Os")))
-#else
-#define NDS_RENDERER_COLD __attribute__((cold, noinline, optimize("Os")))
-#endif
+ * renderer's ARM -O2 unity unit (nds_cold.h). */
+#include <nds/nds_cold.h>
+#define NDS_RENDERER_COLD NDS_COLD
 
 #ifndef NDS_SHIP_TELEMETRY
 #define NDS_SHIP_TELEMETRY 1

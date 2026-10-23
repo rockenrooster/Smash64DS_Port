@@ -67,7 +67,7 @@ static sb32 ndsMPLinePositionWorldToLocal(s32 line_id,
     return TRUE;
 }
 
-u16 mpCollisionGetVertexFlagsLineID(s32 line_id)
+NDS_COLD u16 mpCollisionGetVertexFlagsLineID(s32 line_id)
 {
     u32 flags = 0u;
 
@@ -383,7 +383,7 @@ static inline u32 ndsMPAiFloorBits(f32 value)
 
 /* Fill sNdsMPAiFloorIds for `geometry`; FALSE when it has more groups than
  * the snapshot holds (no memo for this stage). */
-static sb32 __attribute__((noinline, cold))
+NDS_COLD static sb32 __attribute__((noinline, cold))
 ndsMPAiFloorIdsFor(MPGeometryData *geometry)
 {
     const u32 count = ndsMPGeometryYakumonoCount(geometry);
@@ -674,7 +674,7 @@ static s32 ndsMPTopologyLineCount(void)
     return (s32)line_total;
 }
 
-static int ndsMPReadTopologyLine(void *context, int line_id,
+NDS_COLD static int ndsMPReadTopologyLine(void *context, int line_id,
                                  NDSMPTopologyRawLine *line)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
