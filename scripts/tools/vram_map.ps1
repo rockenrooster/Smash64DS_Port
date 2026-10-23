@@ -4,8 +4,10 @@ param([string]$Build = 'build-vram-v4', [int[]]$Gkinds = @(4), [string]$Kinds = 
 # NDS_DIAG_COUNTERS=1) run a four-CPU match on each stage of -Gkinds and, at
 # presented frame -Frames, dump every live texture name (address, bytes,
 # format, size, owner bucket, palette bytes) and the census's creating-site
-# PCs; then scripts/tools/vram_map.py turns each record into a static HTML page
-# of banks A-D in artifacts/visibility/vram/<Build>/ (no JavaScript).
+# PCs, and each texture's content (texel hash, colours, alpha levels, 4x4 fit:
+# ndsVramCensusContent); then scripts/tools/vram_map.py turns each record into
+# a static HTML page of banks A-D in artifacts/visibility/vram/<Build>/ (no
+# JavaScript).
 . "$PSScriptRoot\common.ps1"
 foreach ($g in $Gkinds) {
     $name = "$Tag-g$g"
@@ -13,7 +15,7 @@ foreach ($g in $Gkinds) {
                'printf "X MAPHDR frame=%u count=%u sites=%u vramcnt=%x\n", gNdsFrameCounter, gNdsVramCensusMapCount, gNdsVramCensusSiteCount, *(unsigned int *)0x04000240',
                'set $i = 0',
                'while $i < gNdsVramCensusMapCount',
-               'printf "X ROW %u %x %u %u %u %u %u\n", gNdsVramCensusMap[$i].name, gNdsVramCensusMap[$i].addr, gNdsVramCensusMap[$i].bytes, gNdsVramCensusMap[$i].bucket, gNdsVramCensusMap[$i].format, gNdsVramCensusMap[$i].size, gNdsVramCensusMap[$i].pal_bytes',
+               'printf "X ROW %u %x %u %u %u %u %u %x %u %u %u\n", gNdsVramCensusMap[$i].name, gNdsVramCensusMap[$i].addr, gNdsVramCensusMap[$i].bytes, gNdsVramCensusMap[$i].bucket, gNdsVramCensusMap[$i].format, gNdsVramCensusMap[$i].size, gNdsVramCensusMap[$i].pal_bytes, gNdsVramCensusMap[$i].hash, gNdsVramCensusMap[$i].colors, gNdsVramCensusMap[$i].alphas, gNdsVramCensusMap[$i].flags',
                'set $i = $i + 1',
                'end',
                'set $i = 0',

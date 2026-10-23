@@ -54,6 +54,8 @@ void __attribute__((noinline, used)) ndsLabCensusFrameHook(void)
 {
     __asm__ volatile("" ::: "memory");
 }
+/* nds_renderer_texture_scene.c (NDS_VRAM_CENSUS_LIVE follows the counters). */
+void ndsVramCensusContent(void);
 #endif
 static u32 sNdsBattlePlayablePacingStartTick;
 static u32 sNdsBattlePlayableLastPresentVBlank;
@@ -515,6 +517,8 @@ static void ndsBattlePlayablePresentFrame(void)
      * frame, which the heavier stages did not survive. */
     if (gNdsFrameCounter == gNdsLabCensusFrame)
     {
+        /* P8 V4: each live texture's content (hash, colours, 4x4 fit). */
+        ndsVramCensusContent();
         ndsLabCensusFrameHook();
     }
 #endif

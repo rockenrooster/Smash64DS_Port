@@ -1150,7 +1150,23 @@ typedef struct NDSVramCensusMapRow
     u8 format;
     u16 pal_bytes;
     u16 size;
+    /* The palette's LCD address (0: none) and, from ndsVramCensusContent at
+     * the census frame, a hash of the texels (duplicates), the distinct
+     * colours and alpha levels the texture shows and NDS_VC_F_* facts. */
+    u32 pal_addr;
+    u32 hash;
+    u16 colors;
+    u8 alphas;
+    u8 flags;
 } NDSVramCensusMapRow;
+/* Colour 0 is transparent (TEXIMAGE_PARAM bit 29) / shown; every 4x4 block
+ * fits the compressed format exactly (four colours, or three and
+ * transparency); the alpha is only none or full; more than 256 colours. */
+#define NDS_VC_F_COLOR0_TRANSPARENT 1u
+#define NDS_VC_F_TRANSPARENT_SHOWN 2u
+#define NDS_VC_F_4X4 4u
+#define NDS_VC_F_HARD_ALPHA 8u
+#define NDS_VC_F_MANY_COLORS 16u
 __attribute__((used)) NDSVramCensusMapRow gNdsVramCensusMap[NDS_VRAM_CENSUS_NAME_MAX];
 __attribute__((used)) volatile u32 gNdsVramCensusMapCount;
 /* And libnds's texture allocator blocks in address order: VRAM held without a
@@ -1439,6 +1455,23 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
             row->format = (u8)((tex->texFormat >> 26) & 7u);
             row->size = (u16)((tex->texFormat >> 20) & 0x3fu);
             row->pal_bytes = 0u;
+            row->pal_addr = 0u;
+            row->hash = 0u;
+            row->colors = 0u;
+            row->alphas = 0u;
+            row->flags = ((tex->texFormat & (1u << 29)) != 0u) ?
+                NDS_VC_F_COLOR0_TRANSPARENT : 0u;
+            if ((tex->palIndex > 0) &&
+                ((u32)tex->palIndex < palettes->cur_size))
+            {
+                const gl_palette_data *pal = (const gl_palette_data *)
+                    palettes->data[tex->palIndex];
+
+                if (pal != NULL)
+                {
+                    row->pal_addr = (u32)(uintptr_t)pal->vramAddr;
+                }
+            }
             snap->tex_names++;
             snap->tex_bytes += bytes;
             snap->tex_size_field += tex->texSize;
@@ -1504,6 +1537,178 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
         snap->bg3_opaque = ndsPlatformVramCensusOverlayOpaque(1u);
     }
     gNdsVramCensus.captures++;
+}
+
+/* P8 V4: one row's content, through the LCD mapping ndsVramCensusContent
+ * opened. Paletted formats count the colours their used indices show
+ * (colour 0 apart when it is transparent); A3I5 and A5I3 count the colours
+ * of their visible texels and their alpha levels; direct colour counts up
+ * to 257. A 4x4 block fits the compressed format exactly with at most four
+ * opaque colours, or three and transparency, and no partial alpha. */
+static void ndsVramCensusRowContent(NDSVramCensusMapRow *row)
+{
+    static const u8 kBits[8] = { 0u, 8u, 2u, 4u, 8u, 0u, 8u, 16u };
+    const volatile u8 *texels = (const volatile u8 *)(uintptr_t)row->addr;
+    const volatile u16 *palette =
+        (const volatile u16 *)(uintptr_t)row->pal_addr;
+    const u32 width = 8u << (row->size & 7u);
+    const u32 height = 8u << ((row->size >> 3) & 7u);
+    const u32 bits = kBits[row->format & 7u];
+    const u32 alpha_max = (row->format == 6u) ? 31u :
+        ((row->format == 1u) ? 7u : 1u);
+    u16 colors[257];
+    u32 ncolors = 0u;
+    u32 alphas = 0u;
+    u32 hash = 2166136261u;
+    u32 fits = 1u;
+    u32 bx;
+    u32 by;
+    u32 i;
+
+    if ((bits == 0u) || (row->bytes == 0u))
+    {
+        return;
+    }
+    for (i = 0u; i < row->bytes; i++)
+    {
+        hash = (hash ^ texels[i]) * 16777619u;
+    }
+    row->hash = hash;
+    for (by = 0u; by < height; by += 4u)
+    {
+        for (bx = 0u; bx < width; bx += 4u)
+        {
+            u16 block[16];
+            u32 nblock = 0u;
+            u32 clear = 0u;
+            u32 partial = 0u;
+            u32 t;
+
+            for (t = 0u; t < 16u; t++)
+            {
+                const u32 x = bx + (t & 3u);
+                const u32 y = by + (t >> 2);
+                const u32 at = (y * width) + x;
+                u32 alpha = alpha_max;
+                u32 color;
+                u32 index = 0u;
+                u32 k;
+
+                if (bits == 16u)
+                {
+                    color = (u32)texels[at * 2u] |
+                            ((u32)texels[(at * 2u) + 1u] << 8);
+                    alpha = color >> 15;
+                    color &= 0x7fffu;
+                }
+                else
+                {
+                    const u32 byte = texels[(at * bits) >> 3];
+
+                    index = (byte >> ((at * bits) & 7u)) & ((1u << bits) - 1u);
+                    if (row->format == 1u)
+                    {
+                        alpha = index >> 5;
+                        index &= 31u;
+                    }
+                    else if (row->format == 6u)
+                    {
+                        alpha = index >> 3;
+                        index &= 7u;
+                    }
+                    else if ((index == 0u) &&
+                             ((row->flags & NDS_VC_F_COLOR0_TRANSPARENT) != 0u))
+                    {
+                        alpha = 0u;
+                    }
+                    color = (palette != NULL) ? (palette[index] & 0x7fffu) :
+                                                index;
+                }
+                if (alpha == 0u)
+                {
+                    clear = 1u;
+                    row->flags |= NDS_VC_F_TRANSPARENT_SHOWN;
+                    alphas |= 1u;
+                    continue;
+                }
+                alphas |= 1u << (alpha & 31u);
+                if (alpha != alpha_max)
+                {
+                    partial = 1u;
+                }
+                for (k = 0u; (k < nblock) && (block[k] != color); k++)
+                {
+                }
+                if (k == nblock)
+                {
+                    block[nblock++] = (u16)color;
+                }
+                for (k = 0u; (k < ncolors) && (colors[k] != color); k++)
+                {
+                }
+                if ((k == ncolors) && (ncolors < 257u))
+                {
+                    colors[ncolors++] = (u16)color;
+                }
+            }
+            if ((partial != 0u) || (nblock > (clear ? 3u : 4u)))
+            {
+                fits = 0u;
+            }
+        }
+    }
+    row->colors = (u16)ncolors;
+    row->alphas = (u8)__builtin_popcount(alphas);
+    if (ncolors > 256u)
+    {
+        row->flags |= NDS_VC_F_MANY_COLORS;
+    }
+    if ((alphas & ~(1u | (1u << alpha_max))) == 0u)
+    {
+        row->flags |= NDS_VC_F_HARD_ALPHA;
+    }
+    if (fits != 0u)
+    {
+        row->flags |= NDS_VC_F_4X4;
+    }
+}
+
+/* P8 V4 (lab only): every map row's content at the census frame, read with
+ * banks A-D and the palette banks F and G mapped to the LCD for the walk
+ * (the frame on screen is not presented after it: the probe stops here). */
+void ndsVramCensusContent(void)
+{
+    vu8 *cr = (vu8 *)0x04000240u;
+    u8 saved[7];
+    u32 i;
+
+    if (gNdsVramCensusEnable == 0u)
+    {
+        return;
+    }
+    ndsVramCensusCapture(&gNdsVramCensus.live, 0u);
+    for (i = 0u; i < 7u; i++)
+    {
+        saved[i] = cr[i];
+        if (((i < 4u) || (i >= 5u)) && ((saved[i] & 0x80u) != 0u))
+        {
+            cr[i] = VRAM_ENABLE;
+        }
+    }
+    for (i = 0u; i < gNdsVramCensusMapCount; i++)
+    {
+        ndsVramCensusRowContent(&gNdsVramCensusMap[i]);
+    }
+    for (i = 0u; i < 7u; i++)
+    {
+        cr[i] = saved[i];
+    }
+    /* The probe reads memory, not the D-cache. */
+    DC_FlushRange(gNdsVramCensusMap, sizeof(gNdsVramCensusMap));
+    DC_FlushRange(gNdsVramCensusBlockMap, sizeof(gNdsVramCensusBlockMap));
+    DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
+    DC_FlushRange((const void *)&gNdsVramCensusMapCount, sizeof(u32));
+    DC_FlushRange((const void *)&gNdsVramCensusBlockCount, sizeof(u32));
 }
 
 void ndsVramCensusCaptureBurst(void)

@@ -52,6 +52,78 @@ def site_names(elf: Path, pcs: dict[int, int]) -> dict[int, str]:
     return names
 
 
+# ndsVramCensusContent's flags (nds_renderer_texture_scene.c NDS_VC_F_*).
+F_COLOR0_TRANSPARENT, F_TRANSPARENT_SHOWN, F_4X4, F_HARD_ALPHA, F_MANY = 1, 2, 4, 8, 16
+BITS = {1: 8, 2: 2, 3: 4, 4: 8, 5: 2, 6: 8, 7: 16}
+
+
+def dims(r):
+    return 8 << (r["size"] & 7), 8 << ((r["size"] >> 3) & 7)
+
+
+def smallest_exact(r):
+    """(format name, bytes) of the smallest format that shows the same
+    texels: paletted by the colours shown (colour 0 kept for transparency),
+    A3I5/A5I3 and direct colour paletted only when their alpha is none or
+    full; otherwise the texture's own."""
+    w, h = dims(r)
+    fmt = r["format"]
+    hard = (r["flags"] & F_HARD_ALPHA) != 0
+    slots = r["colors"] + (1 if r["flags"] & F_TRANSPARENT_SHOWN else 0)
+    if fmt in (2, 3, 4) or (fmt in (1, 6, 7) and hard and not r["flags"] & F_MANY):
+        for name, bits, cap in (("PAL4", 2, 4), ("PAL16", 4, 16), ("PAL256", 8, 256)):
+            if slots <= cap:
+                return name, w * h * bits // 8
+    return FORMATS.get(fmt, str(fmt)), r["bytes"]
+
+
+def content_tables(rows, owner, table):
+    """V7 (smallest exact format), V8 (4x4) and V9 (duplicate texels) from the
+    content census; empty for a log without it."""
+    rows = [r for r in rows if r.get("hash") is not None]
+    if not rows:
+        return ""
+    smaller, saved = [], 0
+    for r in rows:
+        name, size = smallest_exact(r)
+        if size < r["bytes"]:
+            smaller.append((r, name, size))
+            saved += r["bytes"] - size
+    four, four_saved = [], 0
+    for r in rows:
+        if r["flags"] & F_4X4 and r["format"] != 5:
+            w, h = dims(r)
+            size = w * h * 3 // 8
+            if size < r["bytes"]:
+                four.append((r, size))
+                four_saved += r["bytes"] - size
+    groups = defaultdict(list)
+    for r in rows:
+        groups[(r["hash"], r["format"], r["size"])].append(r)
+    dups = [g for g in groups.values() if len(g) > 1]
+    dup_saved = sum(g[0]["bytes"] * (len(g) - 1) for g in dups)
+    out = [f"<h2>Content (P8 V4: V7 formats, V8 4x4, V9 duplicates)</h2>"
+           f"<p>{len(rows)} textures read. Smallest exact format: {len(smaller)} textures, "
+           f"{saved:,} B. Every 4x4 block exact in the compressed format: {len(four)} textures, "
+           f"{four_saved:,} B (texel and index data; slot rules aside). Duplicate texels: "
+           f"{len(dups)} groups, {dup_saved:,} B.</p>"]
+    if smaller:
+        smaller.sort(key=lambda t: t[0]["bytes"] - t[2], reverse=True)
+        out.append(table(["name", "owner", "format", "size", "colours", "alpha levels", "smallest", "bytes", "saved"],
+                         [(r["name"], html.escape(owner(r["bucket"])), FORMATS.get(r["format"]),
+                           "%dx%d" % dims(r), r["colors"], r["alphas"], n, f'{r["bytes"]:,}',
+                           f'{r["bytes"] - s:,}') for r, n, s in smaller[:40]]))
+    if dups:
+        dups.sort(key=lambda g: g[0]["bytes"] * (len(g) - 1), reverse=True)
+        out.append("<h3>Duplicate texels</h3>")
+        out.append(table(["names", "owners", "format", "size", "bytes each", "saved"],
+                         [(" ".join(str(r["name"]) for r in g),
+                           html.escape(", ".join(sorted({owner(r["bucket"]) for r in g}))),
+                           FORMATS.get(g[0]["format"]), "%dx%d" % dims(g[0]), f'{g[0]["bytes"]:,}',
+                           f'{g[0]["bytes"] * (len(g) - 1):,}') for g in dups[:40]]))
+    return "".join(out)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--log", type=Path, required=True)
@@ -66,11 +138,14 @@ def main() -> int:
         if m:
             blocks.append((int(m.group(1), 16), int(m.group(2)), int(m.group(3))))
             continue
-        m = re.match(r"X ROW (\d+) ([0-9a-f]+) (\d+) (\d+) (\d+) (\d+) (\d+)", line)
+        m = re.match(r"X ROW (\d+) ([0-9a-f]+) (\d+) (\d+) (\d+) (\d+) (\d+)"
+                     r"(?: ([0-9a-f]+) (\d+) (\d+) (\d+))?", line)
         if m:
-            name, addr, size_bytes, bucket, fmt, size, pal = m.groups()
+            name, addr, size_bytes, bucket, fmt, size, pal, hsh, colors, alphas, flags = m.groups()
             rows.append(dict(name=int(name), addr=int(addr, 16), bytes=int(size_bytes),
-                             bucket=int(bucket), format=int(fmt), size=int(size), pal=int(pal)))
+                             bucket=int(bucket), format=int(fmt), size=int(size), pal=int(pal),
+                             hash=int(hsh, 16) if hsh else None, colors=int(colors or 0),
+                             alphas=int(alphas or 0), flags=int(flags or 0)))
             continue
         m = re.match(r"X SITE (\d+) ([0-9a-f]+)", line)
         if m:
@@ -170,6 +245,7 @@ def main() -> int:
                         next((f'{b} {r["addr"] - base:#07x}' for b, base in BANKS
                               if base <= r["addr"] < base + BANK_BYTES), hex(r["addr"])))
                        for r in top])
+    content_html = content_tables(rows, owner, table)
     total = sum(r["bytes"] for r in rows)
     page = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>VRAM map</title><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -185,6 +261,7 @@ svg{{max-width:100%;height:auto;display:block}}
 <h2>Banks (texture slots; hover a segment for its name)</h2>{"".join(bars)}
 <h2>By owner</h2>{owner_table}<h2>By format</h2>{format_table}
 <h2>Per bank</h2>{bank_table}<h2>Largest textures</h2>{top_table}
+{content_html}
 </body></html>"""
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(page, encoding="utf-8")
