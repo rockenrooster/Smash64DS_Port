@@ -19,6 +19,14 @@ SECTIONS {
             .text.ndsUiKitImageMetric
             .rodata.kNdsUiKitImageMetrics .rodata.kNdsUiKitNetImageMetrics
             .rodata.ndsUiKitCommit.*)
+        /* The Results OBJ tenant's entry points that every scene's frame and
+         * Thaw call (P8 R6); the rest of nds_results_oam.o is in the Results
+         * block below. */
+        :nds_results_oam.o (.text.ndsResultsOamEnterPending
+            .text.ndsResultsOamEnterPending.* .text.ndsResultsOamExit
+            .text.ndsResultsOamExit.* .text.ndsResultsOamBeginFrame
+            .text.ndsResultsOamBeginFrame.* .text.ndsResultsOamCommit
+            .text.ndsResultsOamCommit.*)
         . = ALIGN(4);
     } >main AT>lma9 :main = 0xff
 }
@@ -279,6 +287,10 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnvsresults_spot.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        /* The Results OBJ tenant but its resident entry points (P8 R6):
+         * Results' own scene code and the sprite backend's VSResults branch
+         * call it. */
+        :nds_results_oam.o (.text .text.* .rodata .rodata.*)
         . = ALIGN(32);
     } AT>ovlmem :ovl_frontend = 0xff
 
@@ -364,6 +376,9 @@ SECTIONS {
         :battleship_scexplainfiles.o (.bss.sSCExplainStatusBuffer)
         :battleship_mnvsresults.o (.bss.sMNVSResultsForceStatusBuffer)
         :battleship_mnvsresults.o (.bss.sMNVSResultsStatusBuffer)
+        /* The Results OBJ tenant's tables (P8 R6), which its Enter rebuilds. */
+        :nds_results_oam.o (.bss.sNdsResultsCells .bss.sNdsResultsPalettes
+            .bss.sNdsResultsPlanMemo .bss.sNdsResultsIndexedScratch)
         :battleship_mntraining.o (.bss.sMNPlayers1PTrainingStatusBuffer)
         :battleship_mntraining.o (.bss.sMNPlayers1PTrainingForceStatusBuffer)
         . = ALIGN(32);

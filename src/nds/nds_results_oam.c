@@ -136,8 +136,9 @@ static const NDSResultsOamShape sNdsResultsShapes[] =
  * frame: the exhaustive search was ~76,500 ticks of a steady FFA frame, the
  * margin that decided 48 of 121 steady frames taking two VBlanks
  * (artifacts/bugs/2026-09-30_results-pacing, section 3). Key 0 is never a real
- * pair (both dimensions are nonzero), so the zeroed table starts empty; a
- * replaced slot just recomputes the same exact plan. */
+ * pair (both dimensions are nonzero), so the zeroed table is empty; Enter
+ * zeroes it, as it lives in the frontend overlay's BSS (below). A replaced
+ * slot just recomputes the same exact plan. */
 #define NDS_RESULTS_PLAN_MEMO_SLOTS 32u
 typedef struct NDSResultsOamPlanMemo
 {
@@ -147,6 +148,14 @@ typedef struct NDSResultsOamPlanMemo
 static NDSResultsOamPlanMemo sNdsResultsPlanMemo[NDS_RESULTS_PLAN_MEMO_SLOTS];
 static u32 sNdsResultsPlanMemoNext;
 
+/* THE FRONTEND OVERLAY (P8 R6, linker/nds_frontend_overlay.ld). This file's
+ * code but the four resident entry points (EnterPending, Exit, BeginFrame,
+ * Commit) sits in the overlay's VS Results block, and the plan memo above,
+ * the cells, the banks and the indexed scratch in its BSS: only Results draws
+ * through this tenant, Enter rebuilds all of it, and a VS battle lends that
+ * memory out. The resident entry points touch only the scalars and the staged
+ * palette words, which stay in .main -- Exit runs at the next scene's Thaw,
+ * when the VS select may already have lent the Results block. */
 static NDSResultsOamCell sNdsResultsCells[NDS_RESULTS_CELL_SLOTS];
 static NDSResultsOamPalette sNdsResultsPalettes[NDS_RESULTS_PALETTE_BANKS];
 /* The banks' colours, staged: they reach OBJ palette RAM with the OAM in
@@ -1352,11 +1361,18 @@ void ndsResultsOamEnterPending(void)
     if (sNdsResultsEnterPending != 0u)
     {
         sNdsResultsEnterPending = 0u;
-        ndsResultsOamEnter();
+        /* Enter is overlay code: Results' own Thaw runs it, and an Enter
+         * left pending past Results is dropped. */
+        if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+        {
+            ndsResultsOamEnter();
+        }
     }
 }
 
-void ndsResultsOamEnter(void)
+/* Not inlined, so the resident EnterPending calls this symbol in the overlay
+ * (frontend_overlay_allowlist.json). */
+__attribute__((noinline)) void ndsResultsOamEnter(void)
 {
     u32 tint_bytes = NDS_RESULTS_TINT_CELL_WIDTH *
                      NDS_RESULTS_TINT_CELL_HEIGHT * sizeof(u16);
@@ -1374,6 +1390,8 @@ void ndsResultsOamEnter(void)
     }
     memset(sNdsResultsCells, 0, sizeof(sNdsResultsCells));
     memset(sNdsResultsPalettes, 0, sizeof(sNdsResultsPalettes));
+    memset(sNdsResultsPlanMemo, 0, sizeof(sNdsResultsPlanMemo));
+    sNdsResultsPlanMemoNext = 0u;
     memset(sNdsResultsPaletteWords, 0, sizeof(sNdsResultsPaletteWords));
     memset(sNdsResultsTintBank, NDS_RESULTS_NO_TINT_BANK,
            sizeof(sNdsResultsTintBank));
@@ -1438,7 +1456,7 @@ void ndsResultsOamExit(void)
     oamClear(&oamMain, 0, 128);
     oamUpdate(&oamMain);
     REG_BLDCNT = sNdsResultsSavedBldCnt;
-    memset(sNdsResultsCells, 0, sizeof(sNdsResultsCells));
+    /* The cells are overlay BSS (above), and Enter clears them. */
     memset(sNdsResultsTintBank, NDS_RESULTS_NO_TINT_BANK,
            sizeof(sNdsResultsTintBank));
     sNdsResultsPaletteDirty = 0u;

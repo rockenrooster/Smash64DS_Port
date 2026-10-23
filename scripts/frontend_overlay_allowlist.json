@@ -753,6 +753,16 @@
       "reason": "The caller returns unless scene_curr is VSResults before invoking this getter. Results dispatch reloads the frontend before scene entry."
     },
     {
+      "source_symbol": "ndsResultsOamEnterPending",
+      "target_symbol": "ndsResultsOamEnter",
+      "reason": "P8 R6. Only Enter (Results' scene start, under the held battle frame) sets the pending flag, and EnterPending calls Enter only while scene_curr is VSResults (Results' own Thaw); an Enter left pending past Results is dropped. Results dispatch reloads the frontend, and Results keeps its own block."
+    },
+    {
+      "source_symbol": "scene_backend.c::ndsDrawLayeredSObjFrame",
+      "target_symbol": "ndsResultsOamDrawGObj",
+      "reason": "P8 R6. The call is behind gSCManagerSceneData.scene_curr == nSCKindVSResults. Results dispatch reloads the frontend before scene entry, and Results keeps its own block."
+    },
+    {
       "source_symbol": "ndsSceneAssetAlloc",
       "target_symbol": "__nds_frontend_end",
       "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
