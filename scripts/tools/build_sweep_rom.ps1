@@ -5,6 +5,10 @@ param(
     [string[]]$Extra = @(),
     # More hot-text sections to leave out of ITCM, for this lab build only.
     [string[]]$EvictSyms = @(),
+    # Input sections (full names, e.g. .bss.gNdsFooCount) to leave out of the
+    # DTCM hot list, for this lab build only: a diagnostics build's counters
+    # take DTCM past the boot stack's low-water ceiling.
+    [string[]]$EvictSections = @(),
     # A shipping build whose NitroFS fills the files the four-CPU target does
     # not stage (default: the newest builds/play-*).
     [string]$NitroFrom = ''
@@ -25,6 +29,9 @@ $text = [IO.File]::ReadAllText("$PWD/$ld")
 $labText = $text.Replace('*(.text.ndsRendererProfileSetOwner)', '/* LAB sweep: evicted */')
 foreach ($sym in $EvictSyms) {
     $labText = $labText.Replace("*(.text.$sym)", "/* LAB sweep: evicted $sym */")
+}
+foreach ($sec in $EvictSections) {
+    $labText = $labText.Replace("*($sec)", "/* LAB sweep: evicted $sec */")
 }
 Copy-S64BuildSeed -Build $Build -Seed $Seed -DropRoms @($rom)
 New-Item -ItemType Directory -Force "builds/$Build" | Out-Null

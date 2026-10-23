@@ -45,6 +45,16 @@ extern volatile u32 gNdsEffectPoolFreeMin;
  * decisions that weigh the frame's elapsed work (the heavy-frame particle
  * LOD, battleship_lbparticle.c). 0 = no iteration has begun. */
 volatile u32 gNdsBattleIterationStartTick;
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_DIAG_COUNTERS) && NDS_DIAG_COUNTERS
+/* Census lab ROMs: the presented battle frame that calls the hook below
+ * (0 = never), for a gdb breakpoint on the hook. */
+volatile u32 gNdsLabCensusFrame __attribute__((used));
+void __attribute__((noinline, used)) ndsLabCensusFrameHook(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+#endif
 static u32 sNdsBattlePlayablePacingStartTick;
 static u32 sNdsBattlePlayableLastPresentVBlank;
 static u32 sNdsBattlePlayableLastDeadFrames;
@@ -496,6 +506,16 @@ static void ndsBattlePlayablePresentFrame(void)
      * source update, so presentation must not add another logic tic. */
     sySchedulerSetTicCount(logic_tick);
     gNdsFrameCounter++;
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_DIAG_COUNTERS) && NDS_DIAG_COUNTERS
+    /* Census lab ROMs: one unconditional gdb stop at the poked frame
+     * (scripts/tools/vram_census.ps1) instead of a conditional stop every
+     * frame, which the heavier stages did not survive. */
+    if (gNdsFrameCounter == gNdsLabCensusFrame)
+    {
+        ndsLabCensusFrameHook();
+    }
+#endif
     gNdsBattlePlayablePacingPresentedFrames++;
     /* The battle-time low-water of the taskman general heap, which is the
      * number every memory decision on this target turns on:

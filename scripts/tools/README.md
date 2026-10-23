@@ -62,6 +62,8 @@ table, and where runs write. Conventions:
 |---|---|
 | `worst_case_sweep.ps1` | WORK P50/P95 and the two-VBlank share per stage and roster on a gate ROM; the CSV rows are the replay digest (`scripts/compare-replay-digest.py a.csv b.csv`) |
 | `heap_census.ps1` | one match's heap allocations, ensured files, stage program load, heap low-water, motion cache and lent spans |
+| `profile_set.ps1 -Build -Tag [-Set cast|heavy|mixes|all] [-NoSplit]` | P0's profile census on a profiling gate ROM (`-Extra NDS_TASK37_PROFILE=1,NDS_BATTLE_PROFILE=1,NDS_TASK37_PROFILE_START=200,NDS_TASK37_PROFILE_FRAMES=384`): per-function cycles for the cast, the heavy roster and the mixes, one runner slot a run; `-NoSplit` when the per-frame regions do not fit DTCM |
+| `vram_census.ps1 -Build [-Gkinds] [-Kinds] [-Content]` | texture VRAM over a four-CPU match on a gate ROM built with `-Extra NDS_DIAG_COUNTERS=1`: free bytes and the largest free run at GO, live and at their minimum, peak texel and palette bytes (loop V) |
 | `ram_ledger.py MAP [--diff OLD_MAP] [--section NAME]` | a build's RAM from its link map: the image, VS battle, 1P battle and menu totals, the TCMs, the image by object and by family; `--diff` the change from an older build, largest first (R0) |
 
 ## Readability (Phase C)
@@ -75,6 +77,7 @@ table, and where runs write. Conventions:
 | `repoint_split_readers.py FILE_NAME READER.py...` | after a split, points each script that reads the file's text at `source_test_helpers.source()`, which reads it whole (slices in include order, fragments in place) |
 | `pp_run.py LISTING OUT_DIR` | preprocesses every compile of a `make -n -B` listing (`-E -P`) into OUT_DIR; a split's proof is the same text before and after |
 | `pp_cmp.py BEFORE AFTER` | compares two `pp_run.py` trees: exact, blank-lines-only, or different |
+| `obj_cmp.py LISTING BEFORE AFTER WORK` | compiles the units two `pp_run.py` trees differ in, with each unit's flags from the `make -n` listing, and compares their non-debug sections byte for byte (readelf; seconds an object): when preprocessing differs, the code still must not |
 
 A split also registers in `scripts/menus/source_test_helpers.py` `SPLIT_SOURCES`,
 so host tests read the file whole through `source()`.

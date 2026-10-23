@@ -13,7 +13,10 @@ param(
     [string]$WaitFile = '', [string]$Wait = '',
     # A private, writable SD image (the shared one is read-only for runners),
     # so the save and its siblings persist; -Fresh deletes it first.
-    [string]$Image = '', [switch]$Fresh
+    [string]$Image = '', [switch]$Fresh,
+    # End the run when gdb exits (a record taken at one breakpoint that then
+    # quits) instead of waiting out $Seconds.
+    [switch]$StopWithGdb
 )
 # One gdb session for a whole emulator run on runner slot $Slot (the melonDS
 # stub takes one attach per instance): main, the pokes, the caller's
@@ -63,6 +66,7 @@ try {
     $t0 = Get-Date
     while (((Get-Date) - $t0).TotalSeconds -lt $Seconds) {
         if ($p.HasExited) { break }
+        if ($StopWithGdb -and $g.HasExited) { break }
         if ($Every -gt 0) {
             Start-Sleep -Seconds $Every
             if ($p.HasExited) { break }

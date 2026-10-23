@@ -1,12 +1,14 @@
 param([string]$Build = 'build-prof-s67', [string]$Tag = 's67p', [int[]]$Slots = @(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-      [string]$Set = 'all', [int]$StartFrame = 200, [int]$Frames = 384)
+      [string]$Set = 'all', [int]$StartFrame = 200, [int]$Frames = 384, [switch]$NoSplit)
 # P0's profile census (docs/P8/P8_PLAN.md section 5) on a profiling ROM built
 # with the census window (build_gate_rom.ps1 -Extra NDS_TASK37_PROFILE=1,
 # NDS_BATTLE_PROFILE=1, NDS_TASK37_PROFILE_START=200, NDS_TASK37_PROFILE_FRAMES=384,
-# NDS_TASK37_PROFILE_PER_FRAME_REGION=1; the census refuses another window): the
-# cast and the heavy roster on all sixteen VS stages, the four mixes on Hyrule
-# Temple and Saffron City. Each run is one run-task37-profile-census.ps1 on its
-# own runner slot (starts 30 s apart), split over the gate, written to
+# and NDS_TASK37_PROFILE_PER_FRAME_REGION=1 unless -NoSplit; the census refuses
+# another window): the cast and the heavy roster on all sixteen VS stages, the
+# four mixes on Hyrule Temple and Saffron City. Each run is one
+# run-task37-profile-census.ps1 on its own runner slot (starts 30 s apart),
+# split over the gate (per-function totals only with -NoSplit: the per-frame
+# regions' DTCM words do not fit beside the ship layout's), written to
 # artifacts/performance/<date>_<Tag>-<run>-g<gkind>-profile/. -Set picks
 # 'cast', 'heavy', 'mixes' or 'all'. One line a run in
 # builds/probes/profile-<Tag>.out.
@@ -38,14 +40,15 @@ while ($queue.Count -gt 0 -or $jobs.Count -gt 0) {
         if ($queue.Count -eq 0) { continue }
         $r = $queue.Dequeue()
         $dir = Join-Path $S64Repo "artifacts\performance\$($date)_$Tag-$($r.Name)-profile"
-        $jobs[$slot] = Start-Job -ArgumentList $S64Repo, $Build, $r, $dir, $slot, $StartFrame, $Frames -ScriptBlock {
-            param($repo, $build, $r, $dir, $slot, $start, $frames)
+        $jobs[$slot] = Start-Job -ArgumentList $S64Repo, $Build, $r, $dir, $slot, $StartFrame, $Frames, ([bool]$NoSplit) -ScriptBlock {
+            param($repo, $build, $r, $dir, $slot, $start, $frames, $nosplit)
             New-Item -ItemType Directory -Force $dir | Out-Null
             $log = Join-Path $dir 'run.log'
+            $split = if ($nosplit) { @{ PerFrameRegion = $false } } else { @{ SplitOverGate = $true } }
             try {
                 & (Join-Path $repo 'scripts\run-task37-profile-census.ps1') -Build $build -NoBuild `
                     -Target smash64ds-p2-fourcpu-tickhud-hwtri -StartFrame $start -Frames $frames -Top 60 `
-                    -SplitOverGate -OutDir $dir -RunnerSlot $slot `
+                    -OutDir $dir -RunnerSlot $slot @split `
                     -BootSetGlobals @("gNdsLabFourCpuGkind=$($r.G)", "gNdsLabFourCpuKinds=$($r.Kinds)", "gNdsLabP4Content=$($r.Content)") *> $log
                 "$($r.Name) slot=$slot exit=$LASTEXITCODE census=$(Test-Path (Join-Path $dir 'census.json'))"
             } catch {
