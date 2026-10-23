@@ -79,6 +79,12 @@ static void hostResolvePath(const char *path, char *out, size_t out_size)
     {
         tail = path + 7;
     }
+    else if (path[0] == NDS_NITRO_STAGES[0])
+    {
+        /* ndsNitroPath's expansion of the stage directory's code. */
+        snprintf(out, out_size, "%s/stages/%s", sHostRoot, path + 1);
+        return;
+    }
     snprintf(out, out_size, "%s/%s", sHostRoot, tail);
 }
 

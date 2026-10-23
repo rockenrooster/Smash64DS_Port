@@ -9,6 +9,10 @@ typedef struct NdsRelocAssetStream {
     void *file; /* FILE*, kept void so callers need no <stdio.h> */
 } NdsRelocAssetStream;
 
+/* The stage tables' directory code (include/nds/nds_reloc_assets.h, P8 R2):
+ * the stream open expands it to "nitro:/stages/". */
+#define NDS_NITRO_STAGES "\021"
+
 s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path);
 s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
                             u32 bytes);

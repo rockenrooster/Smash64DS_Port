@@ -72,6 +72,9 @@ static u32 sOriginalSpriteOverlayBg3Lent, sOriginalSpriteOverlayBg3ReturnPending
 static void ndsPlatformVramReturnBankDNow(void) { assert(0); }
 #define NDS_TRANSITION_SNAPSHOT_BANK_C 1u
 static u32 sNdsTransitionSnapshotBank;
+/* P8 V5: bank C lent to textures refuses BG2 writes and clears. */
+static s32 sBg2Usable = TRUE;
+static s32 ndsPlatformVramBg2Usable(u32 write) { (void)write; return sBg2Usable; }
 ''' + set_affine + queue + clear + r'''
 int main(void)
 {
@@ -104,6 +107,15 @@ int main(void)
     ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
     ndsPlatformCommitNativeWallpaperAffine();
     assert(writes == 3 && registers[0] == 190 && registers[3] == 61);
+    /* Bank C lent: the BG2 clear touches neither the bytes nor the epoch. */
+    sBg2Usable = FALSE;
+    {
+        const u32 cleared = gNdsOriginalSpriteBg2ClearBytes;
+        const u32 epoch = sOriginalSpriteOverlayEpoch[0];
+        ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
+        assert(gNdsOriginalSpriteBg2ClearBytes == cleared);
+        assert(sOriginalSpriteOverlayEpoch[0] == epoch);
+    }
     return 0;
 }
 '''

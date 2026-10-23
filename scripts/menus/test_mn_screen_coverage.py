@@ -80,7 +80,8 @@ def test_unstaged_container_is_reported_as_missing(reloc):
     deltas, _info = audit.audit_imported_screen(ROOT, screen, broken)
     assert deltas and {d.kind for d in deltas} == {"MISSING"}
     detail = deltas[0].detail
-    assert "nitro:/reloc/" in detail
+    # The row to add, in the asset table's directory-code form (P8 R2).
+    assert 'NDS_NITRO_RELOC_MENUS "MNCharacters"' in detail
     assert "stage_reloc_file.py" in detail
 
 
