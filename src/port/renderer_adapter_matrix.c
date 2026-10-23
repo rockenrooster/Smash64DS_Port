@@ -80,7 +80,6 @@ __attribute__((used)) volatile u32 gNdsLabItemAcc[16];
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT 128u
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK \
     (NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT - 1u)
-#define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
 #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
 #define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
 #define NDS_RENDERER_ADAPTER_G_TX_NOMASK 0u
@@ -91,7 +90,6 @@ __attribute__((used)) volatile u32 gNdsLabItemAcc[16];
 #define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_1 0x04u
 #define NDS_RENDERER_ADAPTER_G_MWO_A_LIGHT_2 0x18u
 #define NDS_RENDERER_ADAPTER_G_MWO_B_LIGHT_2 0x1cu
-#define NDS_RENDERER_ADAPTER_G_MWO_POINT_ST 0x14u
 #define NDS_RENDERER_ADAPTER_G_TX_LDBLK_MAX_TXL 2047u
 /* dLBCommonFuncMatrixList is consumed as syMtxProcess pairs; kind 0x4B maps
  * to lbCommonFighterPartsFuncMatrix in BattleShip. */

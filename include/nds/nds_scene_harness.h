@@ -165,7 +165,6 @@
 #define NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP 162u
 #define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE 163u
 #define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME 163u
-#define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_MATCH_LIFECYCLE 163u
 /* Boot straight into VS Results with a finished match already in the transfer
  * state. Owner-requested 2026-07-30 to make the R2-07 Results work iterable:
  * every Results measurement before this had to emulate the whole one-minute
@@ -179,7 +178,6 @@
 
 #define NDS_SCENE_HARNESS_NONE 0u
 #define NDS_SCENE_HARNESS_PASS 0x4841524Eu
-#define NDS_SCENE_HARNESS_RESERVED_PASS 0x48525356u
 
 extern volatile u32 gNdsSceneHarnessMode;
 extern volatile u32 gNdsSceneHarnessResult;

@@ -9,7 +9,6 @@
 #define NDS_NET_HDR_BYTES         8u
 
 /* Message kinds (the header's fourth byte). */
-#define NDS_NET_KIND_HELLO        1u  /* lab discovery */
 #define NDS_NET_KIND_START        2u  /* host -> all: descriptor, seed, ports */
 #define NDS_NET_KIND_START_ACK    3u  /* guest -> host */
 #define NDS_NET_KIND_INPUT        4u  /* lockstep records and digest */

@@ -236,7 +236,6 @@ static u32 sMenuVsArrowsShown;
  * select, which is the lobby; JOIN keeps the tab white while this console
  * looks for a room and joins the first open one running its own build. B
  * gives up the search. The choice lasts for the session. */
-#define NDS_MENU_VS_NET_OFF 0u
 #define NDS_MENU_VS_NET_HOST 1u
 #define NDS_MENU_VS_NET_JOIN 2u
 #define NDS_MENU_VS_NET_VALUES 3u

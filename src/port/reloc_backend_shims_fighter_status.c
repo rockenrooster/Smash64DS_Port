@@ -1080,13 +1080,6 @@ sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
     return ndsBaseFTCommonJumpAerialCheckInterruptCommon(fighter_gobj);
 }
 
-#define NDS_DAMAGE_LOSEGRIP_SELECT 0x1u
-#define NDS_DAMAGE_LOSEGRIP_LINKS 0x2u
-#define NDS_DAMAGE_LOSEGRIP_POSITION 0x4u
-#define NDS_DAMAGE_LOSEGRIP_COLLISION 0x8u
-#define NDS_DAMAGE_LOSEGRIP_SETAIR 0x10u
-#define NDS_DAMAGE_LOSEGRIP_LINK_CLEAR 0x20u
-#define NDS_DAMAGE_LOSEGRIP_ORIGINAL 0x40u
 
 void mpCommonSetFighterAir(FTStruct *fp)
 {

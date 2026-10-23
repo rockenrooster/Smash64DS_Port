@@ -1,7 +1,6 @@
 /* Native renderer, the rebirth halo: its texture, its groups and their packed GX
  * submission. A slice of nds_renderer.c, after nds_renderer_native_common.c. */
 
-#define NDS_REBIRTH_PHASE_MARK(slot, before) do { (void)(before); } while (0)
 static s32 ndsRendererHardwareBindRebirthHaloTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 texture_slot, u32 upload_width, u32 upload_height, u32 format)

@@ -46,12 +46,8 @@
 
 #define NDS_R2_COLLISION_ORACLE_BUCKETS 3u
 /* Probe offsets from the joint origin, in whole world units. */
-#define NDS_R2_COLLISION_ORACLE_OFFSET_0 1
-#define NDS_R2_COLLISION_ORACLE_OFFSET_1 4
-#define NDS_R2_COLLISION_ORACLE_OFFSET_2 16
 /* 0.0200 world units expressed in 1/4096ths, the bound R2-03 E64b/E65 set and
  * the one the kernel's host falsifier is gated on. */
-#define NDS_R2_COLLISION_ORACLE_BOUND_Q12 82u
 
 void ndsR2CollisionOracleSampleFrame(void);
 

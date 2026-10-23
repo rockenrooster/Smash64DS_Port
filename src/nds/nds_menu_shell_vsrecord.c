@@ -63,7 +63,6 @@
 /* Rows and columns a table window shows. */
 #define NDS_MENU_VSRECORD_WINDOW 8u
 #define NDS_MENU_VSRECORD_ROW_PITCH 17
-#define NDS_MENU_VSRECORD_ICON ((s32)NDS_MN_UI_KIT_VSREC_ICON)
 
 /* Battle Score, DS pixels: the icon row under the header, the row icons in
  * the left column, eight 24-pixel cells and the total column. */
@@ -73,14 +72,12 @@
 #define NDS_MENU_VSRECORD_SCORE_CELL_X 20
 #define NDS_MENU_VSRECORD_SCORE_CELL_W 24
 #define NDS_MENU_VSRECORD_SCORE_TOTAL_R 252
-#define NDS_MENU_VSRECORD_SCORE_BOTTOM 186
 
 /* Ranking: the label row, eight rows under it and the seven columns. */
 #define NDS_MENU_VSRECORD_RANK_TOP 33
 #define NDS_MENU_VSRECORD_RANK_HEAD 47
 #define NDS_MENU_VSRECORD_RANK_ROW_Y 48
 #define NDS_MENU_VSRECORD_RANK_COL_X 20
-#define NDS_MENU_VSRECORD_RANK_BOTTOM 183
 #define NDS_MENU_VSRECORD_RANK_LABEL_Y 38
 
 /* Individual: the stat lines beside the portrait (their words are in the

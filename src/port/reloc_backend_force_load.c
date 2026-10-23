@@ -656,7 +656,6 @@ void *lbRelocGetForceStatusBufferFile(u32 id)
  * image). */
 #define NDS_RELOC_IF_COMPACT_MAX_DROPS 64u
 #define NDS_RELOC_IF_COMPACT_MAX_SPANS (NDS_RELOC_IF_COMPACT_MAX_DROPS + 1u)
-#define NDS_RELOC_IF_COMPACT_SLOT_CAP 2048u
 #define NDS_RELOC_IF_COMPACT_MARGIN (64u * 1024u)
 
 typedef struct NDSRelocIfSpan

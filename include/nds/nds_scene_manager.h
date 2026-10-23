@@ -36,7 +36,6 @@
  * one function rather than a grep. */
 
 /* Scene descriptor flags. */
-#define NDS_SCENE_FLAG_NONE 0u
 /* Entry rewinds the taskman general arena (i.e. the scene reaches
  * syTaskmanStartTask, which calls syTaskmanInitGeneralHeap). Every scene in
  * the table has this today; the flag exists so a future scene that does NOT

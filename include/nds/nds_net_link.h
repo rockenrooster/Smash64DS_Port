@@ -41,7 +41,6 @@
 #define NDS_NET_CMD(cmd, arg)   (((uint32_t)(cmd) & 0xFu) | (((uint32_t)(arg) & 0x3FFFFFu) << 4))
 
 /* NdsNetShared.state, written by the ARM7. */
-#define NDS_NET_STATE_OFF       0u
 #define NDS_NET_STATE_ATTACHED  1u  /* module thread running, radio off */
 #define NDS_NET_STATE_RUNNING   2u  /* radio on, sending and receiving */
 #define NDS_NET_STATE_ERROR     3u

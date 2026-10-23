@@ -15,7 +15,6 @@
 #ifdef MWL_DEBUG
 #include <calico/system/dietprint.h>
 #else
-#define dietPrint(...) ((void)0)
 #endif
 
 typedef enum MwlTask {

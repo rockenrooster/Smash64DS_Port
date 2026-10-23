@@ -98,18 +98,14 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_MODIFY_ST 1u
 #define NDS_NATIVE_RUN_RAW_CURRENT 0u
 #define NDS_NATIVE_RUN_CROSS_MATRIX 1u
-#define NDS_NATIVE_DENSE_VERTEX_COUNT 541u
 #define NDS_NATIVE_ROOT_BINDING_COUNT 32u
 #define NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK 0x07u
 #define NDS_NATIVE_DIRECT_POLICY_TEXTURED_LIT 0u
-#define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM 1u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_ONLY 2u
-#define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM_ALT_ALPHA 3u
 #define NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2 4u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_PASS2 5u
 #define NDS_NATIVE_DIRECT_POLICY_CULL_NONE 0x80u
 #define NDS_NATIVE_DENSE_ID_MASK 0x07ffu
-#define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 11u
 #define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 11u
 /* An owner with 2048 dense vertices or more (a P4 donor carrying every model
  * part its motions draw: Banjo, Crash) has wide dense ids: a span's u16 is its
@@ -121,11 +117,6 @@ typedef struct NDSRendererTraversalState
     ((tables_)->dense_count > NDS_NATIVE_DENSE_ID_MASK)
 #define NDS_NATIVE_SPAN_FIRST(wide_, span_)                                    \
     ((wide_) ? (u32)(span_) : ((u32)(span_) & NDS_NATIVE_DENSE_ID_MASK))
-#define NDS_NATIVE_SPAN_COUNT(wide_, span_, action_)                           \
-    ((wide_) ?                                                                 \
-        (((action_)->kind == NDS_NATIVE_VERTEX_BLOCK) ?                        \
-            (u32)(action_)->count : 1u) :                                      \
-        ((u32)(span_) >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT))
 /* P2-3 image ABI tag: first u32 of every native-owner image, checked on load
  * before any member is bound. v6 gives NDSNativeRun.submit_class upper bits
  * the source-unlit vertex-colour flag plus per-run polygon alpha while keeping

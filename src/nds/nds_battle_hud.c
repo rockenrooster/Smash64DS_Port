@@ -37,7 +37,6 @@ _Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
 
 /* Source -> DS is the same 4/5 frame scale used by the menu bake. */
 #define NDS_BATTLE_HUD_SOURCE_SCALE(v) (((v) * 4 + 2) / 5)
-#define NDS_BATTLE_HUD_PLAYER_Y NDS_BATTLE_HUD_SOURCE_SCALE(210)
 #define NDS_BATTLE_HUD_STOCK_Y NDS_BATTLE_HUD_SOURCE_SCALE(185)
 /* An emblem (at most 30x27 in the source frame, 24x22 here) in a 32x32 cell. */
 #define NDS_BATTLE_HUD_EMBLEM_CELL 32u

@@ -227,8 +227,6 @@ static sb32 sNdsStageMPCliffAttackActionLoopSetStatusActive = FALSE;
 static sb32 sNdsStageMPCliffEscapeActionLoopSetStatusActive = FALSE;
 static FTStruct *sNdsFTCommonCliffCommon2BridgeStruct = NULL;
 
-#define NDS_STAGE_MPDOWNWAIT_RECOVERY_STABLE_FRAMES 8u
-#define NDS_STAGE_MPDOWNWAIT_ROLL_TRANSN_SPEED 1.25F
 
 struct NDSFighterScriptInput
 {

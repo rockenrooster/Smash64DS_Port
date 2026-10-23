@@ -94,8 +94,6 @@
 
 /* kind in the high nibble, track index in the low nibble. Both fit: the kinds
  * are 0..7 and the joint tracks are 0..9. */
-#define NDS_ANIM_DENSE_TRACK_MASK 0x0fu
-#define NDS_ANIM_DENSE_KIND_SHIFT 4
 
 /* ONE record serves the ROM bank and the live track, which is why `cmd_index`
  * sits here rather than in a separate bank-only struct. The live form has three

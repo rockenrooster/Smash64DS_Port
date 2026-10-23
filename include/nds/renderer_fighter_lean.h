@@ -106,7 +106,6 @@ extern volatile u32 gNdsFtrLeanSlow;
  * Compiled only into a tick-HUD build made with NDS_FTR_LEAN_KTIME=1 (Makefile,
  * own build dir); elsewhere the bit is ignored and the kernel carries no
  * timing code. */
-#define NDS_FTR_LEAN_SLOW_KTIME 8u
 /* Lab check, not a cost form: every event that re-selects a held list (an
  * entry, or a variant record of one) also materializes the key into the other
  * entry and compares the two (verify_*). Route 1 only (it needs both halves). */
@@ -751,8 +750,6 @@ void ndsVramCensusCaptureBurst(void);
  * Admission runs at the end of the battle's scene-texture preparation when
  * the word is already set (the default), else at the first frame end that
  * sees it set (a lab poke after setup). */
-#define NDS_FTR_LEAN_ADMIT_OFF 0u
-#define NDS_FTR_LEAN_ADMIT_PIN 1u
 #define NDS_FTR_LEAN_ADMIT_REGIONS 2u
 #define NDS_FTR_LEAN_ADMIT_FIGHTERS 4u
 

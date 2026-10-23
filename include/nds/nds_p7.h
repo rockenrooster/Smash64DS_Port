@@ -53,9 +53,7 @@ void ndsP7ClearStages(void);
 #define NDS_P7_SITE_BONUS_END 5u    /* a row's: either practice */
 #define NDS_P7_UNLOCK_FIGHTER 0u
 #define NDS_P7_UNLOCK_STAGE 1u
-#define NDS_P7_DELIVERY_DIRECT 0u     /* a message, no fight */
 #define NDS_P7_DELIVERY_CHALLENGER 1u /* a challenger fight, then the message */
-#define NDS_P7_DELIVERY_COMPANION 2u  /* its message after the row that opens it */
 #define NDS_P7_ANY 0xFFu
 #define NDS_P7_NO_RACE 0xFFFFu
 #define NDS_P7_BONUS_TASKS 10u      /* every target, every platform */

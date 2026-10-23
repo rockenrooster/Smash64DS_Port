@@ -562,10 +562,6 @@ static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 #define NDS_RENDERER_HW_TEXTURE_MAX_TEXELS \
     (NDS_RENDERER_HW_TEXTURE_MAX_WIDTH * NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT)
 #define NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT (16u * 16u)
-#define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT 16u
-#define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT \
-    (NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT * \
-     NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT)
 /* Sized from the measured working set, not chosen: Task 90 E0 traced 128
  * consecutive light-shade requests on the Boundary battle and found exactly 6
  * distinct (diffuse, ambient) pairs against 49 requests per frame. At 4 entries
@@ -629,8 +625,6 @@ static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 #define NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY 3u
 #define NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE 4u
 #define NDS_RENDERER_HW_POS_TEST_MAX 40u
-#define NDS_RENDERER_HW_POS_TEST_TOLERANCE 16u
-#define NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA 4352
 #define NDS_RENDERER_MATRIX_SNAPSHOT_INVALID 0u
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START (0x1000 * 6)
 #define NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START \
@@ -639,10 +633,8 @@ static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 #define NDS_RENDERER_HW_SOURCE_DEPTH_MIN (128 - 0x1000)
 #define NDS_RENDERER_HW_SOURCE_DEPTH_MAX (0x1000 - 129)
 #define NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT 4u
-#define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z_CLASS 3u
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
-#define NDS_RENDERER_HW_ORACLE_EPSILON 0u
 /* Texture-cache sizing is measured at the request site, not inferred from draw
  * count. The original 48-entry resident-key layout could not survive post-KO
  * demand and also cost 14,016 B of main RAM. Moving static keys back to their
@@ -1410,14 +1402,6 @@ static u32 sNdsRendererHardwareSubmitClassCounts[
 /* The logical demand is derived exactly from the submitted class totals.
  * Profiles 1/2 pack actual call/clamp counts plus error flags into this one
  * existing summary word, avoiding forensic BSS growth in the tight P1 build. */
-#define NDS_RENDERER_HW_DIVISION_CALL_MASK          0x00000fffu
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_SHIFT 12u
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_ONE   (1u << 12)
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_LOW_MASK  0x000ff000u
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_SHIFT 20u
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_ONE  (1u << 20)
-#define NDS_RENDERER_HW_DIVISION_PRECLAMP_HIGH_MASK 0x0ff00000u
-#define NDS_RENDERER_HW_DIVISION_ZERO_DENOMINATOR   (1u << 28)
 #define NDS_RENDERER_HW_DIVISION_MISMATCH           (1u << 29)
 static u32 sNdsRendererHardwareDivideSummary;
 static u32 sNdsRendererHardwareSourceVertexLoadCount;

@@ -16,10 +16,6 @@ extern s32 sEFManagerStructsFreeNum;
 extern volatile u32 gNdsEffectPoolFreeMin;
 
 
-#define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u
-#define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
-#define NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX 220u
-#define NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX 240u
 /* The natural combat chain (wait/walk/dash-run/brake/turn/approach/attack/
  * damage/guard) needs more scripted frames than the old wait+walk proof. */
 #define NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX 2400u
@@ -28,9 +24,6 @@ extern volatile u32 gNdsEffectPoolFreeMin;
 #define NDS_FIGHTER_BATTLE_PLAYABLE_UPDATE_MAX 9000u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX 600u
 #define NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX 216000u
-#define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
-#define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
-#define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
 /* Task 106 E0 sizing lever. `SRC` is exactly this many logical updates per
  * presented frame -- `ndsRunMarioFoxProofUpdate` is the only writer of
  * `gNdsTickHudSourceTicks`, and it brackets `scVSBattleFuncUpdate`. Building

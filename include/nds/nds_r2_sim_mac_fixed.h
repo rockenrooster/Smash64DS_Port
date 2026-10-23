@@ -83,8 +83,6 @@
 extern "C" {
 #endif
 
-#define NDS_R2_SIM_MAC_ARM_TRANSFORM 1u
-#define NDS_R2_SIM_MAC_ARM_COMPOSE   2u
 #define NDS_R2_SIM_MAC_ARM_GRADE     4u
 /* Repeat count, arm >> 8. Zero means one evaluation.
  *
@@ -149,21 +147,6 @@ void ndsR2SimMacShadowCompose(float mtx[4][4], uint32_t arm);
  * no DCache lookup, and a max-deviation counter is written only when a new
  * maximum occurs -- exactly the access pattern that is still dirty at the final
  * stop and reads STALE. */
-#define NDS_R2_SIM_MAC_GROUP(X) \
-    X(gNdsR2SimMacXfrmCalls) \
-    X(gNdsR2SimMacXfrmShadow) \
-    X(gNdsR2SimMacXfrmDecline) \
-    X(gNdsR2SimMacCmpsShadow) \
-    X(gNdsR2SimMacCmpsDecline) \
-    X(gNdsR2SimMacCmpsCalls) \
-    X(gNdsR2SimMacDriveCalls) \
-    X(gNdsR2SimMacXfrmMaxDevQ12) \
-    X(gNdsR2SimMacXfrmDev0) \
-    X(gNdsR2SimMacXfrmDev1) \
-    X(gNdsR2SimMacXfrmDev2) \
-    X(gNdsR2SimMacXfrmDev3) \
-    X(gNdsR2SimMacXfrmDev4) \
-    X(gNdsR2SimMacXfrmDev5)
 
 #ifdef __cplusplus
 }

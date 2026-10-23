@@ -44,7 +44,6 @@
 #define NDS_TASK37_PROFILE_MARKER_MAGIC 0x4D500000u
 #define NDS_TASK37_PROFILE_MARKER_DUMP  0x4D50FFFDu
 #define NDS_TASK37_PROFILE_MARKER_RESET 0x4D50FFFEu
-#define NDS_TASK37_PROFILE_MARKER_OFF   0x4D50FFFFu
 
 /* MCR is an ARM-mode instruction; the battle seam compiles to Thumb, so this
  * one function is forced to ARM and kept out of line. The interworking call is

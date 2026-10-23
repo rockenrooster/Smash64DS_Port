@@ -3620,10 +3620,6 @@ static s32 ndsRendererNativeStageSelectPacket(void)
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 \
     (sNdsNativeStagePacketActive->has_generated_segment0)
 #define NDS_NATIVE_STAGE_BINDING_HEADS (sNdsNativeStagePacketActive->binding_heads)
-#define NDS_NATIVE_STAGE_BINDING_DOBJS (sNdsNativeStagePacketActive->binding_dobjs)
-#define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
-    (sNdsNativeStagePacketActive->rigid_binding_mask & \
-     ~sNdsNativeStagePacketActive->camera_binding_mask)
 #else
 #define NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES \
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RAW
@@ -3633,10 +3629,6 @@ static s32 ndsRendererNativeStageSelectPacket(void)
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 1u
 #define NDS_NATIVE_STAGE_BINDING_HEADS ((const u8 *)NULL)
-#define NDS_NATIVE_STAGE_BINDING_DOBJS ((const u16 *)NULL)
-#define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
-    (NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK & \
-     ~NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS)
 #endif
 
 /* Read by the stage ADAPTER (a separate translation unit) so its capture

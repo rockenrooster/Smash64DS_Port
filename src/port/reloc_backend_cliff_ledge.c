@@ -5,15 +5,7 @@
  * slice of reloc_backend.c. */
 
 #include <nds/nds_effects.h>
-#define NDS_FIGHTER_DASH_RUN_IMPORT_PROCPARAMS_MASK 0xfffdf3ffu
-#define NDS_FIGHTER_DASH_RUN_IMPORT_DAMAGE_SETUP_MASK 0xbffffdfdu
 
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_EMPTY      (1u << 0)
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_ENABLED    (1u << 1)
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_HURT_SKIP  (1u << 2)
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_SHLD_SKIP  (1u << 3)
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_GROUP_SKIP (1u << 4)
-#define NDS_STAGE_MPLIVEHIT_DETECT_GATE_RESTORE    (1u << 5)
 
 static sb32 ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled(void)
 {

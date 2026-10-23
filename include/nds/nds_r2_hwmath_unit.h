@@ -72,7 +72,6 @@
 #define NDS_R2_HWMATH_SQRT_PARAM   (*(volatile uint64_t *)0x040002B8)
 
 #define NDS_R2_HWMATH_BUSY      0x8000u
-#define NDS_R2_HWMATH_DIV_32_32 0u
 #define NDS_R2_HWMATH_DIV_64_32 1u
 #define NDS_R2_HWMATH_DIV_64_64 2u
 #define NDS_R2_HWMATH_SQRT_64   1u

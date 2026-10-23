@@ -61,15 +61,7 @@ extern s32 syUtilsRandIntRange(s32 range);
  * step (-41,+37) -- mnmodeselect.c:459.
  * VS mode, source: buttons at (120,31) (97,70) (74,109) (51,148),
  * step (-23,+39) -- mnvsmode.c:319/:601/:687/:733. */
-#define NDS_MENU_MODE_X0 150
-#define NDS_MENU_MODE_Y0 44
-#define NDS_MENU_MODE_DX (-30)
-#define NDS_MENU_MODE_DY 30
 
-#define NDS_MENU_VS_X0 96
-#define NDS_MENU_VS_Y0 40
-#define NDS_MENU_VS_DX (-18)
-#define NDS_MENU_VS_DY 31
 
 #define NDS_MENU_HEADER_X 14
 #define NDS_MENU_HEADER_Y 12
@@ -82,20 +74,12 @@ extern s32 syUtilsRandIntRange(s32 range);
  * there -- which is what hid the digit of "1P GAME" until a capture showed it.
  * The mode-select row also has a digit sprite in front of its text, so its
  * cursor clears eleven more pixels than the VS screen's. */
-#define NDS_MENU_CURSOR_DX (-34)
-#define NDS_MENU_CURSOR_DX_DIGIT (-46)
-#define NDS_MENU_CURSOR_DY (-14)
 
 /* The source's own menu colours, read off the sprite primitive colours it
  * sets: mnmodeselect.c:517 draws the MODE SELECT decal in 0x3C73B4 over a
  * 0x083365 bar, its labels in pure red, and greys an unselected icon to 0x96
  * (mnmodeselect.c:219). */
-#define NDS_MENU_RGB_WHITE 0x00ffffffu
-#define NDS_MENU_RGB_RED 0x00ff0000u
-#define NDS_MENU_RGB_GREY 0x00969696u
-#define NDS_MENU_RGB_LOCKED 0x00606060u
 #define NDS_MENU_RGB_HEADER 0x003c73b4u
-#define NDS_MENU_RGB_VALUE 0x00ffd23cu
 
 /* The DS backdrop, which is main BG palette entry 0: the only pixel source on
  * this engine that costs no VRAM at all. Both main BG banks are full (C and D
@@ -110,10 +94,6 @@ extern s32 syUtilsRandIntRange(s32 range);
 /* Text slots. Six is the kit's budget and every screen below fits it. */
 #define NDS_MENU_SLOT_HEADER 0u
 #define NDS_MENU_SLOT_ROW0 1u
-#define NDS_MENU_SLOT_ROW1 2u
-#define NDS_MENU_SLOT_ROW2 3u
-#define NDS_MENU_SLOT_ROW3 4u
-#define NDS_MENU_SLOT_EXTRA 5u
 
 /* Sprite slots. */
 #define NDS_MENU_SPRITE_CURSOR 0u

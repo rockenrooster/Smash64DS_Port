@@ -910,9 +910,6 @@ static u32 ndsMenuShellCssRuleArrow(void)
 /* Text slots. P2-1k gave the four per-slot fighter names back: they are source
  * art baked into the gate surface now, so this screen holds four of the eight
  * and the other four are free for the next element that needs one. */
-#define NDS_CSS_SLOT_MODE 0u
-#define NDS_CSS_SLOT_BACK 1u
-#define NDS_CSS_SLOT_READY 2u
 
 /* Sprite slots, in DEPTH order: lower OAM ids draw in front. The source's
  * REGION_US PRESS/START GObj is display link 28 (player-kind camera priority
@@ -973,7 +970,6 @@ static u32 ndsMenuShellCssHumanArt(u32 art, u32 slot)
 #define NDS_CSS_LEVEL_MAX 9u
 
 /* mnPlayersVSMakeLabels' own colours, mnplayersvs.c:1391. */
-#define NDS_CSS_RGB_MODE 0x00e3ac04u
 /* mnPlayersVSMakeReady's ready-text primitive, mnplayersvs.c:4128. */
 
 static u32 ndsMenuShellCssKindImage(u32 pkind)

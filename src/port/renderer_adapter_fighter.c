@@ -17,7 +17,6 @@ typedef struct NDSFighterDisplayContractEvent {
 _Static_assert(NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS == GMCOMMON_PLAYERS_MAX,
                "Kirby hat residency must cover every battle player slot");
 
-#define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
 
 typedef struct NDSFighterDisplayContract {
     NDSFighterDisplayContractEvent events[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -104,14 +103,6 @@ volatile u32 gNdsP2NessLastPlanHit;
 volatile u32 gNdsP2NessFirstFallbackReason;
 volatile u32 gNdsP2NessLastFallbackReason;
 volatile u32 gNdsP2NessLastPlanResult;
-#define NDS_P2_NESS_FALLBACK(reason_) do { \
-    if (owner_slot == 9u) { \
-        u32 nds_p2_ness_reason = (u32)(reason_); \
-        gNdsP2NessLastFallbackReason = nds_p2_ness_reason; \
-        if (gNdsP2NessFirstFallbackReason == 0u) \
-            gNdsP2NessFirstFallbackReason = nds_p2_ness_reason; \
-    } \
-} while (0)
 
 
 static u32 ndsFighterDisplayContractPackColor(u8 r, u8 g, u8 b, u8 a)

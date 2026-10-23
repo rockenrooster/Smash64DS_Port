@@ -15,9 +15,7 @@
 
 /* Session state (gNdsNetSessionState). */
 #define NDS_NET_SESSION_OFF      0u
-#define NDS_NET_SESSION_LOBBY    1u
 #define NDS_NET_SESSION_RUNNING  2u   /* a lockstep match is in progress */
-#define NDS_NET_SESSION_ENDED    3u
 #define NDS_NET_SESSION_ABORTED  4u
 
 /* The host's port in a lockstep match, NDS_NET_PORTS otherwise. Every console

@@ -1640,7 +1640,6 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
  * state are still rebuilt from those source objects each frame.
  */
 #define NDS_P2_NDL_RECORD_COUNT 64u
-#define NDS_P2_NDL_OWNER_NONE 0u
 #define NDS_P2_NDL_OWNER_IMPACT_WAVE 1u
 #define NDS_P2_NDL_OWNER_DAMAGE_SLASH 2u
 /* 3 was the efground owner (Lakitu, Bronto Burt): their roots are baked now. */
