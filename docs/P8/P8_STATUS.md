@@ -5,12 +5,12 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** D (purpose headers: 132 port files have none, 21 a one- or
-two-line one), then R0/P0 and the R and P loops (owner order: C and D before
-the RAM hunt); F, G, H-2 and I interleave with them. C and E are done (E's
-last file, `check-gbi-decode-fixtures.ps1`, waits for the owner's copy to be
-clean). S1's campaign audit finishes in the background. The owner's BUGS.md
-rows are fixed (play ROM `play-p8d`).
+**Next action:** R0/P0 and the R and P loops (owner order: C and D before
+the RAM hunt, both done). R0's ledger tool is `scripts/tools/ram_ledger.py`
+(`play-p8f`: image 2,925,948 B, -960 against `play-p7z`); R1 (the renderer's
+cold code as Thumb `-Os`) first. F, G (with the `nds_ftanim_track.c` stubs and
+their generated pack), H-2 and I interleave. The owner's art for Ike's and
+Palutena's congratulations screens is in `play-p8e`.
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -38,10 +38,10 @@ commit with explicit paths only.
 |---|---|---|
 | Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
 | H-1 tools S1 and the gate need, into `scripts/tools/` | done | 22 files, `scripts/tools/README.md`: play/walk/gate/soak builds, the probe session and halt probes, the six audit drivers, the wireless lag driver, the worst-case sweep, the heap census, the boot check; no session paths (`common.ps1`); `boot_check.ps1` boots `play-ram1` clean |
-| S1 regression net (full matrix) on HEAD | in progress | ROMs `walk-u19`, `build-soak-s32`, `net-p8a`, `build-sweep-s62` on HEAD `8b9d2a52f9f`; slot images regenerate per slot now (`5075604365a`), five audits side by side. Soak m1-m8 (every fighter, all items, four players): 0 halts, 0 native failures, heap low-water 41,696 at the least. Bonus: 38 practices clean. Training: 29 of 32 to the select; the 3 timeouts (DK, Kirby, Mad Piano) are the probe's: the walk took RESET, the game went on to the Training select at 60 fps, but the scene-entry breakpoint no longer fired (gdb), so no END line. Wireless 2 consoles: 3 matches, 0 desyncs, 0 aborts. VS walk: 20 laps, 87 scene entries, 0 native failures, battle heap low-water 100,304. Metal Mario: the campaign stage and both bonus boards clean. Campaign: the 13 vanilla fighters and contents 1-10 clean so far (heap low-water 28,388 at the least, content 10), the rest running; then 4-console wireless |
+| S1 regression net (full matrix) on HEAD | in progress | ROMs `walk-u19`, `build-soak-s32`, `net-p8a`, `build-sweep-s62` on HEAD `8b9d2a52f9f`; slot images regenerate per slot now (`5075604365a`), five audits side by side. Soak m1-m8 (every fighter, all items, four players): 0 halts, 0 native failures, heap low-water 41,696 at the least. Bonus: 38 practices clean. Training: 29 of 32 to the select; the 3 timeouts (DK, Kirby, Mad Piano) are the probe's: the walk took RESET, the game went on to the Training select at 60 fps, but the scene-entry breakpoint no longer fired (gdb), so no END line. Wireless 2 consoles: 3 matches, 0 desyncs, 0 aborts. VS walk: 20 laps, 87 scene entries, 0 native failures, battle heap low-water 100,304. Metal Mario: the campaign stage and both bonus boards clean. Campaign: all 32 fighters (12, Metal Mario and the 19 contents) through the ladder to the ending, 0 native failures, heap low-water 28,388 at the least (content 10). Next: 4-console wireless |
 | C split the 13 port files over 4,000 lines | done | C1-C12 and the counter purge: every plan file is under 4,000 lines (largest port file now `nds_renderer_native_entry.c`, 3,965). `renderer_adapter_stage.c`'s 5,677-line body keeps its text: its claim and submit phases are fragments it includes in place (`split_function.py`). `include/ft/fighter.h` (4,933) is the one file left over: a decomp-shaped mirror of BattleShip's ft headers that `scripts/p4/ft_layout.py` and nine other tools parse, so it keeps the source's layout (section 3) |
 | S3 static analysis (`-fanalyzer`, allocations, stacks) | in progress | `-fanalyzer` over the 80 port compiles of the play config: 21 distinct warnings, all triaged false or benign (NULL-checked helpers read as maybe-NULL in `nds_p4.c`; the ARM7 snapshot copy; a zero-count loop; linker-symbol pointer differences; the joint table's parent-first order). `-fstack-usage`: largest frames `ndsAudioParseCtl` 12,384 B (boot, main stack), `ndsRendererAdapterSubmitStageDLBody` 5,192 B, `ndsRendererAdapterTryNativeEntryEffect` 2,888 B; next the allocation audit and the coroutine stack paint |
-| D purpose headers and invariant comments | open | after C |
+| D purpose headers and invariant comments | done | `fade4d1e094` (40 src/port files), `cab524db6f9` (103 in src/nds, include and src/host): every port file opens with what it owns, who calls it, its contracts and generated inputs; nine one-line headers remain (complete statements). Before them the husks went: D0 `1c20ddf249d` (11 empty files), D0b `454132e40a6` (885 macros nothing names; `nds_audio_bgm.h`'s stream pins kept) |
 | E dormant verifier framework, legacy fighter executor | done | `1371dee1858`: 33 scripts and `HARNESSES.md` (-9,593 lines); seven passing host checks kept, two failing ones left for H-2; `check-gbi-decode-fixtures.ps1` stays while the owner's worktree holds it modified. The executor itself went in `1c8636a6632`; its knob goes with G |
 | F history names | open | |
 | G Makefile cleanup and split | open | proof: `make -n` identity |
@@ -64,6 +64,18 @@ commit with explicit paths only.
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- D1: purpose headers, `fade4d1e094` (src/port) and `cab524db6f9` (src/nds, include, src/host);
+  comments only, every unit preprocess-identical in the five configs.
+- 2026-10-22 -- D0b: 885 macros nothing names (`454132e40a6`, 971 lines in 45 files, three rounds to a
+  fixpoint; the scan reads tracked sources, generated sources, overlay patches, scripts, the Makefile and
+  linker scripts). Every unit preprocess-identical in the five configs; the play ROM rebuilt after
+  (`play-p8f`) has ARM9/ARM7 byte-identical to `play-p8e` and every NitroFS path on identical data; host
+  tests 0 new failures.
+- 2026-10-22 -- D0: 11 husk files (`1c20ddf249d`); scene_backend.o and nds_renderer.o non-debug sections
+  identical in the five configs.
+- 2026-10-22 -- owner: Ike's and Palutena's congratulations art (`assets/congra/c19.png`, `c20.png`) built
+  into `play-p8e` (plates 0x1F66-0x1F69 in NitroFS, regenerated from the new PNGs).
+- 2026-10-22 -- S1 campaign: all 32 fighters to the ending, 0 native failures, lowest heap 28,388.
 - 2026-10-22 -- E1: the P1/P2 verifier framework (`1371dee1858`; 33 scripts and `HARNESSES.md`, chosen by a
   reference graph); `VERIFYING.md` keeps its live procedure; three comment edits preprocess identically.
 - 2026-10-22 -- C12: `renderer_adapter_stage.c` (14,929 lines) into 4 slices (1,764 to 3,152) and

@@ -62,6 +62,7 @@ table, and where runs write. Conventions:
 |---|---|
 | `worst_case_sweep.ps1` | WORK P50/P95 and the two-VBlank share per stage and roster on a gate ROM; the CSV rows are the replay digest (`scripts/compare-replay-digest.py a.csv b.csv`) |
 | `heap_census.ps1` | one match's heap allocations, ensured files, stage program load, heap low-water, motion cache and lent spans |
+| `ram_ledger.py MAP [--diff OLD_MAP] [--section NAME]` | a build's RAM from its link map: the image, VS battle, 1P battle and menu totals, the TCMs, the image by object and by family; `--diff` the change from an older build, largest first (R0) |
 
 ## Readability (Phase C)
 
