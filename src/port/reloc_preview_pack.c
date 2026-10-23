@@ -1,5 +1,13 @@
-/* Included by reloc_backend_assets.c: shares the scene-owned file registry and
- * its existing source-format normalizers. Never pages fighter data at runtime. */
+/* Fighter packs: the character-select previews' FPC1 packs (offline source
+ * data, nds_preview_pack.h), the battle core's fighter data with its extern
+ * and foreign-image patching, a P4 battle pack's half-resolution frames
+ * (upsampled on use), the deferred entry files, and the native address
+ * queries the renderer and effects resolve roots through
+ * (ndsRelocNativeAssetAddress and family). Included at the end of
+ * reloc_backend_force_load.c, the last asset slice: it shares the
+ * scene-owned file registry and its source-format normalizers. Never pages
+ * fighter data at runtime. */
+
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_scene_manager.h>
 #include <stdio.h>

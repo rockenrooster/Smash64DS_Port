@@ -1,3 +1,8 @@
+/* Linkable stand-ins for symbols the imported ftdata tables name and the DS
+ * image does not have: the particle ROM banks' bounds (the DS O2R manifest
+ * carries no particle banks) and Kirby's copy-motion token. Compiled on its
+ * own. */
+
 #include <PR/ultratypes.h>
 #include <stdint.h>
 

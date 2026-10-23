@@ -1,3 +1,9 @@
+/* The source's 2D sprite entry points the scenes call (lbCommon's SObj
+ * draws and sprite decodes, gcInitDLs and the camera matrix helpers), cut
+ * to what the DS needs: SObjs draw through the native menu fill sink and
+ * the wallpaper cache, never the N64 sprite display-list pipeline. Included
+ * by scene_backend.c. */
+
 #include <lb/lbfade_ds.h>
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_renderer.h>

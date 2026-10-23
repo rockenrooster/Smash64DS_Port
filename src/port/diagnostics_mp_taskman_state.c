@@ -1,3 +1,9 @@
+/* Not only diagnostics: the map-collision globals the source's mp module
+ * would define (yakumono DObjs, speeds, bounds, the BGM ids), the relocation
+ * symbol tokens (ll*FileID and offsets the imported units name), and the
+ * taskman arena's counters. A slice of diagnostics.c, not a translation unit
+ * of its own. */
+
 static MPYakumonoDObj sNdsMPCollisionYakumonoDObjs;
 static Vec3f sNdsMPCollisionSpeeds[NDS_MP_YAKUMONO_DOBJ_SLOTS];
 MPYakumonoDObj *gMPCollisionYakumonoDObjs =

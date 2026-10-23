@@ -1,3 +1,11 @@
+/* The scene backend, one translation unit: the port slices that share
+ * static linkage are included here in order -- the diagnostic and port-state
+ * definitions, the taskman seam, the relocation backend (renderer adapters
+ * and stage owners inside it), the sprite preview backend, the display
+ * callbacks (opening_movie_backend.c) and the title scenes' stubs. The
+ * object and taskman pools are the imported sys/objman.c's and
+ * sys/taskman.c's, not defined here. */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

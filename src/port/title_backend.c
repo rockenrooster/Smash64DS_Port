@@ -1,3 +1,9 @@
+/* The opening movie's scene entry points the scene manager names
+ * (mvOpening*StartScene), bridged to the next scene, and the retired
+ * title and action thumbnails, which record a native failure and never
+ * draw. The real main menu is src/nds/nds_menu_shell.c. Included by
+ * scene_backend.c. */
+
 static void ndsSceneBoundary(void)
 {
     gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;

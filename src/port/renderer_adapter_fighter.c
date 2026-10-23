@@ -1,3 +1,12 @@
+/* The fighter draw seam: the display contract the source's fighter display
+ * calls fill (render state, colours, lights, the selected lists), the
+ * source functions it replaces (gcPrepDObjMatrix, gcDrawMObjForDObj), the
+ * fixed-point viewport projection, the per-slot draw caches and their
+ * invalidation on a status change, and ndsFighterDisplayContractSubmit,
+ * which hands each fighter to its lean list or production owner. Includes
+ * renderer_fighter_lean.c and renderer_fighter_magnify.c at its end. A
+ * slice of reloc_backend_renderer_dl.c. */
+
 typedef struct NDSFighterDisplayContractEvent {
     DObj *dobj;
     DObj *matrix_dobj;

@@ -1,3 +1,9 @@
+/* The task-loop seam at scene load: syTaskmanLoadScene's RunTask becomes a
+ * bounded run (a few original task updates, one startup draw, the source's
+ * cleanup tail) and never enters the source's per-frame gcRunAll/gcDrawAll
+ * loop; plus the opening movie's frame presents and room handoffs the
+ * imported mvopening units report. A slice of taskman_seam.c. */
+
 static void ndsDrainTaskmanQueue(OSMesgQueue *queue)
 {
     while (osRecvMesg(queue, NULL, OS_MESG_NOBLOCK) != -1)

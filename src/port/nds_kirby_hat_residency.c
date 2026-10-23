@@ -1,3 +1,10 @@
+/* The Kirby copy hats a match must keep resident: from the match's closed
+ * set of fighters, every power a Kirby can take (directly, or passed on by
+ * another Kirby) and the hat it shows, the source's hats and the P4
+ * contents' own. Called at match setup, VS (ndsKirbyHatPrepareMatch, from
+ * battleship_scvsbattle.c and nds_p4.c) and 1P (ndsKirbyHatPrepare1PMatch);
+ * gNdsKirbyHatAdmissionFailure names a hat the match needs and cannot load. */
+
 #include "nds_build_config.h"
 #include <ft/fighter.h>
 #include <sc/scene.h>

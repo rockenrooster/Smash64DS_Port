@@ -1,3 +1,8 @@
+/* What the imported ftMainSetStatus calls around a status change: the
+ * common status reset, the stage-specific status arms (the cliff, Congo's
+ * barrel cannon, Hyrule's twister) and the per-status records the probes
+ * read. A slice of reloc_backend.c. */
+
 static void ndsFTMainApplyCommonStatusReset(FTStruct *fp, u32 flags)
 {
     if (fp == NULL)

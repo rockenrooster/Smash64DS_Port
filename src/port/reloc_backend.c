@@ -1,3 +1,11 @@
+/* The relocation backend: the forward declarations its slices share, then
+ * the slices in order -- the compatibility shims, the relocation asset
+ * loading (registry, tables, file IDs, resolution, normalizers, symbols and
+ * extern trees, the motion cache, the force loads), the fighter model, the
+ * renderer adapters, movement and the stage draw loop, map collision, the
+ * cliff and ledge seam and the diagnostic recorders. Part of the
+ * scene_backend.c unit. */
+
 #include <ef/effect.h>
 #include <it/item.h>
 #include <nds/nds_fcmp.h>

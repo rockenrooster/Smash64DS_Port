@@ -1,3 +1,7 @@
+/* The opening movie's object-count witnesses (GObjs, DObjs, XObjs and AObjs
+ * before and after each room's setup), static to the unit. A slice of
+ * diagnostics.c, not a translation unit of its own. */
+
 static u32 sNdsRelocInitCount;
 static u32 sNdsOpeningRoomPencilsCountsCaptured;
 static u32 sNdsOpeningRoomPencilsGObjsBefore;

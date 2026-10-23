@@ -1,3 +1,10 @@
+/* The N64 controller interface (osCont*, osMotor*) on the DS keypad: keys
+ * map to source buttons and the binary stick, and SELECT is the L-trigger
+ * taunt. Playback pads replace the keypad when a driver feeds them (the
+ * menu walk, the lab sweep, the net lockstep: ndsControllerPlayback*); their
+ * state sits in DTCM. ndsControllerLiveButtons gives scenes the latched
+ * keypad without a second scanKeys(), which would eat the frame's edges. */
+
 #include <nds.h>
 #include <string.h>
 

@@ -1,4 +1,9 @@
-/* Imported ftmain no longer executes the local duplicate damage callbacks. */
+/* What is left of the P1 Mario/Fox stage loop's proof harness: the stage
+ * draw loop's per-scene reset and prepare (called by
+ * reloc_backend_stage_draw_loop.c) and the live-hit damage gate. The
+ * imported ftmain no longer runs the local duplicate damage callbacks. A
+ * slice of reloc_backend.c. */
+
 #include <nds/nds_effects.h>
 #define NDS_FIGHTER_DASH_RUN_IMPORT_PROCPARAMS_MASK 0xfffdf3ffu
 #define NDS_FIGHTER_DASH_RUN_IMPORT_DAMAGE_SETUP_MASK 0xbffffdfdu

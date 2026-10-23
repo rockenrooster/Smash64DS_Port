@@ -1,3 +1,10 @@
+/* The startup, scene and fighter-loop diagnostic words gdb probes read,
+ * with a few source data tables the unit needs a definition of
+ * (dFTCommonDataDownBounceSFX). The notes below say why the port's builds of
+ * the source's infinite asserts (`while (TRUE);`) recover and count instead
+ * of spinning: those counters must read 0. A slice of diagnostics.c, not a
+ * translation unit of its own. */
+
 volatile u32 gNdsSceneBoundaryResult;
 volatile u32 gNdsSceneBoundaryKind;
 volatile u32 gNdsStartupTaskmanResult;

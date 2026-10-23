@@ -1,3 +1,10 @@
+/* The libultra boot and DMA services the source calls at startup, cut to
+ * what a DS boot needs: osInitialize and the PI/VI managers do nothing, ROM
+ * DMA and overlay loads have no cartridge behind them (the data comes from
+ * NitroFS), syDebugPrintf is silent, and the audio service thread sets its
+ * ready bit and finishes instead of parking forever (see below). Called by
+ * the imported sys/ units; gNdsOriginalBootStage records boot progress. */
+
 #include <stdarg.h>
 #include <string.h>
 

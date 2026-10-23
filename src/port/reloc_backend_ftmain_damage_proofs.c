@@ -1,3 +1,7 @@
+/* The damage status helpers reloc_backend_ftmain_status_compat.c uses: which
+ * statuses are damage statuses and the motion each one plays. A slice of
+ * reloc_backend.c. */
+
 
 static s32 ndsFTCommonDamageMotionForStatus(s32 status_id)
 {

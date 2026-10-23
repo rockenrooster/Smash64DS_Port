@@ -1,3 +1,10 @@
+/* The source-named ftmain procs and hit-pipeline entry points: the imported
+ * battleship_ftmain.c renames its own (battleship_ftMain*), and these call
+ * them, some bracketed for the tick HUD's spans (SHDT hit detection, SCAT
+ * the catch search, SGCO), plus ftParamGetCapturedDamage.
+ * sNdsFighterDashRunHitCollisionFGMs is parsed by
+ * scripts/sfx/check-fgm-pack-coverage.py. A slice of reloc_backend.c. */
+
 #define NDS_FTMOTION_ATTACK_EVENT_POS_NEW 0x1u
 #define NDS_FTMOTION_ATTACK_EVENT_POS_WORLD 0x2u
 #define NDS_FTMOTION_ATTACK_EVENT_POS_TRANSFER 0x4u

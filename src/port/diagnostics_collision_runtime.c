@@ -1,3 +1,9 @@
+/* Diagnostic words of the battle's collision and fighter proofs (projectile,
+ * fire and model-part witnesses, pacing and present counters), and the reset
+ * of the collision runtime record (taskman_seam_core.c calls it at scene
+ * start). gdb probes read them; NDS_DIAG writes compile out of every live
+ * build. A slice of diagnostics.c, not a translation unit of its own. */
+
 void ndsCollisionRuntimeDiagnosticsReset(void)
 {
     NDSCollisionRuntimeDiagnostics reset = { 0 };

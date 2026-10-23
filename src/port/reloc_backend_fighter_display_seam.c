@@ -1,3 +1,9 @@
+/* ftDisplayMainProcDisplay, the fighter display proc the source installs,
+ * run on the DTCM hot stack (its lean run nests in place under it), with the
+ * source's invisibility gate: a fighter stays undrawn from match setup until
+ * its own entry presents it (the native submit replaces the decomp body that
+ * held the gate). A slice of reloc_backend.c. */
+
 #include <port/coroutine.h>
 
 static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj);

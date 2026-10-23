@@ -1,3 +1,11 @@
+/* Weak stand-ins for BattleShip functions whose translation units the port
+ * does not import: camera preparation, stage hazard queries (Zebes acid,
+ * Hyrule's twister, Congo's barrel), 1P game hooks, effect and particle
+ * helpers. Each does what the DS needs: nothing, the source's value, or the
+ * source's own body copied verbatim (lbCommonEjectGObjLinkedList). An
+ * imported unit that defines the real function wins the link (NDS_WEAK).
+ * Compiled on its own; the imported units call these by their source names. */
+
 #include <ef/effect.h>
 #include <ft/fighter.h>
 #include <gm/generic.h>

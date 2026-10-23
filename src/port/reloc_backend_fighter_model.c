@@ -1,3 +1,11 @@
+/* The fighter manager seam: the live registry from a player number to its
+ * source fighter GObj (every GMCOMMON_PLAYERS_MAX slot), which the native
+ * renderer and collision helpers read; the display fighters the 1P and
+ * bonus menus register (ndsFighterManagerRegisterDisplayFighter); the
+ * physics helpers the shims share; and names for the imported manager's
+ * FTStruct and parts pools (no second pool: in the ship layout
+ * sNdsFighterPartsPool is not even linked). A slice of reloc_backend.c. */
+
 #include "nds_scene_harness_config.h"
 
 static void *sNdsFighterFTManagerCommonFile;

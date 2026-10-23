@@ -1,3 +1,11 @@
+/* libultra's threads and message queues on port coroutines: every OSThread
+ * runs as one (coroutine.c), and ndsOsRunThreads, called from main.c's
+ * loop, resumes the runnable and waiting ones. The service threads (ids 1-6)
+ * take the 4 KB coroutine minimum and a finished one's stack goes back to
+ * the heap; a GObj thread runs on a block objman owns and recycles. Thread
+ * ids: objman's from 10000000 up. ndsOsForgetThreadsInArena drops the threads
+ * a scene's arena rewind is about to take, without writing into that memory. */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

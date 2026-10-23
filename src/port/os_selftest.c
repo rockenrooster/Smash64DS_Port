@@ -1,3 +1,7 @@
+/* A boot self-test of libultra_os.c's threads and message queues on a
+ * private thread (id 90, below the source's service ids), run once from
+ * main.c before the game starts. */
+
 #include <stdint.h>
 
 #include <PR/os.h>

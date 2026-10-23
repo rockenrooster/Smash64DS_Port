@@ -1,3 +1,8 @@
+/* Runs the source's syVideoInit once at boot on a private thread (id 91)
+ * with the 320x240, 16-bit setup BattleShip asks for (every framebuffer
+ * aliases buffer 0) and records whether the video globals came out as
+ * expected (gNdsVideoBootstrapResult). Started and pumped from main.c. */
+
 #include <PR/mbi.h>
 #include <PR/os.h>
 #include <nds/nds_video.h>

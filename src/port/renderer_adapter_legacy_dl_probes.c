@@ -1,3 +1,8 @@
+/* Despite the name, live: the display-list draw state the general stage
+ * submit carries (its persistent renderer state, seeded, captured and
+ * copied between lists), with the branch and data resolvers and the vertex
+ * decode its executor uses. A slice of reloc_backend_renderer_dl.c. */
+
 
 static u32 ndsFighterDLExecReadU32(const void *ptr)
 {

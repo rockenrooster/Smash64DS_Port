@@ -1,3 +1,10 @@
+/* The battle host loop's operations (ndsR2HostBattle*, called by
+ * src/nds/r2/nds_r2_battle.c and the menu router): prepare, one logic
+ * iteration, present, and finish, with the logic clock and present pacing,
+ * the audio update, the campaign and continue playback drivers the walk
+ * audits use, and the per-frame low-water samples. A slice of
+ * taskman_seam.c. */
+
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <sys/video.h>

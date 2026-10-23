@@ -1,3 +1,10 @@
+/* The source's display-callback entry points the port owns: gcCaptureCameraGObj
+ * (ITCM) walks a camera's link mask and hands each link's GObjs to the native
+ * renderer, and func_80017DBC/func_80017EC0 and the gcDrawDObj*ForGObj family
+ * are the camera and draw procs the imported scenes install. The opening
+ * room's software DL preview is retired; its probes remain as stubs that
+ * record a native failure. Included by scene_backend.c. */
+
 #include <sys/objdef.h>
 
 #define NDS_GBI_OP_DL 0xdeu

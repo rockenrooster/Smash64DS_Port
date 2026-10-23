@@ -1,3 +1,9 @@
+/* osGetTime and the float trig the source calls, on the DS: osGetTime is
+ * Calico's timer scaled so its low bits vary (the source seeds its random
+ * picks with osGetTime() & 0xFF), and sinf/cosf are fixed point (owner: no
+ * software floating point), a binary angle into a quarter-wave table. The
+ * trig body is ARM code in main RAM; ITCM has no room for its 888 bytes. */
+
 #include <math.h>
 
 #include <PR/os.h>

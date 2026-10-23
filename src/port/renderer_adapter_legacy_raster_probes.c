@@ -1,3 +1,7 @@
+/* The collections of a fighter's drawable DObjs (every DObj with a list,
+ * selected by index) and the recursive walk that fills them. A slice of
+ * reloc_backend_renderer_dl.c. */
+
 typedef struct NDSFighterDLMultiDrawCollection {
     DObj *dobjs[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];
     u32 indices[NDS_FIGHTER_DL_MULTI_DRAW_MAX_SELECTED];

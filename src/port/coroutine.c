@@ -1,3 +1,10 @@
+/* Coroutines for the source's threads (libultra_os.c runs every OSThread as
+ * one) and the DTCM hot stack. A coroutine owns its stack: malloc'd, or the
+ * caller's block (portCoroutineCreateStatic, never freed here). The register
+ * swap is coroutine_arm.s. ndsDtcmHotStackRun (ITCM) runs a subtree on the
+ * DTCM hot stack to save its D-cache fills; a call from inside a suspended
+ * hot-stack context runs in place instead (gNdsDtcmHotStackBusy). */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

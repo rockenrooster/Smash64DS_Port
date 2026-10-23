@@ -1,3 +1,8 @@
+/* The renderer adapters of the relocation backend, in order: the matrix
+ * adapter, the DL draw state, the stage adapter (its packet, lanes and
+ * general submit), the fighter DObj collections and the fighter adapter. A
+ * slice of reloc_backend.c. */
+
 #include "renderer_adapter_matrix.c"
 #include "renderer_adapter_matrix_math.c"
 #include "renderer_adapter_matrix_world.c"

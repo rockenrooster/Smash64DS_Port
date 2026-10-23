@@ -1,3 +1,10 @@
+/* The scene harnesses a lab build boots into (NDS_DEV_SCENE_HARNESS):
+ * direct battles, the Results lab podium and the VS defaults, each seeding
+ * the source's scene data the way its menus would, with every fighter and
+ * stage open. ndsDevSceneHarnessApply (the scene manager and VS Results
+ * call it) returns at once in a published build (harness normal, ID 0), so
+ * the save's locks stand. */
+
 #include <ft/fighter.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>

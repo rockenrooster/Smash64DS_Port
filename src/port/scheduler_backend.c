@@ -1,3 +1,9 @@
+/* libultra's event, video, RSP and cache calls on the DS: the VI calls
+ * (mode, swap, current and next framebuffer), the SP and DP task calls (no
+ * RSP: nothing runs), osGetCount, the cache maintenance, and
+ * ndsOsPostVBlank, which main.c's frame loop and the battle host call to post
+ * the source's retrace message to the queue osViSetEvent registered. */
+
 #include <nds.h>
 
 #include <PR/os.h>

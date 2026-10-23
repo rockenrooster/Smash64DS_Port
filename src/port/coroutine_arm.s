@@ -1,3 +1,7 @@
+/* The coroutine register swap and entry trampoline for coroutine.c (ARM
+ * state: r4-r11, sp and lr), plus two stack-profile helpers in their own
+ * section, which --gc-sections drops from every ROM that does not call them. */
+
     .syntax unified
     .arm
     .text

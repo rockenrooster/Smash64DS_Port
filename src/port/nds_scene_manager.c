@@ -1,4 +1,9 @@
-/* P2-1b -- the port-owned scene seam. Contract and reasoning: include/nds/nds_scene_manager.h. */
+/* The port's scene registry and seam: the scenes this build has, requests
+ * and transitions between them (ndsSceneManagerRequest/Enter/Exit, called
+ * by the imported taskman and the menus) and each scene's draw-memory
+ * preparation. A kind that is not registered cannot be requested; every
+ * registered scene resets the arena at its start. Contract and reasoning:
+ * include/nds/nds_scene_manager.h. */
 
 #include <string.h>
 #include <gr/ground.h>

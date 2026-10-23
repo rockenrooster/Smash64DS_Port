@@ -1,3 +1,10 @@
+/* The startup reset of the diagnostic words: ndsResetStartupDiagnostics
+ * runs once, from the startup scene. In a shipping build (NDS_DIAG_COUNTERS
+ * 0) only its non-zero stores remain, and the cold zero resets share one
+ * tagged-address table (ndsResetDiagnosticWords). Also the build check that
+ * the R2 battle loop's folded harness constants match the harness. A slice
+ * of taskman_seam.c. */
+
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_freeze_diagnostics.h>
