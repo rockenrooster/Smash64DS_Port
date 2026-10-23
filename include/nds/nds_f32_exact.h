@@ -1,3 +1,7 @@
+/* Exact binary32 addition on bit patterns with integer operations, for the
+ * fighter pose clock (the note below says why it must match the source's
+ * float arithmetic). */
+
 #ifndef SSB64_NDS_F32_EXACT_H
 #define SSB64_NDS_F32_EXACT_H
 

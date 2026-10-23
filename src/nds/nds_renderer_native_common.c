@@ -1,3 +1,10 @@
+/* The native renderer's common owners: the impact wave and the procedural
+ * visual templates (ndsRendererSubmitNativeImpactWave and
+ * ndsRendererSubmitNativeVisualEffect, called from the stage DL submit), and
+ * the raw fast path's triangle decode and vertex emitters. A slice of
+ * nds_renderer.c; its own slices (the rebirth halo through the hierarchy)
+ * follow it there. */
+
 #include <nds/nds_preview_pack.h>
 
 

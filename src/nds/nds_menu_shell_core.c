@@ -1,3 +1,10 @@
+/* The menu shell's core: the menu walk the walk ROMs and the audits drive
+ * (ndsMenuShellWalkDrive1PSourceMenus, the Results start), input taps and
+ * repeats, screen transitions (ndsMenuShellGoto), the title screen's demo
+ * fighter shuffle with the source's own picks, and the layout that places
+ * the source's 320x240 screens on 256x192. The UI kit's atlas is
+ * generated/mn_ui_kit.generated.inc. A slice of nds_menu_shell.c. */
+
 
 #if !NDS_P2_UI_KIT
 #error "NDS_P2_MENU_SHELL draws with the P2-1c kit (NDS_P2_UI_KIT=1)"

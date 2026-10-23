@@ -1,3 +1,6 @@
+/* Host only: declarations of the reference renderer
+ * (nds_renderer_reference.c), never in a DS build. */
+
 #ifndef NDS_HOST_GRAPHICS_REFERENCE_H
 #define NDS_HOST_GRAPHICS_REFERENCE_H
 #if defined(ARM9) || defined(ARM7) || defined(__NDS__)

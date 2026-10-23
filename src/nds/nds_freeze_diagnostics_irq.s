@@ -1,3 +1,6 @@
+/* The freeze report's IRQ vector: records the interrupted PC and LR, then
+ * chains to the original IRQ handler. nds_freeze_diagnostics.c installs it. */
+
 	.arm
 	.align 2
 	.global ndsFreezeDiagnosticsIrqVector

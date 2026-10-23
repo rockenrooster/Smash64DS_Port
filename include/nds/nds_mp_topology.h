@@ -1,3 +1,6 @@
+/* Map collision topology on O2R words (each 32-bit word's halfwords read
+ * high then low): line-info views and the edge resolution kernel. */
+
 #ifndef SSB64_NDS_MP_TOPOLOGY_H
 #define SSB64_NDS_MP_TOPOLOGY_H
 

@@ -1,3 +1,6 @@
+/* Single-precision compares (__aeabi_fcmplt, fcmple, fcmpge, fcmpgt and
+ * fcmpun) in ARM state in ITCM, in place of libgcc's. */
+
 	.syntax unified
 	.arch armv5te
 	.arm

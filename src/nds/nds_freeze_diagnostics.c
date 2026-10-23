@@ -1,3 +1,10 @@
+/* The freeze report: a heartbeat each battle frame beats (a frame unfinished
+ * for three to four seconds trips it; the lockstep's waits for another
+ * console count as beats), the exception handlers, breadcrumbs, and the
+ * lower-screen report of where the game thread and the interrupted code
+ * stood. Built into the ship target (NDS_FREEZE_DIAGNOSTICS, Makefile) and
+ * wired in through the NDS_FREEZE_DIAGNOSTICS_* macros, no-ops elsewhere. */
+
 #include <nds.h>
 
 #include <calico/system/tick.h>

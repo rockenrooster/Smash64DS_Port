@@ -1,3 +1,7 @@
+/* The dense fighter-animation track format and why it is not resident (the
+ * note below); the generators (generate_ftanim_dense_bank.py,
+ * generate_battlepack_anim.py) and the pose code share these records. */
+
 #ifndef NDS_ANIM_DENSE_H
 #define NDS_ANIM_DENSE_H
 

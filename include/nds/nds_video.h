@@ -1,3 +1,6 @@
+/* The video bootstrap (src/port/video_bootstrap.c) and the blackout commit
+ * (src/port/video_blackout.c). */
+
 #ifndef SSB64_NDS_VIDEO_BOOTSTRAP_H
 #define SSB64_NDS_VIDEO_BOOTSTRAP_H
 

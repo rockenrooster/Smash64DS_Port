@@ -1,3 +1,7 @@
+/* The music service's PXI protocol between the ARM9 (nds_audio_bgm.c) and
+ * the ARM7 (arm7/nds_audio_bgm_service.c), and the two hardware channels
+ * the stream owns. */
+
 #ifndef NDS_BGM_IPC_H
 #define NDS_BGM_IPC_H
 #include <nds/nds_bgm_stream.h>

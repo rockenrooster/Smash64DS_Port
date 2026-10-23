@@ -1,3 +1,8 @@
+/* Fox's blaster as data: the source draws the gun (model part 13, joint 17)
+ * by pointing the joint's DObj at a display list in reloc file 315, which the
+ * baked fighter body cannot do; its vertices, CI4 texels and palette are
+ * baked here and drawn as world quads (nds_renderer_world_quads.c). */
+
 #include <nds/nds_fox_gun.h>
 
 

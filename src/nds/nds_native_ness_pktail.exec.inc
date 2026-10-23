@@ -1,3 +1,7 @@
+/* Ness's PK Thunder tail executor. TEXTUAL INCLUDE ONLY: nds_renderer.c
+ * includes it; the stage DL submit (renderer_adapter_stage_submits.inc)
+ * calls ndsRendererSubmitNativeNessPKTail. */
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
 volatile u32 gNdsNessPKTailNativeDraws;
 

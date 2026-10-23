@@ -1,4 +1,9 @@
-/* P2-7 save data: the DS stand-in for the source's SRAM. See nds_backup.h. */
+/* Save data, the DS stand-in for the source's SRAM: one image read at boot
+ * and written back by ndsBackupFlush (lbbackup.c), on the flashcart's FAT
+ * volume (fat:) or a DSi's SD (sd:), never the read-only nitro: filesystem;
+ * and the P7 records' sibling files (open, transact, promote:
+ * nds_p7_records.c). See nds_backup.h. */
+
 #include <fat.h>
 #include <stdio.h>
 #include <string.h>

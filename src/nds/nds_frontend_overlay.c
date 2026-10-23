@@ -1,3 +1,10 @@
+/* The front-end overlay and its loans: the menus' code and data
+ * (linker/nds_frontend_overlay.ld) live in a region a battle borrows -- all
+ * of it in a VS battle, all but the 1P head in a 1P or bonus battle, all but
+ * the training head in training -- and are loaded again when a menu needs
+ * them. BeginScene and EndScene bracket each scene;
+ * ndsFrontendOverlayLoanContains says whether an address is lent. */
+
 #include <stdint.h>
 #include <calico/nds/arm9/ovl.h>
 #include <nds/nds_frontend_overlay.h>

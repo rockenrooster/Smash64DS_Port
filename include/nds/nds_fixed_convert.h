@@ -1,3 +1,6 @@
+/* Out-of-line float <-> fixed conversions (ARM, in battleship_sys_utils.c)
+ * for code that runs a few times a frame. */
+
 #ifndef SSB64_NDS_FIXED_CONVERT_H
 #define SSB64_NDS_FIXED_CONVERT_H
 

@@ -1,3 +1,7 @@
+/* The port's effect seams: the DS visual effect kinds and their bounded
+ * presentations, the effect-pool samples and the counters the effect
+ * owners publish. */
+
 #ifndef SSB64_NDS_EFFECTS_H
 #define SSB64_NDS_EFFECTS_H
 

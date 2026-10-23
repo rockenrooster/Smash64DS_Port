@@ -1,3 +1,7 @@
+/* FAT cluster chains to sector extents (src/nds/nds_audio_extent.c), shared
+ * by the ARM9 and the ARM7: the extent record and the volume a chain is
+ * walked on. */
+
 #ifndef NDS_AUDIO_EXTENT_H
 #define NDS_AUDIO_EXTENT_H
 #include <stdint.h>

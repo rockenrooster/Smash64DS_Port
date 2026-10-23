@@ -1,3 +1,7 @@
+/* The startup and scene diagnostic words: pass and blocker codes, with the
+ * topic slices (nds_startup_*.h) it includes for the rest; gdb probes read
+ * them. */
+
 #ifndef SSB64_NDS_STARTUP_H
 #define SSB64_NDS_STARTUP_H
 

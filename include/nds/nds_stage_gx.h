@@ -1,3 +1,6 @@
+/* The stage GX program format: the opcode kinds by version, compiled by
+ * scripts/stages/compile_nds_stage_gx.py and run by nds_stage_gx.exec.inc. */
+
 #ifndef NDS_STAGE_GX_H
 #define NDS_STAGE_GX_H
 

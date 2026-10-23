@@ -1,3 +1,6 @@
+/* The opening movie's name scenes: the records they report and the macro
+ * that defines each scene's entry points. */
+
 #ifndef SSB64_NDS_OPENING_NAME_SCENE_H
 #define SSB64_NDS_OPENING_NAME_SCENE_H
 

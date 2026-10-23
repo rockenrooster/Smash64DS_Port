@@ -1,3 +1,9 @@
+/* The FireGrind particle effect without the particle interpreter: one fixed
+ * spark pool kept contiguous (a dead spark swaps with the last live one),
+ * its colours and spawn-cone samples baked offline from the source
+ * (lbparticle.c). Spawned from the imported efmanager.c, updated and drawn
+ * from lbparticle.c. */
+
 #include <nds/nds_firegrind.h>
 
 

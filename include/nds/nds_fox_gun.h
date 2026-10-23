@@ -1,3 +1,6 @@
+/* Fox's blaster mesh, baked (src/nds/nds_fox_gun.c); the submit lives in
+ * the renderer. */
+
 #ifndef SSB64_NDS_FOX_GUN_H
 #define SSB64_NDS_FOX_GUN_H
 

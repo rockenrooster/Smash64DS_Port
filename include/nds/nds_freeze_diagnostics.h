@@ -1,3 +1,7 @@
+/* The freeze report's hooks (src/nds/nds_freeze_diagnostics.c): the
+ * NDS_FREEZE_DIAGNOSTICS_* macros the game calls, no-ops unless the build
+ * sets NDS_FREEZE_DIAGNOSTICS (the ship target does). */
+
 #ifndef SSB64_NDS_FREEZE_DIAGNOSTICS_H
 #define SSB64_NDS_FREEZE_DIAGNOSTICS_H
 

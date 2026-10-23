@@ -1,3 +1,10 @@
+/* The battle HUD on the sub screen's sprites: each player's damage meter,
+ * stock icons and emblem, the timers and the score particles, drawn from
+ * the HUD atlas scripts/menus/generate_battle_hud.py bakes
+ * (generated/battle_hud.generated.inc). The sixteen sub OBJ palettes are
+ * budgeted per player, never per fighter kind. nds_platform.c's present
+ * calls ndsBattleHudRender and ndsBattleHudClear. */
+
 #include <nds/arm9/sprite.h>
 #include <nds/arm9/video.h>
 #include <nds/arm9/cache.h>

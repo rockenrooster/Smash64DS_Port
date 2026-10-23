@@ -1,4 +1,7 @@
-/* Purin Sing: four source quads, live DObj transforms and PRIM animation. */
+/* Jigglypuff's Sing executor: four source quads, live DObj transforms and
+ * PRIM animation. TEXTUAL INCLUDE ONLY: nds_renderer.c includes it; the
+ * stage DL submit (renderer_adapter_stage_submits.inc) calls it. */
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
 
 volatile u32 gNdsPurinSingNativeDraws[4];

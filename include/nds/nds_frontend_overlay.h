@@ -1,3 +1,5 @@
+/* The front-end overlay and its loans (src/nds/nds_frontend_overlay.c). */
+
 #ifndef NDS_FRONTEND_OVERLAY_H
 #define NDS_FRONTEND_OVERLAY_H
 

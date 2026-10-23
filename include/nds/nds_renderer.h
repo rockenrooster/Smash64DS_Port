@@ -1,3 +1,7 @@
+/* The native renderer's interface (src/nds/nds_renderer.c): its build
+ * constants, the config, stats and native-failure records, the matrix and
+ * material types, and every submit the adapters and owners call. */
+
 #ifndef SSB64_NDS_RENDERER_H
 #define SSB64_NDS_RENDERER_H
 

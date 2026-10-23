@@ -1,3 +1,6 @@
+/* The source's IFCommon interface on OAM (src/nds/nds_ifcommon_oam.c and
+ * its slices): the game-status, ending and pause sprites. */
+
 #ifndef SSB64_NDS_IFCOMMON_OAM_H
 #define SSB64_NDS_IFCOMMON_OAM_H
 

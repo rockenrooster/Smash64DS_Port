@@ -1,3 +1,7 @@
+/* The ARM7's reader of a pre-rendered music stream file: the header (sizes
+ * and loop point, little endian) and the packets, for
+ * arm7/nds_audio_bgm_service.c. */
+
 #include <nds/nds_bgm_stream.h>
 #include <string.h>
 

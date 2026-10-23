@@ -1,3 +1,6 @@
+/* Port coroutines (src/port/coroutine.c, coroutine_arm.s): create, resume,
+ * yield and destroy, and the DTCM hot stack. */
+
 #ifndef SSB64_NDS_COROUTINE_H
 #define SSB64_NDS_COROUTINE_H
 

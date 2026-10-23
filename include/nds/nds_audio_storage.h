@@ -1,3 +1,7 @@
+/* The ARM9-ARM7 card read protocol: request lines, the PXI channel, the
+ * largest read and the main-RAM range a read may write. The ARM9 side is
+ * src/nds/nds_audio_storage.c, the ARM7 side src/nds/arm7/nds_audio_main.c. */
+
 #ifndef NDS_AUDIO_STORAGE_H
 #define NDS_AUDIO_STORAGE_H
 

@@ -1,3 +1,10 @@
+/* The renderer's preamble: the hardware state shadows and texture keys, the
+ * fighter packet arena's DMA wait and idle region, the GX recorders' hooks,
+ * the ITCM placement macros (placement only: include/nds/nds_task37_itcm.h's
+ * rule), and the native owners' diagnostic words. Generated inputs:
+ * nds_particle_banks.generated.h and nds_rebirth_halo.generated.inc. The
+ * first slice of nds_renderer.c. */
+
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>

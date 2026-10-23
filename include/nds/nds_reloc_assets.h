@@ -1,3 +1,7 @@
+/* The relocation asset table's interface (src/nds/nds_reloc_assets.c): the
+ * O2R asset header, the loaded file's layout, the load and path calls and
+ * the filesystem lock. */
+
 #ifndef SSB64_NDS_RELOC_ASSETS_H
 #define SSB64_NDS_RELOC_ASSETS_H
 

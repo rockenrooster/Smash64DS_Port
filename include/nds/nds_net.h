@@ -1,4 +1,7 @@
-/* P3 local multiplayer, ARM9 API (docs/P3_Multiplayer/Smash64DS_Multiplayer_Plan.md). */
+/* P3 local multiplayer, the ARM9 API: the radio link (attach, start, stop,
+ * send and receive packets) and its status codes
+ * (docs/P3_Multiplayer/Smash64DS_Multiplayer_Plan.md; src/nds/net/). */
+
 #ifndef NDS_NET_H
 #define NDS_NET_H
 

@@ -1,3 +1,6 @@
+/* The fighter display contract's setters, called from the imported fighter
+ * display (src/port/renderer_adapter_fighter.c implements them). */
+
 #ifndef SSB64_NDS_FIGHTER_DISPLAY_H
 #define SSB64_NDS_FIGHTER_DISPLAY_H
 

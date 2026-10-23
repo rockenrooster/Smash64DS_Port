@@ -1,3 +1,7 @@
+/* The character-select preview pack (FPC1): written offline by
+ * scripts/fighters/generate_preview_core_packs.py, read by
+ * src/port/reloc_preview_pack.c; the layout note follows. */
+
 #ifndef NDS_PREVIEW_PACK_H
 #define NDS_PREVIEW_PACK_H
 

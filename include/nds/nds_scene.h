@@ -1,3 +1,5 @@
+/* The scene boundary's result words, read by gdb probes. */
+
 #ifndef SSB64_NDS_SCENE_BACKEND_H
 #define SSB64_NDS_SCENE_BACKEND_H
 

@@ -1,3 +1,10 @@
+/* The menu router: the source's menu scene entry points (mnModeSelect,
+ * mnMaps, mnOption, mnData, mnBackupClear and the rest of *StartScene)
+ * start the native 2D screens, with each scene's backdrop, music and cue
+ * prefetch, and the screen loop that runs and presents them; plus the
+ * CSS cadence attribution (UI, residency and preview phases). A slice of
+ * nds_menu_shell.c. */
+
 /* --- The screen loop ----------------------------------------------------- */
 
 /* The DATA menu (mn/mndata/mndata.c) is the newest native screen, shaped on

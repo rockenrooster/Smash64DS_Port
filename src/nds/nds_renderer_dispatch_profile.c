@@ -1,3 +1,9 @@
+/* The renderer's failure record and dispatch state: the first native
+ * failure (gNdsRendererNativeFailure, written out of the cache only when a
+ * failure happens), the lab's first sixteen distinct causes, the hardware
+ * path's per-frame consume and source-cache resets, and the fighter draw's
+ * texel-alpha bracket. A slice of nds_renderer.c. */
+
 volatile NDSRendererNativeFailure gNdsRendererNativeFailure
     __attribute__((aligned(32)));
 _Static_assert(sizeof(NDSRendererNativeFailure) == 32,

@@ -1,3 +1,6 @@
+/* The DS platform layer's interface (src/nds/nds_platform.c): the input
+ * bits, the frame lifecycle, the clock, the console and the developer HUDs. */
+
 #ifndef SSB64_NDS_PLATFORM_H
 #define SSB64_NDS_PLATFORM_H
 

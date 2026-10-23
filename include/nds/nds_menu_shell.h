@@ -1,3 +1,8 @@
+/* The native menu shell's interface (src/nds/nds_menu_shell.c and its
+ * slices): each screen's run call, the 1P mode, CSS and bonus panels, and
+ * the VS select's 3D previews. A leaf header: it must not pull in the
+ * source's scene or fighter headers (below). */
+
 #ifndef NDS_MENU_SHELL_H
 #define NDS_MENU_SHELL_H
 

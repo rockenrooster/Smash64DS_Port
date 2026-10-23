@@ -1,3 +1,6 @@
+/* The 2D UI kit (src/nds/nds_ui_kit.c): retained OBJ slots for text and
+ * sprites; its contract follows. */
+
 #ifndef NDS_UI_KIT_H
 #define NDS_UI_KIT_H
 

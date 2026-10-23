@@ -1,3 +1,7 @@
+/* The port's scene seam (src/port/nds_scene_manager.c): the registry's
+ * scene descriptions and the request, enter and exit calls; the note below
+ * says what it is not. */
+
 #ifndef NDS_SCENE_MANAGER_H
 #define NDS_SCENE_MANAGER_H
 

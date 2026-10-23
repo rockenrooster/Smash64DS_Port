@@ -1,3 +1,6 @@
+/* The pre-rendered music stream container: sample rate, header and packet
+ * layout (written by scripts/sfx/bgm, read by src/nds/nds_bgm_stream.c). */
+
 #ifndef NDS_BGM_STREAM_H
 #define NDS_BGM_STREAM_H
 #include <stdint.h>

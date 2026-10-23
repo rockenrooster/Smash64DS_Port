@@ -1,3 +1,6 @@
+/* The DS-native FireGrind spark (src/nds/nds_firegrind.c): the pool and the
+ * calls efmanager.c and lbparticle.c make. */
+
 #ifndef NDS_FIREGRIND_H
 #define NDS_FIREGRIND_H
 

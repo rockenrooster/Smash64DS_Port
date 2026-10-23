@@ -1,3 +1,7 @@
+/* The resident figatree pack (src/nds/nds_battlepack_anim.c): the blob's
+ * layout and the lookups the motion cache uses; the note below says what it
+ * replaced. */
+
 #ifndef NDS_BATTLEPACK_ANIM_H
 #define NDS_BATTLEPACK_ANIM_H
 

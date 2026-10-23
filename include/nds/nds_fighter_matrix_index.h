@@ -1,3 +1,6 @@
+/* The sine-table index of a rotation, truncf(angle * 651.8986) without
+ * soft float, exact over the kernel's domain (|angle| < 16384 rad). */
+
 #ifndef SSB64_NDS_FIGHTER_MATRIX_INDEX_H
 #define SSB64_NDS_FIGHTER_MATRIX_INDEX_H
 

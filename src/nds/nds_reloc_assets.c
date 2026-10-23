@@ -1,3 +1,10 @@
+/* The relocation asset table: an asset id to its NitroFS path (the fighters'
+ * rows from nds/generated/nds_fighter_production.generated.h), file loads
+ * with their extern ids, the animation directory and the fighters' motion
+ * stream spans; and ndsFsLock/ndsFsUnlock, one lock for the whole
+ * filesystem, because libfat and NitroFS are not reentrant and more than one
+ * thread reads. */
+
 #include <filesystem.h>
 #include <nds.h>
 #include <calico.h>

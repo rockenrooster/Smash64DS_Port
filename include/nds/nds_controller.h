@@ -1,3 +1,6 @@
+/* The controller backend's playback pads and the keypad calls
+ * (src/port/controller_backend.c). */
+
 #ifndef SSB64_NDS_CONTROLLER_H
 #define SSB64_NDS_CONTROLLER_H
 

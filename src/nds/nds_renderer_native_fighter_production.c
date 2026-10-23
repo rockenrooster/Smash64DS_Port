@@ -1,3 +1,9 @@
+/* The production fighter owner's executor: a generated owner record's runs
+ * (prepare, shade, emit) validated against their spans and run from ITCM;
+ * a declined run is a correctness failure, torn down exactly but kept out
+ * of ITCM. The fighter's colour animation (a hurt flash, the challenger's
+ * black) modulates every root once a draw. A slice of nds_renderer.c. */
+
 #if defined(__arm__)
 #define NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE \
     __attribute__((noinline, cold, optimize("Os"), target("arm")))

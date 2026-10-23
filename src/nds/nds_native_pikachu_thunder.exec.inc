@@ -1,3 +1,7 @@
+/* Pikachu's Thunder executor: two live IA8 glows and a fixed CI4 spark.
+ * TEXTUAL INCLUDE ONLY: nds_renderer.c includes it; the stage lanes
+ * (renderer_adapter_stage_lanes.c) call ndsRendererSubmitNativePikachuThunder. */
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
 volatile u32 gNdsPikachuThunderNativeDraws[3];
 volatile u32 gNdsPikachuThunderNativeRoleMask;

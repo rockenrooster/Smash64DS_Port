@@ -1,3 +1,9 @@
+/* The ARM9's card reads served by the ARM7 (nds_audio_main.c): synchronous
+ * reads sent as asynchronous requests in rotating lines (a late answer to an
+ * abandoned send lands where nobody polls), resends after a timeout, and
+ * the asynchronous reads the FGM cache and the motion prefetch poll
+ * (ndsAudioStorageReadAsync). ndsAudioStorageHealth feeds the freeze report. */
+
 #include <calico.h>
 #include <nds/arm9/cache.h>
 #include <string.h>

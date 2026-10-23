@@ -1,3 +1,11 @@
+/* Stage wallpapers on BG2: a battle's backdrop as one affine BG2 image
+ * converted at build time (generated/native_wallpapers.generated.inc; the P5
+ * stages' in nds_p5_wallpapers.generated.inc, scripts/p5/stage_generate.py),
+ * preloaded at match setup and moved each frame the way grwallpaper.c moves
+ * it; the menus' wallpaper SObjs draw through it too. One BG2 image is
+ * resident; rows stage in main RAM and reach VRAM as halfword stores (fread
+ * never writes VRAM). */
+
 #include <nds.h>
 #include <math.h>
 #include <string.h>

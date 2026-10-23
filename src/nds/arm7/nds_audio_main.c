@@ -1,3 +1,9 @@
+/* The ARM7 program: Calico's services, the DLDI wrapper (nds_audio_dldi.c),
+ * the music service (nds_audio_bgm_service.c), and the storage thread that
+ * serves the ARM9's card reads through the FAT extent map: synchronous
+ * reads, the FGM cache fills and the motion prefetch, up to 22 in flight,
+ * each answered in the request line it came on. */
+
 #include <calico.h>
 #include <nds/nds_audio_storage.h>
 #include <string.h>

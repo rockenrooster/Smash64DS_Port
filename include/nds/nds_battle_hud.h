@@ -1,3 +1,7 @@
+/* The battle HUD (src/nds/nds_battle_hud.c): the presentation state the
+ * source's IFPlayerDamage owns, snapshotted at the source/DS boundary, and
+ * the render, clear and score-particle calls. */
+
 #ifndef SSB64_NDS_BATTLE_HUD_H
 #define SSB64_NDS_BATTLE_HUD_H
 

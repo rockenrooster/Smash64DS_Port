@@ -1,3 +1,6 @@
+/* Which Kirby copy hats a match keeps resident
+ * (src/port/nds_kirby_hat_residency.c). */
+
 #ifndef NDS_KIRBY_HAT_RESIDENCY_H
 #define NDS_KIRBY_HAT_RESIDENCY_H
 

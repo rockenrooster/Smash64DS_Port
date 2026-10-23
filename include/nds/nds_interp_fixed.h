@@ -1,3 +1,6 @@
+/* syInterpGetFracFrame's Bezier/Catmull-Rom arm in fixed point (the owner's
+ * no-soft-float rule); the note below says why and which paths run it. */
+
 #ifndef SSB64_NDS_INTERP_FIXED_H
 #define SSB64_NDS_INTERP_FIXED_H
 

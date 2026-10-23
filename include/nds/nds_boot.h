@@ -1,3 +1,5 @@
+/* The source boot's progress bits (gNdsOriginalBootStage, boot_stubs.c). */
+
 #ifndef SSB64_NDS_BOOT_H
 #define SSB64_NDS_BOOT_H
 

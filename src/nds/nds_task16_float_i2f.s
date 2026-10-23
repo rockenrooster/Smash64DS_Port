@@ -1,3 +1,6 @@
+/* Integer to single-precision conversion (__aeabi_i2f) in ARM state in
+ * ITCM, replacing libgcc's. */
+
 	.syntax unified
 	.arch armv5te
 	.arm

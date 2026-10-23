@@ -1,4 +1,7 @@
-/* Yoshi Egg Lay victim-egg native executor. TEXTUAL INCLUDE ONLY. */
+/* Yoshi's Egg Lay victim-egg executor. TEXTUAL INCLUDE ONLY: nds_renderer.c
+ * includes it; the stage DL submit (renderer_adapter_stage_submits.inc)
+ * calls it. */
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
 #if NDS_P2_YOSHI_BUG_PROOF
 volatile u32 gNdsYoshiBugProofEggLayDrawCount;

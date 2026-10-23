@@ -1,3 +1,8 @@
+/* FAT16/FAT32 cluster chains to extents, used on both CPUs: a file's
+ * clusters on the card's FAT volume resolved once (ndsAudioFatExtents), so a
+ * card read needs no FAT walk; a repeated or looping chain is corruption and
+ * fails the map. */
+
 #include <nds/nds_audio_extent.h>
 #include <stddef.h>
 

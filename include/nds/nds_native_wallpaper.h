@@ -1,3 +1,5 @@
+/* Native wallpapers on BG2 (src/nds/nds_native_wallpaper.c). */
+
 #ifndef NDS_NATIVE_WALLPAPER_H
 #define NDS_NATIVE_WALLPAPER_H
 

@@ -1,3 +1,10 @@
+/* The ARM7's card driver hookup: Calico publishes the sheltered DLDI
+ * driver's interface to its block server before main; this wraps it so the
+ * block server and the audio worker take one priority-inheriting lock (one
+ * card access at a time) and counts the reads and writes. The driver's code
+ * and data stay byte-identical, and Calico's DumpDldi exports the original
+ * interface, never pointers into this program. */
+
 #include <calico.h>
 #include <string.h>
 

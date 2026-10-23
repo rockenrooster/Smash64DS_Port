@@ -1,3 +1,11 @@
+/* The DS platform layer: video and VRAM setup, the frame lifecycle every
+ * scene and the battle host use (ndsPlatformBeginFrame, ndsPlatformEndFrame:
+ * the GX flush, the VBlank wait, the battle HUD's and Results' OAM
+ * commits), input (ndsPlatformReadInput scans the keypad once a frame), the
+ * platform clock (ndsPlatformTicks), the sub screen's console, the
+ * developer HUDs (FPS, tick HUD, text battle HUD) and the build revision
+ * telemetry. Called from main.c's loop and from the scenes. */
+
 #include <nds.h>
 #include <stdarg.h>
 #include <stdio.h>

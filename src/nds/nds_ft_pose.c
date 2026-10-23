@@ -1,3 +1,9 @@
+/* Fighter poses from the dense animation tracks: binds a fighter's joints to
+ * their tracks at a status change (ndsFtPoseBindBegin/Entry/End, from
+ * ftmanager and the effect shims), evaluates them each tick, and tells the
+ * source's animation which joints it owns (ndsFtPoseOwnsJoint) and whether
+ * the body changed this tick. */
+
 #include <nds/nds_ft_pose.h>
 
 /* `used` on every counter: --gc-sections has removed diagnostic globals here

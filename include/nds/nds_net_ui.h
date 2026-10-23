@@ -1,4 +1,6 @@
-/* P3 wireless UI on the lower screen (src/nds/net/nds_net_ui.c). */
+/* P3 wireless status on the lower screen (src/nds/net/nds_net_ui.c): text
+ * lines and the lobby rows on the character and stage selects. */
+
 #ifndef NDS_NET_UI_H
 #define NDS_NET_UI_H
 

@@ -1,3 +1,6 @@
+/* The libultra layer's port calls (src/port/libultra_os.c, scheduler_backend.c,
+ * os_selftest.c): the thread pump, the VBlank post and the self-test. */
+
 #ifndef SSB64_NDS_OS_BACKEND_H
 #define SSB64_NDS_OS_BACKEND_H
 

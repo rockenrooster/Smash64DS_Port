@@ -1,3 +1,6 @@
+/* The compact Guard (shield) pose owner: tri-state results, fail-closed on
+ * an invalid generated contract (below). */
+
 #ifndef NDS_SHIELD_POSE_H
 #define NDS_SHIELD_POSE_H
 

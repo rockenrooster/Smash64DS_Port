@@ -1,3 +1,9 @@
+/* The source's audio asset files on NitroFS: parses the sound banks (CTL:
+ * banks, instruments, waves), the sequence and FGM tables into the shapes
+ * the audio runtime reads, and loads them fenced against the card reads
+ * already in flight (ndsAudioAssetLoadFenced, from VS setup and the menu
+ * router). */
+
 #include <nds/nds_audio_assets.h>
 
 #include <stdio.h>

@@ -1,4 +1,8 @@
-/* Two immutable Vulcan meshes; source effect motion/lifetime remain live. */
+/* Kirby's Vulcan Jab executor: two immutable meshes, the source effect's
+ * motion and lifetime stay live; prepared at match setup
+ * (ndsRendererPrepareNativeKirbyVulcan). TEXTUAL INCLUDE ONLY:
+ * nds_renderer.c includes it; the stage DL submit calls it. */
+
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
 static u32 sVulcanTextureNames[5];
 static u32 sVulcanTextureGeneration;

@@ -1,3 +1,7 @@
+/* The music tracks (src/nds/nds_audio_bgm.c): the source track ids, each
+ * pre-rendered stream's size, loop point and pinned hashes (checked by
+ * scripts/check-audio-bgm-derived-assets.ps1), and the play and volume API. */
+
 #ifndef SSB64_NDS_AUDIO_BGM_H
 #define SSB64_NDS_AUDIO_BGM_H
 

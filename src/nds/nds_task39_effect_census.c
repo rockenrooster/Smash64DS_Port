@@ -1,3 +1,8 @@
+/* The effect route census tables: each source effect kind's name and route
+ * (original, substitute or skipped) from
+ * nds/generated/task39_effect_census.generated.h, with no-op reset and
+ * record hooks the effect manager and the item and HUD code call. */
+
 #include <nds/nds_task39_effect_census.h>
 
 #include <string.h>

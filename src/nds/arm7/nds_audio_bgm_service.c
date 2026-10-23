@@ -1,3 +1,10 @@
+/* The ARM7's music service: the ARM9 commands a track (play, stop, volume)
+ * over PXI, and a timer-driven worker refills the hardware stream buffers
+ * with the track's IMA-ADPCM packets, read from the card through
+ * nds_audio_main.c's storage reads. VOLUME is a doorbell: only the latest
+ * value waits, so a run of changes cannot fill the mailbox. The worker sits
+ * in main RAM (ARM7 WRAM is full); the storage thread's stack stays in WRAM. */
+
 #include <calico.h>
 #include <string.h>
 #include <nds/nds_audio_storage.h>

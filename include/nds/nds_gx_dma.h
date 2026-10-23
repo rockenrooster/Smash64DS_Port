@@ -1,3 +1,6 @@
+/* Bounded DMA0 geometry-FIFO waits; a stall past four frames is recorded for
+ * the freeze report and cleared. */
+
 #ifndef NDS_GX_DMA_H
 #define NDS_GX_DMA_H
 

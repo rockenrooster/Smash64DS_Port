@@ -1,3 +1,7 @@
+/* Sound effects (src/nds/nds_audio_fgm.c): the FGM pack's shape, which must
+ * equal the generated pack exactly, the cache and miss-ring sizes, and the
+ * play API. */
+
 #ifndef SSB64_NDS_AUDIO_FGM_H
 #define SSB64_NDS_AUDIO_FGM_H
 

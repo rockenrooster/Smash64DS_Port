@@ -1,3 +1,7 @@
+/* Native OBJ presentation for the source 2D scenes with no native screen of
+ * their own (the 1P intro, stage clear, continue, challenger, message and
+ * congratulations scenes); the contract follows. */
+
 #ifndef NDS_SOURCE2D_H
 #define NDS_SOURCE2D_H
 

@@ -1,3 +1,10 @@
+/* The native renderer, one translation unit: the preamble, the asset and
+ * owner tables, the DL core, textures and effects, the native owners (entry
+ * effects, fighter packets, lean lists, the hierarchy), and each native
+ * executor after its generated program (generated/nds_native_*.generated.inc,
+ * written at build time by the stage, item and effect generators under
+ * scripts/). */
+
 #include "nds_renderer_preamble.c"
 #include <nds/nds_frontend_overlay.h>
 #include "nds_renderer_assets.c"

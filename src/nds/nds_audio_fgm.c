@@ -1,3 +1,10 @@
+/* Sound effects (FGM) on the DS sound hardware: the FGM pack (the source's
+ * cues rendered offline; the P4 contents' own pack, nds_p4_fgm.generated.h)
+ * is read through a ring cache filled asynchronously from the card, and
+ * cues play on the hardware channels. ndsAudioFgmLendTail lends the cache's
+ * tail to the VS select. Called through the source's audio API
+ * (ndsAudioFgmPlay and family). */
+
 #include <nds.h>
 #include <calico/nds/nitrorom.h>
 

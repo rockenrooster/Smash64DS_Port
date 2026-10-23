@@ -1,3 +1,6 @@
+/* The lab scene harness ids (NDS_DEV_SCENE_HARNESS) and the state
+ * src/port/scene_harness.c seeds; harness 0 (normal) ships. */
+
 #ifndef NDS_SCENE_HARNESS_H
 #define NDS_SCENE_HARNESS_H
 

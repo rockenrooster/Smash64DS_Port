@@ -1,3 +1,7 @@
+/* Save data on the card (src/nds/nds_backup.c): the SRAM image the
+ * transcribed lbbackup.c addresses by offset, and the sibling files the P7
+ * records use; the note below gives the write and recovery order. */
+
 #ifndef SSB64_NDS_BACKUP_H
 #define SSB64_NDS_BACKUP_H
 

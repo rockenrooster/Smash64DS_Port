@@ -1,3 +1,6 @@
+/* A particle's view-space centre from a normalized Q12 affine camera, once
+ * per particle before its four corners. */
+
 #ifndef NDS_PARTICLE_VIEW_H
 #define NDS_PARTICLE_VIEW_H
 

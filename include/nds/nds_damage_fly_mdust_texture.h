@@ -1,3 +1,6 @@
+/* The damage-fly dust texture split into four A5I3 planes that keep every
+ * RGB5 intensity and alpha5 value; the generator and the runtime share it. */
+
 #ifndef NDS_DAMAGE_FLY_MDUST_TEXTURE_H
 #define NDS_DAMAGE_FLY_MDUST_TEXTURE_H
 #include <stdint.h>

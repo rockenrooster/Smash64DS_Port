@@ -1,3 +1,6 @@
+/* The crowd actor's counters (BUGS.md crowd row), present only when the
+ * ftpublic import is built (NDS_IMPORT_BATTLESHIP_FT_PUBLIC). */
+
 #ifndef SSB64_NDS_FTPUBLIC_H
 #define SSB64_NDS_FTPUBLIC_H
 

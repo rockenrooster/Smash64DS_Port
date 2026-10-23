@@ -1,3 +1,6 @@
+/* Scalar floor and ceiling crossing tests for map collision: an O2R-safe
+ * adapter of the source's mpCollisionCheck*Surface* policies. */
+
 #ifndef SSB64_NDS_MP_FLOOR_CROSSING_H
 #define SSB64_NDS_MP_FLOOR_CROSSING_H
 

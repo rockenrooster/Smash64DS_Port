@@ -1,3 +1,5 @@
+/* F3DEX2 command field decoders shared by the DL walkers. */
+
 #ifndef SSB64_NDS_GBI_DECODE_H
 #define SSB64_NDS_GBI_DECODE_H
 

@@ -1,3 +1,9 @@
+/* VS Results on OAM: each SObj the Results scene draws is baked into sprite
+ * cells (a memoized tile plan per size) with palettes and VRAM allocated per
+ * frame, the source's black tints become OBJ planes over them, and the
+ * frame is committed at present (ndsResultsOamCommit, from nds_platform.c).
+ * Called by sprite_preview_backend.c and battleship_mnvsresults.c. */
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

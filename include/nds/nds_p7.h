@@ -1,3 +1,7 @@
+/* P7's unlocks and records (docs/P7/P7_Implementation_Plan.md): the
+ * progress block beside the source's save, and the selection ids every
+ * unlock and record uses. */
+
 #ifndef SSB64_NDS_P7_H
 #define SSB64_NDS_P7_H
 

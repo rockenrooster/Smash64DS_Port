@@ -1,3 +1,6 @@
+/* VS Results on OAM (src/nds/nds_results_oam.c): enter, exit, the frame's
+ * emits and the commit. */
+
 #ifndef SSB64_NDS_RESULTS_OAM_H
 #define SSB64_NDS_RESULTS_OAM_H
 

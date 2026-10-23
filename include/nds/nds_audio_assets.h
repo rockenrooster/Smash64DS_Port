@@ -1,3 +1,6 @@
+/* The audio asset load (src/nds/nds_audio_assets.c): the fenced load call
+ * and the counters gdb probes read. */
+
 #ifndef SSB64_NDS_AUDIO_ASSETS_H
 #define SSB64_NDS_AUDIO_ASSETS_H
 

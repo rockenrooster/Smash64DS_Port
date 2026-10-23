@@ -1,3 +1,11 @@
+/* The battle's static textures, converted at build time: stage and HUD
+ * images in their canonical DS form (paletted, PAL16 or PAL256), looked up
+ * by source key so the renderer uploads them instead of converting the N64
+ * image. Records, payloads and palette blocks come from
+ * generated/battle_playable_static_textures.generated.inc
+ * (scripts/generate_battle_playable_static_textures.py); each record is
+ * checked against its source image before use. */
+
 #include "nds/battle_playable_static_textures.h"
 
 #include "generated/battle_playable_static_textures.generated.inc"

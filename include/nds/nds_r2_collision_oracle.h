@@ -1,3 +1,6 @@
+/* The R2 fixed-point collision kernel's oracle against a real match's
+ * joints (the note below says why a synthetic domain was not enough). */
+
 #ifndef SSB64_NDS_R2_COLLISION_ORACLE_H
 #define SSB64_NDS_R2_COLLISION_ORACLE_H
 

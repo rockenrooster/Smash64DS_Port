@@ -1,3 +1,10 @@
+/* The ARM9 side of the music: the track table (source sequence to its
+ * pre-rendered IMA stream, with the loop points the renderer measured; the
+ * P4 and P5 tracks from nds_p4_bgm.generated.inc and
+ * nds_p5_bgm.generated.inc), the play, stop, fade and volume calls the
+ * source's audio API lands on, and the PXI commands to the ARM7 service.
+ * Stream sizes and hashes are pinned in include/nds/nds_audio_bgm.h. */
+
 #include <calico.h>
 #include <nds.h>
 #include <stdio.h>

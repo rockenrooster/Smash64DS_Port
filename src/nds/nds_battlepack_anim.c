@@ -1,3 +1,9 @@
+/* The battle pack: the motions a match's fighters use, one blob
+ * (scripts/generate_battlepack_anim.py) streamed into the taskman arena at
+ * match load. The motion cache adopts it (ndsBattlePackAdopt) and finds a
+ * figatree by id with a binary search. A NULL base means not resident:
+ * every lookup misses and the generic acquisition path runs instead. */
+
 #include <nds/nds_battlepack_anim.h>
 
 /* `used` because a dropped diagnostic global has turned Boundary red here

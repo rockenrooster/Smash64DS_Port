@@ -1,3 +1,10 @@
+/* The ARM9 entry: ARM9 WRAM and the platform, the relocation registry, the
+ * coroutine main context and the libultra self-test, then the source's
+ * syMainLoop boot, the video bootstrap, and the frame loop (input, the
+ * VBlank post, ndsOsRunThreads, the controller update, and a present only
+ * when the running scene did not present itself). The lab-only cache
+ * experiments compile to nothing in every live build. */
+
 #include <nds.h>
 #include <stdio.h>
 

@@ -1,3 +1,9 @@
+/* The DL core: the matrix stack and the 20.12 matrix math the executors
+ * share (ndsRendererMtxMul20p12 and family), the source's matrix,
+ * vertex-modify and MVP commands, the lighting shade LUTs (the builder runs
+ * only on a cache miss, out of ITCM) and the texture tile state. A slice of
+ * nds_renderer.c. */
+
 
 
 

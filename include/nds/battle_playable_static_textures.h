@@ -1,3 +1,7 @@
+/* The battle's static texture records: the key layout the renderer matches a
+ * source texture state against, the lookup results, and the payload file on
+ * NitroFS (src/nds/battle_playable_static_textures.c). */
+
 #ifndef SSB64_NDS_BATTLE_PLAYABLE_STATIC_TEXTURES_H
 #define SSB64_NDS_BATTLE_PLAYABLE_STATIC_TEXTURES_H
 

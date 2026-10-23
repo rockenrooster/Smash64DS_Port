@@ -1,3 +1,6 @@
+/* Host only: the retired software scene preview's display walk, kept for
+ * the reference harnesses (never in a DS build). */
+
 #if defined(ARM9) || defined(ARM7) || defined(__NDS__)
 #error Software scene preview is host-only
 #endif

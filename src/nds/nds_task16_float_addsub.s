@@ -1,3 +1,6 @@
+/* Single-precision add and subtract (__aeabi_fadd, __aeabi_fsub) in ARM
+ * state in ITCM, in place of libgcc's, for the source's float code. */
+
 	.syntax unified
 	.arch armv5te
 	.arm

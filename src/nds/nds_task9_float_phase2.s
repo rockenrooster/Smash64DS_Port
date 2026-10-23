@@ -1,3 +1,6 @@
+/* Single-precision equality compare (__aeabi_fcmpeq) in ARM state in ITCM,
+ * replacing libgcc's. */
+
 	.syntax unified
 	.arch armv5te
 	.arm
