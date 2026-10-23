@@ -158,17 +158,24 @@ def test_cloud_route_and_executor_wiring():
 def test_cloud_kind48_math_against_source():
     """Cited tokens the host kind48 mirror depends on; drift fails here first."""
     adapter = read_split(ADAPTER_PATH)
+    # The adapter's Mod1 is the source's LookAt x Persp in closed form, fixed
+    # point (ndsRendererAdapterMvpMod1Q): the horizontal distance e, the
+    # vertical d, their cosines L1 = d / m and L2 = e / m, and the kind-48
+    # rows scaled by the recalc scales (ndsRendererAdapterMvpKind48RowsQ).
     for token in (
-        "f32 dx = cobj->vec.at.x - cobj->vec.eye.x",
-        "f32 dz = cobj->vec.at.z - cobj->vec.eye.z",
-        "f32 eye_z = sqrtf((dz * dz) + (dx * dx))",
-        "syMatrixLookAtF(out, 0.0F, cobj->vec.eye.y, eye_z,",
-        "0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F)",
-        "guMtxCatF(*out, perspective_f, *out)",
-        "if (eye_z < 0.0001F)",
+        "const s64 dx = (s64)ndsF32ToFixed(cobj->vec.at.x, 12u) -",
+        "const s64 dz = (s64)ndsF32ToFixed(cobj->vec.at.z, 12u) -",
+        "const s64 d = (s64)ndsF32ToFixed(cobj->vec.eye.y, 12u) -",
+        "e = (s64)ndsR2HwMathSqrt64Fast((u64)((dx * dx) + (dz * dz)));",
+        "out->zero = (e == 0) ? TRUE : FALSE;",
+        "m = (s64)ndsR2HwMathSqrt64Fast((u64)((d * d) + (e * e)));",
+        "out->l1_q30 = (s32)ndsR2HwMathDivideFast(d << 30, m);",
+        "out->l2_q30 = (s32)ndsR2HwMathDivideFast(e << 30, m);",
         "recalc_scale_x = parent_scale_x * dobj->scale.vec.f.x",
         "recalc_scale_y = parent_scale_x * dobj->scale.vec.f.y",
-        "f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x",
+        "out->m[0][0] = ndsMvpScaleQ16(p00, sx);",
+        "out->m[1][1] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l2_q30, p11), sy);",
+        "out->m[2][1] = ndsMvpScaleQ16(-ndsMvpMulQ30(mod1->l1_q30, p11), sx);",
     ):
         assert token in adapter, (
             f"DEFECT adapter kind48 math changed at {token!r}. Exact fix: "

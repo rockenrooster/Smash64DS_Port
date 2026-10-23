@@ -20,6 +20,7 @@ typedef uint16_t v16;
 #define NDS_P2_STAGE_YOSTER 1
 #define NDS_RENDERER_HW_TRIANGLES 1
 #define NDS_RENDERER_GEOM_ZBUFFER 1u
+#define NDS_RENDERER_GEOM_LIGHTING 0x00020000u
 #define NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED 1u
 #define NDS_FIGHTER_PACKET_DMA_WAIT() ((void)0)
 typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
@@ -108,6 +109,23 @@ static void ndsRendererProfileRecordHardwareTriangle(void) {}
 static void glColor(u32 c) { (void)c; }
 static void glTexCoord2t16(s32 a,s32 b) { (void)a;(void)b; }
 static void glVertex3v16(v16 x,v16 y,v16 z) { (void)x;(void)y;(void)z; g_verts++; }
+/* The executor's per-bind-site texture memo: the host binds through the
+ * ordinary stub, which counts and can fail. */
+typedef struct { u32 valid; } NDSRendererOwnerTextureMemo;
+static s32 ndsRendererHardwareBindTextureOwnerMemo(
+    NDSRendererOwnerTextureMemo *m, u32 site, NDSRendererStats *s,
+    const NDSRendererConfig *c, NDSRendererTraversalState *t)
+{ (void)m; (void)site; return ndsRendererHardwareBindTexture(s, c, t); }
+/* The corner memo's direct register writes: a corner is one COLOR, one
+ * TEX_COORD and two VERTEX16 words, so every second VERTEX16 is a vertex. */
+#define TEXTURE_PACK(u,v) (((u32)(u16)(u)) | ((u32)(u16)(v) << 16))
+static u32 g_gfx_sink, g_vtx16_writes;
+static u32 *hostGfxSink(void) { return &g_gfx_sink; }
+static u32 *hostGfxVertex16(void)
+{ if ((++g_vtx16_writes & 1u) == 0u) { g_verts++; } return &g_gfx_sink; }
+#define GFX_COLOR (*hostGfxSink())
+#define GFX_TEX_COORD (*hostGfxSink())
+#define GFX_VERTEX16 (*hostGfxVertex16())
 
 /* NATIVE_ACTOR_IMPLEMENTATION */
 
