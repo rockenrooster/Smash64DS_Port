@@ -91,6 +91,9 @@ int main(void) {{
         counters='\n'.join('static u32 '+name+';' for name in sorted(set(re.findall(r'\bgNds\w+',bodies))))
         program=TYPES+record+'''
 #define NDS_R2_RUN_MEMO_MAX 67u
+/* Rows are by run index modulo 67, tagged with the run (a P4 owner's runs
+ * pass 67); a run index past the tag byte is never memoized. */
+#define NDS_R2_RUN_TEXMEMO_RUN_MAX 0xffu
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 300u
 _Static_assert(sizeof(NDSR2RunTextureMemo)==28, "memo size");
 typedef struct {u32 hardware_texture_ready_count, hardware_texture_format,

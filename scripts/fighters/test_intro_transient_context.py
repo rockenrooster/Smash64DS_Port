@@ -204,6 +204,10 @@ typedef unsigned u32; typedef int sb32;
 #define NDS_RENDERER_PROFILE_LEVEL 0
 #define NDS_INTRO_TRANSIENT_SCRATCH_SLOT 0u
 #define nSCKind1PIntro 14
+/* The other one-actor scenes the submit draws (scdef.h values). */
+#define nSCKind1PChallenger 13
+#define nSCKindEnding 48
+#define nSCKind1PContinue 49
 typedef struct GObj GObj;
 typedef struct FTStruct { GObj *fighter_gobj; u32 fkind; } FTStruct;
 struct GObj { FTStruct *fp; };
@@ -231,6 +235,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     assert(sNdsIntroTransientActive && sNdsFighterDisplayContractPlayback);
     assert(oracle && captured->fp == fp);
     gNdsFighterMarioFoxDLAllDrawCount++;
+}
+/* The submit draws through the lean transient path, which walks the same
+ * draw (and owns the scratch rebind). */
+static u32 gNdsFtrLeanSkippedDraws;
+static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind) {
+    (void)rebind;
+    ndsFighterMarioFoxDLAllDrawForSlot(0u, fp, NULL, 0u);
+    return TRUE;
 }
 '''
         code += '\n' + function(ADAPTER, 'ndsIntroTransientNeedsBindChange')

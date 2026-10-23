@@ -17,6 +17,8 @@ typedef s16 v16;
 #define FALSE 0
 #define NDS_P2_STAGE_JUNGLE 1
 #define NDS_RENDERER_HW_TRIANGLES 1
+/* Setup-only code is Thumb -Os on the DS (P8 R1); plain code on the host. */
+#define NDS_RENDERER_COLD
 #define NDS_RENDERER_GEOM_ZBUFFER 1u
 #define NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8u
 #define NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED 1u
