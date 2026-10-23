@@ -500,7 +500,12 @@ QUAD_ATLAS_HEIGHT = 64
 # cap held frame 0, a yellow puff, for the whole effect. The owner picked
 # 24x24 (QUAD_CELL_SIZE); ten of those are 5,760 texels against the ~700 the
 # seven sheets leave, so an eighth proven-size 8 KiB block carries them.
-QUAD_ATLAS_SHEETS_MAX = 8
+# Same day, same reason: SparkleWhite (texture 45; Fox's up-B trail among
+# others) is nine RGBA32 frames -- fireball, smoke, star flash -- and held
+# frame 0 too. Nine 24x24 cells need 4,160 more texels, exactly what the
+# Yoster-on bake has left, so they never pack and the ladder would halve
+# 16/17/23/32 instead; a ninth block carries them.
+QUAD_ATLAS_SHEETS_MAX = 9
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after
@@ -749,14 +754,15 @@ QUAD_HELD_FRAME = {25: 2}
 #
 # The explosion (texture 29) keeps all ten frames: its scripts step 0..8 a
 # tick apiece and 0x21 draws 9, so any decimation drops a whole stage of the
-# burn (see QUAD_ATLAS_SHEETS_MAX's 2026-10-22 note).
-QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 29: 10, 224: 1, 225: 4}
+# burn (see QUAD_ATLAS_SHEETS_MAX's 2026-10-22 note). SparkleWhite (45) keeps
+# its nine for the same reason: script 0x73 steps 0..8.
+QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 29: 10, 45: 9, 224: 1, 225: 4}
 
 # A cell size that is not a halving of the source, by texture. quad_cell_dims
 # only halves, and 32 -> 16 -> 8 has no step at 24; the owner chose 24x24 for
 # the explosion (0.75x) as the size that keeps its ten frames readable in one
-# 8 KiB sheet. The atlas bake area-averages these (area_average_cell).
-QUAD_CELL_SIZE = {29: 24}
+# 8 KiB sheet, and the same for SparkleWhite's nine. The atlas bake area-averages these (area_average_cell).
+QUAD_CELL_SIZE = {29: 24, 45: 24}
 
 
 def quad_cell_dims(width: int, height: int,
