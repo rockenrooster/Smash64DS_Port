@@ -1948,12 +1948,16 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     # preparation from nitro:/p4/entry_texels.bin (raw, 4-aligned), so the
     # eighteen contents' article texels cost no .main bytes in every scene
     # (NDS_ENTRY_EFFECT_COMPRESSION_FILE; the row's texels is 1 + offset).
+    # P8 R3: so does a payload only startup-only textures use -- the fighters'
+    # entries, prepared once at battle setup with the rest of the set and
+    # never by the gameplay re-prepare (ndsRendererPrepareEntryEffectTextureSet
+    # skip_startup); a payload a persistent texture shares stays resident.
     file_payloads: dict[int, int] = {}
     if p4 and texels_file is not None:
         owners = p4_texture_owners(p4, texture_keys, p4_root_first, groups)
         shared: set[int] = set()
         for slot, key in enumerate(texture_keys):
-            if owners[slot] == 0:
+            if owners[slot] == 0 and not startup_only_texture_flags[slot]:
                 shared.add(texture_payload_refs[slot][0])
         for slot, key in enumerate(texture_keys):
             index = texture_payload_refs[slot][0]
