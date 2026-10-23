@@ -672,8 +672,11 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
         self.assertNotIn(
             "status_vars.kirby.specialn.copy_id = nFTKindKirby", self.shims)
         self.assertIn("gNdsNativeKirbyHatSuppressedCount++", self.shims)
+        # The hat's slot is the player's port in a battle, the select's slot
+        # elsewhere (its admission is per battle slot).
         self.assertIn(
-            "(u32)fp->nds_slot, (u32)modelpart_id", self.shims)
+            "(u32)fp->player : (u32)fp->nds_slot", self.shims)
+        self.assertIn("hat_slot, (u32)modelpart_id, 0u", self.shims)
         self.assertNotIn("ndsRendererNativeSetKirbyHatBattleSlot", self.adapter)
         self.assertIn(
             "u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail",

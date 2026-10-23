@@ -27,7 +27,8 @@ def test_battle_capture_guards_and_scene_lifecycle(tmp_path):
         "ndsBaseSyTaskmanStartTask(tsetup)")
     publish = re.search(r"gNdsSceneManagerCurrIsBattle\s*=.*?;", manager, re.S)[0]
     # Skip the global initializer and take the actual Enter assignment.
-    publish = re.search(r"gNdsSceneManagerCurrIsBattle\s*=.*?;",
+    # (An assignment, not the stage-state reset's `== 0u` test before it.)
+    publish = re.search(r"gNdsSceneManagerCurrIsBattle\s*=(?!=).*?;",
                         manager[manager.index("void ndsSceneManagerEnter("):], re.S)[0]
 
     def prefix(name, marker):
@@ -45,8 +46,10 @@ def test_battle_capture_guards_and_scene_lifecycle(tmp_path):
                      "gNdsStageGCDrawAllLoopCapturedDisplayCount++;")
     draw = prefix("ndsStageGCDrawAllLoopRecordDObjDraw",
                   "if (ndsStageGCDrawAllLoopClassifyGObj(")
+    # The guard ends where the hardware frame begins (the MIP-cache lab block
+    # that used to follow it is gone).
     present = prefix("ndsStageGCDrawAllLoopPresentHardwareFrame",
-                     "#if NDS_SCENE_MIP_CACHE_LAB")
+                     "ndsStageGCDrawAllLoopBeginHardwareFrame();")
     code = """
 #include <assert.h>
 #include <stddef.h>
@@ -57,6 +60,7 @@ typedef unsigned u32; typedef int s32; typedef int sb32; typedef void GObj;
 #define NDS_RENDERER_PROFILE_LEVEL 0
 #define NDS_TICK_HUD 0
 #define NDS_RENDERER_M3_PHASE0_PROFILE 0
+#define NDS_DIAG(x) (x)
 static u32 gNdsSceneManagerCurrIsBattle, enabled=1, prepared=1;
 static u32 sNdsFighterGCDrawAllLoopDisplayActive;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitActive=1;

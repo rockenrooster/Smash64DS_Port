@@ -24,6 +24,13 @@ def test_frontend_loan_lifecycle_and_bounds():
                             "#define __nds_frontend_end (test_overlay + 256)")
     source = source.replace("extern u8 __nds_frontend_1p_end[];",
                             "#define __nds_frontend_1p_end (test_overlay + 64)")
+    # The 1P head's training part and per-stage parts, in the linker
+    # script's order inside [start, 1p_end).
+    for name, offset in (("training_end", 16), ("1p_gdonkey", 32),
+                         ("1p_boss", 40), ("1p_polygon", 48),
+                         ("1p_bonus", 56)):
+        source = source.replace(f"extern u8 __nds_frontend_{name}[];",
+                                f"#define __nds_frontend_{name} (test_overlay + {offset})")
     source = source.replace("extern u8 __nds_frontend_select_start[];",
                             "#define __nds_frontend_select_start (test_overlay + 192)")
     source = source.replace("extern u8 __nds_frontend_results_start[];",
@@ -43,9 +50,17 @@ typedef int32_t s32;
 typedef int32_t sb32;
 enum { FALSE = 0, TRUE = 1 };
 enum { nSCKindPlayersVS = 16, nSCKind1PGame = 52, nSCKind1PBonusStage = 53,
-       nSCKind1PTrainingMode = 54, nSCKindVSBattle = 22, nSCKindVSResults = 24 };
+       nSCKind1PTrainingMode = 54, nSCKindVSBattle = 22, nSCKindVSResults = 24,
+       nSCKindEnding = 55, nSCKind1PContinue = 56, nSCKind1PIntro = 57 };
+enum { nSC1PGameStageDonkey = 4, nSC1PGameStageBoss = 13,
+       nSC1PGameStageZako = 10, nSC1PGameStageBonus3 = 12 };
 #define NDS_DIAG(x) ((void)(x))
-static struct { u32 scene_curr; } gSCManagerSceneData;
+#define NDS_1P_INTRO_BAKE 0
+static struct { u32 scene_curr; u32 spgame_stage; } gSCManagerSceneData;
+/* No dead spans and no stage program to yield in this fixture. */
+void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment)
+{ (void)size; (void)alignment; return NULL; }
+s32 ndsStageGxYield(size_t size) { (void)size; return FALSE; }
 static _Alignas(32) u8 test_overlay[256];
 static u8 general_asset[512];
 static unsigned loads, deactivations, initializations, locks, allocations;
