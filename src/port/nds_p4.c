@@ -1742,6 +1742,7 @@ void ndsP4EntryFileEnsure(FTStruct *fp)
     void **slot;
     void *data;
     u32 file_id;
+    u32 cache;
 
     if ((f == NULL) || (f->overrides == NULL) ||
         (f->overrides->entry_deferred_special == 0u))
@@ -1753,8 +1754,11 @@ void ndsP4EntryFileEnsure(FTStruct *fp)
     {
         return;
     }
+    cache = ndsR2AnimCacheElasticBytes();
     data = ndsRelocLoadDeferredEntryFile(fp->nds_p4_content,
-                                         NDS_P4_ENTRY_DEFER_KEEP_FREE);
+                                         NDS_P4_ENTRY_DEFER_KEEP_FREE +
+                                         ((cache < NDS_P4_ENTRY_DEFER_CACHE_FLOOR) ?
+                                              cache : NDS_P4_ENTRY_DEFER_CACHE_FLOOR));
     if (data == NULL)
     {
         gNdsP4EntryDeferDeclines++;

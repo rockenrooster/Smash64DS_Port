@@ -856,6 +856,11 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
  * file's effect (ndsP4EntryMakeEffect counts a miss): the fighter makes his
  * entry, the vehicle stays away. */
 #define NDS_P4_ENTRY_DEFER_KEEP_FREE (40u * 1024u)
+/* The motion cache's elastic block sits above the heap cursor and counts as
+ * free, and the file stays for the whole match: Crash's 75,168 B taken from
+ * the cache cost the heavy roster 22K-105K WORK P95 (P8, 2026-10-24, gate
+ * `s94`). The file leaves the cache this much of its block. */
+#define NDS_P4_ENTRY_DEFER_CACHE_FLOOR (48u * 1024u)
 sb32 ndsP4DefersEntryDependency(u32 content, u32 dep_asset);
 void ndsP4EntryFileEnsure(FTStruct *fp);
 /* battleship_ftmanager.c: lend the loaded content files' dead article

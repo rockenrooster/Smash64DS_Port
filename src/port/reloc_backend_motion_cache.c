@@ -637,6 +637,19 @@ static sb32 ndsR2AnimCacheArenaStillOwned(void)
     return TRUE;
 }
 
+/* The elastic block's bytes this scene, 0 without one. It sits above the
+ * cursor, so `end - ptr` counts it as free; a content's deferred entry file
+ * leaves it a floor (nds_p4.c ndsP4EntryFileEnsure). */
+u32 ndsR2AnimCacheElasticBytes(void)
+{
+    if ((sNdsR2AnimCacheArenaElastic == FALSE) || (sNdsR2AnimCacheArena == NULL) ||
+        (sNdsR2AnimCacheArenaGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return 0u;
+    }
+    return sNdsR2AnimCacheArenaBytes;
+}
+
 /* Defined below with the residency loader; declared here because THIS is the
  * one seam where the arena stops being ours, and the pack lives in it. Binding
  * the invalidation to the writer rather than to each reader is the shape the

@@ -49,6 +49,8 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id);
  * set reserved before the first per-kind closure load. The reservation is
  * derived from source/build identities rather than live fighter-file state. */
 s32 ndsR2AnimCacheReserveCSSWorkingSet(void);
+/* The motion cache's elastic block bytes above the heap cursor (0: none). */
+u32 ndsR2AnimCacheElasticBytes(void);
 extern volatile u32 gNdsR2AnimCacheHits;
 extern volatile u32 gNdsR2AnimCacheMisses;
 /* P8 R2: the asset, stage, music and fighter-image tables name a NitroFS
