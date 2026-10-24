@@ -34,6 +34,17 @@ void ndsFsUnlock(void)
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_frontend_overlay.h>
+
+/* The battle's general heap and its admission test (include/nds/nds_startup.h,
+ * sys/taskman.h), declared here so this loader stays off the source's
+ * headers. */
+struct SYMallocRegion;
+extern struct SYMallocRegion gSYTaskmanGeneralHeap;
+extern volatile u32 gNdsTaskmanHeapGeneration;
+s32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
+                        u32 alignment);
+void *syTaskmanMalloc(size_t size, u32 align);
 
 /* src/port/nds_p4.c; declared here so this loader stays off ft/fighter.h. */
 const char *ndsP4RelocAssetPath(u32 file_id);
@@ -2064,6 +2075,102 @@ static u16 sNdsFtAnimP4RowMemoId[NDS_FTANIM_P4_ROW_MEMO];
 static NDSFtAnimStreamEntry sNdsFtAnimP4RowMemo[NDS_FTANIM_P4_ROW_MEMO];
 __attribute__((used)) volatile u32 gNdsRelocAssetP4StreamRowReads;
 
+/* 2026-10-24 (P8 P7): in a VS battle, the directory a sector at a time. A
+ * heavy match's four contents (Crash, Sonic, Mr. Game & Watch, Palutena)
+ * fetch 578 distinct clips, and the memo above re-read 322 rows on Hyrule
+ * Temple -- a storage round trip each, a third of the match's 917. A 512-byte
+ * sector of the directory costs the round trip an 8-byte row does and holds
+ * 64 rows, and a content's clip ids lie close together, so a match's rows are
+ * a few sectors. A page is taken when first needed: from the loaned range's
+ * idle tail, else from the general heap while it keeps the floor the
+ * optional caches keep (25,600 B and the match's later growth, as
+ * NDS_FTR_LEAN_SPARE_KEEP_FREE); it lives as long as the heap generation.
+ * Without one -- or outside a VS battle, whose menus budget their heap
+ * themselves -- the memo above serves. A full set replaces its pages in
+ * turn. */
+#define NDS_FTANIM_P4_PAGE_BYTES 512u
+#define NDS_FTANIM_P4_PAGES 24u
+#define NDS_FTANIM_P4_PAGE_KEEP_FREE (25600u + 24576u)
+static u8 *sNdsFtAnimP4Page[NDS_FTANIM_P4_PAGES];
+static u32 sNdsFtAnimP4PageSector[NDS_FTANIM_P4_PAGES];  /* sector + 1; 0 empty */
+static u32 sNdsFtAnimP4PageCount;
+static u32 sNdsFtAnimP4PageNext;
+static u32 sNdsFtAnimP4PageGen;   /* gNdsTaskmanHeapGeneration + 1 */
+__attribute__((used)) volatile u32 gNdsRelocAssetP4StreamPageReads;
+
+/* The row at directory byte `at` of the P4 pack, from its sector's page, or
+ * NULL when no page holds it (the caller reads the row alone). */
+static const NDSFtAnimStreamEntry *ndsRelocAssetP4StreamPageRow(u32 at)
+{
+    const u32 sector = at / NDS_FTANIM_P4_PAGE_BYTES;
+    const u32 within = at % NDS_FTANIM_P4_PAGE_BYTES;
+    u32 bytes;
+    u32 slot;
+    u32 i;
+
+    if (((within + (u32)sizeof(NDSFtAnimStreamEntry)) >
+         NDS_FTANIM_P4_PAGE_BYTES) ||
+        (ndsSceneIsVSBattle() == FALSE))
+    {
+        return NULL;
+    }
+    if (sNdsFtAnimP4PageGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        sNdsFtAnimP4PageGen = gNdsTaskmanHeapGeneration + 1u;
+        sNdsFtAnimP4PageCount = 0u;
+        sNdsFtAnimP4PageNext = 0u;
+    }
+    for (i = 0u; i < sNdsFtAnimP4PageCount; i++)
+    {
+        if (sNdsFtAnimP4PageSector[i] == sector + 1u)
+        {
+            return (const NDSFtAnimStreamEntry *)(const void *)
+                (sNdsFtAnimP4Page[i] + within);
+        }
+    }
+    if (sNdsFtAnimP4PageCount < NDS_FTANIM_P4_PAGES)
+    {
+        u8 *page = ndsVSBattleOverlayTryAlloc(NDS_FTANIM_P4_PAGE_BYTES, 32u);
+
+        if ((page == NULL) &&
+            (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                                 NDS_FTANIM_P4_PAGE_BYTES +
+                                     NDS_FTANIM_P4_PAGE_KEEP_FREE,
+                                 32u) != FALSE))
+        {
+            page = syTaskmanMalloc(NDS_FTANIM_P4_PAGE_BYTES, 32u);
+        }
+        if (page == NULL)
+        {
+            return NULL;
+        }
+        slot = sNdsFtAnimP4PageCount++;
+        sNdsFtAnimP4Page[slot] = page;
+    }
+    else
+    {
+        slot = sNdsFtAnimP4PageNext;
+        sNdsFtAnimP4PageNext = (slot + 1u) % NDS_FTANIM_P4_PAGES;
+    }
+    sNdsFtAnimP4PageSector[slot] = 0u;
+    bytes = sNdsFtAnimP4StreamHeader.blob_bytes -
+        (sector * NDS_FTANIM_P4_PAGE_BYTES);
+    if (bytes > NDS_FTANIM_P4_PAGE_BYTES)
+    {
+        bytes = NDS_FTANIM_P4_PAGE_BYTES;
+    }
+    if (nitroromReadFile(sNdsFtAnimP4StreamRom, sNdsFtAnimP4StreamFileId,
+                         sector * NDS_FTANIM_P4_PAGE_BYTES,
+                         sNdsFtAnimP4Page[slot], bytes) == false)
+    {
+        return NULL;
+    }
+    sNdsFtAnimP4PageSector[slot] = sector + 1u;
+    gNdsRelocAssetP4StreamPageReads++;
+    return (const NDSFtAnimStreamEntry *)(const void *)
+        (sNdsFtAnimP4Page[slot] + within);
+}
+
 static s32 ndsRelocAssetOpenP4Stream(void)
 {
     NDSFtAnimStreamHeader *header = &sNdsFtAnimP4StreamHeader;
@@ -2129,26 +2236,33 @@ static s32 ndsRelocAssetP4StreamEntry(u32 asset_id,
         return FALSE;
     }
     {
+        const u32 at = header->dir_off +
+            ((asset_id - header->first_id) * (u32)sizeof(NDSFtAnimStreamEntry));
+        const NDSFtAnimStreamEntry *row = ndsRelocAssetP4StreamPageRow(at);
         const u32 way = asset_id & (NDS_FTANIM_P4_ROW_MEMO - 1u);
 
-        if ((u32)sNdsFtAnimP4RowMemoId[way] != asset_id)
+        if (row != NULL)
         {
-            sNdsFtAnimP4RowMemoId[way] = 0u;
-            if ((asset_id > 0xffffu) ||
-                (nitroromReadFile(sNdsFtAnimP4StreamRom,
-                                  sNdsFtAnimP4StreamFileId,
-                                  header->dir_off +
-                                      ((asset_id - header->first_id) *
-                                       sizeof(NDSFtAnimStreamEntry)),
-                                  &sNdsFtAnimP4RowMemo[way],
-                                  sizeof(NDSFtAnimStreamEntry)) == false))
-            {
-                return FALSE;
-            }
-            sNdsFtAnimP4RowMemoId[way] = (u16)asset_id;
-            gNdsRelocAssetP4StreamRowReads++;
+            *entry = *row;
         }
-        *entry = sNdsFtAnimP4RowMemo[way];
+        else
+        {
+            if ((u32)sNdsFtAnimP4RowMemoId[way] != asset_id)
+            {
+                sNdsFtAnimP4RowMemoId[way] = 0u;
+                if ((asset_id > 0xffffu) ||
+                    (nitroromReadFile(sNdsFtAnimP4StreamRom,
+                                      sNdsFtAnimP4StreamFileId, at,
+                                      &sNdsFtAnimP4RowMemo[way],
+                                      sizeof(NDSFtAnimStreamEntry)) == false))
+                {
+                    return FALSE;
+                }
+                sNdsFtAnimP4RowMemoId[way] = (u16)asset_id;
+                gNdsRelocAssetP4StreamRowReads++;
+            }
+            *entry = sNdsFtAnimP4RowMemo[way];
+        }
     }
     return ((entry->offset >= header->data_off) && (entry->size != 0u) &&
             (entry->offset <= header->blob_bytes) &&
