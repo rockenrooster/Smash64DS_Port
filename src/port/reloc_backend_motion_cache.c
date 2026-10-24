@@ -2779,7 +2779,7 @@ static sb32 ndsR2AnimWarmAssetMatchesRoster(u32 asset_id)
 /* R2-06 E13. Move ndsRelocNormalizeFighterAObj16File off the gameplay frame.
  *
  * WHY THIS ONE. Cycle 107 attributed the load frame exactly
- * (task37_census.py --split-by-symbol ndsRelocFinalizeLoadedFile, 74 load frames
+ * (cpu_census.py --split-by-symbol ndsRelocFinalizeLoadedFile, 74 load frames
  * against 326 control, premium 650,610 cycles/frame): the reloc + copy family is
  * 23.6% of it and ndsRelocFinalizeLoadedFile alone is 10.0%, of which the AObj16
  * pass is the bulk -- 10,236,800 ticks a match against a 63,115,584 SINT

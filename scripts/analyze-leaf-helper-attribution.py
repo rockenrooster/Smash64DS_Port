@@ -17,7 +17,7 @@ count at a `bl <helper>` instruction IS that call site's exact dynamic call
 count. Summing per caller gives exact call counts, and multiplying by the
 helper's measured cycles-per-call attributes its cost. This costs no build and
 no emulator run -- it reads a profile that already exists, the same way
-`task37_census.py --split-by-symbol` does.
+`cpu_census.py --split-by-symbol` does.
 
 Two traps this handles, both of which produced wrong numbers by hand first:
 

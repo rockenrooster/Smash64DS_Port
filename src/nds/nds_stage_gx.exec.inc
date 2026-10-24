@@ -856,7 +856,7 @@ static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
 /* The stage hash below -- lab ROMs only, and not profile ROMs: hashing every
  * FIFO word dominated the stage rows of the late-window lab profile. */
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
-    !(defined(NDS_TASK37_PROFILE) && NDS_TASK37_PROFILE)
+    !(defined(NDS_CPU_PROFILE) && NDS_CPU_PROFILE)
 #define NDS_LAB_STAGE_GX_HASH 1
 #else
 #define NDS_LAB_STAGE_GX_HASH 0

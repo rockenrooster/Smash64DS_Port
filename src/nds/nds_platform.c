@@ -26,7 +26,7 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
 #include <nds/nds_source2d.h>
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_video.h>
@@ -3035,7 +3035,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
                 (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
                 (unsigned int)NDS_TASK44_STAGE_STEADY,
                 (unsigned int)NDS_TASK36_HW_COMPOSE,
-                (unsigned int)NDS_TASK37_ITCM_LEAVES);
+                (unsigned int)NDS_ITCM_LIB_LEAVES);
         }
     }
 #endif

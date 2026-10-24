@@ -1,7 +1,7 @@
-#ifndef NDS_TASK37_ITCM_H
-#define NDS_TASK37_ITCM_H
+#ifndef NDS_ITCM_PLACEMENT_H
+#define NDS_ITCM_PLACEMENT_H
 
-/* Task 37 placement-only ITCM admission.
+/* Placement-only ITCM admission (the 2026-07 census, "Task 37").
  *
  * The Task 37 census measured every profiled instruction and split its stall
  * cycles by whether the instruction touched data. Only the non-memory half can
@@ -24,19 +24,19 @@
  * See docs/optimization/ClaudeFable5_Task37_ItcmRepack_20260722.md.
  */
 
-/* NDS_TASK37_ITCM_LEAVES is a bitmask so the admissions can be bisected; the
- * port-side group is bit 2, surfaced by the Makefile as NDS_TASK37_ITCM_PORT.
+/* NDS_ITCM_LIB_LEAVES is a bitmask so the admissions can be bisected; the
+ * port-side group is bit 2.
  * The 0-vs-7 A/B failed its state-hash gate and the owner confirmed the enabled
  * lab build misbehaves, so nothing here is trusted until the responsible group
  * is identified. */
 
 #if defined(__arm__)
-#define NDS_TASK37_ITCM_CODE __attribute__((section(".itcm")))
+#define NDS_ITCM_CODE __attribute__((section(".itcm")))
 #else
-#define NDS_TASK37_ITCM_CODE
+#define NDS_ITCM_CODE
 #endif
 
-/* Campaign 01 re-knapsack, 2026-08-17. Same rule as NDS_TASK37_ITCM_CODE above:
+/* Campaign 01 re-knapsack, 2026-08-17. Same rule as NDS_ITCM_CODE above:
  * placement and nothing else, in both directions, so an admission cannot be
  * confused with a recompile.
  *
@@ -87,4 +87,4 @@
  * .itcm at all is what diverges, independently of which code moved. */
 
 
-#endif /* NDS_TASK37_ITCM_H */
+#endif /* NDS_ITCM_PLACEMENT_H */

@@ -506,7 +506,7 @@ endif
 export LD := $(CC)
 export OFILES := \
 	$(NDS_TASK9_FLOAT_ITCM_OFILES) \
-	$(NDS_TASK37_ITCM_OFILES) \
+	$(NDS_ITCM_LIB_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) \
 	battleship_mpprocess_live_bridge.o

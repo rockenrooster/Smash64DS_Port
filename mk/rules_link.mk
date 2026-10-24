@@ -358,29 +358,29 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 			".task9-float-itcm/$$member" "$$out" || exit $$?; \
 	done
 	@rm -rf ".task9-float-itcm"
-ifneq ($(strip $(NDS_TASK37_ITCM_OFILES)),)
-NDS_TASK37_LIBC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libc.a)
-NDS_TASK37_LIBM := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)
-NDS_TASK37_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
+ifneq ($(strip $(NDS_ITCM_LIB_OFILES)),)
+NDS_LIBC_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libc.a)
+NDS_LIBM_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)
+NDS_ARCHIVER := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Grouped recipe, one verified private copy per archive, extract only the named
 # members. Same shape as the Task 9 block above and for the same reason: the
 # installed archives must stay out of Make's prerequisite graph.
-$(NDS_TASK37_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
-	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || echo "$(NDS_TASK37_LIBC_SHA256) *$(NDS_TASK37_LIBC)" | sha256sum -c -
-	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || echo "$(NDS_TASK37_LIBM_SHA256) *$(NDS_TASK37_LIBM)" | sha256sum -c -
-	@rm -rf ".task37-itcm" $(NDS_TASK37_ITCM_OFILES)
-	@mkdir -p ".task37-itcm"
-	@cp "$(NDS_TASK37_LIBC)" ".task37-itcm/libc.a"
-	@cp "$(NDS_TASK37_LIBM)" ".task37-itcm/libm.a"
-	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || (cd ".task37-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS))
-	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || (cd ".task37-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS))
-	@for member in $(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(NDS_TASK37_LIBC_MEMBERS)) $(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(NDS_TASK37_LIBM_MEMBERS)); do \
+$(NDS_ITCM_LIB_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
+	@test "$(NDS_ITCM_LIBC)" != "1" || echo "$(NDS_LIBC_ARCHIVE_SHA256) *$(NDS_LIBC_ARCHIVE)" | sha256sum -c -
+	@test "$(NDS_ITCM_LIBM)" != "1" || echo "$(NDS_LIBM_ARCHIVE_SHA256) *$(NDS_LIBM_ARCHIVE)" | sha256sum -c -
+	@rm -rf ".itcm-libs" $(NDS_ITCM_LIB_OFILES)
+	@mkdir -p ".itcm-libs"
+	@cp "$(NDS_LIBC_ARCHIVE)" ".itcm-libs/libc.a"
+	@cp "$(NDS_LIBM_ARCHIVE)" ".itcm-libs/libm.a"
+	@test "$(NDS_ITCM_LIBC)" != "1" || (cd ".itcm-libs" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_ARCHIVER) x "libc.a" $(NDS_ITCM_LIBC_MEMBERS))
+	@test "$(NDS_ITCM_LIBM)" != "1" || (cd ".itcm-libs" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_ARCHIVER) x "libm.a" $(NDS_ITCM_LIBM_MEMBERS))
+	@for member in $(if $(filter 1,$(NDS_ITCM_LIBC)),$(NDS_ITCM_LIBC_MEMBERS)) $(if $(filter 1,$(NDS_ITCM_LIBM)),$(NDS_ITCM_LIBM_MEMBERS)); do \
 		stem="$${member%.o}"; \
 		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) \
 			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
-			".task37-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
+			".itcm-libs/$$member" "$$stem.itcm.o" || exit $$?; \
 	done
-	@rm -rf ".task37-itcm"
+	@rm -rf ".itcm-libs"
 endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type

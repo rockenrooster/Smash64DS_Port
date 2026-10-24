@@ -13,7 +13,7 @@
 #include <nds/nds_source2d.h>
 #include <gr/ground.h>
 #include <nds/nds_reloc_assets.h>
-#include <nds/nds_task37_profile.h>
+#include <nds/nds_cpu_profile.h>
 
 #if NDS_R2_PATH
 #include <nds/nds_r2_battle.h>

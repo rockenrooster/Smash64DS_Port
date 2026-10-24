@@ -18,7 +18,7 @@
 #include <nds/nds_results_oam.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
-#include <nds/nds_task37_profile.h>
+#include <nds/nds_cpu_profile.h>
 #include <nds/timers.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -1056,7 +1056,7 @@ void ndsMNVSResultsRecordFrame(void)
      * increments, so a battle-keyed window would open and dump during the match
      * and describe nothing about this scene. Costs one compare per Results
      * iteration in profile builds only. */
-    NDS_TASK37_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
+    NDS_CPU_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
 
     /* Sample this scene's presented-frame cadence. The first iteration only
      * seeds the reference -- there is no previous frame to difference against,

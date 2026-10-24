@@ -10,7 +10,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task39_effect_census.h>
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/nds_ftanim_track.h>
 #include <nds/nds_ft_pose.h>
 #include <nds/nds_kirby_hat_residency.h>
@@ -2763,7 +2763,7 @@ static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
     return flat;
 }
 
-static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateRootParts(
+static void NDS_ITCM_CODE ndsFTParamsInvalidateRootParts(
     DObj *root, sb32 reset_mode)
 {
     FTParts *parts = (root != NULL) ? root->user_data.p : NULL;
@@ -2778,7 +2778,7 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateRootParts(
     }
 }
 
-static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFlatParts(
+static void NDS_ITCM_CODE ndsFTParamsInvalidateFlatParts(
     const NDSFtPartsFlatWalk *flat, sb32 reset_mode)
 {
     u32 i;

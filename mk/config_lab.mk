@@ -160,15 +160,15 @@ NDS_TASK44_STAGE_STEADY ?= 0
 # Land water is frozen) and admit five higher-stall functions. Placement only.
 # KEEP on measurement: WORK-H P95 -52,224 with both evictions; this ships the
 # owner's one-eviction variant. Default on.
-NDS_TASK37_PROFILE ?= 0
-NDS_TASK37_PROFILE_START ?= 438
-NDS_TASK37_PROFILE_FRAMES ?= 128
+NDS_CPU_PROFILE ?= 0
+NDS_CPU_PROFILE_START ?= 438
+NDS_CPU_PROFILE_FRAMES ?= 128
 # Number each profiled frame as its own profiler region, so the host ledger can
 # be differenced against the tick-HUD ring frame by frame instead of only over
 # the window. Window totals cannot separate "accurate everywhere" from
 # "over-counts on clean frames, under-counts on the tail", and the tail is what
 # the P95 gate is decided on.
-NDS_TASK37_PROFILE_PER_FRAME_REGION ?= 0
+NDS_CPU_PROFILE_PER_FRAME_REGION ?= 0
 # Task 37 placement repack: admit the measured non-memory-stall toppers into the
 # 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
 # no eviction of any current resident.
@@ -181,16 +181,16 @@ NDS_TASK37_PROFILE_PER_FRAME_REGION ?= 0
 #   2  libm leaf     __ieee754_sqrtf
 #   4  port leaves   TextureSourceBytes, PolyFmt, FTParamsInvalidateFighterParts
 #   7  all of them (what the failing A/B ran)
-NDS_TASK37_ITCM_LEAVES ?= 0
+NDS_ITCM_LIB_LEAVES ?= 0
 # Deferred (=), not immediate (:=). The per-target blocks below override
-# NDS_TASK37_ITCM_LEAVES, and they are parsed AFTER these lines -- with := these
+# NDS_ITCM_LIB_LEAVES, and they are parsed AFTER these lines -- with := these
 # would latch the default 0 and the override would silently do nothing, so the
 # published target and the device A/B pair would both build with no leaves moved
 # and produce a byte-identical ROM. Environment-driven builds were unaffected
 # (the env value is in place before line 110), which is why the lab A/B runs
 # were valid and this stayed hidden.
-NDS_TASK37_ITCM_LIBC = 0
-NDS_TASK37_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_ITCM_LIBC = 0
+NDS_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_ITCM_LIB_LEAVES)),1,0)
 # Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.

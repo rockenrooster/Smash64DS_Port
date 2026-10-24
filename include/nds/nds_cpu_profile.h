@@ -1,7 +1,7 @@
-#ifndef NDS_TASK37_PROFILE_H
-#define NDS_TASK37_PROFILE_H
+#ifndef NDS_CPU_PROFILE_H
+#define NDS_CPU_PROFILE_H
 
-/* Task 37 census instrument.
+/* The CPU census instrument (the cycle profiler's window; "Task 37").
  *
  * The repo-owned melonDS build carries a host-side ARM9 performance profiler
  * that attributes emulated cycles per program counter, including cache fills,
@@ -18,32 +18,32 @@
  *
  * On retail hardware these are ordinary CP15 writes. They cost a few cycles and
  * produce no output, so one ROM is valid on both, but nothing in a shipping
- * configuration should be paying for them: NDS_TASK37_PROFILE stays 0 in every
+ * configuration should be paying for them: NDS_CPU_PROFILE stays 0 in every
  * published target and compiles to nothing at all.
  *
- * Window: reset the profiler at NDS_TASK37_PROFILE_START presented frames --
+ * Window: reset the profiler at NDS_CPU_PROFILE_START presented frames --
  * far enough in that the scene has settled -- and dump the CSV
- * NDS_TASK37_PROFILE_FRAMES later. The dump is applied at the next instruction
+ * NDS_CPU_PROFILE_FRAMES later. The dump is applied at the next instruction
  * boundary and does not stop the run.
  */
 
-#ifndef NDS_TASK37_PROFILE
-#define NDS_TASK37_PROFILE 0
+#ifndef NDS_CPU_PROFILE
+#define NDS_CPU_PROFILE 0
 #endif
 
-#if NDS_TASK37_PROFILE
+#if NDS_CPU_PROFILE
 
-#ifndef NDS_TASK37_PROFILE_START
-#define NDS_TASK37_PROFILE_START 438u
+#ifndef NDS_CPU_PROFILE_START
+#define NDS_CPU_PROFILE_START 438u
 #endif
 
-#ifndef NDS_TASK37_PROFILE_FRAMES
-#define NDS_TASK37_PROFILE_FRAMES 128u
+#ifndef NDS_CPU_PROFILE_FRAMES
+#define NDS_CPU_PROFILE_FRAMES 128u
 #endif
 
-#define NDS_TASK37_PROFILE_MARKER_MAGIC 0x4D500000u
-#define NDS_TASK37_PROFILE_MARKER_DUMP  0x4D50FFFDu
-#define NDS_TASK37_PROFILE_MARKER_RESET 0x4D50FFFEu
+#define NDS_CPU_PROFILE_MARKER_MAGIC 0x4D500000u
+#define NDS_CPU_PROFILE_MARKER_DUMP  0x4D50FFFDu
+#define NDS_CPU_PROFILE_MARKER_RESET 0x4D50FFFEu
 
 /* MCR is an ARM-mode instruction; the battle seam compiles to Thumb, so this
  * one function is forced to ARM and kept out of line. The interworking call is
@@ -53,7 +53,7 @@
  * Deliberately typed in plain unsigned int rather than u32 so the header has no
  * dependency on the port's type headers and can be included anywhere. */
 __attribute__((noinline, target("arm")))
-static void ndsTask37ProfileWriteMarker(unsigned int value)
+static void ndsCpuProfileWriteMarker(unsigned int value)
 {
     __asm__ volatile("mcr p15, 0, %0, c13, c0, 1" : : "r"(value) : "memory");
 }
@@ -65,14 +65,14 @@ static void ndsTask37ProfileWriteMarker(unsigned int value)
  * that over-counts on clean frames and under-counts on the tail, and the tail
  * is where PROJECT_GOAL.md's P95 gate is decided. Costs one extra CP15 write
  * per frame, inside the window, in profile builds only. */
-#ifndef NDS_TASK37_PROFILE_PER_FRAME_REGION
-#define NDS_TASK37_PROFILE_PER_FRAME_REGION 0
+#ifndef NDS_CPU_PROFILE_PER_FRAME_REGION
+#define NDS_CPU_PROFILE_PER_FRAME_REGION 0
 #endif
 
-#if NDS_TASK37_PROFILE_PER_FRAME_REGION
+#if NDS_CPU_PROFILE_PER_FRAME_REGION
 /* Region ids run 1..FRAMES so that 0 keeps meaning "outside the window". */
-#if (NDS_TASK37_PROFILE_FRAMES + 1u) >= 0xFFFDu
-#error "NDS_TASK37_PROFILE_FRAMES would collide with the reserved marker commands"
+#if (NDS_CPU_PROFILE_FRAMES + 1u) >= 0xFFFDu
+#error "NDS_CPU_PROFILE_FRAMES would collide with the reserved marker commands"
 #endif
 #endif
 
@@ -89,36 +89,36 @@ static void ndsTask37ProfileWriteMarker(unsigned int value)
  *
  * The region write trails the frame it names: setting region r at the end of
  * iteration START+r-1 means iteration START+r is what accumulates into r. */
-static inline void ndsTask37ProfileFrameTick(unsigned int presented_frames)
+static inline void ndsCpuProfileFrameTick(unsigned int presented_frames)
 {
-    if (presented_frames == (unsigned int)NDS_TASK37_PROFILE_START) {
-        ndsTask37ProfileWriteMarker(NDS_TASK37_PROFILE_MARKER_RESET);
+    if (presented_frames == (unsigned int)NDS_CPU_PROFILE_START) {
+        ndsCpuProfileWriteMarker(NDS_CPU_PROFILE_MARKER_RESET);
     } else if (presented_frames ==
-               ((unsigned int)NDS_TASK37_PROFILE_START +
-                (unsigned int)NDS_TASK37_PROFILE_FRAMES)) {
-        ndsTask37ProfileWriteMarker(NDS_TASK37_PROFILE_MARKER_DUMP);
+               ((unsigned int)NDS_CPU_PROFILE_START +
+                (unsigned int)NDS_CPU_PROFILE_FRAMES)) {
+        ndsCpuProfileWriteMarker(NDS_CPU_PROFILE_MARKER_DUMP);
         return;
     }
-#if NDS_TASK37_PROFILE_PER_FRAME_REGION
-    if ((presented_frames >= (unsigned int)NDS_TASK37_PROFILE_START) &&
-        (presented_frames < ((unsigned int)NDS_TASK37_PROFILE_START +
-                             (unsigned int)NDS_TASK37_PROFILE_FRAMES))) {
-        ndsTask37ProfileWriteMarker(
-            NDS_TASK37_PROFILE_MARKER_MAGIC +
-            (presented_frames - (unsigned int)NDS_TASK37_PROFILE_START) + 1u);
+#if NDS_CPU_PROFILE_PER_FRAME_REGION
+    if ((presented_frames >= (unsigned int)NDS_CPU_PROFILE_START) &&
+        (presented_frames < ((unsigned int)NDS_CPU_PROFILE_START +
+                             (unsigned int)NDS_CPU_PROFILE_FRAMES))) {
+        ndsCpuProfileWriteMarker(
+            NDS_CPU_PROFILE_MARKER_MAGIC +
+            (presented_frames - (unsigned int)NDS_CPU_PROFILE_START) + 1u);
     }
 #endif
 }
 
-#define NDS_TASK37_PROFILE_FRAME_TICK(frames) \
-    ndsTask37ProfileFrameTick((unsigned int)(frames))
-#define NDS_TASK37_PROFILE_RESULTS_TICK(tics) ((void)0)
+#define NDS_CPU_PROFILE_FRAME_TICK(frames) \
+    ndsCpuProfileFrameTick((unsigned int)(frames))
+#define NDS_CPU_PROFILE_RESULTS_TICK(tics) ((void)0)
 
 #else
 
-#define NDS_TASK37_PROFILE_FRAME_TICK(frames) ((void)0)
-#define NDS_TASK37_PROFILE_RESULTS_TICK(tics) ((void)0)
+#define NDS_CPU_PROFILE_FRAME_TICK(frames) ((void)0)
+#define NDS_CPU_PROFILE_RESULTS_TICK(tics) ((void)0)
 
-#endif /* NDS_TASK37_PROFILE */
+#endif /* NDS_CPU_PROFILE */
 
-#endif /* NDS_TASK37_PROFILE_H */
+#endif /* NDS_CPU_PROFILE_H */

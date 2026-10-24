@@ -9,7 +9,7 @@
 #include <sys/vector.h>
 #endif
 
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/renderer_fighter_lean.h>

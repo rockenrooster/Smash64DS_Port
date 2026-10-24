@@ -51,7 +51,7 @@ override NDS_TASK44_STAGE_STEADY := 1
 # prove the shipping program, so any flag that is on there and off here makes
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
 # Track the published placement exactly (2026-08-30 rebank: libc + port).
-override NDS_TASK37_ITCM_LEAVES := 5
+override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # P2-2 standing stress arm. It deliberately boots straight into the source
@@ -220,7 +220,7 @@ override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_TASK37_ITCM_LEAVES := 5
+override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
@@ -305,7 +305,7 @@ endif
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_TASK37_ITCM_LEAVES := 5
+override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
@@ -385,7 +385,7 @@ override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_TASK37_ITCM_LEAVES := 5
+override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1

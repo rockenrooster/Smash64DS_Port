@@ -19,7 +19,7 @@
  *
  * Delete once the tap defect is closed; this is an instrument, not a seam. */
 #include <nds/nds_os.h>
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman

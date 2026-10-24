@@ -57,8 +57,8 @@ if ($Skip -notcontains 'host') {
 
 $gate = "$Prefix-gate"
 if ($Skip -notcontains 'configs') {
-    $profile = @('NDS_TASK37_PROFILE=1', 'NDS_TASK37_PROFILE_START=800', 'NDS_TASK37_PROFILE_FRAMES=800',
-                 'NDS_TASK37_PROFILE_PER_FRAME_REGION=1')
+    $profile = @('NDS_CPU_PROFILE=1', 'NDS_CPU_PROFILE_START=800', 'NDS_CPU_PROFILE_FRAMES=800',
+                 'NDS_CPU_PROFILE_PER_FRAME_REGION=1')
     $configs = @(
         @{ Name = 'play'; Script = 'build_play_rom.ps1'; Filter = 'play-p*'; Extra = @() },
         @{ Name = 'walk'; Script = 'build_walk_rom.ps1'; Filter = 'walk-u*'; Extra = @() },

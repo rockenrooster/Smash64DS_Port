@@ -340,15 +340,15 @@ NDS_TASK9_FLOAT_ITCM_OFILES := \
 # Same mechanism as Task 9: extract from a SHA-verified private copy of the
 # archive and rename the section. The code is byte-identical; only where it
 # lives changes, so the A/B measures placement and nothing else.
-NDS_TASK37_LIBC_SHA256 := \
+NDS_LIBC_ARCHIVE_SHA256 := \
 	01424211f6f671e0b07b52fb72086f14e18000fca089e9ecfe45aa77b36873e2
-NDS_TASK37_LIBM_SHA256 := \
+NDS_LIBM_ARCHIVE_SHA256 := \
 	b437e8747f520c891d2784df015ab6f8cd30bb91cd02430f03657c20027d6685
-NDS_TASK37_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
-NDS_TASK37_LIBM_MEMBERS := libm_a-ef_sqrt.o
-NDS_TASK37_ITCM_OFILES := \
-	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS)))) \
-	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBM_MEMBERS))))
+NDS_ITCM_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
+NDS_ITCM_LIBM_MEMBERS := libm_a-ef_sqrt.o
+NDS_ITCM_LIB_OFILES := \
+	$(if $(filter 1,$(NDS_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_ITCM_LIBC_MEMBERS)))) \
+	$(if $(filter 1,$(NDS_ITCM_LIBM)),$(addsuffix .itcm.o,$(basename $(NDS_ITCM_LIBM_MEMBERS))))
 
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Task 37 census: join the melonDS per-PC cycle profile to ELF placement.
+"""The CPU census: join the melonDS per-PC cycle profile to ELF placement.
 
 The repo-owned melonDS build writes a CSV attributing emulated ARM9 cycles to
 every program counter it executed, including the cost of cache fills, cache
@@ -172,7 +172,7 @@ def attribute(
 ) -> tuple[int, int, int]:
     """Fold the per-PC CSV into the symbol list. Returns (cycles, unmapped, rows).
 
-    With NDS_TASK37_PROFILE_PER_FRAME_REGION=1 the emulator emits one row per
+    With NDS_CPU_PROFILE_PER_FRAME_REGION=1 the emulator emits one row per
     (region, pc) pair, so passing `detail` also builds
     region -> symbol index -> [cycles, instructions, mem_cycles]. Window totals
     can hide a cost that only appears on a handful of frames, and those frames
@@ -537,7 +537,7 @@ def main() -> int:
     parser.add_argument(
         "--split-by-symbol",
         metavar="SYMBOL",
-        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Split the census "
+        help="needs NDS_CPU_PROFILE_PER_FRAME_REGION=1. Split the census "
         "frames into the ones that executed SYMBOL and the ones that did not, "
         "and rank every symbol by the per-frame cycle difference between them. "
         "Answers 'where does an expensive class of frame actually spend the "
@@ -546,7 +546,7 @@ def main() -> int:
     parser.add_argument(
         "--split-over-gate",
         action="store_true",
-        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Same table as "
+        help="needs NDS_CPU_PROFILE_PER_FRAME_REGION=1. Same table as "
         "--split-by-symbol, but the partition is the gate itself: frames costing "
         "more than 2 VBlanks against frames costing 2. Use it when no symbol is "
         "known to name the expensive class -- which is the usual case, because "
@@ -556,7 +556,7 @@ def main() -> int:
         "--split-top-frames",
         type=int,
         metavar="N",
-        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Same table again, but "
+        help="needs NDS_CPU_PROFILE_PER_FRAME_REGION=1. Same table again, but "
         "the partition is the tail itself: the N most expensive frames by "
         "NON-IDLE cycles against all the rest. This is the one that matches the "
         "gate -- P95 of 1600 frames is --split-top-frames 80. Prefer it over "
@@ -815,7 +815,7 @@ def main() -> int:
                     f"{label} selected {len(hot)} of "
                     f"{len(hot) + len(control)} census regions -- a split needs "
                     "both populations. If every region is on one side the build "
-                    "is missing NDS_TASK37_PROFILE_PER_FRAME_REGION=1, so the "
+                    "is missing NDS_CPU_PROFILE_PER_FRAME_REGION=1, so the "
                     "whole window collapsed into one region; if the regions are "
                     "there, this window simply holds one kind of frame -- widen "
                     "it or move it until it straddles the class you want."

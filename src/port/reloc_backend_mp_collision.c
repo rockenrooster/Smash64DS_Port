@@ -3,7 +3,7 @@
  * slice of reloc_backend.c; its topic slices follow it there: mp_lines,
  * mp_walls, mp_floors. */
 #include "nds_scene_harness_config.h"
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/nds_mp_floor_crossing.h>
 #include <nds/nds_mp_topology.h>
 #include <nds/nds_mpprocess_source.h>

@@ -6,7 +6,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_scene_manager.h>
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/nds_p5.h>
 #include <it/item.h>
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only

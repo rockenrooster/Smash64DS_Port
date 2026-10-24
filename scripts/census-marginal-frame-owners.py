@@ -133,7 +133,7 @@ def marginal_regions(profile_dir: Path, count: int,
     two masks is measurable rather than assumed.
 
     THE FRAME -> REGION MAPPING IS `region = frame - 439`, NOT `- 438`.
-    run-task37-profile-census.ps1's banner prints "region r = presented frame
+    run-cpu-profile-census.ps1's banner prints "region r = presented frame
     438 + r", which is the ROM's own accounting; measured against the tick-HUD
     sampler's frame numbering on 2026-08-15 it is off by one. It is not a
     judgement call -- at `-438` the c185 rank-80 frames land at median profile
@@ -159,7 +159,7 @@ def marginal_regions(profile_dir: Path, count: int,
         # `KeyError: 'halt_wait'` after the caller had already spent an emulator
         # run, and the obvious reading of that traceback -- "the script is broken"
         # -- is wrong. Name the real fault: the wrong emulator produced the
-        # profile. run-task37-profile-census.ps1 now refuses the invocation that
+        # profile. run-cpu-profile-census.ps1 now refuses the invocation that
         # causes it (-MelonDS plus -RunnerSlot), but a v2 capture on disk from
         # before that guard still reaches here.
         if reader.fieldnames is not None and "halt_wait" not in reader.fieldnames:

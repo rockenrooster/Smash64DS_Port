@@ -905,7 +905,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         ndsPlatformTickHudSample();
     }
 #endif
-    NDS_TASK37_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
+    NDS_CPU_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
     /* Publish here and not one line later: the harness breaks on
      * ndsBattlePlayableFrameCompleteMarker, GDB stops at its entry, and GDB
      * cannot see the ARM9 D-cache. This is also the only point in the

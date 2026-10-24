@@ -22,8 +22,8 @@ $gate = @('TARGET=smash64ds-p2-fourcpu-tickhud-hwtri', 'NDS_LAB_FOURCPU_WORDS=1'
     'NDS_P2_STAGE_HYRULE=1', 'NDS_P2_STAGE_YAMABUKI=1', 'NDS_P2_STAGE_INISHIE=1', 'NDS_P2_STAGE_SECTOR=1',
     'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1',
     "NDS_HOT_TEXT_LINKER_SCRIPT=$($labLd -replace '\\', '/')") + $S64ShipFlags
-$profile = @('NDS_TASK37_PROFILE=1', 'NDS_TASK37_PROFILE_START=800', 'NDS_TASK37_PROFILE_FRAMES=800',
-             'NDS_TASK37_PROFILE_PER_FRAME_REGION=1')
+$profile = @('NDS_CPU_PROFILE=1', 'NDS_CPU_PROFILE_START=800', 'NDS_CPU_PROFILE_FRAMES=800',
+             'NDS_CPU_PROFILE_PER_FRAME_REGION=1')
 $configs = [ordered]@{
     play = @('TARGET=smash64ds') + $S64PlayFlags
     walk = @('TARGET=smash64ds', 'NDS_P2_MENU_WALK=1') + $S64PlayFlags

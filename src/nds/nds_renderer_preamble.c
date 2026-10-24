@@ -1,6 +1,6 @@
 /* The renderer's preamble: the hardware state shadows and texture keys, the
  * fighter packet arena's DMA wait and idle region, the GX recorders' hooks,
- * the ITCM placement macros (placement only: include/nds/nds_task37_itcm.h's
+ * the ITCM placement macros (placement only: include/nds/nds_itcm_placement.h's
  * rule), and the native owners' diagnostic words. Generated inputs:
  * nds_particle_banks.generated.h and nds_rebirth_halo.generated.inc. The
  * first slice of nds_renderer.c. */
@@ -21,7 +21,7 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_gx_dma.h>
 #include <nds/nds_startup.h>
-#include <nds/nds_task37_itcm.h>
+#include <nds/nds_itcm_placement.h>
 #include <nds/renderer_fighter_lean.h>
 #if NDS_P2_LINK
 const LookAt *ndsRendererAdapterCurrentLookAt(void);
@@ -68,7 +68,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 
 /* Task 82 repack. Placement and nothing else, in both directions.
  *
- * include/nds/nds_task37_itcm.h states the rule this obeys: a task that moved
+ * include/nds/nds_itcm_placement.h states the rule this obeys: a task that moved
  * code and recompiled it differently at the same time could not attribute its
  * own result. Admission adds a section attribute and no more; eviction drops
  * the section while keeping hot/O3/ARM exactly as NDS_RENDERER_HOT_CODE had
@@ -93,7 +93,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
 #endif
 
-/* Campaign 01 re-knapsack, 2026-08-17. See include/nds/nds_task37_itcm.h for
+/* Campaign 01 re-knapsack, 2026-08-17. See include/nds/nds_itcm_placement.h for
  * the ranking and the measured rents. The generic display-list interpreter and
  * its submit chain are the fallback renderer that the native stage and fighter
  * owner paths replaced; GX compose retired the affine multiply on top of that.

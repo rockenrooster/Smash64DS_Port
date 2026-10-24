@@ -2,7 +2,7 @@
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [int]$RunnerSlot = -1,
-    [string]$Build = 'build-task37-profile',
+    [string]$Build = 'build-cpu-profile',
     [switch]$NoBuild,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(1,100000)][int]$Frames = 128,
@@ -20,19 +20,16 @@ param(
     [string]$SplitBySymbol = '',
     # The same table partitioned by the GATE instead of by a symbol: frames
     # costing more than two VBlanks against frames costing two.
-    # task37_census.py has carried `--split-over-gate` since it was written and
+    # cpu_census.py has carried `--split-over-gate` since it was written and
     # this harness never exposed it, so every over-gate investigation had to
     # guess a symbol that names the expensive class -- which is the thing the
     # table exists to find. Use this when no symbol is known, which is the usual
     # case. Mutually exclusive with -SplitBySymbol; both need -PerFrameRegion.
     [switch]$SplitOverGate,
-    # Which loop drives the window. `Battle` counts presented frames, the
-    # campaign default. `Results` counts sMNVSResultsTotalTimeTics instead,
-    # because the VS Results loop never increments the presented-frame counter --
-    # a battle-keyed window would open and dump during the match and describe
-    # nothing about Results. Results runs must emulate the entire one-minute
-    # match before the window opens, so give them a long -TimeoutSeconds.
-    [ValidateSet('Battle','Results')]
+    # Which loop drives the window: presented battle frames. (A Results-tic
+    # window had its own census build, whose flag Phase A resolved to 0 on
+    # 2026-10-21: the ROM's Results tick marker compiles to nothing.)
+    [ValidateSet('Battle')]
     [string]$Scene = 'Battle',
     # Which ROM the window is measured on: the four-CPU gate ROM (the P1
     # battle and Results lab targets were retired on 2026-10-20).
@@ -70,7 +67,7 @@ foreach ($mf in $MakeFlags) {
 
 # Task 37 census driver.
 #
-# Runs the NDS_TASK37_PROFILE=1 ROM under the repo-owned melonDS build with the
+# Runs the NDS_CPU_PROFILE=1 ROM under the repo-owned melonDS build with the
 # host ARM9 performance profiler armed, and waits for the ROM to close its own
 # census window. The ROM writes a CP15 reset marker at StartFrame and a dump
 # marker Frames later, so the CSV describes settled battle frames only -- a
@@ -88,15 +85,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = $Target
-$isResults = ($Scene -eq 'Results')
-# Battle frame 438 is deep into a settled match; Results tic 131 is where R0
-# measured the scene's cost plateau. Only override a default the caller left alone.
-if ($isResults -and (-not $PSBoundParameters.ContainsKey('StartFrame'))) {
-    $StartFrame = 131
-}
-if ($isResults -and (-not $PSBoundParameters.ContainsKey('Build'))) {
-    $Build = 'build-task37-profile-results'
-}
+# Battle frame 438 is deep into a settled match.
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot -NoBuild:$NoBuild
@@ -131,7 +120,7 @@ $elf = Resolve-Smash64DSBuildOutput `
 # `-NoBuild` therefore silently measures whatever window the previous build
 # baked, while the banner still prints the window that was ASKED for. The build
 # directory's generated config header is what the ROM actually contains;
-# Assert-Task37CensusWindow compares the two and is called after the build step.
+# Assert-CpuCensusWindow compares the two and is called after the build step.
 #
 # That failure is not hypothetical. R2-07 L6 ran an over-gate arm (517..521) and
 # then a clean arm (508..512) six minutes later with -NoBuild, and got a
@@ -143,7 +132,7 @@ $elf = Resolve-Smash64DSBuildOutput `
 # An earlier version of this check looked for the header at $root/$Build and
 # concluded the layout "does not emit one" -- it does, at builds/$Build. That
 # path indirection is exactly what Resolve-Smash64DSBuildPath exists for.
-function Assert-Task37CensusWindow {
+function Assert-CpuCensusWindow {
     param(
         [Parameter(Mandatory=$true)][string]$BuildDir,
         [Parameter(Mandatory=$true)][hashtable]$Want
@@ -155,7 +144,7 @@ function Assert-Task37CensusWindow {
     }
     $baked = @{}
     foreach ($line in (Get-Content -LiteralPath $header)) {
-        if ($line -match '^\s*#define\s+(NDS_TASK37_PROFILE\w*)\s+(\d+)u?\s*$') {
+        if ($line -match '^\s*#define\s+(NDS_CPU_PROFILE\w*)\s+(\d+)u?\s*$') {
             $baked[$Matches[1]] = [int]$Matches[2]
         }
     }
@@ -172,11 +161,10 @@ function Assert-Task37CensusWindow {
 }
 $buildDir = Resolve-Smash64DSBuildPath -Root $root -Build $Build
 $censusWindow = @{
-    NDS_TASK37_PROFILE                  = 1
-    NDS_TASK37_PROFILE_START            = $StartFrame
-    NDS_TASK37_PROFILE_FRAMES           = $Frames
-    NDS_TASK37_PROFILE_PER_FRAME_REGION = [int]$PerFrameRegion
-    NDS_TASK37_PROFILE_RESULTS          = [int]$isResults
+    NDS_CPU_PROFILE                  = 1
+    NDS_CPU_PROFILE_START            = $StartFrame
+    NDS_CPU_PROFILE_FRAMES           = $Frames
+    NDS_CPU_PROFILE_PER_FRAME_REGION = [int]$PerFrameRegion
 }
 
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
@@ -199,8 +187,8 @@ $report = Join-Path $OutDir 'census.txt'
 $json = Join-Path $OutDir 'census.json'
 
 $temp = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $RunnerSlot
-$emulatorOut = Join-Path $temp 'task37-census.melonds.out'
-$emulatorErr = Join-Path $temp 'task37-census.melonds.err'
+$emulatorOut = Join-Path $temp 'cpu-census.melonds.out'
+$emulatorErr = Join-Path $temp 'cpu-census.melonds.err'
 $configState = $null
 $emulator = $null
 
@@ -210,10 +198,9 @@ try {
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
         $makeArgs = @(
             "TARGET=$target", "BUILD=$Build",
-            'NDS_TASK37_PROFILE=1', "NDS_TASK37_PROFILE_START=$StartFrame",
-            "NDS_TASK37_PROFILE_FRAMES=$Frames",
-            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)",
-            "NDS_TASK37_PROFILE_RESULTS=$([int]$isResults)"
+            'NDS_CPU_PROFILE=1', "NDS_CPU_PROFILE_START=$StartFrame",
+            "NDS_CPU_PROFILE_FRAMES=$Frames",
+            "NDS_CPU_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)"
         ) + $MakeFlags
         make -C $root @makeArgs
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -223,7 +210,7 @@ try {
             throw "Required census input is missing: $path"
         }
     }
-    Assert-Task37CensusWindow -BuildDir $buildDir -Want $censusWindow
+    Assert-CpuCensusWindow -BuildDir $buildDir -Want $censusWindow
 
     Remove-Item $csv, $meta, $regions, $emulatorOut, $emulatorErr `
         -Force -ErrorAction SilentlyContinue
@@ -242,7 +229,7 @@ try {
         -BreakOnStartup:($BootSetGlobals.Count -ne 0)
 
     $env:MELONDS_ARM9_PROFILE_CSV = $csv
-    Write-Host "scene:         $Scene$(if ($isResults) { ' (window counts Results tics, not presented frames)' })"
+    Write-Host "scene:         $Scene"
     Write-Host "census window: frames $StartFrame..$($StartFrame + $Frames)"
     # The ROM sets region r at the END of iteration StartFrame+r-1, so it is
     # iteration StartFrame+r that accumulates into r. Region 0 is everything
@@ -265,8 +252,8 @@ try {
         # packets (melonDS stores binary X writes unescaped), and detach.
         Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
         $gdbExe = Join-Path $(if ($env:DEVKITARM) { $env:DEVKITARM } else { 'C:/devkitPro/devkitARM' }) 'bin\arm-none-eabi-gdb.exe'
-        $gdbCmd = Join-Path $temp 'task37-census.boot.gdb'
-        $gdbLog = Join-Path $temp 'task37-census.boot.log'
+        $gdbCmd = Join-Path $temp 'cpu-census.boot.gdb'
+        $gdbLog = Join-Path $temp 'cpu-census.boot.log'
         @('set pagination off', 'set confirm off', 'set remotetimeout 30',
           "target remote 127.0.0.1:$($context.GdbPort)", 'set remote X-packet off',
           'tbreak main', 'continue') +
@@ -278,7 +265,7 @@ try {
             @('detach', 'quit') | Set-Content -LiteralPath $gdbCmd -Encoding ascii
         $gdbProc = Start-Process -FilePath $gdbExe -ArgumentList @('-batch', '-x', $gdbCmd, $elf) `
             -PassThru -WindowStyle Hidden -RedirectStandardOutput $gdbLog `
-            -RedirectStandardError (Join-Path $temp 'task37-census.boot.err')
+            -RedirectStandardError (Join-Path $temp 'cpu-census.boot.err')
         if (-not $gdbProc.WaitForExit(120000)) {
             Stop-Process -Id $gdbProc.Id -Force
             throw 'The boot-poke GDB session did not finish within 120 s.'
@@ -318,7 +305,7 @@ try {
     if (-not $done) {
         throw ("Census window did not close within $TimeoutSeconds s. " +
             "The ROM dumps at presented frame $($StartFrame + $Frames); check that " +
-            'it was built with NDS_TASK37_PROFILE=1.')
+            'it was built with NDS_CPU_PROFILE=1.')
     }
 } finally {
     if ($null -ne $emulator) {
@@ -352,7 +339,7 @@ if ($SplitOverGate) {
     }
     $censusArgs += @('--split-over-gate')
 }
-& $python (Join-Path $PSScriptRoot 'task37_census.py') @censusArgs |
+& $python (Join-Path $PSScriptRoot 'cpu_census.py') @censusArgs |
     Tee-Object -FilePath $report
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host ''
