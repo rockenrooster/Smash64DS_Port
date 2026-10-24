@@ -22,13 +22,17 @@
 #if NDS_P4_CODE_IKE
 
 #include <macros.h>
+#include <string.h>
 #include <sys/obj.h>
+#include "kirby/nds_p4_kirby.generated.h"
 
 #if !NDS_P4_CODE_ROY
 #include "nds_p4_roy.c"
 #endif
 
 void ndsP4RoyEntryCase(FTStruct *fp);
+void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
+void ftPhysicsApplyGroundFrictionOrTransN(GObj *fighter_gobj);
 
 /* scripts/p6/ike/spec.json "statuses". */
 #define IKE_STATUS_ATTACK13 0xF9
@@ -552,6 +556,186 @@ static void ndsP4IkeBeforePhysicsMap(GObj *fighter_gobj)
         }
     }
 }
+
+/* ---- Kirby's copy (owner BUGS.md 2026-10-23) ----
+ *
+ * "Ike's hat has the wrong attack, is should be ike's dash attack". Kirby
+ * wearing Ike's hat holds Roy's power (scripts/p4/p4_kirby.py AUTHORED_HATS:
+ * its statuses and sword), and his neutral special is Ike's dash attack
+ * instead of the combo (p4_kirby.py AUTHORED_STARTERS): Kirby's rising third
+ * swing (ROY_NSPG_3_High / ROY_NSPA_3_High, the owner's pick) under a script
+ * of its own. The swing's windup, flash, trail, voice, effect and sound stay
+ * the Remix script's; the hits are Ike's (scripts/p6/ike/motions/dash.ms:
+ * 14 then 9 late, 45 degrees, growth 100, base 60, slashing) for two frames
+ * then three, on the Roy power's three spheres at their places and 1.25x
+ * their sizes (p4_kirby.py POWER_HITBOX_SCALES). On the ground he slides
+ * from his dash speed as a dash attack does, the floor's friction taking
+ * it; B does not chain. */
+#ifdef NDS_P4_KIRBY_STATUS_ROY_NSPG_3_HIGH
+
+#define IKE_KIRBY_SWING_FRAME 11   /* the swing's first hit frame */
+
+/* MakeAttackColl's five words (ftdef.h ftMotionCommandMakeAttackColl): the
+ * id, joint, damage, can_rebound and the slashing element; the size and the
+ * offset (y 0); 45 degrees, growth 100, no set knockback, ground and air;
+ * the hit sound's level, its kind 5 (a sword's) and base knockback 60. */
+#define IKE_KIRBY_HIT(aid, jid, dmg, size, ox, oz, level)                                 \
+    NDS_P4_MOTION_EVENT(nFTMotionEventMakeAttackColl, ((aid) << 23) | ((jid) << 13) |     \
+                        ((dmg) << 5) | (1u << 4) | nGMHitElementSlash),                    \
+    (((u32)(size) << 16) | ((u32)(ox) & 0xFFFFu)), ((u32)(oz) & 0xFFFFu),                \
+    ((45u << 22) | (100u << 12) | 3u), (((u32)(level) << 21) | (5u << 17) | (60u << 7))
+/* The sword's tip and middle (joint 17) and his hand (joint 15). */
+#define IKE_KIRBY_HITS(dmg, level)                     \
+    IKE_KIRBY_HIT(1u, 17u, dmg, 225, 0, 250, level),   \
+    IKE_KIRBY_HIT(0u, 17u, dmg, 200, -50, 70, level),  \
+    IKE_KIRBY_HIT(2u, 15u, dmg, 200, 0, 0, level)
+
+static const u32 sNdsP4IkeKirbyNSPScript[] = {
+    0xD0004000u,                                  /* Remix: frame speed 2.0 (the windup) */
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetModelPartID, 17u << 19), /* the sword in his hand */
+    NDS_P4_MOTION_EVENT(nFTMotionEventHideItem, 0),
+    NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, 8),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetColAnim, 0x5Eu << 18),   /* the swing's flash */
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetAfterImage, 8u << 18),   /* the sword's trail */
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayVoiceStoreInfo, 0x182),
+    NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, IKE_KIRBY_SWING_FRAME),
+    0xD0003F80u,                                  /* Remix: frame speed 1.0 */
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetTexturePartID, 5),       /* his eyes */
+    NDS_P4_MOTION_EVENT(nFTMotionEventEffect, (17u << 19) | (31u << 10)), 0u, 350u << 16, 0u,
+    IKE_KIRBY_HITS(14u, 2u),
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGMStoreInfo, 0x102),   /* the swing (Ike's 258) */
+    NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 2),
+    IKE_KIRBY_HITS(9u, 1u),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 3),
+    NDS_P4_MOTION_EVENT(nFTMotionEventClearAttackCollAll, 0),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 5),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetAfterImage, 0x3FFFFu),   /* the trail off */
+    NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 16),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetTexturePartID, 0),
+    NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
+};
+
+/* The slide still to give (status_vars word 0). */
+static f32 *ndsP4IkeKirbySlide(FTStruct *fp)
+{
+    return &((f32 *)(void *)&fp->status_vars)[0];
+}
+
+static void ndsP4IkeKirbyNSPProcs(FTStruct *fp);
+
+void ndsP4IkeKirbyNSPUpdate(GObj *fighter_gobj)
+{
+    if (ftGetStruct(fighter_gobj)->ga == nMPKineticsGround)
+    {
+        ftAnimEndSetWait(fighter_gobj);
+    }
+    else ftAnimEndSetFall(fighter_gobj);
+}
+
+/* The swing's own step (its TransN), plus what is left of the slide. */
+void ndsP4IkeKirbyNSPGroundPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 *slide = ndsP4IkeKirbySlide(fp);
+
+    ftPhysicsApplyGroundFrictionOrTransN(fighter_gobj);
+    if (*slide > 0.0F)
+    {
+        fp->physics.vel_ground.x += *slide;
+        *slide -= dMPCollisionMaterialFrictions[fp->coll_data.floor_flags & MAP_VERTEX_MAT_MASK] *
+                  fp->attr->traction;
+        ftPhysicsSetGroundVelTransferAir(fighter_gobj);
+    }
+}
+
+/* The other side's twin at the same frame, the script, hits and speed where
+ * they were: the status change replays the Remix swing's own script up to
+ * the frame (its hits included), so those are put back over it, muted. */
+static void ndsP4IkeKirbyNSPSwitch(GObj *fighter_gobj, s32 status_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTMotionScript scripts[2][2];
+    FTAttackColl colls[ARRAY_COUNT(fp->attack_colls)];
+    ub32 is_attack_active = fp->is_attack_active;
+    ub32 is_muted = fp->is_muted;
+    f32 speed = DObjGetStruct(fighter_gobj)->anim_speed;
+
+    memcpy(scripts, fp->motion_scripts, sizeof(scripts));
+    memcpy(colls, fp->attack_colls, sizeof(colls));
+    fp->is_muted = TRUE;
+    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, IKE_PRESERVE_SWITCH);
+    fp->is_muted = is_muted;
+    memcpy(fp->motion_scripts, scripts, sizeof(scripts));
+    memcpy(fp->attack_colls, colls, sizeof(colls));
+    fp->is_attack_active = is_attack_active;
+    gcSetAnimSpeed(fighter_gobj, speed);
+    ndsP4IkeKirbyNSPProcs(fp);
+}
+
+static void ndsP4IkeKirbyNSPToAir(GObj *fighter_gobj)
+{
+    mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
+    *ndsP4IkeKirbySlide(ftGetStruct(fighter_gobj)) = 0.0F;
+    ndsP4IkeKirbyNSPSwitch(fighter_gobj, NDS_P4_KIRBY_STATUS_ROY_NSPA_3_HIGH);
+}
+
+static void ndsP4IkeKirbyNSPToGround(GObj *fighter_gobj)
+{
+    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
+    ndsP4IkeKirbyNSPSwitch(fighter_gobj, NDS_P4_KIRBY_STATUS_ROY_NSPG_3_HIGH);
+}
+
+void ndsP4IkeKirbyNSPGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4IkeKirbyNSPToAir);
+}
+
+void ndsP4IkeKirbyNSPAirMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterLanding(fighter_gobj, ndsP4IkeKirbyNSPToGround);
+}
+
+/* The swing statuses' own routines are Dancing Blade's (its chain, its
+ * collision); these replace them for the status. */
+static void ndsP4IkeKirbyNSPProcs(FTStruct *fp)
+{
+    fp->proc_update = ndsP4IkeKirbyNSPUpdate;
+    fp->proc_interrupt = NULL;
+    if (fp->ga == nMPKineticsGround)
+    {
+        fp->proc_physics = ndsP4IkeKirbyNSPGroundPhysics;
+        fp->proc_map = ndsP4IkeKirbyNSPGroundMap;
+    }
+    else
+    {
+        fp->proc_physics = ftPhysicsApplyAirVelDrift;
+        fp->proc_map = ndsP4IkeKirbyNSPAirMap;
+    }
+}
+
+static void ndsP4IkeKirbyNSPSetStatus(GObj *fighter_gobj, s32 status_id, f32 slide)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4KirbySetMotionScript(fp, sNdsP4IkeKirbyNSPScript);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+    *ndsP4IkeKirbySlide(fp) = slide;
+    ndsP4IkeKirbyNSPProcs(fp);
+}
+
+void ndsP4IkeKirbyNSPGroundInitial(GObj *fighter_gobj)
+{
+    ndsP4IkeKirbyNSPSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_ROY_NSPG_3_HIGH,
+                              ftGetStruct(fighter_gobj)->attr->dash_speed);
+}
+
+void ndsP4IkeKirbyNSPAirInitial(GObj *fighter_gobj)
+{
+    ndsP4IkeKirbyNSPSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_ROY_NSPA_3_HIGH, 0.0F);
+}
+
+#endif /* NDS_P4_KIRBY_STATUS_ROY_NSPG_3_HIGH */
 
 /* The taunt is the counter (card). */
 static const u16 sNdsP4IkeStatusReplace[] = {

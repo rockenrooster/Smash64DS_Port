@@ -229,6 +229,22 @@ AUTHORED_HATS = {
     "ike": {"kind": "spans", "joint": 9, "detail": 1, "spans": (3, 4, 5),
             "scale": (2.6, 2.6, 2.6), "offset": (0, -40, 0)},
 }
+# An authored content's own neutral-special starters over its base's power
+# (its statuses, hat and weapon kept). Ike (owner BUGS.md 2026-10-23: "Ike's
+# hat has the wrong attack, is should be ike's dash attack"): Ike's dash
+# attack on Kirby's rising third Dancing Blade swing, not the combo
+# (src/port/nds_p4_ike.c).
+AUTHORED_STARTERS = {
+    "ike": ("ndsP4IkeKirbyNSPGroundInitial", "ndsP4IkeKirbyNSPAirInitial"),
+}
+# Owner tuning, not Remix (generate_p4_fighter.py OWNER_HITBOX_SCALES, keyed
+# here by power): each MakeAttackColl's size in the power's motions' scripts
+# (every block they reach) times the scale, in the script file's copy; the
+# manifest lists the commands changed. Roy's Dancing Blade (owner BUGS.md
+# 2026-10-23: "hitbox for roy's hat is too small for the 3 attack combo"):
+# Remix gives Kirby Roy's own sizes and offsets (180 and 160 on the sword,
+# 160 on the hand) on his own joints, 1.25x as Dedede's jabs took.
+POWER_HITBOX_SCALES = {"roy": 1.25}
 # A custom power's hat id: no Remix image (hat_count 0), the plain head
 # (hat_base 0) beneath; its hat, when it has one, is a joint-6 sidecar
 # (p4_kirby_custom_hats.py), its file past the Remix hat textures (0x1910 +
@@ -407,6 +423,13 @@ def main() -> int:
                 raise KirbyError(f"{cmd['at']}: GO_TO_FILE into Kirby's motion file")
     events = {"blocks": dec.blocks, "data_refs": dec.data_refs}
     synth = G.MotionSynth(_EmptyBase(rom), KIRBY_MOTION_FILE, events, SCRIPT_FILE_ID)
+    hitbox_scaled = {}
+    for k, scale in POWER_HITBOX_SCALES.items():
+        power_motions = sorted({s["motion_id"] for s in selected
+                                if owner[s["status_id"]] == k and s["motion_id"] >= 0})
+        if power_motions:
+            hitbox_scaled[k] = {"scale": scale, "commands": G.scale_owner_hitboxes(
+                synth, events, resolved, {"motions": power_motions, "scale": scale})}
     script_o2r = synth.build()
     checked = G.round_trip(rom, script_o2r, synth, roots)
 
@@ -641,6 +664,11 @@ def main() -> int:
                                        "texid": None, "palette": None, "head": 0,
                                        "sidecar_joint": KIRBY_HAT_JOINT | KIRBY_SIDECAR_BIT,
                                        "material": False, "via_base": False, "via_bias": 0}})
+        if c in AUTHORED_STARTERS:
+            power["starters"] = []
+            for proc in AUTHORED_STARTERS[c]:
+                proto.add(proc)
+                power["starters"].append("ndsP4Proc_" + proc)
         powers.append(power)
     # The custom powers, after Remix's: their statuses follow the selected
     # ones; their motions are Kirby's own vanilla rows (C names).
@@ -866,6 +894,7 @@ def main() -> int:
                      for r in specials],
         "script_file": {"file_id": SCRIPT_FILE_ID, "bytes": len(synth.data),
                         "intern_slots": synth.intern_count, "round_trip_roots": checked},
+        "hitbox_scales": hitbox_scaled,
         "animations": {f"{a:#x}": anim_sizes.get(a) for a in anims},
         "largest_animation": max(anim_sizes.values(), default=0),
         "custom_hats": {f"{h:#x}": r for h, r in sorted(hat_rows.items())},
