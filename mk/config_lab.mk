@@ -5,15 +5,6 @@
 
 NDS_OWNER_LINK_INTRO_STAMP := $(PROJECT_ROOT)/src/nds/generated/.owner_link_intro
 $(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_LINK_INTRO_STAMP)" 2>/dev/null)" = "$(NDS_OWNER_LINK_INTRO)" ] || echo "$(NDS_OWNER_LINK_INTRO)" > "$(NDS_OWNER_LINK_INTRO_STAMP)")
-# PROBE BUILDS ONLY. 1 makes the reason-20 preview halt count instead of
-# spinning forever, so the shell walk can cross a CSS where one fighter's
-# preview has no native owner (measured 2026-09-22: kind 11, Ness). Never 1 in
-# anything published -- that halt is deliberate, and a silent decline is
-# precisely the failure it exists to expose.
-NDS_PREVIEW_HALT_NONFATAL ?= 0
-ifneq ($(filter 0 1,$(NDS_PREVIEW_HALT_NONFATAL)),$(NDS_PREVIEW_HALT_NONFATAL))
-$(error NDS_PREVIEW_HALT_NONFATAL must be 0 or 1)
-endif
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -31,52 +22,6 @@ NDS_R2_PATH ?= 0
 # attribution, realized 94,784 on STG P50 over 128/128 frames. Independent of
 # NDS_R2_PATH -- it is a renderer change, measurable on either battle path.
 NDS_R2_STAGE_DIRECT ?= 0
-# R2-03 E1. Replaces newlib's sqrtf with a correctly-rounded one built on the DS
-# hardware square-root unit. E0 measured __ieee754_sqrtf at 223.1 ticks per call
-# and 14,258 ticks/frame. Bit-exact by construction, so the Task 37 state hash
-# must not move -- sqrtf is on the gameplay path and a last-bit difference is a
-# pose difference.
-#
-# R2-07 L10 turned it ON. E1 measured -6,040 ticks/frame, bit-exact, Boundary
-# green, and then left the flag at 0 -- it read as a mean-only lever because the
-# 8-frame A/B was flat inside the placement floor. L6's over-gate split says
-# otherwise: __ieee754_sqrtf runs 87 times on an over-gate frame against 26 on a
-# clean one (3.34x) for a 26,007-cycle delta, so the saving concentrates on
-# exactly the frames that miss the gate. That makes it a P95 lever, and P95 is
-# what the gate is. scripts/check-r2-fixed-sqrt.ps1: 12,807,569 inputs,
-# 8,775,610 handled, 0 mismatches.
-NDS_R2_FIXED_SQRT ?= 1
-# R2-02 E2. Pushes the Task 36 rigid-replay command stream to the GX with GXFIFO
-# DMA instead of a CPU store loop. ~4,200 words/frame at Task 103's measured
-# 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
-# happening, which is how the switch plan's §3.3 says traffic work is judged.
-NDS_R2_STAGE_DMA ?= 0
-# R2-02 E7. Composes the sixteen dynamic stage bindings from one hoisted
-# view-projection instead of rebuilding the camera operands per binding. The old
-# path cost 54,901 ticks/frame, 44.6% of the stage preflight, and the arithmetic
-# was never the bulk of it: per binding it ran the camera-cache lookup and three
-# 64-byte MTXCOPY memcpys to produce operands identical for all sixteen.
-# STG P50 224,320 -> 212,480, P95 232,640 -> 219,072.
-#
-# Exact, not approximate. For the battle camera BuildCameraMatrices leaves
-# modelview_valid FALSE and returns projection = MtxMul(lookat, persp), so the
-# old compose was already world x (lookat x persp) -- one multiply, not two --
-# and BuildTask36StageCameraMatrices derives its two halves from the same
-# syMatrixLookAtReflect/syMatrixPerspFast calls, so the hoisted product is
-# bit-identical rather than reassociated. Proven against the pre-E7 arm:
-# binding_composed[] identical for all 42 bindings at frames
-# 260/420/500/700/1100/1700.
-NDS_R2_STAGE_VIEWPROJ ?= 0
-# R2-02 E8, and the switch plan's §7 read literally: "no generic preflight, no
-# stats temporaries". For the five stage segments the Task 36 replay does not
-# serve, the owner preflight clears a 1,292-byte NDSRendererStats, initialises a
-# traversal state, and replays 21 run-level and 16 binding-level state spans --
-# 13,565 ticks/frame for the clears alone and 20,370 for the run spans -- to
-# produce a preflight_stats and a traversal state that, once E1a's prepared run
-# table is valid, nothing reads. The single member that outlives the loop is
-# sync_command_count, which this memoises alongside epoch_mask.
-# Requires NDS_R2_STAGE_DIRECT (it is that memo's guard) and HW_COMPOSE 2.
-NDS_R2_STAGE_PREFLIGHT ?= 0
 # R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
 # shade loop once a frame and counts the frames each changes on. 48,422
 # ticks/frame re-light 541 dense vertices; this says whether they need to.
@@ -93,28 +38,6 @@ NDS_R2_FIGHTER_SHADE_PROOF ?= 0
 # never writes hierarchy_runs[], so that hook measured nothing. Read
 # gNdsR2RunCallCount first; zero means the instrument did not run.
 NDS_R2_FIGHTER_RUN_PROOF ?= 0
-# R2-03 E9. The fighter-parts matrix path converts float -> N64 16.16 -> DS
-# 20.12, and E8 established 97.5% of local-matrix builds take it. The
-# intermediate is a lossless round trip, so the direct conversion is bit-exact
-# by construction, not by tolerance.
-#   1 = direct conversion.
-#   2 = run both and compare, because "by construction" is the kind of claim
-#       E8 proved gets read wrong.
-# Promote 2 -> 1 only on a zero gNdsR2MtxDirectVerifyFail run.
-NDS_R2_FIGHTER_MTX_DIRECT ?= 0
-# R2-03 E12. E5 proved PrepareProductionRun is a pure function of run_index and
-# E11 measured the cost: 45.3 of 60.9 calls a frame re-resolve a texture whose
-# identity never changes, at 1,013 ticks each, because the caller resets
-# texture_prepare_valid per DObj. The memo caches that identity per run and skips
-# SyncTextureTile, the key build, its hash and the lookup -- but still binds,
-# still refreshes the eviction LRU, and revalidates residency, because E5
-# deliberately excluded the cache entry pointer from its stable set.
-#   1 = memo live.
-#   2 = memo never taken; the full path runs and the memo is asked whether it
-#       would have disagreed. E8's key was incomplete three times running and a
-#       verify arm caught it each time.
-# Promote 2 -> 1 only on a zero gNdsR2TexMemoVerifyFail run.
-NDS_R2_FIGHTER_RUN_MEMO ?= 0
 # P2-2 fighter packet. Captures each fighter's whole GX command stream once as
 # packed GXFIFO words (in the battle-idle gSYFramebufferSets) and replays it by
 # DMA every frame, patching only the projection, the joint-chain matrices and
@@ -134,27 +57,6 @@ NDS_R2_FIGHTER_PACKET ?= 1
 # what hardware lighting needs. Rendering-side -- positions now round in hardware
 # -- so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_MTX ?= 0
-# Slice 43. E17 moved the modelview x projection multiply onto the geometry
-# engine; this moves the JOINT chain there too. The c119 attribution puts 52.5
-# ndsRendererMtxMulAffine20p12 calls a frame, 18,560 ticks on 80/80 tail frames,
-# in one loop -- ndsRendererAdapterComposeOwnerWorldsFlat -- and the composed
-# world has exactly one consumer, the GL_MODELVIEW load. The production root loop
-# already stores per-root matrices to the GX palette and binding_parents[i] < i
-# is preorder, so RESTORE(parent) / MTX_MULT_4x4(chain) / STORE(i) rebuilds the
-# tree in the loop's own order with the palette as the parent store.
-# Requires NDS_R2_FIGHTER_HW_MTX.
-#   0 = CPU compose (control arm).
-#   1 = GX compose (shipped; owner-accepted 2026-08-15).
-#   2 = GX compose AND keep the CPU compose, comparing the two per binding.
-#       Costs more than either arm; it exists because "same order, same operands"
-#       is exactly the claim E8 proved gets read wrong.
-# Promote 2 -> 1 only on a zero gNdsR2GxComposeVerifyFail run. That verification,
-# the full-match stack fix, and the owner's matched-tic visual acceptance are now
-# complete, so the accepted route is the default rather than a lab-only bank.
-NDS_R2_FIGHTER_GX_COMPOSE ?= 1
-NDS_R2_FIGHTER_GX_COMPOSE_REQUESTED := $(NDS_R2_FIGHTER_GX_COMPOSE)
-# Explicit controls require this escape and a separate lab output directory.
-NDS_R2_FIGHTER_GX_COMPOSE_LAB ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
 # NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY.
@@ -196,14 +98,6 @@ NDS_R2_STAGE_VALIDATE_STRIDE ?= 0
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_LIGHT ?= 0
-# R2-03 E32. Folds SSB64's hitlag shuffle into the fighter's world matrix
-# instead of switching the whole native owner off for the duration of every hit.
-# The source (ftdisplaymain.c:1205) is one PUSH + syMatrixTra(x, y, 0) + POP
-# around the entire fighter draw, and lbcommon.c:1627 expresses the same effect
-# as an add into the world matrix's translation row -- which is exactly where
-# this puts it, so it is mechanically equivalent rather than an approximation.
-# E31 measured the fallback it removes at 41.9% of the P95 tail's excess.
-NDS_R2_FIGHTER_SHUFFLE_FOLD ?= 0
 # R2-03 E30. Draws the tick HUD's percentile block on screen. The ring is
 # sampled either way, so a GDB-scripted measurement reads exactly the same data
 # with this off -- and off is the configuration that resembles the published
@@ -234,36 +128,7 @@ NDS_R2_DRAW_SUPPRESS_MASK ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
 NDS_RENDERER_BENCHMARK_MODE ?= 0
-NDS_SCENE_MIP_CACHE_LAB ?= 0
-# R2-07 R4c. Select the NATIVE FIGHTER OWNER on the Results path, the renderer
-# the match already uses. `no_oracle` is not a proof switch: it is what
-# reloc_backend_renderer_dl.c:12603 tests to enter the native owner, so it picks
-# the renderer (R4g). The battle present brackets its whole draw
-# (reloc_backend_movement.c:13724/:13810), which is why the match gets the
-# native owner -- while VS Results reached the same submit with no bracket on
-# its path and got the generic DL interpreter at four times the cost.
-#
-# GRADUATED 2026-07-30, owner approved the fighter look on sight ("use the
-# native renderer, it's already been approved"). Measured on the Results lab,
-# matched source: 3.04 -> 1.04 VBlanks per source tic, 1,701,577 -> 581,197
-# ticks, -1,120,380 (-65.9%), which takes Results from 1.52x OVER the 1.12M gate
-# to 0.52x -- inside it. Fighter draw 1,449,776 -> 364,784.
-#
-# Battle is unaffected and that is measured, not assumed: the bracket saves and
-# restores rather than clearing, so it is a no-op wherever the flag is already
-# set, which is the whole battle path. Clean matched-window 128-sample A/B at
-# -StartFrame 600: ALL p95 1,680,064 -> 1,120,384, WORK p95 1,197,760 ->
-# 1,106,112, FTR p95 390,208 -> 391,040 (noise). Evidence in
-# artifacts/performance/r4c-fighter-no-oracle-on-20260730.json and
-# artifacts/visibility/2026-07-30_r207-r4c-*.png.
-NDS_R2_FIGHTER_NO_ORACLE ?= 1
 NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT ?= 0
-NDS_IFCOMMON_HYBRID_OAM ?= 0
-NDS_DEBUG_HUD ?= 0
-ifneq ($(NDS_DEBUG_HUD),0)
-$(error NDS_DEBUG_HUD legacy debug wall is retired; use the focused battle phase HUD)
-endif
-NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 # The shipping free-play ROM carries the freeze watchdog and the exception
 # report (owner, 2026-10-11: a frozen console showed nothing to photograph,
 # and an out-of-memory halt spins silently); every measurement target keeps
@@ -273,8 +138,6 @@ NDS_FREEZE_DIAGNOSTICS ?= $(if $(filter smash64ds,$(TARGET)),1,0)
 # may start this many scanlines before its swap retrace (131 = half a
 # VBlank interval); 0 is the old loop. gNdsPresentLeadLines A/Bs at boot.
 NDS_PRESENT_LEAD ?= 131
-NDS_TASK9_FLOAT_CENSUS ?= 0
-NDS_TASK9_FLOAT_ITCM ?= 1
 # 2026-08-16 ITCM reclaim. Two of the six Task 9 libgcc members are DEAD CODE in
 # ITCM: the port defines __aeabi_fcmpeq/lt/le/ge/gt/un itself, and the Task 9/16
 # --redefine-sym filters below rename libgcc's copies to `*_golden` names, which
@@ -296,15 +159,8 @@ NDS_TASK9_FLOAT_ITCM ?= 1
 # This list is placement-only: the extracted libgcc member is byte-identical
 # and merely retains its original .text section in main RAM.
 NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
-NDS_TASK9_FLOAT_PHASE2 ?= 1
-NDS_TASK16_FLOAT_COMPARE ?= 0
-NDS_TASK16_FLOAT_I2F ?= 0
-NDS_TASK16_FLOAT_ADDSUB ?= 0
-NDS_TASK32_DRAW_HOT_TEXT ?= 0
 NDS_FIGHTER_ANIM_AUDIT ?= 0
-NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
 NDS_TASK39_FX_SPRITES ?= 0
-NDS_TASK39_FX_FLASH ?= 0
 # R2-07: compile the original particle bytecode interpreter (lb/lbparticle.c,
 # ef/efparticle.c) in place and let the real efcommon scripts run instead of the
 # recoloured 16-vertex stand-ins.
@@ -356,20 +212,6 @@ NDS_R2_PARTICLE_DRAW ?= 1
 # full stage collision for the projectile every frame -- and is a separate
 # seam that this does not touch.
 NDS_R2_FIREBALL_QUAD ?= 1
-# The battle camera's matrix chain is Q20.12 only since 2026-10-06: the float
-# arms, the lean levels (NDS_R2_CAMERA_MATRIX_LEAN, shipped level 2) and the
-# route word / SELECT toggle (NDS_R2_CAMERA_FIXED, NDS_R2_CAMERA_FIXED_TOGGLE)
-# were deleted. Their A/Bs: artifacts/performance/2026-08-16_camera-fixedpoint
-# and the 2026-08-09 lean-level notes in battleship_gmcamera.c's history.
-# Draw Fox's source blaster model as its four baked, untextured vertices instead
-# of walking and decoding relocData 316's nine-command display list every
-# frame. Owner-playtested and accepted 2026-08-09; ON BY DEFAULT. The source
-# beam is a solid magenta quad;
-# there is no texture to approximate or upload. The native arm admits only the
-# exact horizontal spawn trajectory used by Fox in the P1 boundary and falls
-# through to the restored source display route after a hop/reflection changes
-# that contract. See reloc_backend_movement.c.
-NDS_R2_FOX_BLASTER_QUAD ?= 1
 # Replace EFCommon script 0x62 with its closed nine-visible-tick size program
 # and upload texture 27 as the source's exact PAL16 16x8 half-disc. The DS
 # texture unit mirrors T in hardware, reproducing the N64 MASKT tile as one
@@ -377,7 +219,7 @@ NDS_R2_FOX_BLASTER_QUAD ?= 1
 # beam quad so the Fox-native lab arm covers the complete shot presentation;
 # it remains independently switchable for attribution A/Bs. Owner-playtested
 # and accepted 2026-08-09; ON BY DEFAULT through the beam route.
-NDS_R2_FOX_BLASTER_GLOW_AOT ?= $(NDS_R2_FOX_BLASTER_QUAD)
+NDS_R2_FOX_BLASTER_GLOW_AOT ?= 1
 # BUGS.md "Fox's pistol model is missing". Fox's gun is model part 13 on joint
 # 17; source draws it by pointing the joint DObj's own `dl` at a display list in
 # reloc asset 0x13b. The DS cannot copy that: ndsFighterDrawPlanResolve rejects
@@ -396,26 +238,6 @@ NDS_R2_FOX_GUN_OVERLAY ?= 1
 # resident atlas row. Owner-playtested and accepted 2026-08-07; ON BY DEFAULT.
 # See include/nds/nds_firegrind.h.
 NDS_R2_FIREGRIND_NATIVE ?= 1
-# Dream Land Whispy native path. BattleShip still owns every root, generator,
-# transform, child particle, update, and ejection; only the final draw selects
-# three preconverted DS-native textures. Owner-playtested and accepted
-# 2026-08-08; ON BY DEFAULT.
-NDS_R2_WHISPY_NATIVE_TEXTURES ?= 1
-# This keeps the source pools and source constructors, but AOT-specializes the
-# three exact Dream Land generator/update scripts and submits their rigid
-# billboards through the fixed-point GX quad path. Route 7 is the measured
-# fastest path. Owner-playtested and accepted 2026-08-08; ON BY DEFAULT.
-NDS_R2_WHISPY_NATIVE_AOT ?= 1
-ifeq ($(NDS_R2_WHISPY_NATIVE_AOT),1)
-ifneq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
-$(error NDS_R2_WHISPY_NATIVE_AOT=1 requires NDS_R2_WHISPY_NATIVE_TEXTURES=1)
-endif
-endif
-ifeq ($(NDS_R2_FOX_BLASTER_GLOW_AOT),1)
-ifneq ($(NDS_R2_WHISPY_NATIVE_AOT),1)
-$(error NDS_R2_FOX_BLASTER_GLOW_AOT=1 requires NDS_R2_WHISPY_NATIVE_AOT=1)
-endif
-endif
 # Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
 # top/center/bottom/width fields from the weapon attributes reloc data -- by a
 # port-side factor at spawn. The source values load straight from ROM reloc
@@ -434,13 +256,6 @@ NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
 # pixel-identical presented-frame A/B is owner-approved, so keep this on by
 # default; setting it to 0 remains the source/interpreted control arm.
 NDS_R2_IMPACT_WAVE_NATIVE ?= 1
-# Source RebirthHalo model (EFCommonEffects3) compiled into DS-native triangle
-# and texture tables. Runtime keeps the source GObj attachment/scale/rotation
-# owner but does no N64 DL/Vtx/CI4/TLUT/I4 conversion for the three halo lists.
-# The visible post-KO +60-frame A/B is pixel-identical and the native path cuts
-# roughly 259K effect-draw ticks per active presented frame, so ship it on by
-# default; setting it to 0 remains the source/interpreted control arm.
-NDS_R2_REBIRTH_HALO_NATIVE ?= 1
 # Bit per generated RebirthHalo group eligible for model-space GX submission.
 # 0x3f is the all-GX experiment; final acceptance may narrow this if the DS
 # transformer's subpixel rounding changes source coverage for a specific group.
@@ -638,24 +453,4 @@ NDS_TASK37_LAYOUT_PROBE ?= 0
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
-ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
-ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
-$(error NDS_TASK9_FLOAT_PHASE2=1 requires NDS_TASK9_FLOAT_ITCM=1)
-endif
-endif
-ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
-ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
-$(error NDS_TASK16_FLOAT_COMPARE=1 requires NDS_TASK9_FLOAT_PHASE2=1)
-endif
-endif
-ifeq ($(NDS_TASK16_FLOAT_I2F),1)
-ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
-$(error NDS_TASK16_FLOAT_I2F=1 requires NDS_TASK9_FLOAT_ITCM=1)
-endif
-endif
-ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
-ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
-$(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
-endif
-endif
 

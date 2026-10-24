@@ -738,8 +738,8 @@ if (($heal7.Count -ne 1) -or ($heal8.Count -ne 1) -or
 # set, bit 15 (FlameRandom) clear, i.e. the burn was exactly half-drawn. No soak
 # could have caught it earlier, because until the same cycle the burn could not
 # happen at all; a use-mask regrade only sees the effects the run can produce.
-# 64/65/66 (Dream Land) left 2026-10-04: NDS_R2_WHISPY_NATIVE_TEXTURES draws
-# them from their own native textures, so their atlas cells were never read.
+# 64/65/66 (Dream Land) left 2026-10-04: Whispy's native path draws them from
+# their own native textures, so their atlas cells were never read.
 foreach ($id in @(0, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27,
                   29, 33, 34, 37, 38, 40, 41, 45)) {
     if (@($report.quads.admitted) -notcontains $id) {
@@ -1168,12 +1168,9 @@ foreach ($banned in @(
 $makefile = [regex]::Replace((Get-Content -LiteralPath $makefilePath -Raw),
     '(?m)^include \$\(PROJECT_ROOT\)/mk/([\w.-]+\.mk)[ \t]*$',
     { param($m) (Get-Content -LiteralPath (Join-Path $root "mk/$($m.Groups[1].Value)") -Raw).TrimEnd("`n") })
+# Whispy's native textures are always staged (their build switches went with
+# P8 G's knob removal).
 foreach ($token in @(
-    'NDS_R2_WHISPY_NATIVE_TEXTURES ?= 1',
-    'NDS_R2_WHISPY_NATIVE_AOT ?= 1',
-    'NDS_R2_WHISPY_NATIVE_AOT=1 requires NDS_R2_WHISPY_NATIVE_TEXTURES=1',
-    "echo '#define NDS_R2_WHISPY_NATIVE_AOT `$(NDS_R2_WHISPY_NATIVE_AOT)'",
-    'ifeq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)',
     '$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin')) {
     if (-not $makefile.Contains($token)) {
         throw "Whispy promoted build guard lost: $token"

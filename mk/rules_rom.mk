@@ -36,7 +36,7 @@ $(NITROFS_DIR)/fighters/preview/%.fpc: $(NDS_PREVIEW_CORE_DIR)/%.fpc
 $(OUTPUT).nds: $(NDS_PREVIEW_NITRO_FILES)
 endif
 
-ifneq ($(filter 1,$(NDS_P2_SHELL_ARGMAX_ROSTER) $(NDS_P2_COMPACT_BATTLE_FIGHTERS)),)
+ifneq ($(filter 1,$(NDS_P2_COMPACT_BATTLE_FIGHTERS)),)
 # Source-exact LOW-detail VSBattle core packs.  These are deliberately
 # separate from the HIGH-only CSS/1P preview packs above: BattleShip's 3/4
 # player path constructs LOW commonparts and falls back to HIGH per joint when

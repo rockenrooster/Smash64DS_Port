@@ -60,15 +60,6 @@ SOURCES := src/nds src/nds/r2 src/nds/net src/port src/import $(BATTLESHIP_SYS)
 # narrow ABI needed by each imported source slice.
 INCLUDES := include $(BATTLESHIP_DECOMP)/src $(BATTLESHIP_SYS)
 
-# Explicit matrix controls must survive canonical target defaults in a lab.
-# Keep the published output protected from this diagnostic escape.
-ifeq ($(NDS_R2_FIGHTER_GX_COMPOSE_LAB),1)
-ifeq ($(strip $(NDS_OUTPUT_ROOT)),$(strip $(PROJECT_ROOT)))
-$(error NDS_R2_FIGHTER_GX_COMPOSE_LAB requires a separate lab NDS_OUTPUT_ROOT)
-endif
-override NDS_R2_FIGHTER_GX_COMPOSE := $(NDS_R2_FIGHTER_GX_COMPOSE_REQUESTED)
-endif
-
 # Profiling must use the native runtime. The old semantic and ablation modes
 # select reference rendering or suppress required drawing; keep them host-only.
 ifeq ($(NDS_RENDERER_PROFILE_LEVEL),2)
@@ -213,24 +204,6 @@ NDS_FTANIM_STREAM_SOURCES := \
 NDS_BATTLEPACK_DIR := $(PROJECT_ROOT)/assets/animation
 NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 
-# Task 3 stage 3 -- the AOT typed track rows the dense fighter-animation runtime
-# steps (`src/nds/nds_ftanim_track.c`).
-#
-# THIS ONE *IS* .rodata, and the reason is the opposite of the battlepack's. The
-# rows do not REPLACE the o2r payload here: both are resident at once, which is
-# what makes the route bit a SAME-BINARY A/B with no placement floor and what
-# lets the stage-4 oracle compare the dense stepper against the generic parser
-# on the same joint of the same frame. That costs image, so it is bounded by
-# measurement rather than by the boot-headroom ladder: static growth comes out
-# of the same bytes as the taskman arena, and `gNdsTaskmanGeneralHeapFreeMin`
-# read 53,136 on the c193 gate arm against the mandated 32,768 B reserve.
-# 12,288 B of rows plus ~3,552 B of cursor blocks leaves ~37,000.
-#
-# `--max-bytes` selects in ASCENDING ASSET ID, which is ascending motion index,
-# so a tight budget buys the common motions rather than a coverage lottery. The
-# admitted clip count and the runtime's own bind/step counters are the coverage
-# figure; nothing here estimates it.
-NDS_R2_FTANIM_TRACK ?= 0
 NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
 
 # P2-2p6 (owner ruling 2026-08-23: "do both"). The fighter pose engine,
@@ -260,11 +233,7 @@ NDS_FT_POSE_ORACLE ?= 0
 NDS_FOX_BLASTER_BORE_OFFSET_Y ?= 0
 NDS_FTANIM_TRACK_MAX_BYTES ?= 12288
 NDS_FTANIM_TRACK_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_ftanim_track_pack.generated.h
-ifeq ($(NDS_R2_FTANIM_TRACK),1)
-NDS_FTANIM_TRACK_PREREQ := $(NDS_FTANIM_TRACK_HEADER)
-else
 NDS_FTANIM_TRACK_PREREQ :=
-endif
 
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
@@ -326,29 +295,10 @@ LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-T,$(NDS_MEMORY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
-ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
 LDFLAGS += -Wl,--undefined=__nds_task9_libgcc_fcmpeq_golden \
 	-Wl,--undefined=__nds_task16_libgcc_fcmpun_golden
-endif
-ifeq ($(NDS_TASK16_FLOAT_I2F),1)
 LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_i2f_golden
-endif
-ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
 LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_fadd_golden
-endif
-
-NDS_TASK9_FLOAT_WRAP_SYMBOLS := \
-	__aeabi_fadd __aeabi_fsub __aeabi_frsub __aeabi_fmul __aeabi_fdiv \
-	__aeabi_fcmpeq __aeabi_fcmplt __aeabi_fcmple __aeabi_fcmpge \
-	__aeabi_fcmpgt __aeabi_fcmpun __aeabi_f2iz __aeabi_f2uiz \
-	__aeabi_i2f __aeabi_ui2f __aeabi_l2f __aeabi_ul2f __aeabi_f2d \
-	__aeabi_d2f __aeabi_dadd __aeabi_dsub __aeabi_drsub __aeabi_dmul \
-	__aeabi_ddiv __aeabi_dcmpeq __aeabi_dcmplt __aeabi_dcmple \
-	__aeabi_dcmpge __aeabi_dcmpgt __aeabi_dcmpun __aeabi_d2iz \
-	__aeabi_i2d __aeabi_ui2d __aeabi_l2d __aeabi_ul2d
-ifeq ($(NDS_TASK9_FLOAT_CENSUS),1)
-LDFLAGS += $(foreach symbol,$(NDS_TASK9_FLOAT_WRAP_SYMBOLS),-Wl,--wrap=$(symbol))
-endif
 
 # Task 9 Phase 1 uses the exact objects from the selected Thumb multilib. The
 # objects contain ARM-state implementations; only their section placement is
@@ -365,7 +315,7 @@ NDS_TASK9_FLOAT_ITCM_MEMBERS := \
 # int->float conversions and __floatsisf (host-checked exact), so the extracted
 # _arm_addsubsf3.o -- otherwise dead Task 16 goldens in ITCM -- has its copies
 # renamed below and lives in main RAM. Needs the Task 16 __aeabi_i2f.
-NDS_P2_FLOAT_CONV ?= $(NDS_TASK16_FLOAT_I2F)
+NDS_P2_FLOAT_CONV ?= 1
 ifeq ($(NDS_P2_FLOAT_CONV),1)
 NDS_TASK9_FLOAT_MAIN_MEMBERS += _arm_addsubsf3.o
 endif

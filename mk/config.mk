@@ -106,20 +106,6 @@ NDS_CAMERA_FRAME_WITNESS ?= 0
 # state, GObjs and top joints live there (include/nds/nds_arm9_wram.h).
 # 0 is the lab control (ARM7 on calico's ds7.ld, the pool on the heap).
 NDS_P2_ARM9_WRAM ?= 1
-# P2-2p8 Phase 1 slice 7: the lean fighter path is the only fighter path and
-# gNdsFtrLeanAdmit 2 is an initialiser (include/nds/renderer_fighter_lean.h
-# NDS_FTR_LEAN_ADMIT_BOOT), so slices 2c-6's lab boot value
-# NDS_FTR_LEAN_ADMIT_DEFAULT and its non-tick-HUD pass NDS_FTR_LEAN_ADMIT_LAB
-# are gone. Admission 0 is a GDB poke on the same ROM at boot:
-# scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals.
-# P2-2p8 Phase 1 slice 2c: 1 compiles the texture cache's exact-key shadow
-# and whole-match identity journal (NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 1,
-# about 29.5 KB of static RAM) that count runtime identity collisions under
-# gNdsTexIdentShadowOn. Lab (tick-HUD) builds only, own build dir -- forced to
-# 0 below for every other target -- so the default tick-HUD ROM keeps the
-# shipping ROM's heap: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
-# BUILD=<own dir> NDS_TEX_IDENT_SHADOW=1`.
-NDS_TEX_IDENT_SHADOW ?= 0
 # P2-2p8 T1 (A7 memory): 1 stages each of the nine VS ground maps (GR<Stage>Map)
 # as a COMPACT map -- the stage wallpaper's Sprite and Bitmap[44] table (776 B)
 # appended, MPGroundData.wallpaper pointing at them -- so the map's extern tree
@@ -147,15 +133,7 @@ NDS_FTR_LEAN_KTIME ?= 0
 # input. 0 restores the bit-exact kernel the lean oracle routes (2/3) grade.
 NDS_FTR_LEAN_RELAXED ?= 1
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
-NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
-# Lab: per-binding stage motion census (renderer_adapter_stage.c); pins
-# _BLOB_RIGID_MASKS. Never in a shipping or gate build.
-NDS_LAB_STAGE_BINDING_CENSUS ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
-# Task 49 GX equivalence differ capture (Part 2 instrument). Records the
-# per-owner GX stream word-for-word for host-side profile-0-vs-profile-1
-# diffing. Lab-only; built via command line, never in a shipping target.
-NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
 # R2-07 E2. Route each stage segment to Task 36 replay or the live path at
 # RUNTIME, in one binary, so the second-entry corruption can be attributed to a
@@ -166,32 +144,6 @@ NDS_TASK36_HW_COMPOSE ?= 0
 # is cache-placement sensitive and that has already confused two comparisons.
 NDS_R2_STAGE_ROUTE_PROBE ?= 0
 
-# Task 53: default-off re-activation guard for the Task 36 rigid-stage
-# replay path. The robust downward-stepping arena allocator at
-# src/port/diagnostics.c:7368 secures anywhere from the 0x130000 floor
-# (after stepping down from NDS_TASKMAN_ARENA_SIZE) up to the full
-# arena; the legacy exact-arena guard at src/nds/nds_renderer.c:4223
-# was a stale "pristine environment only" check. Setting this flag to 1
-# relaxes the guard; the published and tick-HUD target blocks don't
-# override it (default 0 keeps the published ROM 1818AA77-sh equivalent).
-NDS_TASK53_REPLAY_ARENA_FIX ?= 0
-# Task 55: redundant state-write elision at capture. GFX_COLOR/GFX_TEX_COORD
-# are persistent geometry-engine state; ndsRendererNativeStageEmitNoZVertex
-# (src/nds/nds_renderer.c:20448) re-writes color unconditionally per vertex.
-# E0 measured 618/1197 of those state words (COLOR 556 + TEX_COORD 62) as
-# identical to the immediately preceding write -- pure redundancy. Setting
-# this flag to 1 elides them at capture so owner->words[] is 20.6% smaller
-# and bit-identical render (lossless). Default 0 keeps the published ROM
-# byte-identical; the published/tick-HUD blocks do NOT override it.
-#
-# CLOSED, do not reopen as a gate lever (PERF_LEDGER, "Task 55 ... STOP"). It is
-# lossless in the replay buffer and it still fails twice: STG -4,224 against
-# OTHR +7,616, because a COLOR/TEX_COORD write updates a state register and does
-# not trigger a vertex transform -- the stage floor is the 606 VERTEX16
-# transforms and nothing else -- and the owner's visual A/B found surfaces
-# PULSATING IN COLOR at 1. The surviving finding is the one Task 56 acts on:
-# only fewer VERTEX16 commands move that floor.
-NDS_TASK55_STAGE_GEOM ?= 0
 # Task 56: fighter DS-native primitive streams. Compiles the immutable Mario/Fox
 # topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one
 # GFX_BEGIN per primitive group + an N+2-vertex strip sequence) instead of the
@@ -244,19 +196,6 @@ NDS_TASK51_STAGE_NATIVE ?= 0
 # Default off; the published ROM stays byte-identical at 0. Ship-ready only
 # once the owner's visual A/B + perf A/B (Commit 5 KEEP gate) clears.
 NDS_DREAMLAND_DS_MESH ?= 0
-# Task 63 §5: Dream Land backdrop-card cull *visualization*. Lets the owner see
-# what an authorised scenery reduction would actually cost before deciding.
-# Compiles in a 64-bit run mask (gNdsDreamLandCardCullMask) that suppresses
-# whole projected-no-Z stage runs; the mask defaults to 0, so flag=1 with an
-# unset mask renders identically to flag=0. Lab instrument, never shipped.
-NDS_DREAMLAND_CARD_CULL ?= 0
-# Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
-# is the *instrumentation* level within profiles 1 and 2 and keeps its
-# existing values (0 lean, 1 phase timers, 2 full oracle).
-#   0 = DS-native precompiled path (Tasks 51/52; not implemented yet)
-#   1 = today's shipping translation path -- the correctness oracle
-#   2 = instrumented / semantic oracle build of that same path
-NDS_BATTLE_PROFILE ?= 1
 # P2-2p8 joint-cap lab arm (owner 2026-09-16: test builds of experimental
 # optimizations are allowed). 0 = the shipping skeleton. N > 0 prunes every
 # common-part DObj whose container index is >= N at fighter setup, which is a
@@ -307,32 +246,12 @@ NDS_FTPARTS_FLAT_MAX ?= 96
 # else. Measured delta solves for the uncached-word cost that every VRAM
 # candidate in the ranking is quoted against.
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
-# R2-03 E46. Places the whole fighter state-delta path in ITCM. The switch is
-# already there (0x01ff9934 in the census ELF); the span loop (0x02003a14) and
-# the Record* helpers it calls (0x0200d4e8) are not, so every one of the
-# before-span's 134.5 applications a frame leaves zero-wait ITCM for
-# icache-served main RAM. Historical admission was ~1,088 bytes; the old
-# 2,912-free estimate is superseded by the 2026-09-09 linker witness: .itcm was
-# 0x8018 against its 0x7fe0 region (56 B over), and moving the 0xfc-byte
-# ndsMPLineExtentRejects body back to cached main RAM leaves .itcm=0x7f20,
-# 192 B free. Placement only -- no behaviour change.
-NDS_R2_DELTA_PATH_ITCM ?= 0
 # R2-04 E1. Task 75 absorption: keeps each fighter animation's byte-swapped
 # pre-fixup payload resident so the frame that needs a move does not re-walk
 # NitroFS and re-read the cartridge. E0 measured 53 of 82 force-loads (64.6%)
 # repeating an asset already loaded, over a working set of 29 distinct
 # animations. Every failure path degrades to the uncached load.
 NDS_R2_ANIM_CACHE ?= 0
-# R2-06 E13. Apply ndsRelocNormalizeFighterAObj16File to each warmed animation
-# ONCE, at warm time, so the force-load path can skip it. Cycle 107 priced that
-# pass at 10,236,800 ticks a match -- 16.2% of the SINT excursion, ~29,000 per
-# force-load frame -- and E11's rule is that a load-frame cost can only be banked
-# by moving it off the frame, not by making it faster. The transform is
-# position-independent (it reads offsets and never touches the pointer table),
-# and nothing runs between the internal fixups and it, so warm time and load time
-# see identical bytes. Requires NDS_R2_ANIM_CACHE. Declines are per asset and
-# fall back to today's path; see the block comment in reloc_backend_assets.c.
-NDS_R2_AOBJ16_PREBAKE ?= 0
 # Native Battle Kernel slice 1 phase 5. The resident figatree pack: one fighter's
 # clips linked into .rodata in the parser's own byte order, with per-slot tables
 # of blob-relative offsets, so an action change resolves to a const pointer
@@ -369,10 +288,6 @@ NDS_R2_AOBJ16_PREBAKE ?= 0
 # `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md` is the
 # pool history; the 2026-08-15 stress battery is in ARENA_PRICE.md.
 NDS_R2_BATTLEPACK ?= 1
-# Source-normalized AObj16 clips remain in NitroFS and are read directly into
-# each fighter's existing figatree heap on a cache miss. Unlike the resident
-# BattlePack this spends no scene RAM and covers every landed fighter family.
-NDS_R2_FTANIM_STREAM ?= 1
 # The arm that isolates the pack from the cache it displaces. Phase 8 measured
 # the resident pack at 2.9x the gate and attributed all of it to the carve
 # DELETING the raw file cache (262,144 -> 4,096 B; Rejects 0 -> 126); the
@@ -897,29 +812,6 @@ NDS_P2_STAGE_YAMABUKI ?= 0
 NDS_P2_STAGE_INISHIE ?= 0
 # P2-4 stage 8: Sector Z (Sector), the largest stage in the game.
 NDS_P2_STAGE_SECTOR ?= 0
-# P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
-#
-# `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
-# NDS_P2_FOUR_CPU_STRESS and, in nds_match_config.c's own words, "bypasses
-# PlayersVS". The shell is a different entry path -- its character select makes
-# every selectable kind's main files resident for the live previews, and its
-# larger ARM9 binary leaves a SMALLER scene arena -- so a four-kind figure from
-# that arm does not predict one from the shell, and until this flag existed
-# nobody had ever run four distinct kinds through the shipped menus at any
-# roster.
-#
-# 1 seeds the P2-1a descriptor with the measured pack argmax over landed content.
-# Since the 2026-09-10 semantic-pack census that is Donkey human plus
-# Captain/Link/Kirby level-3 CPUs: the VRAM-resolved lower endpoint is the
-# largest of all 793 one-through-four-kind sets, so a shell capacity proof does
-# not depend on unresolved costume-bank bytes.
-# The CSS walk presses START without disturbing the four seeded slots. It changes
-# nothing else: the whole shell runs, the battle loads whatever the CSS committed,
-# and the arena spends what it spends.
-# Deliberately NOT folded into NDS_P2_FOUR_CPU_ROSTER -- one flag naming two
-# different rosters on two different entry paths is how a measurement gets
-# attributed to the wrong arm.
-NDS_P2_SHELL_ARGMAX_ROSTER ?= 0
 NDS_P2_COMPACT_BATTLE_FIGHTERS ?= 0
 # P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
 #
@@ -934,11 +826,6 @@ NDS_P2_COMPACT_BATTLE_FIGHTERS ?= 0
 # suspected loader fault against known-good tables -- not because it is a
 # supported shipping configuration. It does not fit a four-name roster.
 NDS_NATIVE_OWNER_IMAGE ?= 1
-# The proof arm for the flag above. 1 keeps the arrays AND loads the image,
-# then compares them member by member at fighter creation. It is only
-# meaningful with NDS_NATIVE_OWNER_IMAGE=0 -- with the arrays guarded out
-# there is nothing to compare against, and the compare compiles to nothing.
-NDS_NATIVE_OWNER_IMAGE_VERIFY ?= 0
 NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LUIGI),0)
 NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
 NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
@@ -972,13 +859,6 @@ NDS_NATIVE_OWNER_IMAGE_GDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(ND
 # Master Hand (P2-6): the boss owner export tests this flag in the generated
 # owner include; he rides the 1P Game flag like his reloc files.
 NDS_NATIVE_OWNER_IMAGE_BOSS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_1P_GAME),0)
-# P2-3 focused fighter-production proof selector. -1 leaves the canonical
-# Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
-# nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
-# It does NOT admit assets by itself: Luigi is therefore exercised with
-# NDS_P2_LUIGI=1 NDS_P2_PROOF_FIGHTER0=4, and later fighters reuse this same
-# descriptor seam behind their own production flags.
-NDS_P2_PROOF_FIGHTER0 ?= -1
 # Ness Up-B VFX-only proof.  This keeps the normal Ness source-special tour's
 # immediate PK Thunder self-hit steering unchanged; when enabled, the proof
 # controller lets PK Thunder fly naturally so head, spawned trail and attached
@@ -991,9 +871,7 @@ ifeq ($(NDS_P2_NESS_VFX_PROOF),1)
 ifneq ($(NDS_P2_NESS),1)
 $(error NDS_P2_NESS_VFX_PROOF=1 requires NDS_P2_NESS=1)
 endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),11)
-$(error NDS_P2_NESS_VFX_PROOF=1 requires NDS_P2_PROOF_FIGHTER0=11)
-endif
+$(error NDS_P2_NESS_VFX_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
 endif
 # Yoshi BUGS.md visual proof.  This is a controller-only verifier arm: the
 # source game still owns SpecialHi / SpecialN statuses, EggThrow, EggLay,
@@ -1006,9 +884,7 @@ ifeq ($(NDS_P2_YOSHI_BUG_PROOF),1)
 ifneq ($(NDS_P2_YOSHI),1)
 $(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_YOSHI=1)
 endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),6)
-$(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_PROOF_FIGHTER0=6)
-endif
+$(error NDS_P2_YOSHI_BUG_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
 endif
 # P2-3f47 final Kirby runtime proof. The ordinary focused selector above only
 # changes player 0; Kirby's copy-hat acceptance specifically needs Link as the
@@ -1025,131 +901,6 @@ $(error NDS_P2_KIRBY_COPYLINK_PROOF=1 requires NDS_P2_KIRBY=1)
 endif
 ifneq ($(NDS_P2_LINK),1)
 $(error NDS_P2_KIRBY_COPYLINK_PROOF=1 requires NDS_P2_LINK=1)
-endif
-endif
-# P2-3 Samus source-state tour.  This is a proof-only guest driver layered on
-# the existing mode-163 controller playback.  It may stage geometry/damage
-# preconditions in guest code so writes are ARM9-cache coherent, but it never
-# assigns fighter status/motion or calls a status setter: BattleShip collision
-# and common-state interrupts must select every accepted ledge/tumble state.
-NDS_P2_SAMUS_STATE_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_SAMUS_STATE_TOUR)),$(NDS_P2_SAMUS_STATE_TOUR))
-$(error NDS_P2_SAMUS_STATE_TOUR must be 0 or 1)
-endif
-NDS_P2_SAMUS_TUMBLE_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_SAMUS_TUMBLE_TOUR)),$(NDS_P2_SAMUS_TUMBLE_TOUR))
-$(error NDS_P2_SAMUS_TUMBLE_TOUR must be 0 or 1)
-endif
-NDS_P2_SAMUS_DAMAGEFLY_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_SAMUS_DAMAGEFLY_TOUR)),$(NDS_P2_SAMUS_DAMAGEFLY_TOUR))
-$(error NDS_P2_SAMUS_DAMAGEFLY_TOUR must be 0 or 1)
-endif
-NDS_P2_SAMUS_ATTACK_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_SAMUS_ATTACK_TOUR)),$(NDS_P2_SAMUS_ATTACK_TOUR))
-$(error NDS_P2_SAMUS_ATTACK_TOUR must be 0 or 1)
-endif
-# P2-3 LinkBomb source-lifecycle proof.  The guest driver feeds ordinary
-# controller input only; BattleShip must select SpecialLw, manufacture the
-# shared item, throw it, run the critical fuse/explosion and destroy it.
-NDS_P2_LINK_BOMB_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_LINK_BOMB_TOUR)),$(NDS_P2_LINK_BOMB_TOUR))
-$(error NDS_P2_LINK_BOMB_TOUR must be 0 or 1)
-endif
-NDS_P2_LINK_SPECIAL_TOUR ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_LINK_SPECIAL_TOUR)),$(NDS_P2_LINK_SPECIAL_TOUR))
-$(error NDS_P2_LINK_SPECIAL_TOUR must be 0 or 1)
-endif
-ifeq ($(NDS_P2_LINK_SPECIAL_TOUR),1)
-ifneq ($(NDS_P2_LINK),1)
-$(error NDS_P2_LINK_SPECIAL_TOUR=1 requires NDS_P2_LINK=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),5)
-$(error NDS_P2_LINK_SPECIAL_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=5)
-endif
-ifneq ($(NDS_P2_LINK_BOMB_TOUR),0)
-$(error Link special and LinkBomb tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
-$(error Link special and Samus state tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_TUMBLE_TOUR),0)
-$(error Link special and Samus tumble tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
-$(error Link special and Samus damage-fly tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_ATTACK_TOUR),0)
-$(error Link special and Samus attack tours are separate proof arms)
-endif
-endif
-ifeq ($(NDS_P2_LINK_BOMB_TOUR),1)
-ifneq ($(NDS_P2_LINK),1)
-$(error NDS_P2_LINK_BOMB_TOUR=1 requires NDS_P2_LINK=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),5)
-$(error NDS_P2_LINK_BOMB_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=5)
-endif
-ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
-$(error LinkBomb and Samus state tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_TUMBLE_TOUR),0)
-$(error LinkBomb and Samus tumble tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
-$(error LinkBomb and Samus damage-fly tours are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_ATTACK_TOUR),0)
-$(error LinkBomb and Samus attack tours are separate proof arms)
-endif
-endif
-ifeq ($(NDS_P2_SAMUS_ATTACK_TOUR),1)
-ifneq ($(NDS_P2_SAMUS),1)
-$(error NDS_P2_SAMUS_ATTACK_TOUR=1 requires NDS_P2_SAMUS=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),3)
-$(error NDS_P2_SAMUS_ATTACK_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=3)
-endif
-ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
-$(error NDS_P2_SAMUS_ATTACK_TOUR and NDS_P2_SAMUS_STATE_TOUR are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_TUMBLE_TOUR),0)
-$(error NDS_P2_SAMUS_ATTACK_TOUR and NDS_P2_SAMUS_TUMBLE_TOUR are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
-$(error NDS_P2_SAMUS_ATTACK_TOUR and NDS_P2_SAMUS_DAMAGEFLY_TOUR are separate proof arms)
-endif
-endif
-ifeq ($(NDS_P2_SAMUS_TUMBLE_TOUR),1)
-ifneq ($(NDS_P2_SAMUS),1)
-$(error NDS_P2_SAMUS_TUMBLE_TOUR=1 requires NDS_P2_SAMUS=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),3)
-$(error NDS_P2_SAMUS_TUMBLE_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=3)
-endif
-ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
-$(error NDS_P2_SAMUS_TUMBLE_TOUR and NDS_P2_SAMUS_STATE_TOUR are separate proof arms)
-endif
-ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
-$(error NDS_P2_SAMUS_TUMBLE_TOUR and NDS_P2_SAMUS_DAMAGEFLY_TOUR are separate proof arms)
-endif
-endif
-ifeq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),1)
-ifneq ($(NDS_P2_SAMUS),1)
-$(error NDS_P2_SAMUS_DAMAGEFLY_TOUR=1 requires NDS_P2_SAMUS=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),3)
-$(error NDS_P2_SAMUS_DAMAGEFLY_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=3)
-endif
-ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
-$(error NDS_P2_SAMUS_DAMAGEFLY_TOUR and NDS_P2_SAMUS_STATE_TOUR are separate proof arms)
-endif
-endif
-ifeq ($(NDS_P2_SAMUS_STATE_TOUR),1)
-ifneq ($(NDS_P2_SAMUS),1)
-$(error NDS_P2_SAMUS_STATE_TOUR=1 requires NDS_P2_SAMUS=1)
-endif
-ifneq ($(NDS_P2_PROOF_FIGHTER0),3)
-$(error NDS_P2_SAMUS_STATE_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=3)
 endif
 endif
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the

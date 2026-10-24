@@ -1463,11 +1463,9 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
 """)
 
     # ---- nds_match_config ---------------------------------------------------
+    # (The slot-0 proof fighter selector, NDS_P2_PROOF_FIGHTER0, is gone: no
+    # proof-fighter #error row.)
     mc = "src/port/nds_match_config.c"
-    T.insert_after_block(mc, f"NDS_P2_PROOF_FIGHTER0 == {P['kind']} && !{PF}", f'#error "{PN} proof fighter requires {PF}=1"', f"""#if NDS_P2_PROOF_FIGHTER0 == {S['kind']} && !{F}
-#error "{N} proof fighter requires {F}=1"
-#endif
-""")
     adm = re.search(r"#define NDS_P2_KIND_ADMITTED\(k\) \\\n(?:.*\\\n)*.*\)\)\n", T.text(mc).replace("\r\n", "\n")).group(0)
     if F not in adm:
         T.replace(mc, adm, adm.rstrip("\n").rstrip(")") + f" || \\\n     ((k) == {S['kind']} && {F}))\n")

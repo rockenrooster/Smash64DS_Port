@@ -651,7 +651,6 @@ endif
 # compact clip is the authoritative acquisition path. AObj32 entry/effect files
 # remain on the ordinary reloc loader and are restored after the prefix filter.
 NDS_FTANIM_STREAM_REPLACED_RELOC_FILES :=
-ifeq ($(NDS_R2_FTANIM_STREAM),1)
 NDS_FTANIM_STREAM_PATTERNS := \
 	reloc_animations/FTMarioAnim% \
 	reloc_animations/FTFoxAnim% \
@@ -711,7 +710,6 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := $(filter-out \
 NDS_P2_FIGHTER_RELOC_FILES := $(filter-out \
 	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_P2_FIGHTER_RELOC_FILES_FULL)) \
 	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
-endif
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -831,7 +829,6 @@ NDS_VSBATTLE_RELOC_FILES := \
 	reloc_misc_named/SYKseg1Validate
 
 NDS_VS_RESULTS_RELOC_FILES :=
-ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
 NDS_VS_RESULTS_RELOC_FILES := \
 	reloc_menus/MNVSResults \
 	reloc_fighters_common/FTEmblemModels \
@@ -896,7 +893,6 @@ endif
 ifeq ($(NDS_P2_1P_GAME),1)
 NDS_VS_RESULTS_RELOC_FILES += $(NDS_1P_DEMO_RELOC_FILES)
 endif
-endif
 
 NDS_STARTUP_RELOC_FILES := \
 	reloc_misc_named/N64Logo
@@ -912,7 +908,6 @@ NDS_AUDIO_FILES := \
 	audio/fgm_ucd
 
 NDS_AUDIO_DERIVED_FILES :=
-ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_BGM),1)
 NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_pupupu_ima.bin \
 	audio/bgm_win_mario_ima.bin \
@@ -1040,7 +1035,6 @@ NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_training_mode_ima.bin \
 	audio/bgm_data_ima.bin
 endif
-endif
 
 # Superseded BGM assets can survive an incremental build-directory reuse and
 # are otherwise silently repacked by ndstool. The two Mushroom Kingdom PCM16
@@ -1167,9 +1161,7 @@ export NDS_NITROFS_FTANIM_FILES :=
 ifeq ($(NDS_R2_FTANIM_DENSE),1)
 NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
 endif
-ifeq ($(NDS_R2_FTANIM_STREAM),1)
 NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/animation/ftanim_stream_pack.bin
-endif
 
 # Slice 1 phase 5's resident figatree pack. Empty unless a reader is compiled
 # in, for the same reason as the bank above: without NDS_R2_BATTLEPACK it is
@@ -1184,10 +1176,8 @@ ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
 	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin \
 	$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin
-ifeq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin
-endif
 ifeq ($(NDS_P2_STAGE_HYRULE),1)
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grhyrule_native.ds.bin

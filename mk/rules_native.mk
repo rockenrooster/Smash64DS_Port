@@ -619,6 +619,5 @@ $(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
 endif
 
 ifneq ($(NDS_TICK_HUD),1)
-override NDS_TEX_IDENT_SHADOW := 0
 override NDS_FTR_LEAN_KTIME := 0
 endif

@@ -2,7 +2,7 @@ param([string]$Build = 'build-prof-s67', [string]$Tag = 's67p', [int[]]$Slots = 
       [string]$Set = 'all', [int]$StartFrame = 200, [int]$Frames = 384, [switch]$NoSplit)
 # P0's profile census (docs/P8/P8_PLAN.md section 5) on a profiling ROM built
 # with the census window (build_gate_rom.ps1 -Extra NDS_TASK37_PROFILE=1,
-# NDS_BATTLE_PROFILE=1, NDS_TASK37_PROFILE_START=200, NDS_TASK37_PROFILE_FRAMES=384,
+# NDS_TASK37_PROFILE_START=200, NDS_TASK37_PROFILE_FRAMES=384,
 # and NDS_TASK37_PROFILE_PER_FRAME_REGION=1 unless -NoSplit; the census refuses
 # another window): the cast and the heavy roster on all sixteen VS stages, the
 # four mixes on Hyrule Temple and Saffron City. Each run is one

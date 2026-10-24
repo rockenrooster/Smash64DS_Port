@@ -122,14 +122,12 @@ endif
 ifeq ($(NDS_P2_STAGE_SECTOR),1)
 CFILES += battleship_grsector_ground.c
 endif
-ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
 # not in CFILES at all, so a published ROM's link input set is unchanged rather
 # than merely equivalent.
 ifeq ($(NDS_R2_HWMATH_ROUTE),1)
 CFILES += nds_r2_sqrtf_arm.c
-endif
 endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
 CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
@@ -146,14 +144,8 @@ endif
 ifeq ($(NDS_R2_HWMATH_BENCH),1)
 CFILES += nds_r2_hwmath_bench.c
 endif
-# Conditional so a published ROM stays byte-identical: at flag 0 the TU is not
-# linked at all, rather than linked as ten `used` counters nothing writes.
-ifeq ($(NDS_R2_FTANIM_TRACK),1)
-CFILES += nds_ftanim_track.c
-endif
 CFILES += nds_shield_pose.c
 CFILES += nds_ft_pose.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 # ...and the real bodies for two of that file's weak stubs.
 # ftParamProcPauseEffect and ftParamProcResumeEffect were no-ops there, so
@@ -162,7 +154,6 @@ CFILES += battleship_ftcommon_normal_moveset.c
 # textually included: the decomp region also defines ftParamProcStopEffect,
 # which already has a strong port definition and would collide.
 CFILES += battleship_ftparam_effectprocs.c
-endif
 ifneq ($(filter 1,$(NDS_P2_MENU_SHELL) $(NDS_P2_1P_GAME)),)
 # These source menus need no campaign fighter or stage runtime.
 CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c battleship_mnscreenadjust.c
@@ -429,9 +420,7 @@ CFILES += battleship_ftstatus_callback_aliases.c \
 	battleship_ftcommon_shieldbreakstand.c \
 	battleship_ftcommon_furafura.c
 endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_FTCOMPUTER),1)
 CFILES += battleship_ftcomputer.c battleship_ftcomputer_fixed.c
-endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_gmcamera_fixed.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battleship_ftcommon_sleep.c \
@@ -439,43 +428,26 @@ CFILES += battleship_gmcamera.c battleship_gmcamera_fixed.c battleship_ftcommon_
 	battleship_grwallpaper.c \
 	battle_playable_compat_stubs.c
 endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
 CFILES += battleship_lbtransition.c battleship_mnvsresults.c \
 	battleship_mnvsresults_spot.c \
 	battleship_scsubsysfighter.c battleship_scsubsysdata.c
-endif
 CFILES += battleship_ifscreenflash.c
 CFILES += battleship_lbfade.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
 CFILES += nds_battle_hud.c
 # P3 local multiplayer (include/nds/nds_net.h).
 CFILES += nds_net_link.c nds_net_session.c nds_net_lobby.c nds_net_ui.c nds_net_autopilot.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER),1)
 CFILES += battleship_wpmanager_core.c
-endif
-ifneq ($(filter 1,$(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL) $(NDS_IMPORT_BATTLESHIP_FOX_BLASTER) $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI) $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)),)
 CFILES += battleship_special_common.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL),1)
 CFILES += battleship_mario_fireball.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_BLASTER),1)
 CFILES += battleship_fox_blaster.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
 CFILES += battleship_efmanager.c
-endif
 # efground.c owns every VS stage's background actors (Lakitu, Sector rocket /
 # ship, Jungle bird, Zebes Ridley / ship, Yoster clouds and birds, Bronto Burt
 # / Dedede, Saffron birds); grcommonsetup.c:34 summons them at every stage
 # start, so this TU is unconditional like the grounds that stage them.
 CFILES += battleship_efground.c
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
-ifneq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
-$(error NDS_R2_PARTICLE_RUNTIME=1 requires NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1: ef/efdisplay.c owns the efcommon bank request)
-endif
 # The generated pack is in the build now (src/nds/generated/
 # nds_particle_banks.generated.inc, verified byte-reproducing by
 # check-nds-particle-banks.ps1), so nds_particle_banks_placeholder.c is gone --
@@ -497,9 +469,7 @@ CFILES += battleship_lbparticle.c
 # lbParticleDrawTextures.
 CFILES += nds_firegrind.c
 endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
-endif
 # Fox's blaster model part, as data. Unconditional because the module's whole
 # body is inside #if NDS_R2_FOX_GUN_OVERLAY -- at 0 it compiles to nothing and
 # costs no ROM, which is cheaper to reason about than a second flag in the file
@@ -514,18 +484,10 @@ CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c nds_p7_unlocks.c 
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif
-ifneq ($(filter 1,$(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI) $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)),)
 CFILES += battleship_ftcommon_fallspecial.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI),1)
 CFILES += battleship_mario_special_hi.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW),1)
 CFILES += battleship_mario_special_lw.c
-endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI),1)
 CFILES += battleship_fox_special_hi.c
-endif
 CFILES += battleship_ftmain.c
 # grModelSetupGroundDObjs is shared stage-model setup, not Mushroom Kingdom
 # specific: Congo Jungle builds its barrel cannon with it too
@@ -537,21 +499,13 @@ CFILES += battleship_grmodelsetup.c
 endif
 CPPFILES :=
 SFILES := coroutine_arm.s
-ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 SFILES += nds_task9_float_phase2.s
-endif
-ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
 SFILES += nds_task16_float_compare.s
-endif
-ifeq ($(NDS_TASK16_FLOAT_I2F),1)
 SFILES += nds_task16_float_i2f.s
-endif
 ifeq ($(NDS_P2_FLOAT_CONV),1)
 CFILES += nds_float_conv.c
 endif
-ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
 SFILES += nds_task16_float_addsub.s
-endif
 ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
 SFILES += nds_freeze_diagnostics_irq.s
@@ -578,7 +532,7 @@ endif
 
 export LD := $(CC)
 export OFILES := \
-	$(if $(filter 1,$(NDS_TASK9_FLOAT_ITCM)),$(NDS_TASK9_FLOAT_ITCM_OFILES)) \
+	$(NDS_TASK9_FLOAT_ITCM_OFILES) \
 	$(NDS_TASK37_ITCM_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) \

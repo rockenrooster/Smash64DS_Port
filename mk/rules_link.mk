@@ -133,15 +133,9 @@ NDS_FTANIM_STREAM_PRUNE_FILES := $(filter-out \
 	$(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),\
 	$(NDS_FTANIM_STREAM_REPLACED_RELOC_FILES))
 prune-streamed-ftanim:
-ifeq ($(NDS_R2_FTANIM_STREAM),1)
 	@rm -f \
 		$(foreach file,$(NDS_FTANIM_STREAM_PRUNE_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 		$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
-else
-	@rm -f \
-		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin \
-		$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
-endif
 
 # The prune must finish before Make decides whether any retained reloc target
 # needs its normal copy recipe. This also prevents two concurrent cp processes
@@ -212,7 +206,7 @@ $(OUTPUT).elf: $(OFILES) \
 	$(NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC) \
 	$(NDS_NATIVE_STAGE_BONUS2_PURIN_INC) \
 	$(NDS_NATIVE_STAGE_BONUS2_NESS_INC) \
-	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
+	$(NDS_BATTLE_HUD_INC) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC)) \
 	$(NDS_NATIVE_ACTOR_YOSTER_PACKET) \
@@ -318,7 +312,6 @@ scene_backend.o: $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER)
 # intact and scrub only this oversized make-only variable when a shell must
 # launch a native tool for the private ITCM archive work below.
 NDS_SHELL_DEVKIT_ENV := env -u NDS_NITROFS_RELOC_FILES
-ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-libgcc-file-name)
 NDS_TASK9_FLOAT_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Keep the installed archive out of Make's prerequisite graph: `make -B` would
@@ -338,19 +331,19 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 	@for member in $(NDS_TASK9_FLOAT_ITCM_MEMBERS); do \
 		stem="$${member%.o}"; \
 		phase2_filter=""; \
-		if test "$(NDS_TASK9_FLOAT_PHASE2)" = "1" && test "$$member" = "_arm_cmpsf2.o"; then \
+		if test "$$member" = "_arm_cmpsf2.o"; then \
 			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_task9_libgcc_fcmpeq_golden"; \
 		fi; \
-		if test "$(NDS_TASK16_FLOAT_COMPARE)" = "1" && test "$$member" = "_arm_cmpsf2.o"; then \
+		if test "$$member" = "_arm_cmpsf2.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmplt=__nds_task16_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_task16_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_task16_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_task16_libgcc_fcmpgt_golden"; \
 		fi; \
-		if test "$(NDS_TASK16_FLOAT_COMPARE)" = "1" && test "$$member" = "_arm_unordsf2.o"; then \
+		if test "$$member" = "_arm_unordsf2.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmpun=__nds_task16_libgcc_fcmpun_golden"; \
 		fi; \
-		if test "$(NDS_TASK16_FLOAT_ADDSUB)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+		if test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fadd=__nds_task16_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_task16_libgcc_fsub_golden"; \
 		fi; \
-		if test "$(NDS_TASK16_FLOAT_I2F)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+		if test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden"; \
 		fi; \
 		if test "$(NDS_P2_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
@@ -365,7 +358,6 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 			".task9-float-itcm/$$member" "$$out" || exit $$?; \
 	done
 	@rm -rf ".task9-float-itcm"
-endif
 ifneq ($(strip $(NDS_TASK37_ITCM_OFILES)),)
 NDS_TASK37_LIBC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libc.a)
 NDS_TASK37_LIBM := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)
