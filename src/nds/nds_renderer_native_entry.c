@@ -3504,10 +3504,20 @@ NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
             {
                 late[slot] |= 4u;
             }
-            else if (((root >= NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST) &&
-                      (root < NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST)) ||
-                     ((root >= NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) &&
-                      (root < NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST)))
+            /* Kirby's entry warp star is the cutter roots' last (the
+             * generator appends it so the cutters' ordinals stay): an entry
+             * image, wanted before GO like the six entries' above. As a
+             * gameplay image it came after every entry image, and since the
+             * stage's images go first (S6) Hyrule Castle had no room left
+             * for it: Dedede, who enters on Kirby's star, entered without it
+             * beside Bowser, Crash and Ike (NO_PROGRAM, then REJECTED, 30
+             * frames each). */
+            else if ((root != NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST +
+                                  NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_COUNT - 1u) &&
+                     (((root >= NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST) &&
+                       (root < NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST)) ||
+                      ((root >= NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) &&
+                       (root < NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST))))
             {
                 late[slot] |= 2u;
             }
