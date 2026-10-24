@@ -1709,14 +1709,14 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
     {
         return NULL;
     }
-    sNdsRendererRuntimeFrameSummary.texture_lookup_call_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_lookup_call_count++);
     entry = (NDSRendererHardwareTextureCacheEntry *)
         sNdsRendererHardwareActiveTextureEntry;
     if ((entry != NULL) && (entry->ready != 0u) &&
         (entry->key_hash == key_hash) &&
         (ndsRendererHardwareEntryKeyEqual(entry, key) != FALSE))
     {
-        sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count++;
+        NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count++);
         return entry;
     }
 
@@ -1725,7 +1725,7 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
     {
         u32 value = sNdsRendererHardwareTextureLookup[slot];
 
-        sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count++;
+        NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count++);
         if (value == NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY)
         {
             break;
@@ -1734,13 +1734,13 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
         if ((entry->ready != 0u) && (entry->key_hash == key_hash) &&
             (ndsRendererHardwareEntryKeyEqual(entry, key) != FALSE))
         {
-            sNdsRendererRuntimeFrameSummary
-                .texture_lookup_table_hit_count++;
+            NDS_DIAG(sNdsRendererRuntimeFrameSummary
+                .texture_lookup_table_hit_count++);
             return entry;
         }
         slot = (slot + 1u) & (NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT - 1u);
     }
-    sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count++);
     return NULL;
 }
 

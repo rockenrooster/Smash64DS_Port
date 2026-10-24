@@ -224,15 +224,16 @@ static inline void ndsRendererFastAccountRawTriangles(
 {
     sNdsRendererHardwareSubmitClassCounts[
         NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += triangle_count;
+#if NDS_DIAG_COUNTERS
     sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
         triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
-        reuse_count;
-    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
-        reuse_count;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count += reuse_count;
     sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
-        triangle_count * 3u;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices += triangle_count * 3u;
+#else
+    (void)reuse_count;
+#endif
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_zbuffer_triangle_count += triangle_count;

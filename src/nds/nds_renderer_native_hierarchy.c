@@ -143,26 +143,30 @@ static inline void ndsRendererNativeAccountProjectedCrossTriangle(
     NDSRendererStats *stats,
     u32 triangle_count)
 {
-    u32 reuse_count = (triangle_count != 0u) ?
-        triangle_count - 1u : 0u;
-
     sNdsRendererHardwareSubmitClassCounts[
         NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += triangle_count;
-    sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += triangle_count;
-    sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
-        triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
-        reuse_count;
-    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
-        reuse_count;
-    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_vertices +=
-        triangle_count * 3u;
-    if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
-        (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+#if NDS_DIAG_COUNTERS
     {
-        sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+        u32 reuse_count = (triangle_count != 0u) ?
+            triangle_count - 1u : 0u;
+
+        sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += triangle_count;
+        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
+            triangle_count;
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+            reuse_count;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+            reuse_count;
+        sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+        sNdsRendererRuntimeFrameSummary.hardware_vertices +=
+            triangle_count * 3u;
+        if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
+            (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+        {
+            sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+        }
     }
+#endif
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_projected_depth_triangle_count += triangle_count;

@@ -1458,11 +1458,10 @@ typedef struct NDSRendererRuntimeFrameSummary
  * read-modify-write. Cycle 110 priced these counters by compiling them out:
  * FTR fell 7,378 and STG 2,776, an order of magnitude past the ~1,300 the
  * per-line profile showed, because the profile only sees the two symbols the
- * lines live in and every hardware batch on every path pays them. They are not
- * removable -- verify-battle-mariofox-gcrunall-loop-harness.ps1 asserts exact
- * batch and texture-prepare accounting off them, and the Boundary profile runs
- * it -- so the fix is to stop paying main-memory latency and a cache line for
- * evidence.
+ * lines live in and every hardware batch on every path pays them. Since P8 P1
+ * (2026-10-23) every write is NDS_DIAG_COUNTERS-only: the gate and ship ROMs
+ * leave the struct zero, and verify-battle-mariofox-gcrunall-loop-harness.ps1's
+ * exact batch and texture-prepare accounting needs a diagnostics build.
  *
  * `.dtcm` (loaded), where check-task20-dtcm-layout.ps1 models it; it used to
  * ride `.dtcm.fighter`, which left DTCM with Mario's dense tables (P2-2p8,
@@ -2240,19 +2239,20 @@ volatile u32 gNdsRendererProfileTextureVBlankEndLine;
 
 static inline void ndsRendererProfileRecordTextureBind(void)
 {
-    sNdsRendererRuntimeFrameSummary.texture_binds++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_binds++);
 }
 
 /* `count` binds at once (the stage segment fast path's runs). */
 static inline void ndsRendererProfileRecordTextureBinds(u32 count)
 {
-    sNdsRendererRuntimeFrameSummary.texture_binds += count;
+    (void)count;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_binds += count);
 }
 
 static inline void ndsRendererProfileRecordTextureUpload(u32 bytes)
 {
-    sNdsRendererRuntimeFrameSummary.texture_uploads++;
-    sNdsRendererRuntimeFrameSummary.texture_upload_bytes += bytes;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_uploads++);
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_upload_bytes += bytes);
 #if NDS_TICK_HUD
     /* R2-07: cumulative mirrors. The struct above is memset every frame, so a
      * ring stop can only ever read one frame of it. */
@@ -2285,7 +2285,7 @@ static inline void ndsRendererProfileRecordCi4RepresentativeReuse(
 
 static inline void ndsRendererProfileRecordTextureAliasAvoid(void)
 {
-    sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count++);
 }
 
 static inline void ndsRendererProfileRecordTextureEvict(void)
@@ -2297,13 +2297,13 @@ static inline void ndsRendererProfileRecordTextureEvict(void)
 
 static inline void ndsRendererProfileRecordTexel1Composite(void)
 {
-    sNdsRendererRuntimeFrameSummary.texel1_composite_count++;
-    sNdsRendererRuntimeFrameSummary.texel1_load_match_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texel1_composite_count++);
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texel1_load_match_count++);
 }
 
 static inline void ndsRendererProfileRecordTexel1Reject(void)
 {
-    sNdsRendererRuntimeFrameSummary.texel1_reject_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texel1_reject_count++);
 }
 
 static inline void ndsRendererProfileRecordTexel1RejectReason(u32 reason)
@@ -2322,67 +2322,68 @@ static inline void ndsRendererProfileRecordTexel1Refresh(void)
  * into the gNdsRendererProfile* globals, which the P1 harness verifier
  * (verify-battle-mariofox-gcrunall-loop-harness.ps1) and
  * probe-task56-fighter-path.ps1 read. In the fighter path alone: matrix load
- * 564, texture prepare 583 + 92 reuse, batch begin 68 ticks a frame. The
- * behaviour-bearing counters (hardware_triangles, hardware_vertices,
- * hardware_over_limit) are separate. */
+ * 564, texture prepare 583 + 92 reuse, batch begin 68 ticks a frame. Like
+ * every write of the summary they count only with NDS_DIAG_COUNTERS (P8 P1,
+ * 2026-10-23): the gate and ship ROMs carry no instrument, and those readers
+ * run on a diagnostics build. */
 static inline void ndsRendererProfileRecordMatrixLoad(void)
 {
-    sNdsRendererRuntimeFrameSummary.matrix_load_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.matrix_load_count++);
 }
 
 static inline void ndsRendererProfileRecordBatchBegin(void)
 {
-    sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count++);
 }
 
 static inline void ndsRendererProfileRecordBatchReuse(void)
 {
-    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count++);
 }
 
 static inline void ndsRendererProfileRecordBatchEnd(void)
 {
-    sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.hardware_batch_end_count++);
 }
 
 static inline void ndsRendererProfileRecordTexturePrepare(void)
 {
-    sNdsRendererRuntimeFrameSummary.texture_prepare_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_prepare_count++);
 }
 
 static inline void ndsRendererProfileRecordTexturePrepareReuse(void)
 {
-    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count++);
 }
 
 static inline void ndsRendererProfileRecordVertexSaturate(void)
 {
-    sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count++);
 }
 
 static inline void ndsRendererProfileRecordNearPlaneTriangleReject(void)
 {
-    sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count++);
 }
 
 static inline void ndsRendererProfileRecordProjectedSubmit(void)
 {
-    sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count++);
 }
 
 static inline void ndsRendererProfileRecordRawCurrentCandidate(void)
 {
-    sNdsRendererRuntimeFrameSummary.raw_current_candidate_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.raw_current_candidate_count++);
 }
 
 static inline void ndsRendererProfileRecordRawCurrentRangeReject(void)
 {
-    sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count++);
 }
 
 static inline void ndsRendererProfileRecordRawCrossMatrix(void)
 {
-    sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count++;
+    NDS_DIAG(sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count++);
 }
 
 static inline void ndsRendererProfileRecordSubmitClass(
@@ -2482,6 +2483,7 @@ static void ndsRendererProfilePublishSubmitSummary(void)
 
 static inline void ndsRendererProfileRecordHardwareTriangle(void)
 {
+#if NDS_DIAG_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_triangles++;
     sNdsRendererRuntimeFrameSummary.hardware_vertices += 3u;
     if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
@@ -2489,6 +2491,7 @@ static inline void ndsRendererProfileRecordHardwareTriangle(void)
     {
         sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
     }
+#endif
 }
 
 typedef struct NDSRendererHardwareTextureKey

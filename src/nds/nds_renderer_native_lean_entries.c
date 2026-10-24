@@ -2251,6 +2251,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     {
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += raw;
+#if NDS_DIAG_COUNTERS
         sNdsRendererRuntimeFrameSummary.raw_current_candidate_count += raw;
         sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
             packet->raw_reuse;
@@ -2258,12 +2259,14 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
             packet->raw_reuse;
         sNdsRendererRuntimeFrameSummary.hardware_triangles += raw;
         sNdsRendererRuntimeFrameSummary.hardware_vertices += raw * 3u;
+#endif
         sNdsRendererHardwareSubmitted = TRUE;
     }
     if (cross != 0u)
     {
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += cross;
+#if NDS_DIAG_COUNTERS
         sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += cross;
         sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
             packet->cross_reuse;
@@ -2276,8 +2279,10 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         {
             sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
         }
+#endif
         sNdsRendererHardwareSubmitted = TRUE;
     }
+#if NDS_DIAG_COUNTERS
     sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
         packet->batch_begin;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
@@ -2292,6 +2297,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         packet->matrix_loads;
     sNdsRendererRuntimeFrameSummary.texture_binds +=
         packet->texture_binds;
+#endif
     sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
     sNdsRendererFastRunCount += packet->run_count;
     sNdsRendererFastTriangleCount += packet->triangle_count;

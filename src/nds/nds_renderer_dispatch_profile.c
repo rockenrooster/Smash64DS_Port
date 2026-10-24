@@ -237,8 +237,8 @@ void ndsRendererProfileFrameBegin(void)
            sizeof(sNdsRendererFastOwnerTriangleCount));
     memset(sNdsRendererFastFallbackCount, 0,
            sizeof(sNdsRendererFastFallbackCount));
-    memset(&sNdsRendererRuntimeFrameSummary, 0,
-           sizeof(sNdsRendererRuntimeFrameSummary));
+    NDS_DIAG(memset(&sNdsRendererRuntimeFrameSummary, 0,
+           sizeof(sNdsRendererRuntimeFrameSummary)));
     if (gNdsRendererProfileFrameCount == 1u)
     {
         sNdsRendererRuntimeTexel1FractionRefreshCount = 0u;
@@ -266,12 +266,12 @@ void ndsRendererProfileFramePublish(void)
      * counters; otherwise owner[0..2] can be one cache line behind Link/total. */
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_RENDERER_FAST_DEBUGGER_GROUP);
     /* One compact publication replaces hot-loop volatile diagnostic writes. */
-    gNdsRendererProfileTextureBinds =
-        sNdsRendererRuntimeFrameSummary.texture_binds;
-    gNdsRendererProfileTextureUploads =
-        sNdsRendererRuntimeFrameSummary.texture_uploads;
-    gNdsRendererProfileTextureUploadBytes =
-        sNdsRendererRuntimeFrameSummary.texture_upload_bytes;
+    NDS_DIAG(gNdsRendererProfileTextureBinds =
+        sNdsRendererRuntimeFrameSummary.texture_binds);
+    NDS_DIAG(gNdsRendererProfileTextureUploads =
+        sNdsRendererRuntimeFrameSummary.texture_uploads);
+    NDS_DIAG(gNdsRendererProfileTextureUploadBytes =
+        sNdsRendererRuntimeFrameSummary.texture_upload_bytes);
     gNdsRendererProfileTextureCi4DirectPixels =
         sNdsRendererRuntimeTextureCi4DirectPixels;
     gNdsRendererProfileCi4IndexCacheBuildCount =
@@ -282,58 +282,58 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererRuntimeCi4RepresentativePixelCount;
     gNdsRendererProfileCi4ReusePixelCount =
         sNdsRendererRuntimeCi4ReusePixelCount;
-    gNdsRendererProfileTextureCacheAliasAvoidCount =
-        sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count;
-    gNdsRendererProfileTextureLookupCallCount =
-        sNdsRendererRuntimeFrameSummary.texture_lookup_call_count;
-    gNdsRendererProfileTextureLookupProbeCount =
-        sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count;
-    gNdsRendererProfileTextureLookupActiveHitCount =
-        sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count;
-    gNdsRendererProfileTextureLookupTableHitCount =
-        sNdsRendererRuntimeFrameSummary.texture_lookup_table_hit_count;
-    gNdsRendererProfileTextureLookupMissCount =
-        sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count;
-    gNdsRendererProfileTexel1CompositeCount =
-        sNdsRendererRuntimeFrameSummary.texel1_composite_count;
-    gNdsRendererProfileTexel1LoadMatchCount =
-        sNdsRendererRuntimeFrameSummary.texel1_load_match_count;
-    gNdsRendererProfileTexel1RejectCount =
-        sNdsRendererRuntimeFrameSummary.texel1_reject_count;
+    NDS_DIAG(gNdsRendererProfileTextureCacheAliasAvoidCount =
+        sNdsRendererRuntimeFrameSummary.texture_cache_alias_avoid_count);
+    NDS_DIAG(gNdsRendererProfileTextureLookupCallCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_call_count);
+    NDS_DIAG(gNdsRendererProfileTextureLookupProbeCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_probe_count);
+    NDS_DIAG(gNdsRendererProfileTextureLookupActiveHitCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count);
+    NDS_DIAG(gNdsRendererProfileTextureLookupTableHitCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_table_hit_count);
+    NDS_DIAG(gNdsRendererProfileTextureLookupMissCount =
+        sNdsRendererRuntimeFrameSummary.texture_lookup_miss_count);
+    NDS_DIAG(gNdsRendererProfileTexel1CompositeCount =
+        sNdsRendererRuntimeFrameSummary.texel1_composite_count);
+    NDS_DIAG(gNdsRendererProfileTexel1LoadMatchCount =
+        sNdsRendererRuntimeFrameSummary.texel1_load_match_count);
+    NDS_DIAG(gNdsRendererProfileTexel1RejectCount =
+        sNdsRendererRuntimeFrameSummary.texel1_reject_count);
     gNdsRendererProfileTexel1FractionRefreshCount =
         sNdsRendererRuntimeTexel1FractionRefreshCount;
     gNdsRendererProfileTextureCacheEvictCount =
         sNdsRendererRuntimeTextureCacheEvictCount;
-    gNdsRendererProfileProjectedSubmitFallbackCount =
-        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count;
-    gNdsRendererProfileMatrixLoadCount =
-        sNdsRendererRuntimeFrameSummary.matrix_load_count;
-    gNdsRendererProfileHardwareVertices =
-        sNdsRendererRuntimeFrameSummary.hardware_vertices;
-    gNdsRendererProfileHardwareTriangles =
-        sNdsRendererRuntimeFrameSummary.hardware_triangles;
-    gNdsRendererProfileHardwareBatchBeginCount =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count;
-    gNdsRendererProfileHardwareBatchReuseCount =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count;
-    gNdsRendererProfileHardwareBatchEndCount =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count;
-    gNdsRendererProfileTexturePrepareCount =
-        sNdsRendererRuntimeFrameSummary.texture_prepare_count;
-    gNdsRendererProfileTexturePrepareReuseCount =
-        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count;
-    gNdsRendererProfileHardwareOverLimit =
-        sNdsRendererRuntimeFrameSummary.hardware_over_limit;
-    gNdsRendererProfileHWVertexSaturateCount =
-        sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count;
-    gNdsRendererProfileNearPlaneTriangleRejectCount =
-        sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count;
-    gNdsRendererProfileRawCurrentCandidateCount =
-        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count;
-    gNdsRendererProfileRawCurrentRangeRejectCount =
-        sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count;
-    gNdsRendererProfileRawCrossMatrixCount =
-        sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count;
+    NDS_DIAG(gNdsRendererProfileProjectedSubmitFallbackCount =
+        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count);
+    NDS_DIAG(gNdsRendererProfileMatrixLoadCount =
+        sNdsRendererRuntimeFrameSummary.matrix_load_count);
+    NDS_DIAG(gNdsRendererProfileHardwareVertices =
+        sNdsRendererRuntimeFrameSummary.hardware_vertices);
+    NDS_DIAG(gNdsRendererProfileHardwareTriangles =
+        sNdsRendererRuntimeFrameSummary.hardware_triangles);
+    NDS_DIAG(gNdsRendererProfileHardwareBatchBeginCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count);
+    NDS_DIAG(gNdsRendererProfileHardwareBatchReuseCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count);
+    NDS_DIAG(gNdsRendererProfileHardwareBatchEndCount =
+        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count);
+    NDS_DIAG(gNdsRendererProfileTexturePrepareCount =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_count);
+    NDS_DIAG(gNdsRendererProfileTexturePrepareReuseCount =
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count);
+    NDS_DIAG(gNdsRendererProfileHardwareOverLimit =
+        sNdsRendererRuntimeFrameSummary.hardware_over_limit);
+    NDS_DIAG(gNdsRendererProfileHWVertexSaturateCount =
+        sNdsRendererRuntimeFrameSummary.hardware_vertex_saturate_count);
+    NDS_DIAG(gNdsRendererProfileNearPlaneTriangleRejectCount =
+        sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count);
+    NDS_DIAG(gNdsRendererProfileRawCurrentCandidateCount =
+        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count);
+    NDS_DIAG(gNdsRendererProfileRawCurrentRangeRejectCount =
+        sNdsRendererRuntimeFrameSummary.raw_current_range_reject_count);
+    NDS_DIAG(gNdsRendererProfileRawCrossMatrixCount =
+        sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count);
     gNdsRendererProfileOracleSamples = 0u;
     gNdsRendererProfileOracleMismatches = 0u;
     gNdsRendererProfileOracleMaxDelta = 0u;

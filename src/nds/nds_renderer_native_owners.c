@@ -1884,28 +1884,32 @@ ndsRendererNativeStageAccountShortfall(void)
 static void ndsRendererNativeStageAccountRun(
     NDSRendererStats *stats, u32 submit_class, u32 triangle_count)
 {
-    u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
-
     if (gNdsNativeStageRunWitness != 0u)
     {
         ndsRendererNativeStageAccountShortfall();
     }
 
     sNdsRendererHardwareSubmitClassCounts[submit_class] += triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
-    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count += reuse_count;
-    sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
-    sNdsRendererRuntimeFrameSummary.hardware_vertices += triangle_count * 3u;
+#if NDS_DIAG_COUNTERS
+    {
+        u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
+
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count += reuse_count;
+        sNdsRendererRuntimeFrameSummary.hardware_triangles += triangle_count;
+        sNdsRendererRuntimeFrameSummary.hardware_vertices += triangle_count * 3u;
+    }
+#endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
-        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
-            triangle_count;
+        NDS_DIAG(sNdsRendererRuntimeFrameSummary.raw_current_candidate_count +=
+            triangle_count);
         stats->hardware_zbuffer_triangle_count += triangle_count;
     }
     else
     {
-        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
-            triangle_count;
+        NDS_DIAG(sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
+            triangle_count);
         stats->hardware_projected_depth_triangle_count += triangle_count;
     }
     stats->hardware_triangle_count += triangle_count;
