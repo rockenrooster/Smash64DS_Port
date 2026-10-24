@@ -65,10 +65,12 @@ def _owner_title(owner_name: str) -> str:
     return owners._owner_title(owner_name)
 
 
-# The P2-3 owners whose tables this tool moves out of the ARM9 image. Mario and
-# Fox are absent on purpose (frozen combined export).
+# The owners whose tables this tool moves out of the ARM9 image: the P2-3
+# owners, then "mariofox", Mario's and Fox's one shared table set (the frozen
+# combined export, byte for byte; P8 R7). Last, so no other slot moves.
 P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
-                   "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss")
+                   "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss",
+                   "mariofox")
 DETAILS = ("high", "low")
 IMAGE_OWNERS = P2_IMAGE_OWNERS + skeletons.IMAGE_OWNERS
 
@@ -78,7 +80,7 @@ IMAGE_OWNERS = P2_IMAGE_OWNERS + skeletons.IMAGE_OWNERS
 # NDS_P2_BOSS`, which -Wundef reports and the preprocessor evaluates as 0, so
 # the boss image silently stopped resolving. Anything not listed here takes the
 # mechanical name.
-IMAGE_OWNER_GUARDS = {"boss": "NDS_P2_1P_GAME"}
+IMAGE_OWNER_GUARDS = {"boss": "NDS_P2_1P_GAME", "mariofox": "1"}
 
 
 def _owner_guard(owner_name: str) -> str:
@@ -849,6 +851,8 @@ def main() -> int:
     for owner_name in P2_IMAGE_OWNERS:
         for detail in DETAILS:
             contexts[(owner_name, detail)] = (
+                owners.build_mariofox_runtime_context(repo_root, detail)
+                if owner_name == "mariofox" else
                 owners.build_p2_owner_runtime_context(
                     repo_root, owner_name, detail))
     hat_contexts: dict[tuple[int, str], dict[str, object]] = {}

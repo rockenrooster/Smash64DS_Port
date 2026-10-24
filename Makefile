@@ -1012,6 +1012,9 @@ NDS_NATIVE_OWNER_IMAGE_NKIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS
 NDS_NATIVE_OWNER_IMAGE_NPIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPIKACHU),0)
 NDS_NATIVE_OWNER_IMAGE_NPURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPURIN),0)
 NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NNESS),0)
+# Mario's and Fox's shared table set (P8 R7): in every build, so imaged
+# exactly when images are.
+NDS_NATIVE_OWNER_IMAGE_MARIOFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),1,0)
 # Giant DK's echo landed (0b564186676) without this line, so the config header
 # emitted `#define NDS_NATIVE_OWNER_IMAGE_GDONKEY` with an EMPTY value -- the
 # same "#if with no expression" trap as NDS_P2_STAGE_YOSTER above, latent only
@@ -5146,6 +5149,9 @@ NDS_NATIVE_IMAGE_GENERATOR := 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_nat
 NDS_NATIVE_IMAGE_HEADER := 	$(PROJECT_ROOT)/include/nds/generated/nds_native_fighter_image.generated.h
 export NDS_NITROFS_NATIVE_IMAGE_FILES :=
 NDS_NATIVE_IMAGE_OWNERS := mario_skeleton1 fox_skeleton1
+ifeq ($(NDS_NATIVE_OWNER_IMAGE_MARIOFOX),1)
+NDS_NATIVE_IMAGE_OWNERS += mariofox
+endif
 NDS_NATIVE_KIRBY_HAT_IDS := 03 04 05 06 07 08 09 10 11 12 13
 NDS_NATIVE_KIRBY_HAT_STEMS :=
 ifeq ($(NDS_P2_LUIGI),1)
@@ -5735,7 +5741,7 @@ NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
 	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
-NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss mario_skeleton1 fox_skeleton1
+NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss mariofox mario_skeleton1 fox_skeleton1
 NDS_NATIVE_IMAGE_ALL_SRCS := $(foreach owner,$(NDS_NATIVE_IMAGE_ALL_OWNERS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_low.image.c)
 NDS_NATIVE_IMAGE_ALL_SRCS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_low.image.c)
 NDS_NATIVE_IMAGE_ALL_SRCS += $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_skeletons.generated.inc
@@ -5907,6 +5913,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_MMARIO $(NDS_NATIVE_OWNER_IMAGE_MMARIO)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NMARIO $(NDS_NATIVE_OWNER_IMAGE_NMARIO)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NFOX $(NDS_NATIVE_OWNER_IMAGE_NFOX)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_MARIOFOX $(NDS_NATIVE_OWNER_IMAGE_MARIOFOX)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NDONKEY $(NDS_NATIVE_OWNER_IMAGE_NDONKEY)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NSAMUS $(NDS_NATIVE_OWNER_IMAGE_NSAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NLINK $(NDS_NATIVE_OWNER_IMAGE_NLINK)'; \

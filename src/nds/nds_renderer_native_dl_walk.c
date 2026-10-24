@@ -146,7 +146,7 @@ static void ndsRendererNativeApplyVertexActions(
     for (i = 0u; i < epoch->action_count; i++)
     {
         const NDSNativeVertexAction *action =
-            &sNdsNativeFighterVertexActions[epoch->first_action + i];
+            &sNdsNativeFighterHighTables.vertex_actions[epoch->first_action + i];
 
         if (ndsRendererNativeVisitSourceCommand(
                 root_base, action->command_index, callback, callback_user,
@@ -539,7 +539,10 @@ static s32 ndsRendererNativePreflightProductionOwner(
  * word from each per corner, 1,878 times a frame, in the same random order, so
  * the two tables thrash the same 4 KB data cache against each other. Built once
  * at load by ARM9 code and read only by ARM9 code -- never a DMA endpoint, never
- * touched by the ARM7 or IPC, per the check-task20-dtcm-layout.ps1 gate. */
+ * touched by the ARM7 or IPC, per the check-task20-dtcm-layout.ps1 gate.
+ * P8 R7: with the "mariofox" owner image the words arrive baked in it, as
+ * every imaged owner's do, and neither table nor its bake exists. */
+#if !NDS_NATIVE_OWNER_IMAGE_MARIOFOX
 static u32 sNdsNativeFighterDenseNormals[
     sizeof(sNdsNativeFighterDenseVertices) /
         sizeof(sNdsNativeFighterDenseVertices[0])]
@@ -550,6 +553,7 @@ static u32 sNdsNativeFighterDenseNormals[
 static u32 sNdsNativeFighterDenseNormalsLow[
     sizeof(sNdsNativeFighterDenseVerticesLow) /
         sizeof(sNdsNativeFighterDenseVerticesLow[0])];
+#endif
 #if NDS_P2_LUIGI
 #if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 /* P2-3: Luigi owns independent generated geometry, so its one-time normal
@@ -678,8 +682,10 @@ static u32 sNdsNativeBossFighterDenseNormals[
 static u32 sNdsNativeBossFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if !NDS_NATIVE_OWNER_IMAGE_MARIOFOX
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
+#endif
 #if NDS_P2_LUIGI
 #if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 static u8 sNdsNativeLuigiFighterDenseNormalsBuilt;
@@ -758,15 +764,21 @@ static u8 sNdsNativeBossFighterDenseNormalsBuilt;
 static u8 sNdsNativeBossFighterDenseNormalsBuiltLow;
 #endif
 #endif
+/* P2-3f49: imaged owners never bake at runtime -- their words arrive inside
+ * the bound NitroFS image -- so their Built pointer aims here, permanently
+ * set, and the production bake call skips them. Without the "mariofox" image
+ * Mario/Fox still bake, into the pair above. */
+static u8 sNdsNativeImageDenseNormalsReady = 1u;
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+static u32 *sNdsNativeFighterActiveDenseNormals;
+static u8 *sNdsNativeFighterActiveDenseNormalsBuilt =
+    &sNdsNativeImageDenseNormalsReady;
+#else
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
 static u8 *sNdsNativeFighterActiveDenseNormalsBuilt =
     &sNdsNativeFighterDenseNormalsBuilt;
-/* P2-3f49: imaged owners never bake at runtime -- their words arrive inside
- * the bound NitroFS image -- so their Built pointer aims here, permanently
- * set, and the production bake call skips them. Only Mario/Fox still bake,
- * into the pair above. */
-static u8 sNdsNativeImageDenseNormalsReady = 1u;
+#endif
 
 /* Selection is one owner-level operation, never an inner-loop operation.  Keep
  * it out of `.itcm.native_fighter`: inlining the table/normal pointer fan-out
@@ -1321,6 +1333,14 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    /* Mario/Fox (P8 R7): precomputed words from the bound "mariofox" image;
+     * unbound (no ensure), the owner declines rather than draw. */
+    sNdsNativeFighterActiveDenseNormals =
+        (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+    sNdsNativeFighterActiveDenseNormalsBuilt = &sNdsNativeImageDenseNormalsReady;
+    return sNdsNativeFighterActiveTables->dense_normals != NULL;
+#else
     if (use_low_detail != 0u)
     {
         sNdsNativeFighterActiveDenseNormals = sNdsNativeFighterDenseNormalsLow;
@@ -1334,4 +1354,5 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeFighterDenseNormalsBuilt;
     }
     return TRUE;
+#endif
 }

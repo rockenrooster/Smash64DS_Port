@@ -32,7 +32,8 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 # The single list of arrays that ship as a NitroFS image, shared with
 # generate_nds_native_owner_images.py so the two cannot disagree.
-from native_owner_image_arrays import NATIVE_OWNER_SUPPRESSED_ARRAYS  # noqa: E402
+from native_owner_image_arrays import (  # noqa: E402
+    NATIVE_OWNER_IMAGE_ARRAYS, NATIVE_OWNER_SUPPRESSED_ARRAYS)
 
 import generate_nds_native_stage as stage_manifest
 
@@ -56,7 +57,7 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterPrepareNativeOwnerHierarchy",
-        "tracked_bases": ("fp", "joint", "m2_owner", "workspace", "xobj"),
+        "tracked_bases": ("fp", "joint", "workspace", "xobj"),
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
@@ -83,13 +84,6 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_LIVE,
                 "fp.is_use_animlocks fp.shuffle_tics",
             ),
-            **_classified(
-                FIELD_CLASS_CALLBACK,
-                """
-                m2_owner.m2_camera_fetch_count m2_owner.m2_camera_fetch_ticks
-                m2_owner.m2_local_matrix_build_count m2_owner.m2_local_matrix_ticks
-                """,
-            ),
         },
     },
     {
@@ -102,7 +96,7 @@ SOURCE_CLOSURE_POLICIES = (
         # from the manifest and the falsifier would report a consumed field as
         # no longer read, which is the opposite of what happened.
         "tracked_bases": (
-            "epoch", "execution", "hierarchy", "input", "m2_owner",
+            "epoch", "execution", "hierarchy", "input",
             "preamble", "prepared_epoch", "root", "scratch", "state", "stats",
             "tables",
         ),
@@ -143,10 +137,6 @@ SOURCE_CLOSURE_POLICIES = (
                 state.prepared_vertex_color_valid_mask state.texture_prepare_valid
                 state.vertex_color_valid_mask state.vertex_valid_mask stats.blocker
                 """,
-            ),
-            **_classified(
-                FIELD_CLASS_CALLBACK,
-                "m2_owner.m2_lighting_shading_ticks m2_owner.m2_run_prepare_ticks",
             ),
         },
     },
@@ -193,7 +183,7 @@ SOURCE_CLOSURE_POLICIES = (
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererNativeCommitHierarchyRoot",
         "tracked_bases": (
-            "epoch", "execution", "input", "m2_owner", "prepared_epoch",
+            "epoch", "execution", "input", "prepared_epoch",
             "prepared_run", "root", "run", "state", "stats",
         ),
         "fields": {
@@ -230,8 +220,6 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 """
-                m2_owner.m2_corner_emit_account_ticks
-                m2_owner.m2_lighting_shading_ticks m2_owner.m2_run_prepare_ticks
                 stats.command_count stats.end_command_count stats.first_opcode
                 stats.triangle_count
                 """,
@@ -241,7 +229,7 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererExecuteNativeFighterOwnerHierarchy",
-        "tracked_bases": ("hierarchy", "m2_owner", "stats"),
+        "tracked_bases": ("hierarchy", "stats"),
         "fields": {
             **_classified(
                 FIELD_CLASS_CAMERA,
@@ -251,11 +239,7 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 """
-                m2_owner.m2_corner_emit_account_ticks
-                m2_owner.m2_corner_emit_run_count m2_owner.m2_lighting_epoch_count
-                m2_owner.m2_lighting_shading_ticks m2_owner.m2_root_gx_count
-                m2_owner.m2_root_gx_ticks m2_owner.m2_run_prepare_count
-                m2_owner.m2_run_prepare_ticks stats.hardware_matrix_seed_count
+                stats.hardware_matrix_seed_count
                 stats.matrix_pop_count stats.matrix_push_count
                 """,
             ),
@@ -298,7 +282,8 @@ OWNER_TITLE_OVERRIDES = {"mmario": "MMario", "nmario": "NMario",
                          "nlink": "NLink", "nyoshi": "NYoshi",
                          "ncaptain": "NCaptain", "nkirby": "NKirby",
                          "npikachu": "NPikachu", "npurin": "NPurin",
-                         "nness": "NNess", "linkboomerang": "LinkBoomerang"}
+                         "nness": "NNess", "linkboomerang": "LinkBoomerang",
+                         "mariofox": "MarioFox"}
 
 
 def _owner_title(owner_name: str) -> str:
@@ -9531,25 +9516,37 @@ def render_generated_mario_program(program: dict[str, object]) -> list[str]:
     return lines
 
 
-def generate(repo_root: Path | None = None) -> str:
-    if repo_root is None:
-        repo_root = _paths.REPO_ROOT
-    repo_root = Path(repo_root).resolve()
-    context = build_owner_source_context(repo_root)
-    state = context["state"]
-    sequence = context["sequence"]
+# The shared Mario/Fox table set's dense-geometry pins: (vertices, corners) and
+# the per-owner dense blocks (first, limit, owner index) -- Mario canonical,
+# then the second owner's blocks, then the deferred variants.
+MARIOFOX_DENSE_CARDINALITIES = {"high": (613, 2130), "low": (474, 1371)}
+MARIOFOX_DENSE_BLOCKS = {
+    "high": ((0, 255, 0), (255, 541, 1), (541, 567, 1), (567, 613, 0)),
+    "low": ((0, 187, 0), (187, 420, 1), (420, 438, 1), (438, 474, 0)),
+}
+
+
+def build_mariofox_runtime_context(
+        repo_root: Path, detail: str = "high",
+        source_context: dict[str, object] | None = None,
+        ) -> dict[str, object]:
+    """The shared Mario/Fox table set of one detail, as an owner context.
+
+    `generate` emits these lists as the sNdsNativeFighter* arrays, and the
+    image generator (generate_nds_native_owner_images.py, owner "mariofox")
+    builds the NitroFS image that replaces them in the ARM9 binary from the
+    same dictionary, so the two cannot disagree. The keys are the ones
+    build_p2_owner_runtime_context gives a P2-3 owner's image. Mario/Fox runs
+    carry no run metadata and their dense shade words are the runtime bake's
+    normals (the image generator bakes them from dense_vertices).
+    """
+    context = (source_context if source_context is not None
+               else build_owner_source_context(repo_root, detail))
     vertex = context["vertex"]
     triangles = context["triangles"]
     runs = context["runs"]
     epochs = context["epochs"]
-    mario_roots = context["mario_roots"]
-    fox_roots = context["fox_roots"]
     owner_roots = context["owner_roots"]
-    owner_topologies = context["owner_topologies"]
-    direct_epoch_policies = context["direct_epoch_policies"]
-    light_preambles = context["light_preambles"]
-    owner_light_preamble_indices = context["owner_light_preamble_indices"]
-    mario_program = build_generated_mario_program(repo_root, context)
     (
         dense_vertices,
         dense_color_sources,
@@ -9571,22 +9568,24 @@ def generate(repo_root: Path | None = None) -> str:
     )
     # Dense vertices are emitted per owner in root order, so the four blocks
     # are contiguous: Mario canonical, Mario hand variants, Fox canonical, Fox
-    # Results-Lose variants. Pinning the boundaries rather than one total keeps
-    # a variant from silently growing into a canonical owner's geometry.
-    if (len(dense_vertices), len(dense_corners)) != (613, 2130):
+    # Results-Lose variants (the low program orders its variant blocks the
+    # other way round). Pinning the boundaries rather than one total keeps a
+    # variant from silently growing into a canonical owner's geometry.
+    if ((len(dense_vertices), len(dense_corners)) !=
+            MARIOFOX_DENSE_CARDINALITIES[detail]):
         raise ValueError(
-            "expanded dense fighter geometry cardinality changed: "
+            f"expanded {detail} dense fighter geometry cardinality changed: "
             f"{len(dense_vertices)} vertices, {len(dense_corners)} corners"
         )
-    dense_blocks = ((0, 255, 0), (255, 541, 1), (541, 567, 1), (567, 613, 0))
-    for first, limit, owner_index in dense_blocks:
+    for first, limit, owner_index in MARIOFOX_DENSE_BLOCKS[detail]:
         block = dense_owners[first:limit]
         if block.count(owner_index) != (limit - first):
             raise ValueError(
-                "owner dense-vertex census changed: "
+                f"{detail} owner dense-vertex census changed: "
                 f"[{first}, {limit}) is not owner {owner_index}"
             )
-    owner_cross_slots = [topology[3] for topology in owner_topologies]
+    owner_cross_slots = [topology[3] for topology in context["owner_topologies"]]
+    detail_args = ("low",) if detail == "low" else ()
     (
         action_dense_spans,
         packed_corners,
@@ -9596,14 +9595,14 @@ def generate(repo_root: Path | None = None) -> str:
     ) = build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
-        run_root_bindings, run_binding_sets, owner_cross_slots,
+        run_root_bindings, run_binding_sets, owner_cross_slots, *detail_args,
     )
     # Task 56: host-side fighter stripify. Compile each run's triangles into
     # DS-native primitive groups (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) for
     # both mode 1 (exact source order) and mode 2 (within-run reorder). The
     # generated IR carries both sets in gated #if blocks; the build selects one
     # via NDS_TASK56_FIGHTER_PRIMITIVES. Cross-matrix runs stay GL_TRIANGLES.
-    fighter_primitive_streams = {
+    primitive_streams = {
         1: build_fighter_primitive_streams(
             runs, packed_corners, run_first_corner, 1),
         2: build_fighter_primitive_streams(
@@ -9611,8 +9610,90 @@ def generate(repo_root: Path | None = None) -> str:
     }
     gx_positions = build_ds_coverage_gx_positions(
         owner_roots, epochs, runs, dense_vertices, packed_corners,
-        run_first_corner, "high",
+        run_first_corner, detail,
     )
+    return {
+        "owner_name": "mariofox",
+        "detail": detail,
+        "source_context": context,
+        "state": context["state"],
+        "sequence": context["sequence"],
+        "vertex": vertex,
+        "triangles": triangles,
+        "runs": runs,
+        "epochs": epochs,
+        "dense_vertices": dense_vertices,
+        "dense_color_sources": dense_color_sources,
+        "dense_owners": dense_owners,
+        "dense_corners": dense_corners,
+        "action_dense_first": action_dense_first,
+        "run_first_corner": run_first_corner,
+        "run_owners": run_owners,
+        "action_dense_spans": action_dense_spans,
+        "packed_corners": packed_corners,
+        "run_first_unique": run_first_unique,
+        "run_unique_count": run_unique_count,
+        "run_unique_dense": run_unique_dense,
+        "primitive_streams": primitive_streams,
+        "gx_positions": gx_positions,
+        "direct_epoch_policies": context["direct_epoch_policies"],
+        "owner_cross_slots": owner_cross_slots,
+    }
+
+
+def generate(repo_root: Path | None = None) -> str:
+    if repo_root is None:
+        repo_root = _paths.REPO_ROOT
+    repo_root = Path(repo_root).resolve()
+
+    # The shared Mario/Fox arrays the "mariofox" NitroFS image carries leave
+    # the ARM9 binary under its image guard, exactly as a P2-3 owner's do
+    # (render_p2_owner_runtime_program's choke point; P8 R7).
+    _emit_rows = globals()["emit_rows"]
+
+    def emit_rows(type_name, name, rows, const=True, attribute=""):
+        out = _emit_rows(type_name, name, rows, const=const,
+                         attribute=attribute)
+        stem = "sNdsNativeFighter"
+        base = name[len(stem):] if name.startswith(stem) else ""
+        if base.endswith("Low"):
+            base = base[:-len("Low")]
+        # Only the imaged arrays: RunFirstCorner (derived, no image member)
+        # stays for the hierarchy path's dense raw emitter, which no build
+        # links (gc-sections drops it with that path).
+        if base in NATIVE_OWNER_IMAGE_ARRAYS:
+            return ["#if !NDS_NATIVE_OWNER_IMAGE_MARIOFOX"] + out + [
+                "#endif", ""]
+        return out
+
+    context = build_owner_source_context(repo_root)
+    state = context["state"]
+    sequence = context["sequence"]
+    vertex = context["vertex"]
+    triangles = context["triangles"]
+    runs = context["runs"]
+    epochs = context["epochs"]
+    mario_roots = context["mario_roots"]
+    fox_roots = context["fox_roots"]
+    owner_roots = context["owner_roots"]
+    owner_topologies = context["owner_topologies"]
+    direct_epoch_policies = context["direct_epoch_policies"]
+    light_preambles = context["light_preambles"]
+    owner_light_preamble_indices = context["owner_light_preamble_indices"]
+    mario_program = build_generated_mario_program(repo_root, context)
+    mariofox_high = build_mariofox_runtime_context(repo_root, "high", context)
+    dense_vertices = mariofox_high["dense_vertices"]
+    dense_color_sources = mariofox_high["dense_color_sources"]
+    dense_corners = mariofox_high["dense_corners"]
+    action_dense_first = mariofox_high["action_dense_first"]
+    run_first_corner = mariofox_high["run_first_corner"]
+    action_dense_spans = mariofox_high["action_dense_spans"]
+    packed_corners = mariofox_high["packed_corners"]
+    run_first_unique = mariofox_high["run_first_unique"]
+    run_unique_count = mariofox_high["run_unique_count"]
+    run_unique_dense = mariofox_high["run_unique_dense"]
+    fighter_primitive_streams = mariofox_high["primitive_streams"]
+    gx_positions = mariofox_high["gx_positions"]
     packet_plans = []
     owner_root_first = 0
     canonical_owner_roots = context["canonical_owner_roots"]
@@ -9641,51 +9722,20 @@ def generate(repo_root: Path | None = None) -> str:
     low_runs = low_context["runs"]
     low_epochs = low_context["epochs"]
     low_owner_roots = low_context["owner_roots"]
-    (low_dense_vertices, low_dense_color_sources, low_dense_owners,
-     low_dense_corners, low_action_dense_first, low_run_first_corner,
-     low_run_owners, low_run_root_bindings,
-     low_run_binding_sets) = build_dense_geometry(
-        low_vertex, low_triangles, low_runs, low_epochs, low_owner_roots,
-        repo_root, owner_root_bindings=low_context["owner_root_bindings"])
-    if (len(low_dense_vertices), len(low_dense_corners)) != (474, 1371):
-        raise ValueError(
-            "expanded low-detail dense geometry cardinality changed: "
-            f"{len(low_dense_vertices)} vertices, "
-            f"{len(low_dense_corners)} corners"
-        )
-    # Canonical prefix, then Fox's Results-Lose variants, then Mario's
-    # deferred hand variants; same block shape as the high program.
-    low_dense_blocks = (
-        (0, 187, 0), (187, 420, 1), (420, 438, 1), (438, 474, 0),
-    )
-    for first, limit, owner_index in low_dense_blocks:
-        block = low_dense_owners[first:limit]
-        if block.count(owner_index) != (limit - first):
-            raise ValueError(
-                "low-detail owner dense-vertex census changed: "
-                f"[{first}, {limit}) is not owner {owner_index}"
-            )
-    low_owner_cross_slots = [
-        topology[3] for topology in low_context["owner_topologies"]
-    ]
-    (low_action_dense_spans, low_packed_corners, _low_run_first_unique,
-     _low_run_unique_count, _low_run_unique_dense) = \
-        build_direct_dense_tables(
-            low_vertex, low_runs, low_dense_vertices,
-            low_dense_color_sources, low_dense_corners,
-            low_action_dense_first, low_run_first_corner,
-            low_run_owners, low_run_root_bindings, low_run_binding_sets,
-            low_owner_cross_slots, "low")
-    low_fighter_primitive_streams = {
-        1: build_fighter_primitive_streams(
-            low_runs, low_packed_corners, low_run_first_corner, 1),
-        2: build_fighter_primitive_streams(
-            low_runs, low_packed_corners, low_run_first_corner, 2),
-    }
-    low_gx_positions = build_ds_coverage_gx_positions(
-        low_owner_roots, low_epochs, low_runs, low_dense_vertices,
-        low_packed_corners, low_run_first_corner, "low",
-    )
+    mariofox_low = build_mariofox_runtime_context(repo_root, "low", low_context)
+    low_dense_vertices = mariofox_low["dense_vertices"]
+    low_dense_color_sources = mariofox_low["dense_color_sources"]
+    low_dense_corners = mariofox_low["dense_corners"]
+    low_action_dense_first = mariofox_low["action_dense_first"]
+    low_run_first_corner = mariofox_low["run_first_corner"]
+    low_owner_cross_slots = mariofox_low["owner_cross_slots"]
+    low_action_dense_spans = mariofox_low["action_dense_spans"]
+    low_packed_corners = mariofox_low["packed_corners"]
+    _low_run_first_unique = mariofox_low["run_first_unique"]
+    _low_run_unique_count = mariofox_low["run_unique_count"]
+    _low_run_unique_dense = mariofox_low["run_unique_dense"]
+    low_fighter_primitive_streams = mariofox_low["primitive_streams"]
+    low_gx_positions = mariofox_low["gx_positions"]
     # P2-3 keeps new owners as independent programs so the qualified Mario/Fox
     # arrays above are not reindexed. They are emitted behind per-owner admission
     # flags and therefore have zero code/data cost in the standing P2-2 build.

@@ -1759,22 +1759,6 @@
           "classification": "immutable_generation"
         },
         {
-          "access": "m2_owner.m2_camera_fetch_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_camera_fetch_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_local_matrix_build_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_local_matrix_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
           "access": "workspace.hierarchy.camera_modelview",
           "classification": "live_camera_dependent"
         },
@@ -1955,14 +1939,6 @@
         {
           "access": "input.root_offset",
           "classification": "immutable_generation"
-        },
-        {
-          "access": "m2_owner.m2_lighting_shading_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_run_prepare_ticks",
-          "classification": "callback_visible_mutation_output"
         },
         {
           "access": "preamble.flags",
@@ -2279,18 +2255,6 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "m2_owner.m2_corner_emit_account_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_lighting_shading_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_run_prepare_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
           "access": "prepared_epoch.light_direction",
           "classification": "live_camera_dependent"
         },
@@ -2431,38 +2395,6 @@
         {
           "access": "hierarchy.roots",
           "classification": "live_camera_independent"
-        },
-        {
-          "access": "m2_owner.m2_corner_emit_account_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_corner_emit_run_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_lighting_epoch_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_lighting_shading_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_root_gx_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_root_gx_ticks",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_run_prepare_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "m2_owner.m2_run_prepare_ticks",
-          "classification": "callback_visible_mutation_output"
         },
         {
           "access": "stats.hardware_matrix_seed_count",

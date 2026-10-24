@@ -10,6 +10,7 @@
 #include <PR/gbi.h>
 #include <PR/ultratypes.h>
 #include <ft/fighter.h>
+#include <string.h>
 #include <gm/gmsound.h>
 #include <if/interface.h>
 #include <mn/menu.h>
@@ -583,6 +584,11 @@ typedef struct NDSPlayersVSResidentBlock {
      * outlived a scene rewind is rejected instead of published. */
     u32 load_stage;
     u32 load_generation;
+    /* The block's own copy of an owner image another kind's preview shares
+     * (Mario's and Fox's, P8 R7), NULL for every other kind: the slot binds
+     * one copy, and is handed to this one before the block holding that copy
+     * is rewound (ndsMNPlayersVSPreviewHandOffOwnerImage). */
+    const void *owner_image;
 } NDSPlayersVSResidentBlock;
 
 typedef struct NDSPlayersVSPreviewPending {
@@ -808,10 +814,9 @@ static void ndsMNPlayersVSPreviewMarkPermanentFailure(s32 fkind)
     }
 }
 
-/* fkind -> generated native owner-image slot. Mario and Fox draw from their
- * compiled-in tables and own no loadable image, so they answer FALSE and the
- * two owner stages become no-ops for them -- the same outcome the per-kind
- * ladder this replaces produced by falling through to its tail. */
+/* fkind -> generated native owner-image slot. Mario and Fox share one image
+ * (P8 R7, "mariofox"); a build without owner images answers FALSE for them and
+ * the two owner stages become no-ops, as for a kind with compiled-in tables. */
 static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 {
 #define NDS_CSS_OWNER_IMAGE_SLOT(kind_, slot_)                                 \
@@ -820,6 +825,10 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
         *out_slot = (slot_);                                                   \
         return TRUE;                                                           \
     }
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindMario, NDS_NATIVE_IMAGE_SLOT_MARIOFOX)
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindFox, NDS_NATIVE_IMAGE_SLOT_MARIOFOX)
+#endif
 #if NDS_P2_LUIGI
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLuigi, NDS_NATIVE_IMAGE_SLOT_LUIGI)
 #endif
@@ -868,6 +877,91 @@ static sb32 ndsMNPlayersVSPreviewEnsureOwnerImage(s32 fkind, u32 detail)
         return FALSE;
     }
     return TRUE;
+}
+
+/* Kinds whose previews draw from one owner image (P8 R7: Mario's and Fox's). */
+static sb32 ndsMNPlayersVSPreviewSharesOwnerImage(s32 fkind)
+{
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    return ((fkind == nFTKindMario) || (fkind == nFTKindFox)) ? TRUE : FALSE;
+#else
+    (void)fkind;
+    return FALSE;
+#endif
+}
+
+/* Mario and Fox draw from one owner image (P8 R7), and each kind's preview
+ * lives in its own block, so whichever block loaded it would take it along
+ * when it is rewound while the other kind still draws. Each of their blocks
+ * keeps a copy of its own: the one it loaded, or the bound bytes copied into
+ * the room its sizing gave the image (the ensure found the slot bound and
+ * took none). Runs with the block's arena selected. */
+static sb32 ndsMNPlayersVSPreviewKeepOwnerImageCopy(
+    NDSPlayersVSResidentBlock *block, s32 fkind)
+{
+    u32 slot;
+    u32 detail = ndsCssPreviewKindDetail(fkind);
+    u32 bytes;
+    const void *bound;
+    void *copy;
+
+    block->owner_image = NULL;
+    if ((ndsMNPlayersVSPreviewSharesOwnerImage(fkind) == FALSE) ||
+        (ndsMNPlayersVSPreviewOwnerImageSlot(fkind, &slot) == FALSE))
+    {
+        return TRUE;
+    }
+    bound = ndsRendererNativeOwnerImageBase(slot, detail);
+    if (bound == NULL)
+    {
+        return FALSE;
+    }
+    if (((uintptr_t)bound >= (uintptr_t)block->base) &&
+        ((uintptr_t)bound < (uintptr_t)block->base + block->bytes))
+    {
+        block->owner_image = bound;
+        return TRUE;
+    }
+    bytes = ndsRendererNativeOwnerImageSize(slot, detail);
+    copy = ndsSceneAssetAlloc(bytes, 0x10u);
+    if (copy == NULL)
+    {
+        return FALSE;
+    }
+    memcpy(copy, bound, bytes);
+    block->owner_image = copy;
+    return TRUE;
+}
+
+/* Before `leaving`'s range is released: a shared image bound inside it
+ * moves to another block's copy, so that block's preview keeps drawing. */
+static void ndsMNPlayersVSPreviewHandOffOwnerImage(
+    const NDSPlayersVSResidentBlock *leaving)
+{
+    uintptr_t lo = (uintptr_t)leaving->base;
+    uintptr_t hi = lo + leaving->bytes;
+    u32 i;
+
+    for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+    {
+        const NDSPlayersVSResidentBlock *b = &sNdsPlayersVSResidentBlocks[i];
+        s32 kind = (b->fkind != nFTKindNull) ? b->fkind : b->loading_fkind;
+        u32 slot;
+        u32 detail;
+        uintptr_t bound;
+
+        if ((b == leaving) || (b->owner_image == NULL) ||
+            (ndsMNPlayersVSPreviewOwnerImageSlot(kind, &slot) == FALSE))
+        {
+            continue;
+        }
+        detail = ndsCssPreviewKindDetail(kind);
+        bound = (uintptr_t)ndsRendererNativeOwnerImageBase(slot, detail);
+        if ((bound >= lo) && (bound < hi))
+        {
+            (void)ndsRendererNativeRebindOwnerImage(slot, detail, b->owner_image);
+        }
+    }
 }
 
 static sb32 ndsMNPlayersVSPreviewPreloadAnimFile(
@@ -1013,6 +1107,13 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
 
 static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
 {
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    if ((fkind == nFTKindMario) || (fkind == nFTKindFox))
+    {
+        return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeMarioFoxLowImage) :
+                                        (u32)sizeof(NDSNativeMarioFoxHighImage);
+    }
+#endif
 #if NDS_P2_LUIGI
     if (fkind == nFTKindLuigi)
     {
@@ -1406,6 +1507,7 @@ static void ndsMNPlayersVSPreviewBlockGive(NDSPlayersVSResidentBlock *block)
 {
     block->base = NULL;
     block->bytes = 0u;
+    block->owner_image = NULL;
 }
 
 /* Size `slot`'s figatree heap for the clips its kind plays before the source
@@ -1819,6 +1921,7 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
     ndsRelocPreviewFighterLoadCancel(block->load_cursor, fkind);
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
+    ndsMNPlayersVSPreviewHandOffOwnerImage(block);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
@@ -1924,6 +2027,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     gNdsPlayersVSPreviewReleaseRetireBeginCount++;
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
+    ndsMNPlayersVSPreviewHandOffOwnerImage(block);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
@@ -1963,6 +2067,7 @@ static void ndsMNPlayersVSPreviewAbandonCompactLoad(
 {
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
+    ndsMNPlayersVSPreviewHandOffOwnerImage(block);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
@@ -2208,6 +2313,11 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
         {
             ok = ndsMNPlayersVSPreviewPrepareResidentStage(fkind, previous,
                                                             block->load_stage);
+            if ((ok != FALSE) &&
+                (block->load_stage == NDS_PLAYERS_VS_PREPARE_OWNER_LOW))
+            {
+                ok = ndsMNPlayersVSPreviewKeepOwnerImageCopy(block, fkind);
+            }
         }
         ndsTaskmanSwapMallocRegion(previous);
         payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;

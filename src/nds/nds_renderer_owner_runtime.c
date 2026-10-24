@@ -1462,6 +1462,26 @@ NDS_RENDERER_COLD static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u3
                      base, NDS_NATIVE_IMAGE_FOX_SKELETON1_HIGH);
         return;
     }
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    /* Mario's and Fox's one shared table set (P8 R7): both owners' runtimes
+     * point at these two structs. */
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MARIOFOX)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeFighterLowTables,
+                         NDSNativeMarioFoxLowImage, base,
+                         NDS_NATIVE_IMAGE_MARIOFOX_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeFighterHighTables,
+                         NDSNativeMarioFoxHighImage, base,
+                         NDS_NATIVE_IMAGE_MARIOFOX_HIGH);
+        }
+        return;
+    }
+#endif
 #if NDS_NATIVE_OWNER_IMAGE_LUIGI
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
     {
@@ -1904,4 +1924,28 @@ s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail)
             (sNdsNativeOwnerImage[owner_slot][use_low_detail].base != NULL) &&
             (sNdsNativeOwnerImage[owner_slot][use_low_detail].heap_generation ==
                  gNdsTaskmanHeapGeneration)) ? TRUE : FALSE;
+}
+
+/* The bytes a resident slot is bound to, NULL when none this scene. */
+const void *ndsRendererNativeOwnerImageBase(u32 owner_slot, u32 use_low_detail)
+{
+    return (ndsRendererNativeOwnerImageResident(owner_slot, use_low_detail) != FALSE) ?
+               sNdsNativeOwnerImage[owner_slot][use_low_detail].base : NULL;
+}
+
+/* Rebind a resident slot to another copy of its own image, so the range
+ * holding the first copy can be rewound while fighters still draw from the
+ * slot (the character select's Mario and Fox previews: battleship_mnplayersvs.c
+ * ndsMNPlayersVSPreviewHandOffOwnerImage). FALSE leaves the slot as it was. */
+s32 ndsRendererNativeRebindOwnerImage(u32 owner_slot, u32 use_low_detail, const void *copy)
+{
+    if ((copy == NULL) ||
+        (ndsRendererNativeOwnerImageResident(owner_slot, use_low_detail) == FALSE) ||
+        (*(const u32 *)copy != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG))
+    {
+        return FALSE;
+    }
+    sNdsNativeOwnerImage[owner_slot][use_low_detail].base = copy;
+    ndsRendererNativeBindOwnerImage(owner_slot, use_low_detail, copy);
+    return TRUE;
 }

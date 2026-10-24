@@ -106,9 +106,9 @@ ndsRendererNativeEmitDenseRawRun(
         {
             u32 dense_id = *corner++;
             const NDSNativeDenseVertex *vertex =
-                &sNdsNativeFighterDenseVertices[dense_id];
+                &sNdsNativeFighterHighTables.dense_vertices[dense_id];
             const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+                &sNdsNativeFighterHighTables.prepared_dense[dense_id];
             u32 slot = vertex->cache_slot;
 
             ndsRendererHardwareWriteFighterColorWord(
@@ -126,9 +126,9 @@ ndsRendererNativeEmitDenseRawRun(
         {
             u32 dense_id = *corner++;
             const NDSNativeDenseVertex *vertex =
-                &sNdsNativeFighterDenseVertices[dense_id];
+                &sNdsNativeFighterHighTables.dense_vertices[dense_id];
             const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+                &sNdsNativeFighterHighTables.prepared_dense[dense_id];
             u32 slot = vertex->cache_slot;
 
             ndsRendererHardwareWriteFighterColorWord(
@@ -188,11 +188,11 @@ static s32 ndsRendererNativeSubmitRunDirect(
     {
         return FALSE;
     }
-    run_index = (u32)(run - sNdsNativeFighterRuns);
+    run_index = (u32)(run - sNdsNativeFighterHighTables.runs);
     if (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_RAW_CURRENT)
     {
         const u16 *triangles =
-            &sNdsNativeFighterTriangles[run->first_triangle];
+            &sNdsNativeFighterHighTables.triangles[run->first_triangle];
         u32 first_indices[3];
 
         (void)ndsRendererNativeDecodeTriangle(
@@ -215,7 +215,7 @@ static s32 ndsRendererNativeSubmitRunDirect(
     if (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_CROSS_MATRIX)
     {
         const u16 *triangles =
-            &sNdsNativeFighterTriangles[run->first_triangle];
+            &sNdsNativeFighterHighTables.triangles[run->first_triangle];
         u32 first_indices[3];
 
         (void)ndsRendererNativeDecodeTriangle(triangles[0], first_indices);
@@ -294,7 +294,7 @@ static void ndsRendererNativeSubmitRun(
     u32 i;
 
     stats->triangle_count += run->triangle_count;
-    triangle = &sNdsNativeFighterTriangles[run->first_triangle];
+    triangle = &sNdsNativeFighterHighTables.triangles[run->first_triangle];
     if ((ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_RAW_CURRENT) &&
         (run->triangle_count != 0u) &&
         (NDS_RENDERER_BENCHMARK_MODE !=
@@ -536,7 +536,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
     {
         const NDSNativeEpoch *epoch =
-            &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+            &sNdsNativeFighterHighTables.epochs[root->first_epoch + epoch_index];
 
         if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
             ((materials == NULL) ||
@@ -586,7 +586,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     for (epoch_index = 0u; epoch_index < root->epoch_count; epoch_index++)
     {
         const NDSNativeEpoch *epoch =
-            &sNdsNativeFighterEpochs[root->first_epoch + epoch_index];
+            &sNdsNativeFighterHighTables.epochs[root->first_epoch + epoch_index];
         u32 run_index;
         u32 source_command_index =
             epoch->first_triangle_command_index;
@@ -615,7 +615,7 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
         for (run_index = 0u; run_index < epoch->run_count; run_index++)
         {
             const NDSNativeRun *run =
-                &sNdsNativeFighterRuns[epoch->first_run + run_index];
+                &sNdsNativeFighterHighTables.runs[epoch->first_run + run_index];
 
             if ((callback != NULL) ||
                 (sNdsRendererHardwareNoOracle == 0u) ||
@@ -2023,7 +2023,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
         {
             u32 epoch_index = root->first_epoch + epoch_offset;
             const NDSNativeEpoch *epoch =
-                &sNdsNativeFighterEpochs[epoch_index];
+                &sNdsNativeFighterHighTables.epochs[epoch_index];
             NDSNativeHierarchyPreparedEpoch *prepared_epoch =
                 &execution->hierarchy_epochs[epoch_index];
             u32 run_offset;
@@ -2090,7 +2090,7 @@ static s32 ndsRendererNativePreflightFighterHierarchy(
 
                 if (ndsRendererNativePrepareHierarchyRun(
                         run_index,
-                        sNdsNativeFighterEpochDirectPolicy[epoch_index],
+                        sNdsNativeFighterHighTables.epoch_direct_policy[epoch_index],
                         TRUE, hierarchy->config, scratch, state,
                         &execution->hierarchy_runs[epoch_index]) == FALSE)
                 {
@@ -2136,16 +2136,16 @@ static void ndsRendererNativePrepareHierarchyTexcoords(
     {
         return;
     }
-    unique_first = sNdsNativeFighterRunFirstUnique[run_index];
-    unique_count = sNdsNativeFighterRunUniqueCount[run_index];
+    unique_first = sNdsNativeFighterHighTables.run_first_unique[run_index];
+    unique_count = sNdsNativeFighterHighTables.run_unique_count[run_index];
     for (unique_offset = 0u; unique_offset < unique_count; unique_offset++)
     {
-        u32 dense_id = sNdsNativeFighterRunUniqueDense[
+        u32 dense_id = sNdsNativeFighterHighTables.run_unique_dense[
             unique_first + unique_offset];
         const NDSNativeDenseVertex *dense =
-            &sNdsNativeFighterDenseVertices[dense_id];
+            &sNdsNativeFighterHighTables.dense_vertices[dense_id];
         NDSNativePreparedDenseVertex *prepared =
-            &sNdsNativeFighterPreparedDense[dense_id];
+            &sNdsNativeFighterHighTables.prepared_dense[dense_id];
         s32 scaled_s = ((s32)dense->s *
             (s32)prepared_run->scale_s) >> 17;
         s32 scaled_t = ((s32)dense->t *
@@ -2270,7 +2270,7 @@ static void ndsRendererNativeCommitHierarchyRoot(
     {
         u32 epoch_index = root->first_epoch + epoch_offset;
         const NDSNativeEpoch *epoch =
-            &sNdsNativeFighterEpochs[epoch_index];
+            &sNdsNativeFighterHighTables.epochs[epoch_index];
         const NDSNativeHierarchyPreparedEpoch *prepared_epoch =
             &execution->hierarchy_epochs[epoch_index];
         u32 run_offset;
@@ -2291,7 +2291,7 @@ static void ndsRendererNativeCommitHierarchyRoot(
         state->prepared_light_direction_valid =
             prepared_epoch->light_direction_valid;
         (void)ndsRendererNativeShadeProductionActions(
-            epoch, sNdsNativeFighterEpochDirectPolicy[epoch_index],
+            epoch, sNdsNativeFighterHighTables.epoch_direct_policy[epoch_index],
             FALSE, stats, state);
 
         for (run_offset = 0u;

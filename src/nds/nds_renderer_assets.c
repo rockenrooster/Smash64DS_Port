@@ -745,6 +745,14 @@ typedef struct NDSNativeFighterOwnerRuntime
 
 #define NDS_FTR_COUNT(a) ((u32)(sizeof(a) / sizeof((a)[0])))
 
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+/* P8 R7: Mario's and Fox's shared tables are FILLED AT LOAD from the
+ * "mariofox" owner image (ndsRendererNativeEnsureOwnerImage at fighter
+ * construction, as every other owner's), so they start empty; the arrays that
+ * initialise them below are guarded out of this binary by the same flag. */
+static NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables;
+static NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables;
+#else
 static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
 {
     sNdsNativeFighterStateDeltas, NDS_FTR_COUNT(sNdsNativeFighterStateDeltas),
@@ -807,3 +815,4 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
     sNdsNativeFighterPrimitiveVerticesLow,
     sNdsNativeFighterEpochsLow, NDS_FTR_COUNT(sNdsNativeFighterEpochsLow)
 };
+#endif

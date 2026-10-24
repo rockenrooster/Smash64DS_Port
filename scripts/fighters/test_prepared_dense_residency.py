@@ -328,8 +328,12 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                 p4.append(args)
                 continue
             (hats if args[0] == "entry->tables" else ordinary).append(args)
+        # Mario's and Fox's one shared image binds the shared tables both
+        # owners' runtimes name (P8 R7).
         expected = {
-            (f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables",
+            ((f"sNdsNativeFighter{detail.title()}Tables"
+              if owner == "mariofox" else
+              f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables"),
              images._image_type(owner, detail), "base",
              f"NDS_NATIVE_IMAGE_{owner.upper()}_{detail.upper()}")
             for owner in images.P2_IMAGE_OWNERS for detail in images.DETAILS
@@ -372,10 +376,14 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         # since NDS_R2_FIGHTER_HW_LIGHT resolved to 1 (cb344c4671b).
         self.assertIn(
             "_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 10u", src)
-        # Mario/Fox frozen static path untouched (no image, still static).
+        # Mario/Fox's frozen arrays still initialise their static tables where
+        # no owner image is built; with the shared "mariofox" image (P8 R7)
+        # the tables start empty and the image binds them.
         self.assertIn("sNdsNativeFighterPreparedDense,", src)
         self.assertIn("sNdsNativeFighterPreparedDenseLow,", src)
-        self.assertNotIn("NDS_NATIVE_OWNER_IMAGE_MARIO", src)
+        self.assertIn("#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX\n", src)
+        self.assertIn("static NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables;",
+                      src)
 
     def test_owners_chokepoint_and_typedef_shape(self):
         owners_src = OWNERS_PY.read_text(encoding="utf-8")

@@ -1226,6 +1226,10 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
 void ndsRendererNativeArmPolygonImagePool(void);
 u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot);
 s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail);
+/* The bytes a resident slot is bound to (NULL: none this scene), and a rebind
+ * to another copy of the same image before the first one's range is rewound. */
+const void *ndsRendererNativeOwnerImageBase(u32 owner_slot, u32 use_low_detail);
+s32 ndsRendererNativeRebindOwnerImage(u32 owner_slot, u32 use_low_detail, const void *copy);
 /* Bytes Ensure would allocate for that image, or 0 if this build has none. */
 u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail);
 /* CSS preview blocks can back owner images. Once the last fighter using such

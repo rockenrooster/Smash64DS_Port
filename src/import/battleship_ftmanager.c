@@ -996,6 +996,13 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 {
     u32 image_slot = NDS_NATIVE_IMAGE_OWNER_SLOTS;
 
+#if NDS_NATIVE_OWNER_IMAGE_MARIOFOX
+    if ((fkind == nFTKindMario) || (fkind == nFTKindFox))
+    {
+        /* Mario's and Fox's one shared table set (P8 R7). */
+        image_slot = NDS_NATIVE_IMAGE_SLOT_MARIOFOX;
+    }
+#endif
 #if NDS_P2_LUIGI
     if (fkind == nFTKindLuigi)
     {
