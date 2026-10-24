@@ -2,12 +2,16 @@
 """Fighter clip successor table for the motion prefetch (P2-2p8, 2026-09-30).
 
 Input: lab clip traces -- run logs of a lab ROM built with
-CPPFLAGS=-DNDS_LAB_CLIP_TRACE=1 (src/port/reloc_backend_assets.c), each
-reading gNdsLabClipTraceCount and a slice of gNdsLabClipTrace[] through
--ExtraGlobals. A trace word is: clip index (asset - 499, 11 bits), outcome
-(2), battle slot (2), frame (17). Slices of one run (same stage, roster and
-ROM, so the same deterministic replay) are named `<prefix><k>_<run>` and are
-merged by `<run>`.
+CPPFLAGS=-DNDS_LAB_CLIP_TRACE=1 (src/port/reloc_backend_force_load.c), each
+reading gNdsLabClipTraceCount and gNdsLabClipTrace[] through -ExtraGlobals
+(`gNdsLabClipTrace[k]=v` lines) or a gdb dump (`x/4096xw &gNdsLabClipTrace`
+after a `gNdsLabClipTraceCount=N` line). A trace word is, --layout 1 (the
+traces this table was made from): clip index (asset - 499, 11 bits),
+outcome (2), battle slot (2), frame (17); --layout 2 (the lab ROM's since
+P8 P7b, which reaches the contents' clips): index (15), outcome (2), slot
+(2), frame (13). Slices of one run (same stage, roster and ROM, so the same
+deterministic replay) are named `<prefix><k>_<run>` and are merged by
+`<run>`.
 
 For every clip, the two clips that most often followed it in the SAME
 fighter's fetches, over all runs -- only clips the stream pack holds (--pack)
@@ -33,9 +37,12 @@ import struct
 import sys
 
 FIRST_ID = 499
+# Per layout: the index mask and the slot field's shift.
+LAYOUTS = {1: (0x7ff, 13), 2: (0x7fff, 17)}
+DUMP_RE = re.compile(r'<gNdsLabClipTrace(?:\+(\d+))?>:((?:[ \t]+0x[0-9a-f]+)+)')
 
 
-def load_runs(trace_dir, prefixes):
+def load_runs(trace_dir, prefixes, layout=1):
     runs = collections.defaultdict(dict)
     counts = collections.defaultdict(set)
     paths = []
@@ -53,6 +60,10 @@ def load_runs(trace_dir, prefixes):
         counts[run].add(int(c.group(1).replace(',', '')))
         for k, v in re.findall(r'gNdsLabClipTrace\[(\d+)\]=([\d,]+)', txt):
             runs[run][int(k)] = int(v.replace(',', ''))
+        for off, vals in DUMP_RE.findall(txt):
+            base = int(off or 0) // 4
+            for j, v in enumerate(vals.split()):
+                runs[run][base + j] = int(v, 16)
     traces = {}
     for run, words in runs.items():
         if len(counts[run]) != 1:
@@ -61,8 +72,9 @@ def load_runs(trace_dir, prefixes):
         missing = [i for i in range(n) if i not in words]
         if missing:
             raise SystemExit(f'{run}: trace words missing, first {missing[:5]}')
-        traces[run] = [{'asset': (words[i] & 0x7ff) + FIRST_ID,
-                        'slot': (words[i] >> 13) & 3} for i in range(n)]
+        mask, shift = LAYOUTS[layout]
+        traces[run] = [{'asset': (words[i] & mask) + FIRST_ID,
+                        'slot': (words[i] >> shift) & 3} for i in range(n)]
     return traces
 
 
@@ -130,13 +142,14 @@ def main():
     ap.add_argument('--traces', required=True)
     ap.add_argument('--prefix', action='append',
                     help='slice file prefix; repeat for several trace sets')
+    ap.add_argument('--layout', type=int, choices=sorted(LAYOUTS), default=1)
     ap.add_argument('--out', required=True)
     ap.add_argument('--pack', default=os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets',
         'animation', 'ftanim_stream_pack.bin'))
     ap.add_argument('--check', action='store_true')
     a = ap.parse_args()
-    traces = load_runs(a.traces, a.prefix or ['cs'])
+    traces = load_runs(a.traces, a.prefix or ['cs'], a.layout)
     if not traces:
         raise SystemExit('no traces')
     tab = successor_counts(traces)

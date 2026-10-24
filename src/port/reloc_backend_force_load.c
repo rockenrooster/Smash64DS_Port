@@ -405,14 +405,16 @@ void *ndsRelocResolveAuthoritativeForceFile(void *file)
     return file;
 }
 
-#if ((defined(NDS_LAB_CLIP_TRACE) && NDS_LAB_CLIP_TRACE) && NDS_TICK_HUD) && defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if (defined(NDS_LAB_CLIP_TRACE) && NDS_LAB_CLIP_TRACE) && NDS_TICK_HUD
 /* LAB (a lab build with CPPFLAGS=-DNDS_LAB_CLIP_TRACE=1): one word per
- * fighter clip fetch -- clip index (asset - 499, 11 bits), outcome (2: 0
- * zero-copy hit, 1 copy hit, 2 storage read, 3 other), battle slot (2), frame
- * (17). The source of scripts/motion/generate_clip_successors.py's table;
- * read with -ExtraGlobals gNdsLabClipTraceCount,gNdsLabClipTrace[i]... */
+ * fighter clip fetch -- clip index (asset - 499, 15 bits: the contents' clips
+ * run to 0x7fff), outcome (2: 0 zero-copy hit, 1 copy hit, 2 storage read,
+ * 3 other), battle slot (2), frame (13). The source of
+ * scripts/motion/generate_clip_successors.py's tables (--layout 2; the cast
+ * table's traces were layout 1: an 11-bit index and a 17-bit frame); read
+ * with gdb (x/4096xw &gNdsLabClipTrace) or -ExtraGlobals. */
 #define NDS_LAB_CLIP_TRACE_ON 1
-#define NDS_LAB_CLIP_TRACE_MAX 900u
+#define NDS_LAB_CLIP_TRACE_MAX 4096u
 __attribute__((used)) volatile u32 gNdsLabClipTrace[NDS_LAB_CLIP_TRACE_MAX];
 __attribute__((used)) volatile u32 gNdsLabClipTraceCount;
 extern volatile u32 gNdsFrameCounter;
@@ -436,9 +438,9 @@ static void ndsLabClipTraceNote(u32 asset_id, const void *heap, u32 outcome)
     }
     if (n < NDS_LAB_CLIP_TRACE_MAX)
     {
-        gNdsLabClipTrace[n] = ((asset_id - 499u) & 0x7ffu) |
-            ((outcome & 3u) << 11) | (slot << 13) |
-            ((gNdsFrameCounter & 0x1ffffu) << 15);
+        gNdsLabClipTrace[n] = ((asset_id - 499u) & 0x7fffu) |
+            ((outcome & 3u) << 15) | (slot << 17) |
+            ((gNdsFrameCounter & 0x1fffu) << 19);
     }
     gNdsLabClipTraceCount = n + 1u;
 }
