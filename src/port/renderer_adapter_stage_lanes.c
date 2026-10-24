@@ -178,18 +178,26 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     NDSRendererMatrix20p12 modelview;
     const NDSRendererMatrix20p12 *projection_ptr;
     const NDSRendererMatrix20p12 *modelview_ptr;
+    /* One owner's material snapshot a call: the arms below are exclusive by
+     * owner, so their snapshots share storage. As separate locals they made
+     * this the DTCM hot stack's deepest frame (2,888 B; the stack 21.9% free
+     * at its deepest, P8 S3). */
+    union
+    {
+        NDSRendererNativeMaterial common;
 #if NDS_P2_LINK
-    NDSRendererNativeMaterial link_special2_material;
-    NDSRendererNativeMaterial link_spin_materials[9];
+        NDSRendererNativeMaterial link_special2;
+        NDSRendererNativeMaterial link_spin[9];
 #endif
-    /* EFCommonEffects3 needs at most two live MObj snapshots per root:
-     * MBallRays takes two per ray fan, ItemGetSwirl one per drawable child. */
-    NDSRendererNativeMaterial efcommon3_materials[2];
+        /* EFCommonEffects3 needs at most two live MObj snapshots per root:
+         * MBallRays takes two per ray fan, ItemGetSwirl one per drawable
+         * child. */
+        NDSRendererNativeMaterial efcommon3[2];
+    } snapshot;
     /* Every owner passes these to the native prepare; only Link's two
      * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
     u32 native_material_count = 0u;
-    NDSRendererNativeMaterial common_effect_material;
     u32 native_texture_variant = 0xffffffffu;
     u32 p4_variant_count = 0u;
 
@@ -380,12 +388,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
          * supplies only the current source image; MatAnim loops TEXID 0/1.
          * Preserve that live selector while the generated owner supplies the
          * immutable tile/load/combine/geometry and preconverted texture pair. */
-        bzero(&common_effect_material, sizeof(common_effect_material));
+        bzero(&snapshot.common, sizeof(snapshot.common));
         if ((mobj == NULL) || (mobj->next != NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 mobj, &common_effect_material, FALSE,
+                 mobj, &snapshot.common, FALSE,
                  &texture_id_curr, &texture_id_next) == FALSE) ||
-            (common_effect_material.effects !=
+            (snapshot.common.effects !=
                  NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) ||
             (texture_id_curr < 0) || (texture_id_curr > 1) ||
             (texture_id_next < 0) || (texture_id_next > 1))
@@ -393,7 +401,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = &common_effect_material;
+        native_materials = &snapshot.common;
         native_material_count = 1u;
         native_texture_variant = (u32)texture_id_curr;
     }
@@ -665,19 +673,19 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
          * changes only TEXID; the root DL owns the effective combine/blend/TLUT
          * state. Snapshot without advancing IDs and select the matching AOT
          * CI4 frame so effective source alpha survives end to end. */
-        bzero(&common_effect_material, sizeof(common_effect_material));
+        bzero(&snapshot.common, sizeof(snapshot.common));
         if ((mobj == NULL) || (mobj->next != NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 mobj, &common_effect_material, FALSE,
+                 mobj, &snapshot.common, FALSE,
                  &texture_id_curr, &texture_id_next) == FALSE) ||
-            (common_effect_material.effects != expected_effects) ||
+            (snapshot.common.effects != expected_effects) ||
             (texture_id_curr < 0) || (texture_id_curr > texture_id_max) ||
             (texture_id_next < 0) || (texture_id_next > texture_id_max))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = &common_effect_material;
+        native_materials = &snapshot.common;
         native_material_count = 1u;
         native_texture_variant = (u32)texture_id_curr;
     }
@@ -692,16 +700,16 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
          * else declines, counted. */
         MObj *mobj = dobj->mobj;
 
-        bzero(&common_effect_material, sizeof(common_effect_material));
+        bzero(&snapshot.common, sizeof(snapshot.common));
         if ((mobj == NULL) || (mobj->next != NULL) ||
             (((mobj->sub.flags & MOBJ_FLAG_PALETTE) != 0u) && (mobj->palette_id != 0.0F)) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 mobj, &common_effect_material, FALSE, NULL, NULL) == FALSE))
+                 mobj, &snapshot.common, FALSE, NULL, NULL) == FALSE))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = &common_effect_material;
+        native_materials = &snapshot.common;
         native_material_count = 1u;
     }
     else if (p4_variant_count != 0u)
@@ -719,10 +727,10 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             ((p4_variant_count & NDS_P4_VARIANT_PALETTE_FOLLOWS) != 0u) ? TRUE : FALSE;
 
         p4_variant_count &= ~NDS_P4_VARIANT_PALETTE_FOLLOWS;
-        bzero(&common_effect_material, sizeof(common_effect_material));
+        bzero(&snapshot.common, sizeof(snapshot.common));
         if ((mobj == NULL) || (mobj->next != NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 mobj, &common_effect_material, FALSE,
+                 mobj, &snapshot.common, FALSE,
                  &texture_id_curr, &texture_id_next) == FALSE) ||
             (texture_id_curr < 0) ||
             ((u32)texture_id_curr >= p4_variant_count) ||
@@ -733,7 +741,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = &common_effect_material;
+        native_materials = &snapshot.common;
         native_material_count = 1u;
         native_texture_variant = (u32)texture_id_curr;
     }
@@ -749,12 +757,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
          * state instead of freezing its animated PRIM/light values in AOT. */
         if ((mobj == NULL) || (mobj->next != NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 mobj, &link_special2_material, FALSE, NULL, NULL) == FALSE))
+                 mobj, &snapshot.link_special2, FALSE, NULL, NULL) == FALSE))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = &link_special2_material;
+        native_materials = &snapshot.link_special2;
         native_material_count = 1u;
     }
     else if (owner_asset_id == 324u)
@@ -769,7 +777,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         {
             if ((mobj == NULL) ||
                 (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                     mobj, &link_spin_materials[i], FALSE, NULL, NULL) == FALSE))
+                     mobj, &snapshot.link_spin[i], FALSE, NULL, NULL) == FALSE))
             {
                 NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
                 return FALSE;
@@ -781,7 +789,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = link_spin_materials;
+        native_materials = snapshot.link_spin;
         native_material_count = 9u;
     }
 #endif
@@ -818,9 +826,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         {
             if ((mobj == NULL) ||
                 (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                     mobj, &efcommon3_materials[i], FALSE, NULL, NULL) ==
+                     mobj, &snapshot.efcommon3[i], FALSE, NULL, NULL) ==
                  FALSE) ||
-                (efcommon3_materials[i].effects !=
+                (snapshot.efcommon3[i].effects !=
                      NDS_RENDERER_NATIVE_MATERIAL_PRIM))
             {
                 /* No fallback and NO second record: return FALSE and let the
@@ -843,7 +851,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
-        native_materials = efcommon3_materials;
+        native_materials = snapshot.efcommon3;
         native_material_count = expected_material_count;
     }
 
@@ -860,11 +868,11 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
         /* These source roots select segment-E material slot zero. Keep that
          * material's animated fields live; unselected slots cannot affect it. */
-        bzero(&common_effect_material, sizeof(common_effect_material));
+        bzero(&snapshot.common, sizeof(snapshot.common));
         if ((dobj->mobj == NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 dobj->mobj, &common_effect_material, FALSE, NULL, NULL) == FALSE) ||
-            (common_effect_material.effects != expected_effects))
+                 dobj->mobj, &snapshot.common, FALSE, NULL, NULL) == FALSE) ||
+            (snapshot.common.effects != expected_effects))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             /* Material rejection status packs source flags in the low half
@@ -873,12 +881,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
                 (u32)gSCManagerSceneData.scene_curr,
                 (((dobj->parent_gobj != NULL) ? dobj->parent_gobj->id : 0xffffu) << 16) | 84u,
-                ((common_effect_material.effects & 0xffffu) << 16) |
+                ((snapshot.common.effects & 0xffffu) << 16) |
                     ((dobj->mobj != NULL) ? dobj->mobj->sub.flags : 0xffffu),
                 root_offset, (u32)(uintptr_t)dobj->mobj, NDS_NATIVE_FAILURE_BAD_ASSET);
             return FALSE;
         }
-        native_materials = &common_effect_material;
+        native_materials = &snapshot.common;
         native_material_count = 1u;
     }
     if ((sNdsRendererAdapterEntryPrepared != NULL) &&

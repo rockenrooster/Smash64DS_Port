@@ -14,7 +14,11 @@
 
 #define NDS_AUDIO_O2R_RAW_SIZE_OFFSET 0x40L
 #define NDS_AUDIO_O2R_DATA_OFFSET 0x44L
-#define NDS_AUDIO_MAX_OFFSETS 1024u
+/* The CTL parse's three offset sets live on the boot thread's stack (thread 5,
+ * 16 KB). At 1,024 offsets each they were a 12,384-byte frame and that stack's
+ * deepest reach (13,132 B, P8 S3); the largest set the banks need is bank 2's
+ * 322 waves. */
+#define NDS_AUDIO_MAX_OFFSETS 512u
 
 #define NDS_AUDIO_MASK_SEQ        (1u << 0)
 #define NDS_AUDIO_MASK_BANK1_CTL  (1u << 1)

@@ -1475,6 +1475,99 @@ ndsFtrLeanVerifyPlan(const NDSFtrLeanInstance *inst,
 }
 #endif
 
+/* The event path's resolve: the plan the old path would resolve for this
+ * draw's display contract (the same resolver, program selection and
+ * validator), written into the instance's plan rows. The DObj collection is
+ * this call's own, so it is off the event's frame while the materializer runs
+ * below that frame (P8 S3: the hot stack's deepest reach). `*reuse_plan` is
+ * set only by a lab verify arm whose kept plan differs. Returns 0 or a decline
+ * reason. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsFtrLeanEventResolve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
+                       u32 owner_slot, u32 use_low_detail, u32 *reuse_plan,
+                       u32 *count_out, u32 *program_out,
+                       NDSRelocLoadedFile **owner_file_out)
+{
+    NDSRendererAdapterNativeOwnerWorkspace *ws =
+        &sNdsRendererAdapterNativeOwnerWorkspace;
+    NDSFighterDLAllDrawCollection collection;
+    NDSRelocLoadedFile *owner_file = NULL;
+    u32 expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
+    u32 tried = 0u;
+    u32 program;
+    u32 count;
+    u32 i;
+
+    ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN],
+                                    &collection);
+    ndsFighterCollectStripFoxGunSidecar(fp, &collection);
+    if ((ndsFighterDrawPlanResolve(owner_slot, expected_asset_id,
+                                   &collection, ws, &owner_file) !=
+         nNDSFighterDrawPlanOk) ||
+        (owner_file == NULL) || (owner_file->data == NULL))
+    {
+        return nNDSFtrLeanDeclinePlan;
+    }
+    count = collection.selected_count;
+    if ((count == 0u) || (count > NDS_FTR_LEAN_ROOT_MAX))
+    {
+        return nNDSFtrLeanDeclineRoots;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        if ((collection.indices[i] > 0xffu) ||
+            (ws->material_counts[i] > 0xffu))
+        {
+            return nNDSFtrLeanDeclineRoots;
+        }
+    }
+    NDS_FTR_LEAN_EVENT_PART(0u, ev_mark);
+    program = ndsRendererNativeFighterSelectRootProgram(
+        owner_slot, use_low_detail, ws->root_offsets, count, &tried);
+    if (program == 0xffu)
+    {
+        program = 0u;
+    }
+    ndsRendererNativeFighterSetRootProgram(owner_slot, program);
+    if (ndsRendererAdapterValidateNativeOwnerCached(
+            owner_slot, slot, use_low_detail, owner_file, count,
+            ws->root_offsets, ws->material_counts) == FALSE)
+    {
+        return nNDSFtrLeanDeclineValidate;
+    }
+    NDS_FTR_LEAN_EVENT_PART(1u, ev_mark);
+#if NDS_FTR_LEAN_LAB
+    /* Reached with a kept plan only by the verify arm. */
+    if ((*reuse_plan != FALSE) &&
+        (ndsFtrLeanVerifyPlan(inst, &collection, ws, count, program,
+                              owner_file) == FALSE))
+    {
+        *reuse_plan = FALSE;
+    }
+#endif
+    (void)reuse_plan;
+    /* The instance now describes this plan (the kernel, the patches and the
+     * per-frame proofs read it); the entry below is selected for it. */
+    inst->valid = 0u;
+    inst->root_count = (u8)count;
+    for (i = 0u; i < count; i++)
+    {
+        const NDSFighterDisplayContractEvent *event =
+            &sNdsFighterDisplayReplayEvents[collection.indices[i]];
+
+        inst->event_index[i] = (u8)collection.indices[i];
+        inst->root_offsets[i] = ws->root_offsets[i];
+        inst->material_counts[i] = (u8)ws->material_counts[i];
+        inst->root_dl[i] = event->dl;
+        inst->matrix_dobjs[i] = ws->matrix_bindings[i];
+        inst->material_dobjs[i] = ws->material_dobjs[i];
+    }
+    *count_out = count;
+    *program_out = program;
+    *owner_file_out = owner_file;
+    return 0u;
+}
+
 /* The event path: the plan the old path would resolve for this draw's
  * display contract (the same resolver, program selection and validator),
  * the entry key from it, then the entry that holds that key's list or a new
@@ -1502,13 +1595,10 @@ ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
 {
     NDSRendererAdapterNativeOwnerWorkspace *ws =
         &sNdsRendererAdapterNativeOwnerWorkspace;
-    NDSFighterDLAllDrawCollection collection;
     NDSRelocLoadedFile *owner_file = NULL;
     NDSFtrLeanPatchView view;
-    u32 expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
     u32 key[NDS_FTR_LEAN_KEY_WORDS];
     u32 head_key = 0u;
-    u32 tried = 0u;
     u32 program;
     u32 count;
     u32 entry;
@@ -1559,67 +1649,15 @@ restart:
         owner_file = (NDSRelocLoadedFile *)inst->owner_file;
         goto rows;
     }
-    ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN],
-                                    &collection);
-    ndsFighterCollectStripFoxGunSidecar(fp, &collection);
-    if ((ndsFighterDrawPlanResolve(owner_slot, expected_asset_id,
-                                   &collection, ws, &owner_file) !=
-         nNDSFighterDrawPlanOk) ||
-        (owner_file == NULL) || (owner_file->data == NULL))
     {
-        return nNDSFtrLeanDeclinePlan;
-    }
-    count = collection.selected_count;
-    if ((count == 0u) || (count > NDS_FTR_LEAN_ROOT_MAX))
-    {
-        return nNDSFtrLeanDeclineRoots;
-    }
-    for (i = 0u; i < count; i++)
-    {
-        if ((collection.indices[i] > 0xffu) ||
-            (ws->material_counts[i] > 0xffu))
-        {
-            return nNDSFtrLeanDeclineRoots;
-        }
-    }
-    NDS_FTR_LEAN_EVENT_PART(0u, ev_mark);
-    program = ndsRendererNativeFighterSelectRootProgram(
-        owner_slot, use_low_detail, ws->root_offsets, count, &tried);
-    if (program == 0xffu)
-    {
-        program = 0u;
-    }
-    ndsRendererNativeFighterSetRootProgram(owner_slot, program);
-    if (ndsRendererAdapterValidateNativeOwnerCached(
-            owner_slot, slot, use_low_detail, owner_file, count,
-            ws->root_offsets, ws->material_counts) == FALSE)
-    {
-        return nNDSFtrLeanDeclineValidate;
-    }
-    NDS_FTR_LEAN_EVENT_PART(1u, ev_mark);
-#if NDS_FTR_LEAN_LAB
-    if ((reuse_plan != FALSE) && (reuse_check != FALSE) &&
-        (ndsFtrLeanVerifyPlan(inst, &collection, ws, count, program,
-                              owner_file) == FALSE))
-    {
-        reuse_plan = FALSE;
-    }
-#endif
-    /* The instance now describes this plan (the kernel, the patches and the
-     * per-frame proofs read it); the entry below is selected for it. */
-    inst->valid = 0u;
-    inst->root_count = (u8)count;
-    for (i = 0u; i < count; i++)
-    {
-        const NDSFighterDisplayContractEvent *event =
-            &sNdsFighterDisplayReplayEvents[collection.indices[i]];
+        u32 reason = ndsFtrLeanEventResolve(
+            slot, fp, inst, owner_slot, use_low_detail, &reuse_plan, &count,
+            &program, &owner_file);
 
-        inst->event_index[i] = (u8)collection.indices[i];
-        inst->root_offsets[i] = ws->root_offsets[i];
-        inst->material_counts[i] = (u8)ws->material_counts[i];
-        inst->root_dl[i] = event->dl;
-        inst->matrix_dobjs[i] = ws->matrix_bindings[i];
-        inst->material_dobjs[i] = ws->material_dobjs[i];
+        if (reason != 0u)
+        {
+            return reason;
+        }
     }
     /* The material rows (the old path's own storage and row mapping, built
      * from the live MObjs without advancing their texture ids) are what a
