@@ -273,14 +273,14 @@ def no_program_guard_variable(stem: str, adapter: str) -> str | None:
     # stems, which is a source change, not a checker change.
     #
     # What IS caught, and what this checker should be trusted for: a guard
-    # missing from ONE of the three arms, a missing Makefile PREREQ variable,
+    # missing from ONE of the two arms, a missing Makefile PREREQ variable,
     # and a grouped emit rule that lost its prerequisite. All three are RED
     # under mutation.
 
     # `_native_settled` first, for the same reason settled_bonus exists below:
     # it is the stronger terminal state, and an owner that has both (DamageSlash)
     # must be guarded on the settled one. Taking `_native_handled` here instead
-    # reported damage_slash as missing its guard from all three arms.
+    # reported damage_slash as missing its guard from every arm.
     for suffix in ("_native_settled", "_native_handled"):
         candidate = stem + suffix
         if candidate in variables:
@@ -324,18 +324,18 @@ def add_failure(failures: list[str], stem: str, step: str, detail: str) -> None:
     failures.append(f"OWNER {stem}: missing {step} -- {detail}")
 
 
-def no_program_arms(adapter: str) -> tuple[str, str, str]:
-    start = adapter.index("#if NDS_R2_IMPACT_WAVE_NATIVE")
+def no_program_arms(adapter: str) -> tuple[str, str]:
+    """The two conditions every owner's handled/settled flag must hold: the
+    impact-wave submit's and the NO_PROGRAM rejection's after it. (A third,
+    the impact-wave OFF arm, went with its build flag in cb344c4671b.)"""
     submit = adapter.index(
-        "impact_wave_native_handled = ndsRendererSubmitNativeImpactWave", start
+        "impact_wave_native_handled = ndsRendererSubmitNativeImpactWave"
     )
+    start = adapter.rindex("\n    if (\n", 0, submit)
     on_failure = adapter.index("NDS_NATIVE_FAILURE_NO_PROGRAM", submit)
-    off_start = adapter.index("#else", on_failure)
-    off_failure = adapter.index("NDS_NATIVE_FAILURE_NO_PROGRAM", off_start)
     return (
         adapter[start:submit],
         adapter[submit:on_failure],
-        adapter[off_start:off_failure],
     )
 
 
@@ -644,7 +644,7 @@ def main() -> int:
                 add_failure(
                     failures,
                     stem,
-                    "all three NO_PROGRAM arms",
+                    "both NO_PROGRAM arms",
                     f"renderer_adapter_stage.c lacks {guard_variable} in arm(s) {','.join(map(str, missing_arms))} (breaks at runtime)",
                 )
                 failed_owners.add(stem)
