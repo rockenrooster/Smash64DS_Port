@@ -58,7 +58,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "menus"))
 import check_reloc_symbol_census as reloc  # noqa: E402
 sys.path.insert(0, HERE)
-from makefile_parts import makefile_text  # noqa: E402
+from makefile_parts import makefile_sites, makefile_text  # noqa: E402
 
 PREFIX = "NDS_"
 MACRO_RE = re.compile(r"\b(NDS_[A-Za-z0-9_]+)\b")
@@ -66,8 +66,8 @@ COND_LINE_RE = re.compile(r"^\s*#\s*(?:if|ifdef|ifndef|elif)\b(.*)$")
 DEFINE_RE = re.compile(r"^\s*#\s*define\s+(NDS_[A-Za-z0-9_]+)", re.M)
 INCLUDE_RE = re.compile(r'^\s*#\s*include\s+["<]([^">]+)[">]', re.M)
 # Makefile channels.
-ECHO_DEFINE_RE = re.compile(r"#define\s+(NDS_[A-Za-z0-9_$()]+)")
-ECHO_VALUE_VAR_RE = re.compile(r"#define\s+NDS_[A-Za-z0-9_$()]+\s+\$\(([A-Za-z_][A-Za-z0-9_]*)\)")
+ECHO_DEFINE_RE = re.compile(r"#define\s+(NDS_(?:\w|\$\(\w+\))+)")
+ECHO_VALUE_VAR_RE = re.compile(r"#define\s+NDS_(?:\w|\$\(\w+\))+\s+\$\(([A-Za-z_][A-Za-z0-9_]*)\)")
 FOREACH_RE = re.compile(r"\$\(foreach\s+(\w+)\s*,\s*\$\((\w+)\)\s*,")
 MAKE_ASSIGN_RE = re.compile(r"^(?:override\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=\s*(.*)$")
 MAKE_EVAL_ASSIGN_RE = re.compile(r"\$\(eval\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=")
@@ -205,8 +205,9 @@ def make_variables(makefile: str) -> tuple[set[str], dict[str, str]]:
     return assigned, values
 
 
-def makefile_defines(makefile: str) -> tuple[dict[str, str], list[str], list[str]]:
-    """(macro -> 'Makefile:<line>' for every #define the Makefile echoes into a
+def makefile_defines(makefile: str, sites: list[str]) -> tuple[dict[str, str], list[str], list[str]]:
+    """(macro -> its part and line (`sites`, e.g. 'mk/rules_config.mk:<line>')
+    for every #define the Makefile echoes into a
     generated header, unexpandable names, EMPTY findings).  foreach-derived
     names are expanded from the list variable; an echo whose value variable
     is never assigned in the Makefile is EMPTY."""
@@ -225,22 +226,22 @@ def makefile_defines(makefile: str) -> tuple[dict[str, str], list[str], list[str
                 names = [raw.replace(f"$({fe.group(1)})", w) for w in words]
             for name in names:
                 if "$" in name:
-                    unresolved.append(f"Makefile:{lineno} {name}")
+                    unresolved.append(f"{sites[lineno - 1]} {name}")
                 else:
-                    defined.setdefault(name, f"Makefile:{lineno}")
+                    defined.setdefault(name, sites[lineno - 1])
         for var in ECHO_VALUE_VAR_RE.findall(line):
             if var not in assigned and not (fe and var == fe.group(1)):
-                empty.append(f"Makefile:{lineno} $({var}) is never assigned")
+                empty.append(f"{sites[lineno - 1]} $({var}) is never assigned")
     return defined, unresolved, empty
 
 
-def dash_d_defines(repo: str, makefile: str) -> dict[str, str]:
+def dash_d_defines(repo: str, makefile: str, sites: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for lineno, line in enumerate(makefile.splitlines(), 1):
         if line.lstrip().startswith("#"):
             continue
         for name in DASH_D_RE.findall(line):
-            out.setdefault(name, f"Makefile:{lineno} -D")
+            out.setdefault(name, f"{sites[lineno - 1]} -D")
     for path in glob.glob(os.path.join(repo, "scripts", "**", "*.ps1"), recursive=True):
         for lineno, line in enumerate(reloc.read(path).splitlines(), 1):
             if line.lstrip().startswith("#"):
@@ -281,9 +282,10 @@ def harness_mentions(repo: str) -> set[str]:
 
 def census(repo: str) -> dict:
     makefile = makefile_text(repo)
+    sites = makefile_sites(repo)
     sources = Sources(repo)
-    build, unresolved, empty = makefile_defines(makefile)
-    dashd = dash_d_defines(repo, makefile)
+    build, unresolved, empty = makefile_defines(makefile, sites)
+    dashd = dash_d_defines(repo, makefile, sites)
     headers = header_defines(sources)
     generators = generator_defines(repo)
     defined: dict[str, str] = {}

@@ -38,6 +38,21 @@ def makefile_text(root, errors: str = "strict") -> str:
                            lambda name: _read(root / "mk" / name, errors))
 
 
+def makefile_sites(root) -> list[str]:
+    """For each line of `makefile_text(root)`, the part and line it stands on
+    (`mk/config.mk:12`), so a tool reporting a line names the file."""
+    root = Path(root)
+    sites = []
+    for lineno, line in enumerate(_read(root / "Makefile", "replace").split("\n"), 1):
+        m = _INCLUDE.fullmatch(line)
+        if not m:
+            sites.append(f"Makefile:{lineno}")
+            continue
+        body = _read(root / "mk" / m.group(1), "replace").rstrip("\n")
+        sites.extend(f"mk/{m.group(1)}:{n}" for n in range(1, body.count("\n") + 2))
+    return sites
+
+
 def part_containing(root, needle: str) -> Path:
     """The one part whose text holds `needle` (an edit's anchor)."""
     hits = [p for p in makefile_parts(root) if needle in _read(p, "strict")]
