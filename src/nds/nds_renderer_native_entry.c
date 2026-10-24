@@ -91,6 +91,9 @@ static u32 sNdsEntryP4RetiredScene = 0xffffffffu;
 /* The presented frame that last drew an entry root, as
  * sNdsEntryEffectStartupDrawSerial is for the startup-only textures. */
 static u32 sNdsEntryP4EntryDrawSerial;
+/* Contents retired so far: the P4 state cache starts over at each, so the
+ * entry roots' slots go to the roots the match draws after GO. */
+static u32 sNdsEntryP4RetireCount;
 
 static sb32 ndsRendererEntryP4IsEntry(u32 p)
 {
@@ -645,6 +648,7 @@ NDS_RENDERER_COLD void ndsRendererEntryP4RetireEntries(void **storage)
             }
         }
         retired_contents[content >> 5] |= 1u << (content & 31u);
+        sNdsEntryP4RetireCount++;
         for (r = 0u; r < NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT; r++)
         {
             const NDSEntryEffectP4EntryRun *run = &sNdsEntryEffectP4EntryRuns[r];
@@ -807,6 +811,10 @@ u32 gNdsEntryEffectFastCornerGroups;
 static u32 ndsRendererEntryEffectFastCornersReady(void);
 static void ndsRendererEntryEffectEmitFastCorners(u32 first, u32 count,
                                                   u32 lit, u32 textured);
+static void ndsRendererEntryEffectEmitShadedCorners(u32 first, u32 count,
+                                                    u32 material_color,
+                                                    s32 use_material_color,
+                                                    u32 textured);
 
 /* P2-2p8 (2026-09-29): FoxSpecial3's resolved group state, kept across draws.
  *
@@ -835,12 +843,20 @@ u32 gNdsEntryEffectStateReplays;
 #define NDS_ENTRY_STATE_LIT 0x02u
 #define NDS_ENTRY_STATE_HW_LIT 0x04u
 #define NDS_ENTRY_STATE_RAMP 0x08u
+/* An unlit group that is no ramp: its corners take a colour (P8, 2026-10-23:
+ * Palutena's glow, light, gate and the wing roots no cross-matrix corner
+ * bends drew through the per-corner CPU loop). Without VCOLOR, dif_amb is the
+ * group's one packed colour; with it, every corner's own vertex colour, times
+ * dif_amb (the material colour) with MCOLOR. */
+#define NDS_ENTRY_STATE_SHADE 0x10u
+#define NDS_ENTRY_STATE_VCOLOR 0x20u
+#define NDS_ENTRY_STATE_MCOLOR 0x40u
 
 typedef struct NDSEntryEffectGroupState
 {
     u32 poly_fmt;
     u32 texture_params; /* before the merge with the bound texture's word */
-    u32 dif_amb;
+    u32 dif_amb;        /* or a SHADE group's colour word */
     u32 othermode_l;    /* what the batch's alpha-test state reads */
     u32 flags;
 } NDSEntryEffectGroupState;
@@ -936,8 +952,9 @@ static NDSEntryEffectGroupState
  * Sonics' entry planes (fifteen roots, 23 groups a plane) re-resolved every
  * group's state on every draw -- the ~2,500-cycle resolution above, ~90 groups
  * a frame for two seconds of entry. A content's root takes a slot and its
- * groups' range on its first cacheable draw, per heap generation; the packet
- * replay stays the Arwing's (its arena is Sector Z's). */
+ * groups' range on its first cacheable draw, per heap generation and again
+ * after an entry retires (the entry roots had kept the slots all match); the
+ * packet replay stays the Arwing's (its arena is Sector Z's). */
 #define NDS_ENTRY_P4_STATE_ROOTS 40u
 #define NDS_ENTRY_P4_STATE_GROUPS 96u
 #define NDS_ENTRY_P4_STATE_NONE 0xffu
@@ -949,6 +966,7 @@ static u8 sNdsEntryP4StateFirst[NDS_ENTRY_P4_STATE_ROOTS];
 static u32 sNdsEntryP4StateSlots;
 static u32 sNdsEntryP4StateGroupsUsed;
 static u32 sNdsEntryP4StateGen;
+static u32 sNdsEntryP4StateRetires;
 
 static sb32 ndsRendererEntryEffectP4State(
     u32 root_index, const NDSEntryEffectRoot *root,
@@ -956,15 +974,22 @@ static sb32 ndsRendererEntryEffectP4State(
     NDSEntryEffectGroupState **state_groups)
 {
     const u32 p = root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST;
+#if NDS_ENTRY_P4_RETIRE
+    const u32 retires = sNdsEntryP4RetireCount;
+#else
+    const u32 retires = 0u;
+#endif
     u32 slot;
 
-    if (sNdsEntryP4StateGen != gNdsTaskmanHeapGeneration + 1u)
+    if ((sNdsEntryP4StateGen != gNdsTaskmanHeapGeneration + 1u) ||
+        (sNdsEntryP4StateRetires != retires))
     {
         memset(sNdsEntryP4StateSlot, NDS_ENTRY_P4_STATE_NONE,
                sizeof(sNdsEntryP4StateSlot));
         sNdsEntryP4StateSlots = 0u;
         sNdsEntryP4StateGroupsUsed = 0u;
         sNdsEntryP4StateGen = gNdsTaskmanHeapGeneration + 1u;
+        sNdsEntryP4StateRetires = retires;
     }
     if ((p >= NDS_ENTRY_EFFECT_P4_ROOT_COUNT) ||
         ((u32)root->group_count > NDS_ENTRY_STATE_GROUPS))
@@ -2407,13 +2432,24 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 ndsEntryPacketRecordGroup(&packet_rec, group, state, textured,
                                           texture_name, hw_lit);
             }
-            if (hw_lit == FALSE)
+            if ((state->flags & NDS_ENTRY_STATE_VCOLOR) != 0u)
             {
-                glColor(0x7fffu);
+                ndsRendererEntryEffectEmitShadedCorners(
+                    (u32)group->first_vertex, corner_count, state->dif_amb,
+                    ((state->flags & NDS_ENTRY_STATE_MCOLOR) != 0u) ? TRUE : FALSE,
+                    (textured != FALSE) ? 1u : 0u);
             }
-            ndsRendererEntryEffectEmitFastCorners(
-                (u32)group->first_vertex, corner_count, (hw_lit != FALSE) ? 1u : 0u,
-                (textured != FALSE) ? 1u : 0u);
+            else
+            {
+                if (hw_lit == FALSE)
+                {
+                    glColor(((state->flags & NDS_ENTRY_STATE_SHADE) != 0u) ?
+                        (rgb)state->dif_amb : 0x7fffu);
+                }
+                ndsRendererEntryEffectEmitFastCorners(
+                    (u32)group->first_vertex, corner_count,
+                    (hw_lit != FALSE) ? 1u : 0u, (textured != FALSE) ? 1u : 0u);
+            }
             gNdsEntryEffectFastCornerGroups++;
             sNdsRendererHardwareSubmitted = TRUE;
             stats->triangle_count += group->triangle_count;
@@ -2474,6 +2510,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 light_mask = sNdsEntryEffectLightMasks[group->light_state];
         s32 lit;
         u32 hw_lit_group;
+        u32 shade_group;
+        u32 shade_word;     /* a SHADE group's colour word (its group state's) */
 
         /* The RSP transforms a vertex when G_VTX loads its cache slot.  A later
          * display list may then reuse that slot after the modelview changes.
@@ -2693,6 +2731,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
              ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
              ((stats->light_color_mask & NDS_ENTRY_EFFECT_LIGHT_COLORS) ==
               NDS_ENTRY_EFFECT_LIGHT_COLORS)) ? TRUE : FALSE;
+        shade_group = ((lit == FALSE) && (ramp_palette == 0u)) ? TRUE : FALSE;
+        shade_word = (shade_group == FALSE) ? 0u :
+            (use_vertex_color != FALSE) ? material_color :
+            (u32)ndsRendererHardwarePackedValidVertexColor(
+                material_color, use_material_color, FALSE, 0u, 0u);
         if (cpu_projected_group != FALSE)
         {
             ndsRendererLoadHardwareMatrices(NULL, FALSE);
@@ -2765,11 +2808,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
             state->poly_fmt = poly_fmt;
             state->dif_amb = (hw_lit_group != FALSE) ?
                 ndsRendererEntryEffectDiffuseAmbient(
-                    stats->light_color_1, stats->light_color_2) : 0u;
+                    stats->light_color_1, stats->light_color_2) : shade_word;
             state->othermode_l = stats->othermode_l;
             state->flags = ((lit != FALSE) ? NDS_ENTRY_STATE_LIT : 0u) |
                 ((hw_lit_group != FALSE) ? NDS_ENTRY_STATE_HW_LIT : 0u) |
-                ((ramp_palette != 0u) ? NDS_ENTRY_STATE_RAMP : 0u);
+                ((ramp_palette != 0u) ? NDS_ENTRY_STATE_RAMP : 0u) |
+                ((shade_group != FALSE) ? NDS_ENTRY_STATE_SHADE : 0u) |
+                (((shade_group != FALSE) && (use_vertex_color != FALSE)) ?
+                    NDS_ENTRY_STATE_VCOLOR : 0u) |
+                (((shade_group != FALSE) && (use_material_color != FALSE)) ?
+                    NDS_ENTRY_STATE_MCOLOR : 0u);
         }
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, texture_name, poly_fmt,
@@ -2790,23 +2838,40 @@ s32 ndsRendererSubmitNativeEntryEffect(
         if ((static_proven != FALSE) &&
             (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
             (projected_group == FALSE) &&
-            ((hw_lit_group != FALSE) || (ramp_palette != 0u)) &&
+            ((hw_lit_group != FALSE) || (ramp_palette != 0u) ||
+             (shade_group != FALSE)) &&
             ((sNdsEntryEffectRootCoordsFit[root_index >> 5] &
               (1u << (root_index & 31u))) != 0u) &&
             (ndsRendererEntryEffectFastCornersReady() != 0u))
         {
-            if (hw_lit_group == FALSE)
+            if ((shade_group != FALSE) && (use_vertex_color != FALSE))
             {
-                /* The ramp palette already holds the whole colour combiner;
-                 * the colour register holds for every corner after it. */
-                glColor(0x7fffu);
+                ndsRendererEntryEffectEmitShadedCorners(
+                    (u32)group->first_vertex, corner_count, material_color,
+                    use_material_color, (use_texture != FALSE) ? 1u : 0u);
             }
-            ndsRendererEntryEffectEmitFastCorners(
-                (u32)group->first_vertex, corner_count,
-                (hw_lit_group != FALSE) ? 1u : 0u,
-                (use_texture != FALSE) ? 1u : 0u);
+            else
+            {
+                if (hw_lit_group == FALSE)
+                {
+                    /* The ramp palette already holds the whole colour
+                     * combiner, or the group has one colour (the corner
+                     * loop's packing); the colour register holds for every
+                     * corner after it. */
+                    glColor((ramp_palette != 0u) ? 0x7fffu : (rgb)shade_word);
+                }
+                ndsRendererEntryEffectEmitFastCorners(
+                    (u32)group->first_vertex, corner_count,
+                    (hw_lit_group != FALSE) ? 1u : 0u,
+                    (use_texture != FALSE) ? 1u : 0u);
+            }
             gNdsEntryEffectFastCornerGroups++;
             corner = corner_count;
+            if ((shade_group != FALSE) && (state_fox != FALSE))
+            {
+                /* The Arwing's packet records white for an unlit group. */
+                state_ok = FALSE;
+            }
         }
         else
         {
@@ -3682,6 +3747,45 @@ ndsRendererEntryEffectFastCornerLoop(u32 first, u32 count, u32 lit,
                 sNdsEntryEffectNormalWords[*color_index]);
         }
         color_index++;
+        if (textured != 0u)
+        {
+            glTexCoord2t16((t16)sNdsEntryEffectS[*s_index],
+                           (t16)sNdsEntryEffectT[*t_index]);
+        }
+        s_index++;
+        t_index++;
+        glVertex3v16((v16)((s32)position->x << shift),
+                     (v16)((s32)position->y << shift),
+                     (v16)((s32)position->z << shift));
+    }
+}
+
+/* A SHADE group's corners with their own vertex colours, packed as the corner
+ * loop in ndsRendererSubmitNativeEntryEffect packs an unlit corner's
+ * (ndsRendererHardwarePackedValidVertexColor with a vertex colour). One loop
+ * for both texture cases: two cost 776 B of .main for a branch a corner. */
+static void __attribute__((noinline)) ndsRendererEntryEffectEmitShadedCorners(
+    u32 first, u32 count, u32 material_color, s32 use_material_color,
+    u32 textured)
+{
+    const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
+    const u16 *position_index = &sNdsEntryCornerPosition[first];
+    const u16 *color_index = &sNdsEntryCornerColor[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *s_index = &sNdsEntryCornerS[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *t_index = &sNdsEntryCornerT[first];
+    const u16 *end = position_index + count;
+
+    while (position_index != end)
+    {
+        const NDSEntryEffectPosition *position =
+            &sNdsEntryEffectPositions[*position_index++];
+        const NDSEntryEffectColor *color =
+            &sNdsEntryEffectColors[*color_index++];
+
+        glColor(ndsRendererHardwarePackedResolvedColor(
+            ((u32)color->r << 24) | ((u32)color->g << 16) |
+            ((u32)color->b << 8) | (u32)color->a,
+            material_color, use_material_color, 0u));
         if (textured != 0u)
         {
             glTexCoord2t16((t16)sNdsEntryEffectS[*s_index],
