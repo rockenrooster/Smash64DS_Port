@@ -32,6 +32,9 @@ struct PortCoroutine {
     /* Storage is a caller-owned block, not two heap allocations: do not free
      * it. Set only by portCoroutineCreateStatic. */
     int is_static;
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+    int lab_owner;
+#endif
 };
 
 static PortCoroutine *sCurrentCoroutine;
@@ -159,6 +162,108 @@ ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg)
 }
 
 
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+/* Lab (P8 S3, CPPFLAGS=-DNDS_LAB_STACK_PAINT=1): every coroutine stack is
+ * painted when it is made, and its deepest reach is read when it is destroyed
+ * and, for the live ones, on a match's first frame and every 256th after
+ * (portCoroutineLabStackScan,
+ * taskman_seam_battle_host.c). Per owner id (the OSThread id) the record keeps
+ * the stack's size and the most of it ever used; gNdsCoroutineLabWorstFree is
+ * the smallest unused share seen, in per mille. The stability audit's stacks
+ * row (>= 25% free) reads them. */
+#define NDS_COROUTINE_LAB_PAINT 0x5ca1ab1eu
+#define NDS_COROUTINE_LAB_OWNERS 32u
+#define NDS_COROUTINE_LAB_LIVE 64u
+/* [i][0] owner id + 1 (0 = empty), [1] stack bytes, [2] most bytes used. */
+__attribute__((used)) volatile u32 gNdsCoroutineLabStack[NDS_COROUTINE_LAB_OWNERS][3];
+__attribute__((used)) volatile u32 gNdsCoroutineLabWorstFree = 1000u;
+__attribute__((used)) volatile u32 gNdsCoroutineLabScans;
+static PortCoroutine *sNdsCoroutineLabLive[NDS_COROUTINE_LAB_LIVE];
+
+static void ndsCoroutineLabPaint(PortCoroutine *coroutine)
+{
+    u32 *words = (u32 *)coroutine->stack;
+    u32 count = (u32)(coroutine->stack_size / 4u);
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        words[i] = NDS_COROUTINE_LAB_PAINT;
+    }
+    for (i = 0u; i < NDS_COROUTINE_LAB_LIVE; i++)
+    {
+        if (sNdsCoroutineLabLive[i] == NULL)
+        {
+            sNdsCoroutineLabLive[i] = coroutine;
+            break;
+        }
+    }
+}
+
+/* The used bytes of a painted stack: from its top down to the first word
+ * still holding the paint. */
+static void ndsCoroutineLabNote(const PortCoroutine *coroutine)
+{
+    const u32 *words = (const u32 *)coroutine->stack;
+    const u32 count = (u32)(coroutine->stack_size / 4u);
+    const u32 owner = (u32)coroutine->lab_owner + 1u;
+    u32 used;
+    u32 i;
+
+    for (i = 0u; (i < count) && (words[i] == NDS_COROUTINE_LAB_PAINT); i++)
+    {
+    }
+    used = (count - i) * 4u;
+    for (i = 0u; i < NDS_COROUTINE_LAB_OWNERS; i++)
+    {
+        if ((gNdsCoroutineLabStack[i][0] == owner) ||
+            (gNdsCoroutineLabStack[i][0] == 0u))
+        {
+            gNdsCoroutineLabStack[i][0] = owner;
+            gNdsCoroutineLabStack[i][1] = (u32)coroutine->stack_size;
+            if (used > gNdsCoroutineLabStack[i][2])
+            {
+                gNdsCoroutineLabStack[i][2] = used;
+            }
+            break;
+        }
+    }
+    if ((count != 0u) &&
+        ((((count * 4u) - used) * 1000u) / (count * 4u)) < gNdsCoroutineLabWorstFree)
+    {
+        gNdsCoroutineLabWorstFree = (((count * 4u) - used) * 1000u) / (count * 4u);
+    }
+}
+
+static void ndsCoroutineLabForget(PortCoroutine *coroutine)
+{
+    u32 i;
+
+    ndsCoroutineLabNote(coroutine);
+    for (i = 0u; i < NDS_COROUTINE_LAB_LIVE; i++)
+    {
+        if (sNdsCoroutineLabLive[i] == coroutine)
+        {
+            sNdsCoroutineLabLive[i] = NULL;
+        }
+    }
+}
+
+void portCoroutineLabStackScan(void)
+{
+    u32 i;
+
+    gNdsCoroutineLabScans++;
+    for (i = 0u; i < NDS_COROUTINE_LAB_LIVE; i++)
+    {
+        if (sNdsCoroutineLabLive[i] != NULL)
+        {
+            ndsCoroutineLabNote(sNdsCoroutineLabLive[i]);
+        }
+    }
+}
+#endif
+
 extern void ndsCoroutineSwap(NDSCoroutineContext *from,
                              NDSCoroutineContext *to);
 extern void ndsCoroutineTrampoline(void);
@@ -208,6 +313,10 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
     coroutine->context.r4 = (u32)(uintptr_t)coroutine;
     coroutine->context.sp = (u32)stack_top;
     coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+    coroutine->lab_owner = owner_id;
+    ndsCoroutineLabPaint(coroutine);
+#endif
 
     return coroutine;
 }
@@ -247,6 +356,10 @@ PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
     coroutine->context.r4 = (u32)(uintptr_t)coroutine;
     coroutine->context.sp = (u32)top;
     coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+    coroutine->lab_owner = owner_id;
+    ndsCoroutineLabPaint(coroutine);
+#endif
 
     return coroutine;
 }
@@ -254,6 +367,9 @@ PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
 void portCoroutineDestroy(PortCoroutine *coroutine)
 {
     if (coroutine == NULL || coroutine == sCurrentCoroutine) return;
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+    ndsCoroutineLabForget(coroutine);
+#endif
     if (coroutine->is_static) {
         /* The block belongs to the caller's pool (BattleShip recycles it
          * through gcEjectGObjStack). Clear it so a stale resume is impossible

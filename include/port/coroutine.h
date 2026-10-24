@@ -34,6 +34,10 @@ void portCoroutineYield(void);
 int portCoroutineIsFinished(const PortCoroutine *coroutine);
 int portCoroutineInCoroutine(void);
 PortCoroutine *portCoroutineCurrent(void);
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+/* Lab (P8 S3): note every live coroutine's deepest stack reach. */
+void portCoroutineLabStackScan(void);
+#endif
 
 /* Run fn(arg) on the DTCM hot stack and return its result. A call made while
  * already on that stack runs in place. fn must not yield a coroutine or hand

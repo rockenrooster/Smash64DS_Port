@@ -408,6 +408,16 @@ static void ndsBattlePlayablePresentFrame(void)
     u32 logic_tick;
 
     gNdsRendererProfileFrameCount++;
+#if defined(NDS_LAB_STACK_PAINT) && NDS_LAB_STACK_PAINT
+    {
+        extern void portCoroutineLabStackScan(void);
+
+        if ((gNdsRendererProfileFrameCount & 255u) == 1u)
+        {
+            portCoroutineLabStackScan();
+        }
+    }
+#endif
 #if NDS_SHIP_TELEMETRY
     ndsRendererProfileFrameBegin();
 #endif
