@@ -495,11 +495,7 @@ nds_r2_hwmath_bench.o: CFLAGS += -marm
 # -mthumb while nds_r2_sqrtf_arm.o carries the -marm body. Building both -marm
 # would make the two arms identical and the measurement would read zero -- the
 # same trap the bench block above records.
-ifeq ($(NDS_R2_HWMATH_ROUTE),1)
-nds_r2_sqrtf_arm.o: CFLAGS += -marm
-else
 nds_r2_sqrtf.o: CFLAGS += -marm
-endif
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)

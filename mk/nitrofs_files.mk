@@ -1046,10 +1046,8 @@ export NDS_AUDIO_OBSOLETE_DERIVED_FILES := \
 	audio/bgm_inishie_pcm16.raw \
 	audio/bgm_inishie_hurry_pcm16.raw \
 	audio/bgm_results_pcm16.raw
-ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/fgm_phase_pack_ima.bin
-endif
 
 NDS_INISHIE_SCALE_RELOCDATA_FILES :=
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
@@ -1167,12 +1165,9 @@ NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/animation/ftanim_stream_pack.bin
 # in, for the same reason as the bank above: without NDS_R2_BATTLEPACK it is
 # 287,904 bytes of ROM nothing opens.
 export NDS_NITROFS_BATTLEPACK_FILES :=
-ifeq ($(NDS_R2_BATTLEPACK),1)
 NDS_NITROFS_BATTLEPACK_FILES := $(NITROFS_DIR)/animation/battlepack_fox.bin
-endif
 
 export NDS_NITROFS_PARTICLE_FILES :=
-ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
 	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin \
 	$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin
@@ -1182,14 +1177,11 @@ ifeq ($(NDS_P2_STAGE_HYRULE),1)
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grhyrule_native.ds.bin
 endif
-endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
 # reader (ndsTask39PrepareHitSparks), so the ROM does not boot correctly
 # without it whenever the sprite lane is on.
 export NDS_NITROFS_EFFECT_FILES :=
-ifeq ($(NDS_TASK39_FX_SPRITES),1)
 NDS_NITROFS_EFFECT_FILES := \
 	$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin
-endif
 

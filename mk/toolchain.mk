@@ -221,8 +221,6 @@ NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
 # WORK-H P50/P95 1,264,512/1,836,800 -> 1,244,608/1,777,408 across the
 # engine+hold+Q12 series (board row P2-2p6). ORACLE stays a lab flag.
 NDS_FT_POSE ?= 1
-NDS_FT_POSE_HOLD ?= 1
-NDS_FT_POSE_ORACLE ?= 0
 
 # Fox Blaster's shared beam/flash/collision bore line (`nds_effects.h`).
 # SETTLED BY THE OWNER 2026-08-15: "bore should be zero, no offset, not needed

@@ -614,10 +614,7 @@ $(NDS_NATIVE_IMAGE_DIR)/%.bin: $(BUILD)/native_image_%.o
 # generation. Generated from the blob rather than hardcoded so it cannot drift
 # from the asset -- a stale constant here is a pack that silently never becomes
 # resident.
-ifeq ($(NDS_R2_BATTLEPACK),1)
 $(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
-endif
 
 ifneq ($(NDS_TICK_HUD),1)
-override NDS_FTR_LEAN_KTIME := 0
 endif

@@ -61,7 +61,7 @@ nds-bgm-service-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_bgm_service.c $(P
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-service-arm7.d -c $< -o $@
 nds-net-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net_arm7.c $(PROJECT_ROOT)/include/nds/nds_net_link.h
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-net-arm7.d -c $< -o $@
-NDS_ARM7_DS7_LD := $(if $(filter 1,$(NDS_P2_ARM9_WRAM)),$(PROJECT_ROOT)/linker/nds_arm7_ds7_arm9wram.ld,$(CALICO)/lib/ds7.ld)
+NDS_ARM7_DS7_LD := $(PROJECT_ROOT)/linker/nds_arm7_ds7_arm9wram.ld
 $(NDS_ARM7_ELF): $(NDS_ARM7_OBJECTS) $(PROJECT_ROOT)/linker/nds_arm7_contract.ld $(NDS_ARM7_DS7_LD)
 	$(CC) $(NDS_ARM7_FLAGS) -specs=$(CALICO)/share/ds7.specs \
 		-L$(CALICO)/lib -Wl,-Map,nds-audio-arm7.map \

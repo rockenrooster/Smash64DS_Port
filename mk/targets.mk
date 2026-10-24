@@ -2,13 +2,6 @@
 # (the shipping smash64ds, the four-CPU gate, the shell and lab targets).
 # Included in place from the Makefile (P8 G); its text is unchanged.
 
-# A mistyped value here silently produces a wrong ARENA, which reads as a clean
-# measurement of the wrong configuration -- the exact failure this arm exists to
-# repair. Fail the build instead.
-ifneq ($(filter $(NDS_R2_BATTLEPACK_KEEP_CACHE),0 1),)
-else
-$(error NDS_R2_BATTLEPACK_KEEP_CACHE must be 0 or 1)
-endif
 # Task 56: NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2.
 ifneq ($(NDS_TASK56_FIGHTER_PRIMITIVES),$(filter $(NDS_TASK56_FIGHTER_PRIMITIVES),0 1 2))
 $(error NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2; got "$(NDS_TASK56_FIGHTER_PRIMITIVES)")
@@ -41,8 +34,6 @@ override NDS_TASK36_HW_COMPOSE := 2
 ifneq ($(NDS_R2_LAB_R1_PATH),1)
 override NDS_R2_PATH := 1
 endif
-# R2-03 E17/E16: match the published block. Any flag there is on this one too.
-override NDS_R2_FIGHTER_HW_MTX := 1
 # Slice 44. This is the instrument every measurement runs on, so it has to stay
 # flag-identical to the published block -- a stride on one and not the other
 # would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
@@ -52,35 +43,16 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E64b/E65. See the published block, including how the equivalence was
 # finally settled -- with a host error bound, not the state hash.
 ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
-override NDS_R2_CUBIC_FIXED := 1
 endif
-# R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
-# lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
-# call. The cache keys on asset_id and stores the byte-swapped pre-fixup image,
-# re-running fixups per destination so "force" still restores pristine data. The
-# warm list makes the match's 41 measured animations (91,104 bytes) resident one
-# per scene update across the countdown; loading all 41 in one call at
-# scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
-# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640.
-override NDS_R2_ANIM_CACHE := 1
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
-# R2-02 E1a/E2/E7, graduated with the published block 2026-07-28. Defaulted on
-# so a bare tick-HUD build measures the shipping stage program, but deliberately
-# NOT `override`: these three are the live A/B surface for the rest of R2-02,
-# and an override beats the command line, which would make the measurement
-# target unable to measure the thing it exists to measure.
-ifneq ($(origin NDS_R2_STAGE_DIRECT),command line)
-NDS_R2_STAGE_DIRECT := 1
-endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
 # Track the published placement exactly (2026-08-30 rebank: libc + port).
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_TASK39_FX_SPRITES := 1
 ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # P2-2 standing stress arm. It deliberately boots straight into the source
 # VSBattle path instead of walking the CSS: the gate is measuring four-fighter
@@ -245,16 +217,11 @@ override NDS_SHIP_TELEMETRY := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
-override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_R2_CUBIC_FIXED := 1
-override NDS_R2_ANIM_CACHE := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_R2_STAGE_DIRECT := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_TASK39_FX_SPRITES := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 # The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
@@ -335,16 +302,11 @@ override NDS_TASK36_HW_COMPOSE := 2
 ifneq ($(NDS_R2_LAB_R1_PATH),1)
 override NDS_R2_PATH := 1
 endif
-override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_R2_CUBIC_FIXED := 1
-override NDS_R2_ANIM_CACHE := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_R2_STAGE_DIRECT := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_TASK39_FX_SPRITES := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 # The published owner ROM is the all-content build. Keep the 1P campaign
@@ -409,7 +371,6 @@ endif
 NDS_P2_MENU_WALK_TARGETS := \
 	smash64ds-p2-shell-loop-hwtri
 ifneq ($(filter $(TARGET),$(NDS_P2_MENU_WALK_TARGETS)),)
-override NDS_R2_SCENE_LOOP_WALK := 0
 override NDS_P2_MENU_WALK := 20
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
@@ -421,16 +382,11 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
-override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_R2_CUBIC_FIXED := 1
-override NDS_R2_ANIM_CACHE := 1
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_R2_STAGE_DIRECT := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_TASK39_FX_SPRITES := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
 # The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
@@ -450,37 +406,6 @@ override NDS_P2_STAGE_INISHIE := 1
 override NDS_P2_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
-override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
-NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
-# BUGS.md crowd row: compile ft/ftpublic.c in place so the audience actor,
-# its thresholds, cooldowns, repeat limits and defeated-voice queue are the
-# source's rather than a translation.
-#
-# The actor costs 3,332 bytes. NDS_R2_WEAPON_POOL now retains six entries
-# against a measured P1 high-water of one; the shipping soak must keep
-# gNdsTaskmanGeneralHeapFreeMin above the 25,600-byte GObj latch.
-NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
-# The eleven efManager*MakeEffect seams that spawn a particle and nothing else:
-# the hit sparks, the running/landing dust, the fire grind, the sparkles, the
-# flash and the set-off. ON, and the reason it is on is that routing them is
-# CHEAPER than the stand-in it replaces, not merely prettier.
-#
-# Each source maker takes an EFStruct and calls
-# gcMakeGObjSPAfter(nGCCommonKindEffect, NULL, ...) -- whose second argument is
-# a run function, not a DObjDesc (objman.c:1724) -- so it builds NO DObj at all
-# and draws entirely through lbParticleDrawTextures. The stand-in it displaces,
-# ndsEFManagerMakeVisualEffect, takes the same EFStruct AND a gcAddDObjForGObj,
-# so every stand-in is 136 bytes of general heap the match never gives back.
-# Watch gNdsGCDrawsActiveMax across this flag, not just the heap low-water.
-#
-# It was previously behind NDS_R2_SOURCE_EFFECTS_FULL because routing the group
-# "froze the ROM" -- an attribution that has since been retracted. That freeze
-# was the EFDesc offsets holding symbol ADDRESSES, which sent gcSetupCustomDObjs
-# walking garbage and allocating a 136-byte DObj per bogus node until syMallocSet
-# gave up; the per-effect cost it was blamed on never existed. The generator
-# already treats all eleven as P1 seams and has packed their scripts and
-# textures (docs/optimization/archive/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
-NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
 # NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
 # makers -- damage slash, impact wave, catch swirl and the three random spawn
 # showers -- plus the shield, rebirth halo and Fox reflector, and the reason it
@@ -513,12 +438,6 @@ NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
 # which non-forced effects start being refused. Cut something that is actually
 # on the heap instead.
 NDS_R2_EFFECT_POOL ?= 12
-override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
-ifneq ($(NDS_FIGHTER_ANIM_AUDIT),0)
-ifneq ($(NDS_RENDERER_PROFILE_LEVEL),1)
-$(error NDS_FIGHTER_ANIM_AUDIT requires NDS_RENDERER_PROFILE_LEVEL=1)
-endif
-endif
 # Checked here, after every target block has applied its overrides, so a target
 # that turns both on is accepted while a bare command-line NDS_TASK44_STAGE_STEADY=1
 # without the Task 36 stage owner still fails loudly.

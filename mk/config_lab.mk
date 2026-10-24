@@ -16,47 +16,6 @@ $(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_
 # external linkage, so the 0 arm stays byte-identical to a build without the
 # family at all.
 NDS_R2_PATH ?= 0
-# R2-02 E1a. Elides the per-frame stage PrepareRun phase and reuses the prepared
-# run table, which is a pure function of the generated tables and a traversal
-# state Task 44 already proves unchanged. Sized at 67,119 ticks/frame by bracket
-# attribution, realized 94,784 on STG P50 over 128/128 frames. Independent of
-# NDS_R2_PATH -- it is a renderer change, measurable on either battle path.
-NDS_R2_STAGE_DIRECT ?= 0
-# R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
-# shade loop once a frame and counts the frames each changes on. 48,422
-# ticks/frame re-light 541 dense vertices; this says whether they need to.
-NDS_R2_FIGHTER_SHADE_PROOF ?= 0
-# R2-03 E5 falsifier, lab only. Hashes the facts PrepareProductionRun computes
-# per run and counts the frames they change on. Section 7 for this phase asks
-# for a submit consuming only baked facts -- "no PrepareProductionRun policy
-# re-checks, no per-frame texture identity proof" -- which is R2-02 E1a's cut
-# (94,784) moved to a table of the same shape. Three hashes, because they imply
-# different cuts: STABLE is the bakeable candidate, MATERIAL is the live colour
-# alone, and FULL adds the texture cache pointer -- a hardware-cache pointer
-# moving is a different verdict from the drawn facts moving.
-# Hooked in the production path, not the hierarchy preflight: canonical mode 9
-# never writes hierarchy_runs[], so that hook measured nothing. Read
-# gNdsR2RunCallCount first; zero means the instrument did not run.
-NDS_R2_FIGHTER_RUN_PROOF ?= 0
-# P2-2 fighter packet. Captures each fighter's whole GX command stream once as
-# packed GXFIFO words (in the battle-idle gSYFramebufferSets) and replays it by
-# DMA every frame, patching only the projection, the joint-chain matrices and
-# the light vector. The four-CPU stress arm measured the four fighter draws at
-# 607,040 of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK=15 A/B,
-# 2026-08-23); this is the structural cut of that lane. Promoted to the default
-# the same day after four gate-green stress runs (WORK-H P50/P95 1,600,832 /
-# 2,069,824 -> 1,281,728 / 1,866,432), pixel-identical entry-series captures
-# and a green shell loop; `NDS_R2_FIGHTER_PACKET=0` on the command line is the
-# control arm. Compiled out by itself where its preconditions are missing
-# (software triangles, profile level 2, no GX compose / HW matrices / HW light).
-NDS_R2_FIGHTER_PACKET ?= 1
-# R2-03 E17. Loads the fighter's projection and modelview separately and lets the
-# geometry engine perform the multiply, instead of composing on the CPU and
-# loading the product. Measured -17,600 FTR P50 / -18,560 WORK P50, and it leaves
-# the modelview alone in the vector matrix rather than the composed MVP, which is
-# what hardware lighting needs. Rendering-side -- positions now round in hardware
-# -- so it gates on a screenshot pair plus the owner's approval.
-NDS_R2_FIGHTER_HW_MTX ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
 # NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY.
@@ -120,11 +79,6 @@ NDS_TICK_HUD_SPANS_DEFAULT ?= 1
 # configuration that ships. Every other target keeps them; a probe that needs
 # them on a shipping build passes NDS_DIAG_COUNTERS=1.
 NDS_DIAG_COUNTERS ?= $(if $(filter smash64ds smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),0,1)
-# R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
-# whole fighter end to end: the phase census partitions the draw, this measures
-# what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
-# built with this is not a playable configuration.
-NDS_R2_DRAW_SUPPRESS_MASK ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
 NDS_RENDERER_BENCHMARK_MODE ?= 0
@@ -159,59 +113,6 @@ NDS_PRESENT_LEAD ?= 131
 # This list is placement-only: the extracted libgcc member is byte-identical
 # and merely retains its original .text section in main RAM.
 NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
-NDS_FIGHTER_ANIM_AUDIT ?= 0
-NDS_TASK39_FX_SPRITES ?= 0
-# R2-07: compile the original particle bytecode interpreter (lb/lbparticle.c,
-# ef/efparticle.c) in place and let the real efcommon scripts run instead of the
-# recoloured 16-vertex stand-ins.
-#
-# DEFAULT 1 as of 2026-08-01. Measured on three tick-HUD ROMs differing only in
-# these flags: this one is INDISTINGUISHABLE from the control -- NO-FREEZE, a
-# full match to Results, ViolationCount 0, StagePrepareBuildCount 2 -- while
-# running 14 scripts and 138,274 visible particles inside its fixed pools
-# (41/48 structs, 8/10 generators). SwitchPlan 3.11's no-gameplay-allocation
-# clause is satisfied by measurement rather than by argument.
-#
-# IT IS 1,176 BYTES FROM A HARD FAILURE and that is not a figure of speech:
-# ifCommonSetMaxNumGObj caps the GObj pool when the general heap drops under
-# 25 KiB free and the GO countdown then dereferences a NULL, and .text costs
-# taskman arena one for one here. Read `general heap free bytes` and
-# sGCCommonsMaxNum on any soak after adding image.
-NDS_R2_PARTICLE_RUNTIME ?= 1
-# R2-07 particle DRAW. At 1 the atlas is bound and camera-facing quads are
-# emitted, which is what makes the real efcommon scripts visible instead of the
-# recoloured 16-vertex stand-ins six BUGS.md VFX rows describe.
-#
-# DEFAULT 1 as of 2026-08-01, on a measured A/B: 117,937 quads emitted with
-# ZERO atlas misses, NO-FREEZE, and the stage fast path fully engaged
-# (StagePrepareBuildCount 2, reuse 2,041 -- the control's own numbers). Cost is
-# about 10,100 ticks (MISC P50 45,120 -> 55,232) and five extra three-VBlank
-# frames; the five-plus population is unchanged at 4 of 566.
-#
-# Three defects are closed and recorded at their seams rather than here: a
-# `glEnd()` that wedged the geometry engine (GXSTAT=0e008900 --
-# check-gbi-decode-fixtures.ps1 pins that count at 1); a GO-countdown abort
-# that was ifCommonSetMaxNumGObj capping the GObj pool under 25 KiB free
-# (PORTING.md); and 196 five-VBlank frames caused by a 32,768-byte atlas
-# starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
-# is a measured hard bound, not a budget (generate_nds_particle_banks.py).
-NDS_R2_PARTICLE_DRAW ?= 1
-# Draw Mario's fireball as one camera-facing quad instead of interpreting its
-# source model's display list. Owner-playtested and accepted 2026-08-07; ON BY
-# DEFAULT. See the block comment in reloc_backend_movement.c.
-#
-# The asset is why this is worth trying: relocData 297's Vtx[0..3] is a single
-# flat 300x300 quad and its texture is CI4 16x16 whose palette entry 0 is
-# transparent, which is bit-for-bit DS GL_RGB16 + COLOR0_TRANSPARENT. So unlike
-# the shield -- which had to trade index bits against alpha bits -- this bakes
-# with nothing quantised, and both routes draw the same four vertices.
-#
-# Measured on the whole-match instrument (ROM E61D608B, 2026-08-06): one live
-# fireball costs 64,700 ticks/frame at P50, MISC 33,088 of it. This flag
-# addresses that half. The other half is SRC 26,752 -- wpMapTestAll running
-# full stage collision for the projectile every frame -- and is a separate
-# seam that this does not touch.
-NDS_R2_FIREBALL_QUAD ?= 1
 # Replace EFCommon script 0x62 with its closed nine-visible-tick size program
 # and upload texture 27 as the source's exact PAL16 16x8 half-disc. The DS
 # texture unit mirrors T in hardware, reproducing the N64 MASKT tile as one
@@ -220,24 +121,6 @@ NDS_R2_FIREBALL_QUAD ?= 1
 # it remains independently switchable for attribution A/Bs. Owner-playtested
 # and accepted 2026-08-09; ON BY DEFAULT through the beam route.
 NDS_R2_FOX_BLASTER_GLOW_AOT ?= 1
-# BUGS.md "Fox's pistol model is missing". Fox's gun is model part 13 on joint
-# 17; source draws it by pointing the joint DObj's own `dl` at a display list in
-# reloc asset 0x13b. The DS cannot copy that: ndsFighterDrawPlanResolve rejects
-# the whole selected collection when any dl resolves outside the fighter's model
-# asset, so the assignment would push the ENTIRE fighter off the native draw
-# path for one 22-triangle part. This instead submits the part's baked mesh at
-# joint 17's world matrix right after the fighter's own run, leaving the baked
-# body untouched. Geometry, texture and palette are resolved offline by
-# scripts/fox_gun_bake.py; nothing is walked or converted at runtime.
-NDS_R2_FOX_GUN_OVERLAY ?= 1
-# FireGrind as a tiny DS-native effect: replaces the BattleShip root particle +
-# three generators + six interpreter sparks with a fixed pool of three source-
-# derived quads per fireball bounce, drawn inside the existing particle GX batch.
-# No root LBParticle, no generators, no LBTransform, no bytecode, no runtime trig
-# or texture conversion. 3 quads/bounce instead of 6, reusing texture 5's already-
-# resident atlas row. Owner-playtested and accepted 2026-08-07; ON BY DEFAULT.
-# See include/nds/nds_firegrind.h.
-NDS_R2_FIREGRIND_NATIVE ?= 1
 # Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
 # top/center/bottom/width fields from the weapon attributes reloc data -- by a
 # port-side factor at spawn. The source values load straight from ROM reloc
@@ -246,29 +129,10 @@ NDS_R2_FIREGRIND_NATIVE ?= 1
 # collision pass reads them. 1.0 is source-exact; >1 enlarges the rebound feel.
 # Owner playtest 2026-08-07: the source fireball felt slightly too small.
 NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
-# ImpactWave native-mesh lab. The source effect remains the owner of spawn,
-# lifetime, AObj/MObj animation and colour/index semantics, but its hot draw
-# skips the generic N64 display-list/texture path: the 18 source vertices and 16
-# source triangles are compiled into the port, while DL_0x7C28's real CI4 16x32
-# image is stored directly in DS PAL16 nibble order with five AOT RGB555 palettes for
-# the five source PRIM colours. Scene entry uploads those tiny resident names;
-# impact frames do no N64 texel/TLUT conversion or texture allocation. The
-# pixel-identical presented-frame A/B is owner-approved, so keep this on by
-# default; setting it to 0 remains the source/interpreted control arm.
-NDS_R2_IMPACT_WAVE_NATIVE ?= 1
 # Bit per generated RebirthHalo group eligible for model-space GX submission.
 # 0x3f is the all-GX experiment; final acceptance may narrow this if the DS
 # transformer's subpixel rounding changes source coverage for a specific group.
 NDS_R2_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
-# SEEDS gNdsBattlePlayableFoxCpuEnabled FOR A ROM NOBODY DRIVES WITH GDB. 1 is
-# the published source-normal battle (3/2/1/GO, live match timer, level-3 Fox);
-# 0 skips the countdown, unlocks at GO, freezes the timer and leaves Fox
-# standing still. The scripted harnesses keep writing the variable at
-# scVSBattleStartBattle and are unaffected either way -- this exists purely so a
-# hand-played inspection ROM can be built, which it could not be before
-# 2026-08-06. MUST STAY 1 for anything published or measured: a frozen Fox is
-# not representative gameplay and its ticks are not a Boundary figure.
-NDS_R2_FOX_CPU_DEFAULT ?= 1
 # THE P1 DEMO LADDER (owner, 2026-08-17): Fox opens at CPU level 1 and gains a
 # level each time Mario wins and START restarts from Results, wrapping 9 -> 1.
 # The battle text HUD already prints the live level as "CPU L<n> [Fox]" from
@@ -280,65 +144,6 @@ NDS_R2_FOX_CPU_DEFAULT ?= 1
 # (scene_harness.c) so every banked gate figure stays comparable. Build with 0
 # for a fixed level-3 Fox.
 NDS_DEMO_FOX_CPU_LADDER ?= 1
-# NDS_R2_PARTICLE_V16_HEADROOM IS DELETED, AND A FIXED FACTOR IS WHY.
-#
-# It bought one extra bit of range (x16 -> x8, reach +/-2047.9 -> +/-4095.9) at
-# the price of half the sub-unit resolution of EVERY particle, and it was still
-# not enough: the owner re-filed the same symptom against the build that had it
-# on. The reach a particle pass needs is not a constant -- an ordinary hit spark
-# lives inside 2,000 units while the Star KO sparkle follows the dying fighter
-# out to z = -14,999 (ftcommondead.c) -- so no single factor is both wide enough
-# and precise enough. ndsRendererSubmitParticleQuad now picks the factor per
-# batch and escalates only when a quad actually reaches the rail, which keeps
-# the full x16 precision on ordinary frames and buys 8x the range on the frames
-# that need it. Verify with gNdsParticleWorldClampCount (must be 0) and
-# gNdsParticleScaleShiftMax; gNdsWhispyDrawClamped mirrors the first.
-#
-# THE LESSON, for the second time in a fortnight: a measured, working fix parked
-# at a default of 0 is invisible to everyone including its author -- the fixed
-# sqrt sat that way for a month on 2026-07-31. Audit the 0 flags whenever a
-# symptom matches one of their descriptions.
-#
-# R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
-# 20.12 alongside the decomp's float one and records the deviation on the joints
-# a real match inverts. Decides nothing and changes nothing.
-#
-# ITS QUESTION IS ANSWERED -- DO NOT RE-RUN IT. This comment used to say the
-# live scale domain "has never been read off the running game"; it was read on
-# 2026-07-31 and the result is recorded in include/nds/nds_r2_collision_mtx.h:
-# 460 samples, joint scale 1.1138-1.1199, deviation 2/5/21 in 1/4096 world units
-# at the 1/4/16-unit probes against a bound of 82, zero over bound, zero
-# singular. Building it again on 2026-08-01 on the strength of that stale
-# sentence ABORTED the ROM at the GO countdown -- GENERALFREE 20,272 against the
-# 25,600 GObj latch, COMMONSMAX 45, MALLOCOVF 0 -- because its .text alone is
-# more taskman arena than the tree has spare. That is the standing lesson: the
-# shipping tree has roughly five kilobytes of arena margin, and a measurement
-# has to be sized against it like any other code.
-NDS_R2_COLLISION_L7_ORACLE ?= 0
-# R2-07, the whole-cluster fixed-point fighter hurtbox narrow phase. Compiles
-# src/port/nds_r2_collision_fixed.c, the out-of-line ARM entry points for the
-# kernels in include/nds/nds_r2_collision_fixed.h.
-#
-# WIRED 2026-08-15 (slice 52). At 1 this also compiles
-# src/port/nds_r2_collision_ring.c and turns on the wrapper in
-# src/import/battleship_gmcollision.c, which runs func_ovl2_800EDBA4,
-# func_ovl2_800EDE00 and func_ovl2_800EDE5C in fixed point behind an f32
-# boundary. gmCollisionTestRectangle and gmCollisionTestSphere are NOT
-# converted: every collision decision stays in decomp float code reading the
-# same f32 fields, which is what makes the change gradeable by a bound rather
-# than by a flip count. include/nds/nds_r2_collision_ring.h owns that argument.
-#
-# DEFAULT STAYS 0 UNTIL THE OWNER FLIPS IT. The shipping default is an owner
-# decision (BLOCKED(decision: shipping default) on the board), and separately
-# an object entering the link changes the link INPUT SET -- this project has
-# measured re-addressing collateral from less than that (Tasks 87-89/94/95)
-# against a cross-build P95 floor of +/-5,376, so a measuring cycle must not
-# move the published ROM's placement as a side effect.
-#
-# The kernels are proven at this flag's 1 by scripts/check-r2-collision-fixed.ps1,
-# which compiles them for the real target independently of the flag, so 0 costs
-# no coverage. NDS_R2_COLLISION_FIXED_DISPATCH below is the falsifier arm.
-NDS_R2_COLLISION_FIXED ?= 0
 # The falsifier arm for the wiring above, and it is separate from the flag for a
 # measurement reason. Setting NDS_R2_COLLISION_FIXED to 0 removes the objects
 # from the link, which is a DIFFERENT link input set and therefore a different
@@ -346,61 +151,7 @@ NDS_R2_COLLISION_FIXED ?= 0
 # keeps every byte and flips one initialised word of .data
 # (gNdsCfxRingEnable, read through a volatile so no fold can reach it), so arm A
 # and arm B are expected to have byte-identical .text.
-NDS_R2_COLLISION_FIXED_DISPATCH ?= $(NDS_R2_COLLISION_FIXED)
-# THE WARM-MAC EXCHANGE-RATE INSTRUMENT (include/nds/nds_r2_sim_mac_fixed.h).
-# LAB ONLY, DEFAULT 0, and at 0 the translation unit is not linked at all so a
-# published ROM stays byte-identical.
-#
-# It is a SHADOW, not a route: at every arm the decomp float body still runs and
-# still writes the same result, and the fixed form is evaluated beside it and
-# discarded. That is deliberate -- a replacement route cannot price these two
-# bodies, because they feed gameplay decisions and the two arms would play
-# different fights (one such A/B on this exact code ended with damage 130/51
-# against 33/65 on the same ELF, one poked bit apart). The shadow's arms are
-# bit-identical matches by construction, so every whole-match invariant must be
-# equal and an unequal one means the INSTRUMENT is broken.
-#
-# gNdsR2SimMacShadowArm is a `.data` word poked with -SetGlobals: bit 0 runs the
-# fixed point-x-matrix transform, bit 1 the fixed 3x4 affine compose, bit 2
-# grades the transform against the float body's own result on the same inputs.
-NDS_R2_SIM_MAC_SHADOW ?= 0
-# THE TWO HOOKS include/nds/nds_r2_collision_fixed.h:205,215 HAS CARRIED SINCE
-# IT WAS WRITTEN, finally bound. At 1, NDS_R2_CFX_DIV64 and NDS_R2_CFX_ISQRT64
-# reach the ARM9 divide and square-root coprocessors instead of libgcc's
-# bit-by-bit __aeabi_ldivmod and the header's own restoring digit-by-digit root.
-# EXCHANGE.md section 0.4 names that portable divide -- four calls per
-# narrow-phase entry -- as the measured cause of the collision ring's 2.68x
-# exchange rate.
-#
-# It follows NDS_R2_COLLISION_FIXED rather than defaulting to 0 on its own,
-# because at NDS_R2_COLLISION_FIXED=0 the translation unit that binds them is
-# not linked at all and the flag cannot change a byte. There is no arm to
-# choose between: the arithmetic is proven identical (scripts/check-r2-hwmath.ps1
-# for the algorithm, gNdsR2HwMathBench*Mismatch for the unit) and the hardware
-# form is not slower, so a default-off "candidate" here would only be a flag
-# nobody flips.
-NDS_R2_CFX_HWMATH ?= $(NDS_R2_COLLISION_FIXED)
-# Lab price-and-equivalence instrument for those units
-# (src/port/nds_r2_hwmath_bench.c). Default 0 and NOT linked at 0, so a
-# published ROM is byte-identical with or without it. It answers a per-operation
-# question -- what does one hardware divide, one hardware root, one
-# hardware-unit f32 divide and one ARM-state sqrtf cost against the software
-# form each would replace -- which is transferable across lanes in a way a
-# whole-match A/B of one lane is not.
-NDS_R2_HWMATH_BENCH ?= 0
-# Lab SAME-BINARY route for the two hardware-math changes banked on 2026-08-16.
-# Default 0; at 0 there is no route word, no selector and no second sqrtf body,
-# so a published ROM carries only the shipped form. At 1 the binary holds both
-# arms and one `.data` word (gNdsR2HwMathRoute, src/nds/r2/nds_r2_sqrtf.c)
-# picks between them, which is the only way to price either change: sqrtf in ARM
-# state is worth 4,300-4,750 tk/fr and the leading busy poll 2,491, both FAR
-# under the >=14,080 rank-80 cross-build floor, so a two-build A/B cannot decide
-# them.
-#   bit 0  NDS_R2_HWMATH_ROUTE_SQRTF_ARM  sqrtf body from the -marm object
-#   bit 1  NDS_R2_HWMATH_ROUTE_NO_LEAD    skip the leading DIVCNT/SQRTCNT poll
-# Arm 0 is exactly what shipped before this date; arm 3 is exactly what ships
-# after it.
-NDS_R2_HWMATH_ROUTE ?= 0
+NDS_R2_COLLISION_FIXED_DISPATCH ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -418,11 +169,6 @@ NDS_TASK37_PROFILE_FRAMES ?= 128
 # "over-counts on clean frames, under-counts on the tail", and the tail is what
 # the P95 gate is decided on.
 NDS_TASK37_PROFILE_PER_FRAME_REGION ?= 0
-# Drive the profiler window from the VS Results loop instead of the battle loop.
-# The battle site keys off presented frames and the Results loop never increments
-# that counter, so a battle-keyed window opens and dumps during the match and says
-# nothing about Results. Exactly one of the two tick sites is live.
-NDS_TASK37_PROFILE_RESULTS ?= 0
 # Task 37 placement repack: admit the measured non-memory-stall toppers into the
 # 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
 # no eviction of any current resident.
@@ -443,12 +189,8 @@ NDS_TASK37_ITCM_LEAVES ?= 0
 # and produce a byte-identical ROM. Environment-driven builds were unaffected
 # (the env value is in place before line 110), which is why the lab A/B runs
 # were valid and this stayed hidden.
-NDS_TASK37_ITCM_LIBC = $(if $(filter 1,$(NDS_FAST_MEM)),0,$(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0))
+NDS_TASK37_ITCM_LIBC = 0
 NDS_TASK37_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
-NDS_TASK37_ITCM_PORT = $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
-# Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
-# Separates "ITCM residency breaks it" from "any layout change breaks it".
-NDS_TASK37_LAYOUT_PROBE ?= 0
 # Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.

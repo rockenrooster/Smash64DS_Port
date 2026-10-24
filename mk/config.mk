@@ -76,36 +76,13 @@ override NDS_RENDERER_HW_TRIANGLES := 1
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
 NDS_TICK_HUD ?= 0
-# P2-2p8 A5: fixed-point proof that a fighter hurtbox test misses, ahead of the
-# decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
-# selects off/reject/shadow at runtime.
-NDS_P2_HURTBOX_REJECT ?= 1
 # P2-2p8 (2026-10-04), owner ruling D13: fighter joint worlds stay fixed point
 # end to end. The hurtbox reject's per-epoch world cache serves
 # gmCollisionGetFighterPartsWorldPosition and the held item's 0x52 matrix in
 # place of the float latch walk (src/port/nds_p2_hurtbox_reject.c). Re-baselines
 # the replay digest; the P2 VS targets only (the frozen P1 target keeps the
 # float walk). gNdsP2JointResident is the same-ROM A/B word.
-NDS_P2_JOINT_RESIDENT ?= $(if $(filter 1,$(NDS_P2_HURTBOX_REJECT)),$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0),0)
-# P2-2p8: memcpy/memset/memcmp in ARM state (32-byte LDM/STM bodies), in ITCM
-# (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
-# moved into ITCM (NDS_TASK37_ITCM_LIBC is 0 while this is 1). 0 restores them.
-NDS_FAST_MEM ?= 1
-# The lean fighter path's per-draw phase clocks (gNdsFtrLean head/guard/
-# kernel/patch/book/submit ticks and their parts, ~30 reads a frame per
-# fighter) are attribution: 1 compiles them into tick-HUD builds, 0 (default)
-# leaves those counters at 0 and out of WORK-H (A9).
-NDS_FTR_LEAN_PHASE_TICKS ?= 0
-# The battle camera's framing witness (gNdsCamera*, read by
-# scripts/diagnostics/probe-native-render-scene.ps1) is a diagnostic: 1
-# compiles it in, 0 (default) keeps its per-frame margins out of every ROM.
-NDS_CAMERA_FRAME_WITNESS ?= 0
-# P2-2p8: ARM9 owns all 32 KB of shared WRAM (WRAMCNT = 0, a cacheable MPU
-# region at 0x03000000) and ARM7 links in its private WRAM
-# (linker/nds_arm7_ds7_arm9wram.ld); the fighters' FTStruct pool, pose
-# state, GObjs and top joints live there (include/nds/nds_arm9_wram.h).
-# 0 is the lab control (ARM7 on calico's ds7.ld, the pool on the heap).
-NDS_P2_ARM9_WRAM ?= 1
+NDS_P2_JOINT_RESIDENT ?= $(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
 # P2-2p8 T1 (A7 memory): 1 stages each of the nine VS ground maps (GR<Stage>Map)
 # as a COMPACT map -- the stage wallpaper's Sprite and Bitmap[44] table (776 B)
 # appended, MPGroundData.wallpaper pointing at them -- so the map's extern tree
@@ -122,27 +99,9 @@ NDS_P2_ARM9_WRAM ?= 1
 # them instead of shipping the other arm's files.
 NDS_P2_COMPACT_GROUND_MAPS ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
-# P2-2p8 Phase 1 slice 3: 1 compiles the lean kernel's phase timing
-# (gNdsFtrLeanSlow bit 8, gNdsFtrLean.kernel_part_ticks). Lab (tick-HUD)
-# builds only, own build dir -- forced to 0 below for every other target.
-NDS_FTR_LEAN_KTIME ?= 0
-# P2-2p8 (2026-10-04, owner ruling D13 class: render precision only): 1 lets
-# the lean fighter kernel truncate where it reproduced the old compose's
-# round-half-away-from-zero steps and the source's float-rounded angle index
-# (src/nds/nds_ftr_lean_kernel.c). Sub-LSB vertex differences, no gameplay
-# input. 0 restores the bit-exact kernel the lean oracle routes (2/3) grade.
-NDS_FTR_LEAN_RELAXED ?= 1
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
-# R2-07 E2. Route each stage segment to Task 36 replay or the live path at
-# RUNTIME, in one binary, so the second-entry corruption can be attributed to a
-# route rather than to a rebuild. Default 0 keeps the shipping build byte-clean;
-# at 1 the gate reads four volatiles that gdb sets, and reports which route each
-# segment actually took so a picture change is checkable rather than assumed.
-# Separately linked A/B ROMs are the wrong instrument here -- this ROM's pacing
-# is cache-placement sensitive and that has already confused two comparisons.
-NDS_R2_STAGE_ROUTE_PROBE ?= 0
 
 # Task 56: fighter DS-native primitive streams. Compiles the immutable Mario/Fox
 # topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one
@@ -246,99 +205,6 @@ NDS_FTPARTS_FLAT_MAX ?= 96
 # else. Measured delta solves for the uncached-word cost that every VRAM
 # candidate in the ranking is quoted against.
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
-# R2-04 E1. Task 75 absorption: keeps each fighter animation's byte-swapped
-# pre-fixup payload resident so the frame that needs a move does not re-walk
-# NitroFS and re-read the cartridge. E0 measured 53 of 82 force-loads (64.6%)
-# repeating an asset already loaded, over a working set of 29 distinct
-# animations. Every failure path degrades to the uncached load.
-NDS_R2_ANIM_CACHE ?= 0
-# Native Battle Kernel slice 1 phase 5. The resident figatree pack: one fighter's
-# clips linked into .rodata in the parser's own byte order, with per-slot tables
-# of blob-relative offsets, so an action change resolves to a const pointer
-# instead of rebuilding an N64 loaded-file image at the fighter's heap. This is
-# NOT a bigger cache -- a cache HIT still memcpy'd the payload, re-registered the
-# file, re-ran finalize/fixups/AObj16 normalization and stripped alias nodes, and
-# that sequence sat on 62 of the 80 frames that set P95 against 174 of the 1,520
-# body frames (6.8x).
-#
-# THE BLOB IS NOW ARENA-RESIDENT (2026-08-15). At 1 the Fox pack ships as a
-# NitroFS payload and is streamed into the taskman animation arena at scene
-# setup, replacing the 262,144 B raw-file cache; the ARM9 image does not grow.
-# The `.incbin` route it replaced is DISQUALIFIED and must not come back:
-# +288,992 B of static image was MEASURED to push `gNdsTaskmanArenaChosenSize`
-# from 0x150000 to 0x140000 with 16 alloc failures -- the arena is calloc'd from
-# the same libnds heap `fake_heap_start` bounds, so `.rodata` and the arena come
-# out of the same bytes -- projecting a general-heap low-water of ~6,652 against
-# the mandated 32,768 floor. The boot ladder does NOT catch that: the failing arm
-# had 66,784 B of proven headroom.
-# OWNER DECISION 2026-08-17: THE DEFAULT IS 1, taken with KEEP_CACHE below.
-# `artifacts/performance/2026-08-17_ship-cadence/SHIP_CADENCE.md`. The trade the
-# previous comment called unpriced is priced: measured on the shipping defaults,
-# the pack is -34,304 at rank-80 (2.44x the >=14,080 cross-build floor, 2.1x the
-# +16,209 requirement a pack-off ROM carries) and 13 of the frames the cadence
-# arm counts, against 17,600 B of general heap -- low-water 70,736 without it
-# and 53,136 with it, on the mandated 32,768 floor, which is exactly the figure
-# the comment at :345-347 predicted before the run.
-#
-# What made this a decision rather than a candidate: every requirement, every
-# candidate size and BOTH gate arms of this campaign had already been measured
-# with the flag ON while the published ROM shipped without it, nine artifacts
-# deep. The flip does not FIND 34,304 ticks; it stops the measurement basis and
-# the published ROM disagreeing.
-# `artifacts/performance/2026-08-15_battlepack-pool/BATTLEPACK_POOL.md` is the
-# pool history; the 2026-08-15 stress battery is in ARENA_PRICE.md.
-NDS_R2_BATTLEPACK ?= 1
-# The arm that isolates the pack from the cache it displaces. Phase 8 measured
-# the resident pack at 2.9x the gate and attributed all of it to the carve
-# DELETING the raw file cache (262,144 -> 4,096 B; Rejects 0 -> 126); the
-# isolation arm then refuted that attribution, and the mechanism cycle found the
-# real owner -- a resolver ordering defect, now fixed. With the defect gone the
-# carve is the whole remaining fare: H - G = +265,856 at rank-80.
-#
-# At 1 the animation arena reserves the blob PLUS a raw cache, and
-# NDS_TASKMAN_ARENA_SIZE grows so the general heap is not robbed to pay for it.
-# It is independent of NDS_R2_BATTLEPACK on purpose: at BATTLEPACK=0 it grows the
-# arena and nothing else, which is the matched control for the pair (same arena
-# size, same addresses, same Task 53 guard -- only the pack differs).
-#
-# "LAB ONLY, NOT SHIPPABLE AS CONFIGURED" STOOD HERE AND IS WITHDRAWN 2026-08-15
-# (artifacts/performance/2026-08-15_battlepack-arena-price/ARENA_PRICE.md). Two
-# of its three premises were wrong. (1) The growth is 172,032 B, not 258,048:
-# the cache behind the pack is 163,840, not 262,144. (2) The growth does not
-# spend boot headroom on top of the pack -- it REPAYS the pack's own reservation.
-# 1,548,288 - 451,776 leaves taskman 1,096,512 against the shipping arm's
-# 1,376,256 - 262,144 = 1,114,112, i.e. 17,600 B LESS, so this arm's general heap
-# ends tighter than the control's rather than looser. (3) Measured on the stress
-# battery rather than projected: 12 battle entries, 7 matches, 7 START restarts,
-# 4 Sudden Deaths, NO-FREEZE, with ChosenSize 1,548,288 / AllocFail 0 /
-# ReserveFail 0 / Rejects 0 / SyMallocOverflow 0, general-heap low-water 52,400
-# against the 32,768 floor and the GObj cap never firing.
-#
-# What is still true and still binding: this arena is not free RAM. It is
-# grantable libnds heap, the measured grantable ceiling is 1,564,672, and 0x17a000
-# sits 16,384 B under it. Any static growth on top of this arm eats that 16,384
-# one for one, silently, and the ONLY thing that sees it is
-# gNdsTaskmanArenaChosenSize -- never check-boot-headroom.ps1, which meters the
-# static image. Re-read it after any change here.
-#
-# OWNER DECISION 2026-08-17: THE DEFAULT IS 1, and it moves as a PAIR with
-# NDS_R2_BATTLEPACK above. The -34,304 was measured with both flags on, and the
-# pack WITHOUT this arm is the phase-8 configuration whose carve deleted the raw
-# file cache and cost +2,261,376 at rank-80. Never ship one of the two without
-# the other; a build that sets only one is a configuration nothing has measured.
-NDS_R2_BATTLEPACK_KEEP_CACHE ?= 1
-# Cycle 109. Builds BOTH arms of the two animation cuts into one binary, selected
-# at runtime by gNdsR2AnimCutRoute, so they can be priced without a second link.
-# This is standing rule 7's route, and after the determinism finding it is the
-# ONLY method that can separate a cut in the 1,000-5,000 tick class from the
-# 14,080-tick placement term.
-#
-# Default 0 and it must STAY 0 for anything published: at 1 the joint loop pays a
-# register test per AObj node plus a spill, and "replace, don't coexist" is a
-# board rule with a measured price (1.85 cycles of FTR mean per byte of added ARM
-# text). At 0 every route test folds to a constant and the pre-cut arms are
-# dead-coded away, so the shipped ROM is byte-for-byte the no-route program.
-NDS_R2_ANIM_CUT_ROUTE ?= 0
 # Cycle 116. Same instrument, applied to the Task 56 fighter strips: at 1 the
 # raw-corner emitters and the primitive-group emitter are BOTH compiled and
 # `gNdsR2FighterStripRoute` selects between them at run time, so the strip A/B
@@ -348,38 +214,6 @@ NDS_R2_ANIM_CUT_ROUTE ?= 0
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
 NDS_R2_STRIP_ROUTE ?= 0
-# R2-03 E48 lab probe. Counts which branch of the generic colour path draws each
-# vertex, per presented frame, latched at one hitlag frame and one ordinary one.
-# Four hypotheses have been spent guessing at E32's regression (E36, E41, E42,
-# E47) and each cost a build; this measures the branch instead. Delete with the
-# experiment.
-NDS_R2_FLASH_PROBE ?= 0
-# R2-03 E64. The cubic Hermite in gcPlayDObjAnimJoint evaluated in Q12 fixed
-# point instead of 14 soft-float operations. E60/E61 priced the cubic at 149.4
-# evaluations a frame x ~405 ticks = 60,509 ticks/frame, which is 99.6% of the
-# animation path's float. Step and Linear nodes keep the decomp's own
-# expressions, so 45.3% of nodes stay bit-identical.
-#
-# NOT bit-exact by design, and owner-authorized 2026-07-29 on that basis:
-# PROJECT_GOAL.md requires mechanical equivalence and lists "fixed-point
-# replacements" as allowed, while the Task 9 state hash asserts the stronger
-# bit-exact property. Expect that hash to move.
-NDS_R2_CUBIC_FIXED ?= 0
-# Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. On the
-# historical direct-boot R2 targets it makes player 0 a level-3 CPU as well, so
-# both existing fighters attack continuously with no recorded input stream. P2-2
-# reuses the switch on MENU-SHELL builds as the four-CPU seed instead: the match
-# descriptor adds Mario/Fox mirrors in P3/P4 at level 3. The direct-boot meaning
-# is deliberately unchanged so its banked measurements remain comparable.
-# Either form is a deliberate STRESS case: it maximises the live hitbox
-# population that R2-03 E35 named as the owner of the SRC P95 excursion, which
-# also makes it the configuration that most exercises E64b's Q12 cubic (more hit
-# decisions to flip) and E32's hitlag fallback (more bursts).
-#
-# NEVER report a P95 from this build as the Boundary figure. The switch plan
-# defines the shipped Boundary as Mario human vs level-3 Fox CPU at mode 163 and
-# PROJECT_GOAL.md's gate as representative gameplay; this is harder than either.
-NDS_R2_BOTH_CPU ?= 0
 # P2-2's direct-battle standing gate. Unlike NDS_R2_BOTH_CPU this has no
 # historical two-player meaning to preserve: it seeds four level-3 CPU fighter
 # INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
@@ -467,10 +301,6 @@ NDS_NET_LAB_SWEEP ?= 0
 # P3 lab: with the sweep, NDS_NET_LAB_SWEEP_REPRO=N replays reported setup N
 # instead (nds_net_lobby.c, ndsNetLabSweepDescriptor). 0 = the sweep.
 NDS_NET_LAB_SWEEP_REPRO ?= 0
-# P3 lab: with the autopilot and the sweep, rooms without end: the roles swap
-# every room (host rotation), and the rooms cycle through lobby-only visits,
-# matches, rematches and a guest's Leave, with a libc heap sample per room.
-NDS_NET_LAB_SOAK ?= 0
 # P3 lab (plan section 12, P3-0C): the four-fighter gate with the radio
 # running. Compiles gNdsNetLabGateRadio; set to 1 at boot, the battle opens a
 # room and runs the lockstep as a one-human net match, so the same ROM
@@ -886,23 +716,6 @@ $(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_YOSHI=1)
 endif
 $(error NDS_P2_YOSHI_BUG_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
 endif
-# P2-3f47 final Kirby runtime proof. The ordinary focused selector above only
-# changes player 0; Kirby's copy-hat acceptance specifically needs Link as the
-# opponent so real controller input can drive Inhale -> CopyLink. Keep this
-# proof descriptor explicit and default-off instead of teaching the shipping
-# roster or generic battle harness about a second proof selector.
-NDS_P2_KIRBY_COPYLINK_PROOF ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_KIRBY_COPYLINK_PROOF)),$(NDS_P2_KIRBY_COPYLINK_PROOF))
-$(error NDS_P2_KIRBY_COPYLINK_PROOF must be 0 or 1)
-endif
-ifeq ($(NDS_P2_KIRBY_COPYLINK_PROOF),1)
-ifneq ($(NDS_P2_KIRBY),1)
-$(error NDS_P2_KIRBY_COPYLINK_PROOF=1 requires NDS_P2_KIRBY=1)
-endif
-ifneq ($(NDS_P2_LINK),1)
-$(error NDS_P2_KIRBY_COPYLINK_PROOF=1 requires NDS_P2_LINK=1)
-endif
-endif
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
@@ -920,32 +733,11 @@ endif
 # of hardcoding one, so the match can never again be shorter than the run that
 # watches it, and it verifies the value in-guest rather than trusting this flag.
 NDS_R2_SOAK_MATCH_MINUTES ?= 0
-# R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
-# epoch whose vertices carry a valid vertex colour and no material is emitted
-# from that colour raw and is NOT lit. The generic path has always done this
-# (ndsRendererHardwarePackedValidVertexColor never calls LitShadeColor on that
-# route); the owner decided epoch_lit from geometry_mode & LIGHTING alone and ran
-# the geometry engine's light, which is E32's dark-maroon hurt flash. Drops
-# POLY_FORMAT_LIGHT0 for such an epoch and writes GFX_COLOR from the baked dense
-# rgba instead of GFX_NORMAL at all four emit sites. Requires
-# NDS_R2_MATERIAL_DYNAMIC for the epoch predicate.
-NDS_R2_UNLIT_VERTEX_EPOCH ?= 0
 # Task 106 E0: logical updates per presented frame. Ships at 2 (the source 60 Hz
 # simulation against a 30 Hz present). Building with 1 prices what a 30 Hz
 # simulation would save; it is a sizing arm only, uncompensated, and plays at
 # half speed. Do not publish a ROM built with 1.
 NDS_TASK106_UPDATES_PER_PRESENT ?= 2
-# 2026-08-16: does the fighter DRAW CONTRACT actually change every frame?
-# FTR_LANE.md section 5 sized the capture pass at 34,307 tk/fr and called it a
-# CEILING, because the contract-change rate had never been measured and no
-# counter existed for it. This flag adds that counter and nothing else: after
-# each capture, hash the emitted event list, the DL pointers, the preambles and
-# a candidate DObj-tree key, and count changed/unchanged against that slot's
-# previous frame. It answers whether the pass is a memo, a load-time table, or
-# dead, without building a memo first. Lab only, default 0 -- it costs a ~640-
-# byte hash per fighter per frame inside the FTR span, so a ROM built with it
-# must never be read for ticks.
-NDS_R2_FTR_CONTRACT_CENSUS ?= 0
 # 2026-08-16: the INITIAL VALUE of gNdsFtrDrawMemoRoute -- the fighter draw
 # contract memo. The census above measured the answer: the contract is unchanged
 # on 4,025 of 4,076 captures (98.75%), and every one of the 51 changes is decided
@@ -957,16 +749,6 @@ NDS_R2_FTR_CONTRACT_CENSUS ?= 0
 # poke reaches gNdsFtrDrawMemoRoute (its own 32-byte line), so an A/B is one
 # binary and two arms.
 NDS_R2_FTR_DRAW_MEMO ?= 1
-# P2-1b scene-loop walk. Number of menu -> battle -> results -> menu loops the
-# bounded scene tails in taskman_seam.c drive automatically before they park
-# again. 0 (the default, and the value every published and Boundary
-# configuration carries) compiles the three walk tails out entirely, so mode
-# 163 parks exactly where it always did. Set it on a LAB build to produce the
-# per-scene arena high-water evidence the row closes on -- the ring lives in
-# gNdsSceneManagerRing* and is read by scripts/probe-scene-loop-walk.ps1.
-# Needs a fast-logic harness: the walk's battle leg is a bounded run, not a
-# match, because this measures the scene BOUNDARY, not gameplay.
-NDS_R2_SCENE_LOOP_WALK ?= 0
 # P2-1c. The VS shell's 2D UI kit: the SSB64 menu font, the hand cursor, the
 # Mario/Fox CSS portraits, menu SFX, and the retained text/sprite slots
 # P2-1d/1e/1f draw their screens out of. 0 compiles the whole thing out --

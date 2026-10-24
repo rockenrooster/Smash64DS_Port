@@ -123,27 +123,8 @@ ifeq ($(NDS_P2_STAGE_SECTOR),1)
 CFILES += battleship_grsector_ground.c
 endif
 CFILES += nds_r2_sqrtf.c
-# The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
-# not in CFILES at all, so a published ROM's link input set is unchanged rather
-# than merely equivalent.
-ifeq ($(NDS_R2_HWMATH_ROUTE),1)
-CFILES += nds_r2_sqrtf_arm.c
-endif
-ifeq ($(NDS_R2_COLLISION_FIXED),1)
-CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
-endif
-ifeq ($(NDS_P2_HURTBOX_REJECT),1)
 CFILES += nds_p2_hurtbox_reject.c
-endif
-ifeq ($(NDS_FAST_MEM),1)
 CFILES += nds_fast_mem.c
-endif
-ifeq ($(NDS_R2_SIM_MAC_SHADOW),1)
-CFILES += nds_r2_sim_mac_fixed.c
-endif
-ifeq ($(NDS_R2_HWMATH_BENCH),1)
-CFILES += nds_r2_hwmath_bench.c
-endif
 CFILES += nds_shield_pose.c
 CFILES += nds_ft_pose.c
 CFILES += battleship_ftcommon_normal_moveset.c
@@ -194,7 +175,6 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
 	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_FTMANAGER),1)
 CFILES += battleship_ftmanager.c
 ifeq ($(NDS_P2_DONKEY),1)
 # P2-3 DK is the first non-Mario archetype.  Compile BattleShip's own special
@@ -419,15 +399,12 @@ CFILES += battleship_ftstatus_callback_aliases.c \
 	battleship_ftcommon_shieldbreakdown.c \
 	battleship_ftcommon_shieldbreakstand.c \
 	battleship_ftcommon_furafura.c
-endif
 CFILES += battleship_ftcomputer.c battleship_ftcomputer_fixed.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
 CFILES += battleship_gmcamera.c battleship_gmcamera_fixed.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battleship_ftcommon_sleep.c \
 	battleship_ftcommon_entry.c \
 	battleship_grwallpaper.c \
 	battle_playable_compat_stubs.c
-endif
 CFILES += battleship_lbtransition.c battleship_mnvsresults.c \
 	battleship_mnvsresults_spot.c \
 	battleship_scsubsysfighter.c battleship_scsubsysdata.c
@@ -447,7 +424,6 @@ CFILES += battleship_efmanager.c
 # / Dedede, Saffron birds); grcommonsetup.c:34 summons them at every stage
 # start, so this TU is unconditional like the grounds that stage them.
 CFILES += battleship_efground.c
-ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 # The generated pack is in the build now (src/nds/generated/
 # nds_particle_banks.generated.inc, verified byte-reproducing by
 # check-nds-particle-banks.ps1), so nds_particle_banks_placeholder.c is gone --
@@ -468,7 +444,6 @@ CFILES += battleship_lbparticle.c
 # Lives with the particle runtime because its draw integration is inside
 # lbParticleDrawTextures.
 CFILES += nds_firegrind.c
-endif
 CFILES += battleship_fox_reflector.c
 # Fox's blaster model part, as data. Unconditional because the module's whole
 # body is inside #if NDS_R2_FOX_GUN_OVERLAY -- at 0 it compiles to nothing and
@@ -481,9 +456,7 @@ CFILES += nds_fox_gun.c
 # wide VS records beside the save (U2) and the VS Record screen's numbers
 # over them (U9).
 CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c nds_p7_unlocks.c nds_p7_records.c nds_p7_vsrecord.c
-ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
-endif
 CFILES += battleship_ftcommon_fallspecial.c
 CFILES += battleship_mario_special_hi.c
 CFILES += battleship_mario_special_lw.c
