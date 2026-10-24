@@ -32,7 +32,7 @@ run them on a host harness:
     NDSPreviewPackLoad record and its state enum.
   * stubbed (explicit fixture seams): the resident-block cancel/retire helpers,
     the malloc-region swap, ftManagerSetupFilesAllKind, the preparation stages,
-    the owner-image capacity test, and -- for the loader -- the reloc register
+    the owner-image capacity test and copy, and -- for the loader -- the reloc register
     and normalize seams.  `fread` is redirected through a recording wrapper so
     the LARGEST SINGLE FILESYSTEM REQUEST is measurable; the file itself is a
     real synthetic FPC2 payload built by the harness, so the reader's chunking,
@@ -314,6 +314,14 @@ static void ftManagerSetupFilesAllKind(s32 fkind)
 }
 static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
     const NDSPlayersVSResidentBlock *block, s32 fkind)
+{
+    (void)block; (void)fkind;
+    return TRUE;
+}
+/* R7: a block keeps its own copy of the owner image Mario and Fox share; the
+ * fixture's kinds share none, so there is nothing to copy. */
+static sb32 ndsMNPlayersVSPreviewKeepOwnerImageCopy(
+    NDSPlayersVSResidentBlock *block, s32 fkind)
 {
     (void)block; (void)fkind;
     return TRUE;
