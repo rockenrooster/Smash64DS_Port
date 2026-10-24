@@ -86,6 +86,12 @@ ALLOW: dict[str, str] = {
     # the #ifdef's absent arm is the designed no-blob-stages state.
     "NDS_NATIVE_STAGE_BLOB_MAX_SEGMENT_COUNT":
         "optional generated header (__has_include), absent arm is by design",
+    # Lab instruments a lab build turns on with CPPFLAGS=-D<name>=1; no
+    # configuration of the Makefile's sets them.
+    "NDS_LAB_CLIP_TRACE":
+        "lab clip trace, CPPFLAGS only (reloc_backend_force_load.c)",
+    "NDS_LAB_STACK_PAINT":
+        "lab coroutine stack paint, CPPFLAGS only (coroutine.c, P8 S3)",
 }
 
 SRC_EXTS = (".c", ".h", ".inc", ".s", ".S")
