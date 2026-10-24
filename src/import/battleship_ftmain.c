@@ -332,8 +332,17 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
 /* A content's damage scale (NDSP4Fighter damage_scale; Ike's 1.5x): this TU's
  * two staled-damage calls, MakeAttackColl's and SetAttackCollDamage's, both
  * with the maker in fp (ft/fighter.h declared it above). */
+#if NDS_P2_MMARIO
+/* VS Metal Mario's smash armour ends with the first hit made
+ * (battleship_ftmanager.c ndsP7MMarioVsAttackMade). */
+void ndsP7MMarioVsAttackMade(FTStruct *fp);
+#define ftParamGetStaledDamage(player_, damage_, attack_id_, count_) \
+    (ndsP7MMarioVsAttackMade(fp), \
+     ndsP4StaledDamage(fp, (player_), (damage_), (attack_id_), (count_)))
+#else
 #define ftParamGetStaledDamage(player_, damage_, attack_id_, count_) \
     ndsP4StaledDamage(fp, (player_), (damage_), (attack_id_), (count_))
+#endif
 /* P4: Remix's per-frame hooks after the map proc (Bowser's flame recharge,
  * bowser.asm bowser_nsp_recharge) run where ftMainProcPhysicsMap updates the
  * part transforms, its one call in this TU. */
@@ -687,6 +696,12 @@ __attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
 /* The renderer half of the same test (2026-10-02). */
 __attribute__((used)) volatile u32 gNdsFtStatusRenderKept;
 
+#if NDS_P2_MMARIO
+sb32 ndsP7MMarioVsFighter(const FTStruct *fp);
+f32 ndsP7MMarioVsAnimSpeed(s32 status_id, f32 anim_speed);
+void ndsP7MMarioVsAfterSetStatus(FTStruct *fp);
+#endif
+
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
@@ -741,9 +756,23 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
              * motion script's clock with it. */
             anim_speed = ndsP4ScaleAnimSpeed(fighter_gobj, nds_p4_status, anim_speed);
         }
+#if NDS_P2_MMARIO
+        /* VS Metal Mario's heavy landings and slow jabs and tornado
+         * (battleship_ftmanager.c). */
+        if (ndsP7MMarioVsFighter(nds_topology_fp) != FALSE)
+        {
+            anim_speed = ndsP7MMarioVsAnimSpeed(status_id, anim_speed);
+        }
+#endif
     }
     battleship_ftMainSetStatus(fighter_gobj, nds_p4_status, frame_begin,
                                anim_speed, flags);
+#if NDS_P2_MMARIO
+    if (ndsP7MMarioVsFighter(nds_topology_fp) != FALSE)
+    {
+        ndsP7MMarioVsAfterSetStatus(nds_topology_fp);
+    }
+#endif
     if (nds_p4_status != status_id)
     {
         nds_topology_fp->status_id = status_id;

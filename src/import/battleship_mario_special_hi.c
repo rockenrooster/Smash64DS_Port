@@ -17,5 +17,28 @@
 #define FTMARIO_SUPERJUMP_STICK_Y_UNK -44
 #endif
 
+#if NDS_P2_MMARIO
+#define ftMarioSpecialHiProcPhysics ndsBaseFTMarioSpecialHiProcPhysics
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialhi.c"
+#if NDS_P2_MMARIO
+#undef ftMarioSpecialHiProcPhysics
+
+sb32 ndsP7MMarioVsFighter(const FTStruct *fp);
+f32 ndsP7MMarioVsUpBRise(void);
+
+/* VS Metal Mario's Super Jump Punch rises slower, so lower (owner
+ * 2026-10-23: battleship_ftmanager.c NDS_P7_MMARIO_VS_UPB_RISE). */
+void ftMarioSpecialHiProcPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ndsBaseFTMarioSpecialHiProcPhysics(fighter_gobj);
+    if ((fp->ga == nMPKineticsAir) && (fp->physics.vel_air.y > 0.0F) &&
+        (ndsP7MMarioVsFighter(fp) != FALSE))
+    {
+        fp->physics.vel_air.y *= ndsP7MMarioVsUpBRise();
+    }
+}
+#endif
 

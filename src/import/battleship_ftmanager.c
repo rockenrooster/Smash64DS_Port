@@ -1501,6 +1501,21 @@ static void ndsFTManagerSelectLowDetail(FTDesc *desc)
  * the source's). His dash and run are the source's: the owner reverted their
  * walk-top speed and fast-walk motions (2026-10-18). */
 #define NDS_P7_MMARIO_VS_GRAVITY 1.25F
+/* Owner 2026-10-23 (VS balance: "a little OP", the heavy theme kept, Mario's
+ * power): his jumps NDS_P7_MMARIO_VS_JUMP as high and his Super Jump Punch
+ * rising NDS_P7_MMARIO_VS_UPB_RISE as fast (battleship_mario_special_hi.c);
+ * heavy landings -- every landing's motion at NDS_P7_MMARIO_VS_LANDING_SPEED
+ * -- and slow metal -- his jabs and Mario Tornado at
+ * NDS_P7_MMARIO_VS_QUICK_SPEED, their hits with them (the motion script's
+ * clock runs at the animation's speed); his smash attacks armoured
+ * (NDS_P7_MMARIO_VS_ARMOUR: no knockback, the damage still taken) from their
+ * start until their first hit is made (battleship_ftmain.c). His knockback
+ * resistance (30, the source's) stays. */
+#define NDS_P7_MMARIO_VS_JUMP 0.85F
+#define NDS_P7_MMARIO_VS_UPB_RISE 0.8F
+#define NDS_P7_MMARIO_VS_LANDING_SPEED 0.8F
+#define NDS_P7_MMARIO_VS_QUICK_SPEED 0.85F
+#define NDS_P7_MMARIO_VS_ARMOUR 131072.0F
 
 static FTAttributes sNdsP7MMarioVsAttr;
 
@@ -1532,7 +1547,66 @@ static void ndsP7MMarioVsAttr(GObj *fighter_gobj)
 
     sNdsP7MMarioVsAttr = *fp->attr;
     sNdsP7MMarioVsAttr.gravity *= NDS_P7_MMARIO_VS_GRAVITY;
+    sNdsP7MMarioVsAttr.jump_height_base *= NDS_P7_MMARIO_VS_JUMP;
+    sNdsP7MMarioVsAttr.jumpaerial_height *= NDS_P7_MMARIO_VS_JUMP;
     fp->attr = &sNdsP7MMarioVsAttr;
+}
+
+sb32 ndsP7MMarioVsFighter(const FTStruct *fp)
+{
+    return ((fp != NULL) && (fp->attr == &sNdsP7MMarioVsAttr)) ? TRUE : FALSE;
+}
+
+static sb32 ndsP7MMarioVsSmash(s32 status_id)
+{
+    return ((status_id >= nFTCommonStatusAttackS4Hi) && (status_id <= nFTCommonStatusAttackLw4)) ? TRUE : FALSE;
+}
+
+f32 ndsP7MMarioVsAnimSpeed(s32 status_id, f32 anim_speed)
+{
+    switch (status_id)
+    {
+    case nFTCommonStatusLandingLight:
+    case nFTCommonStatusLandingHeavy:
+    case nFTCommonStatusLandingFallSpecial:
+        return anim_speed * NDS_P7_MMARIO_VS_LANDING_SPEED;
+
+    case nFTCommonStatusAttack11:
+    case nFTCommonStatusAttack12:
+    case nFTMarioStatusSpecialLw:
+    case nFTMarioStatusSpecialAirLw:
+        return anim_speed * NDS_P7_MMARIO_VS_QUICK_SPEED;
+
+    default:
+        if ((status_id >= nFTCommonStatusLandingAirStart) && (status_id <= nFTCommonStatusLandingAirEnd))
+        {
+            return anim_speed * NDS_P7_MMARIO_VS_LANDING_SPEED;
+        }
+        return anim_speed;
+    }
+}
+
+/* After the status is set (it clears the status's resistance). */
+void ndsP7MMarioVsAfterSetStatus(FTStruct *fp)
+{
+    if (ndsP7MMarioVsSmash(fp->status_id) != FALSE)
+    {
+        fp->knockback_resist_status = NDS_P7_MMARIO_VS_ARMOUR;
+    }
+}
+
+/* A hit made: a smash's armour ends with its first. */
+void ndsP7MMarioVsAttackMade(FTStruct *fp)
+{
+    if ((ndsP7MMarioVsFighter(fp) != FALSE) && (ndsP7MMarioVsSmash(fp->status_id) != FALSE))
+    {
+        fp->knockback_resist_status = 0.0F;
+    }
+}
+
+f32 ndsP7MMarioVsUpBRise(void)
+{
+    return NDS_P7_MMARIO_VS_UPB_RISE;
 }
 #endif
 
