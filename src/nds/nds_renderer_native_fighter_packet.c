@@ -756,6 +756,12 @@ typedef struct NDSFtrLeanWideHold
  * rate, 19,800 B at Very High, 13,784 B on the campaign's Yoshi Team after
  * Sonic's four spares (its low 24,584). So 24 KB. */
 #define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 24576u)
+/* THE SPENDS ORDER (P8, 2026-10-24): the motion cache's elastic block sits
+ * above the cursor, so `end - ptr` counts it as free and these buffers take
+ * its bytes first. Measured the other order (the cache keeping its first
+ * 48 KB, gate `s93` against `s92`): the heavy roster's caches grew to
+ * 91-106 KB and hit more, but the lean pool lost its bytes and WORK P95 rose
+ * 12K-105K on all five stages; the cast flat. The lists win. */
 
 /* THE LEARN'S COPY OFF THE REGION (2026-10-20). A wide list keeping its own
  * copy for a learn needs twice its words below its records: the region's
