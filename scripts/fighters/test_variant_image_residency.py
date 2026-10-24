@@ -26,6 +26,8 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts/menus"))
 from source_test_helpers import source as read_split  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from makefile_parts import makefile_text  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 
@@ -40,7 +42,6 @@ def _repo() -> Path:
 REPO = _repo()
 ASSETS_C = REPO / "src" / "nds" / "nds_renderer_assets.c"
 FTMANAGER_C = REPO / "src" / "import" / "battleship_ftmanager.c"
-MAKEFILE = REPO / "Makefile"
 HEADER_H = (
     REPO / "include" / "nds" / "generated"
     / "nds_native_fighter_image.generated.h"
@@ -237,7 +238,7 @@ int main(void) {{
                 subprocess.run([str(exe)], check=True, capture_output=True)
 
     def test_makefile_flags_and_staging(self):
-        mk = _read(MAKEFILE)
+        mk = makefile_text(REPO)
         for flag, _title in VARIANTS:
             # Flag derives from the matching P2 build flag (enabled only
             # when the owner is built).

@@ -1164,7 +1164,10 @@ foreach ($banned in @(
         throw "Whispy stage ownership alias returned: $banned"
     }
 }
-$makefile = Get-Content -LiteralPath $makefilePath -Raw
+# The Makefile as make reads it: each mk/ fragment included in place (P8 G).
+$makefile = [regex]::Replace((Get-Content -LiteralPath $makefilePath -Raw),
+    '(?m)^include \$\(PROJECT_ROOT\)/mk/([\w.-]+\.mk)[ \t]*$',
+    { param($m) (Get-Content -LiteralPath (Join-Path $root "mk/$($m.Groups[1].Value)") -Raw).TrimEnd("`n") })
 foreach ($token in @(
     'NDS_R2_WHISPY_NATIVE_TEXTURES ?= 1',
     'NDS_R2_WHISPY_NATIVE_AOT ?= 1',

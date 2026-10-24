@@ -47,6 +47,7 @@ sys.path.insert(0, str(_p))
 import _paths  # noqa: F401,E402
 sys.path.insert(0, str(_p / "menus"))
 from source_test_helpers import source as read_split  # noqa: E402
+from makefile_parts import makefile_text  # noqa: E402
 
 import generate_compact_ground_maps as cgm  # noqa: E402
 import generate_native_wallpapers as wall  # noqa: E402
@@ -60,7 +61,6 @@ RESOLVE_C = ROOT / "src" / "port" / "reloc_backend_resolve.c"
 MATRIX_C = ROOT / "src" / "port" / "renderer_adapter_matrix.c"
 SPRITE_C = ROOT / "src" / "port" / "sprite_preview_backend.c"
 SHIMS_C = ROOT / "src" / "port" / "reloc_backend_compat_shims.c"
-MAKEFILE = ROOT / "Makefile"
 
 # gkind order -> descriptor name (scripts/stages/native_stage_descriptors)
 DESCRIPTORS = ("castle", "sector", "jungle", "zebes", "hyrule", "yoster",
@@ -311,7 +311,7 @@ class GeneratorTests(unittest.TestCase):
 class MakefileAndSourceContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.make = MAKEFILE.read_text(encoding="utf-8")
+        cls.make = makefile_text(ROOT)
         cls.assets = read_split(ASSETS_C) + "\n" + read_split(RESOLVE_C)
 
     def test_default_flag_targets(self):

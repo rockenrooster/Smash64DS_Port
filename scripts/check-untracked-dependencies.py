@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from makefile_parts import expand_includes  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".h", ".hpp", ".inc", ".py", ".s", ".S"}
@@ -110,7 +112,10 @@ def main() -> int:
 
     # Makefile references are read from the index. This catches a committed link or
     # generator prerequisite that names a file which exists only in the worktree.
-    raw_makefile = git("show", ":Makefile")
+    # The Makefile includes its mk/ fragments in place (P8 G); those are read
+    # from the index too.
+    raw_makefile = expand_includes(git("show", ":Makefile"),
+                                   lambda name: git("show", f":mk/{name}"))
     include_dirs = rom_include_dirs(raw_makefile)
     generated_includes = build_generated_includes(raw_makefile)
     makefile = re.sub(r"\\\r?\n[ \t]*", " ", raw_makefile)

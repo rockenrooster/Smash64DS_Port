@@ -86,5 +86,13 @@ table, and where runs write. Conventions:
 | `pp_cmp.py BEFORE AFTER` | compares two `pp_run.py` trees: exact, blank-lines-only, or different |
 | `obj_cmp.py LISTING BEFORE AFTER WORK` | compiles the units two `pp_run.py` trees differ in, with each unit's flags from the `make -n` listing, and compares their non-debug sections byte for byte (readelf; seconds an object): when preprocessing differs, the code still must not |
 
+| `make_dry_identity.ps1 -Out DIR [-Compare DIR]` | `make -n -B` for the eight configurations (play, walk, wireless, the root make, gate, profiling gate, soak, VRAM lab) into DIR, and with `-Compare` each listing against an earlier run's: the proof that a Makefile change (the P8 G split) moved text without changing one command |
+
 A split also registers in `scripts/menus/source_test_helpers.py` `SPLIT_SOURCES`,
 so host tests read the file whole through `source()`.
+
+The Makefile is the root `Makefile` and the topic fragments in `mk/` it
+includes in place. A script that reads the Makefile's text reads
+`scripts/makefile_parts.py` `makefile_text()` (every fragment where its
+include stands); one that edits it writes the part that holds its anchor
+(`part_containing()`).

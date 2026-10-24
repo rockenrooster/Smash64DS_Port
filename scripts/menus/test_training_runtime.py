@@ -19,6 +19,7 @@ exist.
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,6 +27,8 @@ from pathlib import Path
 from source_test_helpers import braced, function, original_enum
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+from makefile_parts import makefile_text  # noqa: E402
 DECOMP = ROOT / "decomp/BattleShip-main/decomp/src"
 TRAINING = (DECOMP / "sc/sc1pmode/sc1ptrainingmode.c").read_text()
 
@@ -173,7 +176,7 @@ class TrainingRuntimeTest(unittest.TestCase):
                       "llSC1PTrainingModeFileID",
                       "llSC1PTrainingModeMenuOptionSpriteArray"):
             self.assertIn(token, reloc)
-        makefile = (ROOT / "Makefile").read_text()
+        makefile = makefile_text(ROOT)
         self.assertIn(
             "CFILES += battleship_mnmessage.c battleship_sc1ptrainingmode.c battleship_mntraining.c",
             makefile)

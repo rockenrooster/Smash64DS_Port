@@ -30,11 +30,12 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 from native_stage_descriptors import get_descriptor  # noqa: E402
 import emit_native_stage_runtime_rows as emitter  # noqa: E402
+sys.path.insert(0, os.path.dirname(HERE))
+from makefile_parts import makefile_parts  # noqa: E402
 
 SELECT = os.path.join(ROOT, "src", "nds", "nds_native_stage_select.inc")
 MATRIX = os.path.join(ROOT, "src", "port", "renderer_adapter_matrix.c")
 ASSETS = os.path.join(ROOT, "src", "nds", "nds_renderer_assets.c")
-MAKEFILE = os.path.join(ROOT, "Makefile")
 BUILDPS1 = os.path.join(ROOT, "build.ps1")
 
 
@@ -277,8 +278,20 @@ def register_assets(stage, dry):
 
 
 def register_makefile(stage, dry):
-    s = load(MAKEFILE)
+    # The Makefile is the root file and its mk/ fragments (P8 G): every edit
+    # below finds its anchor in the joined text and lands in the part that
+    # holds it.
+    parts = [str(p) for p in makefile_parts(ROOT)]
+    texts = {p: load(p) for p in parts}
+    s = "".join(texts[p] for p in parts)
     nl = nl_of(s)
+
+    def edit(anchor, replacement, count):
+        hits = [p for p in parts if anchor in texts[p]]
+        assert len(hits) == 1, f"Makefile anchor in {len(hits)} parts: {anchor[:60]!r}"
+        texts[hits[0]] = texts[hits[0]].replace(anchor, replacement, count)
+        return "".join(texts[p] for p in parts)
+
     MAC = stage.upper()
     var = f"NDS_NATIVE_STAGE_{MAC}_INC"
     if var in s:
@@ -288,21 +301,25 @@ def register_makefile(stage, dry):
     # after the per-stage includes and also ends in _INC; skip it.
     last_var = re.findall(r"^(NDS_NATIVE_STAGE_(?!BLOB_)\w+_INC) := .*$", s, re.M)[-1]
     last_line = re.search(rf"^{last_var} := .*$", s, re.M).group(0)
-    s = s.replace(last_line + nl, last_line + nl +
-                  f"{var} := $(PROJECT_ROOT)/src/nds/nds_native_stage_{stage}.generated.inc{nl}", 1)
+    s = edit(last_line + nl, last_line + nl +
+             f"{var} := $(PROJECT_ROOT)/src/nds/nds_native_stage_{stage}.generated.inc{nl}", 1)
     rule_anchor = re.search(rf"\t@touch \$\({last_var}\){re.escape(nl)}", s)
     assert rule_anchor, "last inc rule"
-    s = s.replace(rule_anchor.group(0), rule_anchor.group(0) +
-                  f"$({var}): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ){nl}"
-                  f"\tpython \"$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py\" --repo-root \"$(PROJECT_ROOT)\" --stage {stage}{nl}"
-                  f"\t@touch $({var}){nl}", 1)
-    dep = re.search(r"^nds_renderer_assets\.o: .*$", s, re.M)
-    assert dep
-    s = s.replace(dep.group(0), dep.group(0) + f" $({var})", 1)
+    s = edit(rule_anchor.group(0), rule_anchor.group(0) +
+             f"$({var}): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ){nl}"
+             f"\tpython \"$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py\" --repo-root \"$(PROJECT_ROOT)\" --stage {stage}{nl}"
+             f"\t@touch $({var}){nl}", 1)
+    # nds_renderer_assets.c is textually included by nds_renderer.c, so the
+    # stage packets are prerequisites of nds_renderer.o.
+    dep = re.search(r"^nds_renderer\.o: \$\(NDS_NATIVE_STAGE_OWNER_INC\) .*$", s, re.M)
+    assert dep, "nds_renderer.o stage prereq line"
+    s = edit(dep.group(0), dep.group(0) + f" $({var})", 1)
     elf = re.search(rf"\t\$\({last_var}\) \\{re.escape(nl)}|\t\$\(NDS_NATIVE_STAGE_\w+_INC\) \$\({last_var}\) \\{re.escape(nl)}", s)
     assert elf, "elf prereq line"
-    s = s.replace(elf.group(0), elf.group(0) + f"\t$({var}) \\{nl}", 1)
-    save(MAKEFILE, s, dry)
+    s = edit(elf.group(0), elf.group(0) + f"\t$({var}) \\{nl}", 1)
+    for p in parts:
+        if texts[p] != load(p):
+            save(p, texts[p], dry)
 
 
 def register_buildps1(stage, dry):

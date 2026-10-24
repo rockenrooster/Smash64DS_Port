@@ -47,6 +47,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from check_reloc_symbol_census import INC_RE, as_built, patched_source, read  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from makefile_parts import makefile_text  # noqa: E402
 
 CALL_RE = re.compile(
     r"\b((?:it|ef|wp|gr|ft|sc|mn|lb|gc|sy|mp|if|gm|mv|db|al)[A-Z]\w*)\s*\("
@@ -317,7 +319,7 @@ def direct_decomp_files(repo: str) -> list[str]:
     # overlay copies except for the compiled-out blocks as_built drops).
     found: set[str] = set()
     try:
-        mk = read(os.path.join(repo, "Makefile"))
+        mk = makefile_text(repo)
     except OSError:
         mk = ""
     base = os.path.join(repo, "decomp", "BattleShip-main", "decomp")

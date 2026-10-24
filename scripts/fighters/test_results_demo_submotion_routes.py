@@ -55,12 +55,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import _paths  # noqa: E402
 import check_results_demo_motion_closure as closure  # noqa: E402
 import generate_fighter_production_manifest as gen  # noqa: E402
+from makefile_parts import makefile_text  # noqa: E402
 
 REPO = _paths.REPO_ROOT
 O2R = REPO / "decomp/BattleShip-main/BattleShip_o2r"
 MANIFEST = REPO / "scripts/fighters/fighter_production_manifest.json"
 MAKE_FRAGMENT = REPO / "scripts/fighters/fighter_production_files.mk"
-MAKEFILE = REPO / "Makefile"
 PRODUCTION_HEADER = (
     REPO / "include/nds/generated/nds_fighter_production.generated.h")
 RELOC_BACKEND = REPO / "src/port/reloc_backend_assets.c"
@@ -147,7 +147,7 @@ def check(rows: list[dict] | None = None,
               if header is None else header)
     backend = (read_split(RELOC_BACKEND)
                if backend is None else backend)
-    makefile = (MAKEFILE.read_text(encoding="utf-8", errors="replace")
+    makefile = (makefile_text(REPO, errors="replace")
                 if makefile is None else makefile)
     fragment = MAKE_FRAGMENT.read_text(encoding="utf-8", errors="replace")
     failures: list[str] = []
@@ -251,7 +251,7 @@ def self_test() -> int:
     rows = demo_rows()
     header = PRODUCTION_HEADER.read_text(encoding="utf-8", errors="replace")
     backend = read_split(RELOC_BACKEND)
-    makefile = MAKEFILE.read_text(encoding="utf-8", errors="replace")
+    makefile = makefile_text(REPO, errors="replace")
     problems: list[str] = []
 
     # PROVE THE CONTROL DIFFERS first: an already-red checker would "pass"

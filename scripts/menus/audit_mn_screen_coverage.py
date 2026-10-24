@@ -111,6 +111,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from makefile_parts import makefile_text  # noqa: E402
 from source_test_helpers import source as read_source  # noqa: E402  (split files)
 
 # ---------------------------------------------------------------------------
@@ -393,7 +395,6 @@ RELOC_DATA_PATH = Path("include/reloc_data.h")
 BACKEND_PATH = Path("src/port/reloc_backend_assets.c")
 NITROFS_ASSETS_PATH = Path("src/nds/nds_reloc_assets.c")
 IMPORT_DIR = Path("src/import")
-MAKEFILE_PATH = Path("Makefile")
 GEOMETRY_TABLE_START = "sNdsBattleInterfaceSpriteDescs[] = {"
 RESULTS_TABLE_START = "sNdsVSResultsSpriteDescs[] = {"
 
@@ -1049,7 +1050,7 @@ def scan_port_reloc(repo_root: Path) -> PortRelocState:
         directory = directory or "reloc_" + code.lower()
         state.nitrofs.add(container)
         state.o2r_dir.setdefault(container, directory)
-    makefile = (repo_root / MAKEFILE_PATH).read_text(errors="replace")
+    makefile = makefile_text(repo_root, errors="replace")
     for directory, container in _MAKE_STAGE_RE.findall(makefile):
         if directory.startswith("reloc"):
             state.staged.add(container)

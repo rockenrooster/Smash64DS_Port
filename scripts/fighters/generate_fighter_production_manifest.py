@@ -30,11 +30,15 @@ import hashlib
 import json
 import re
 import struct
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
 import generate_nds_native_owners as native_owner
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from makefile_parts import makefile_text  # noqa: E402
 
 
 # nds_reloc_assets.c owns these two always-compiled resolvers; a P2 fighter that
@@ -1334,7 +1338,7 @@ def verify_mariofox_makefile(
     by_id: dict[int, dict[str, object]],
 ) -> dict[str, object]:
     by_name = {str(row["fighter"]): row for row in fighters}
-    current = parse_mariofox_makefile_files((repo_root / "Makefile").read_text(encoding="utf-8"))
+    current = parse_mariofox_makefile_files(makefile_text(repo_root))
     expected_ids = [0xA3]  # BattleShip FTManagerCommon, source manager prerequisite.
     for name in ("Mario", "Fox"):
         row = by_name[name]

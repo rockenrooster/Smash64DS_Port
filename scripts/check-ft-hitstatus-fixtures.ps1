@@ -97,7 +97,10 @@ $foxRows = @([regex]::Matches(
 Assert-True ($foxRows.Count -eq 158) `
     'BattleShip Fox files 642..799 are no longer one complete animation bank.'
 
-$makefile = Get-Content $makefilePath -Raw
+# The Makefile as make reads it: each mk/ fragment included in place (P8 G).
+$makefile = [regex]::Replace((Get-Content $makefilePath -Raw),
+    '(?m)^include \$\(PROJECT_ROOT\)/mk/([\w.-]+\.mk)[ \t]*$',
+    { param($m) (Get-Content -LiteralPath (Join-Path $root "mk/$($m.Groups[1].Value)") -Raw).TrimEnd("`n") })
 $ndsRelocAssets = Get-Content $ndsRelocAssetsPath -Raw
 # reloc_backend_assets.c continues in the slices reloc_backend.c includes
 # after it (readability Phase C); read them whole, in order.

@@ -68,6 +68,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import generate_mn_ui_kit as kit  # noqa: E402  (the RELO/Sprite parser)
 import source_test_helpers as sources  # noqa: E402  (split source files)
+sys.path.insert(0, str(HERE.parent))
+from makefile_parts import makefile_parts, makefile_text  # noqa: E402
 
 FMT = {0: "G_IM_FMT_RGBA", 1: "G_IM_FMT_YUV", 2: "G_IM_FMT_CI",
        3: "G_IM_FMT_IA", 4: "G_IM_FMT_I"}
@@ -201,6 +203,17 @@ def read(root: Path, rel: str) -> str:
 def write(root: Path, rel: str, text: str, original: str) -> None:
     if text != original:
         sources.write_for_edit(root / rel, text)
+
+
+def makefile_part(root: Path, list_name: str) -> str:
+    """The Makefile part -- the root file or one of its mk/ fragments (P8 G)
+    -- that holds `list_name`'s staging list, or the VS battle list a new
+    list is written beside."""
+    for anchor in (f"\n{list_name} := \\\n", f"\n{list_name} :=\n", "\n" + MAKE_LIST_ANCHOR):
+        for part in makefile_parts(root):
+            if anchor in part.read_text(encoding="utf-8").replace("\r\n", "\n"):
+                return part.relative_to(root).as_posix()
+    raise StageError(f"{MAKEFILE}: no part holds {list_name} or {MAKE_LIST_ANCHOR.strip()!r}")
 
 
 def hand_asset_name(backend: str, file_id: int) -> str | None:
@@ -477,7 +490,7 @@ def check(root: Path, plan: Plan, list_name: str | None) -> list[str]:
     assets = read(root, ASSETS)
     if plan.assets_line() not in assets:
         missing.append(f"{ASSETS}: path row")
-    make = read(root, MAKEFILE)
+    make = makefile_text(root)
     if f"\t{plan.make_entry()}" not in make:
         missing.append(f"{MAKEFILE}: {plan.make_entry()} in a staging list")
     if list_name and (f"$({list_name})" not in make.split("NDS_NITROFS_RELOC_FILES", 1)[-1]):
@@ -546,8 +559,9 @@ def main(argv: list[str] | None = None) -> int:
             original = read(root, rel)
             pending.append((rel, original, fn(original, plan)))
         if not plan.extend:
-            original = read(root, MAKEFILE)
-            pending.append((MAKEFILE, original, edit_makefile(original, plan, args.list)))
+            make_rel = makefile_part(root, args.list)
+            original = read(root, make_rel)
+            pending.append((make_rel, original, edit_makefile(original, plan, args.list)))
         for rel, original, new in pending:
             write(root, rel, new, original)
             print(f"{'edited ' if new != original else 'unchanged'} {rel}")

@@ -64,6 +64,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import _paths  # noqa: E402
 import check_model_part_mutation_coverage as census  # noqa: E402
+from makefile_parts import makefile_text  # noqa: E402
 
 REPO = _paths.REPO_ROOT
 SCSUBSYS = REPO / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
@@ -213,7 +214,7 @@ def demo_path_route_failures() -> list[str]:
     # fighter that gets two of the three sites reads exactly like the bug this
     # checker was written for.
     if MAKEFILE.is_file():
-        make_text = MAKEFILE.read_text(encoding="utf-8", errors="replace")
+        make_text = makefile_text(REPO, errors="replace")
         for arm in sorted(token_arms):
             staged = arm.replace("_DEMO_ANIM_ASSET_ROWS", "_DEMO_RELOC_FILES")
             if ("$(%s)" % staged) not in make_text:

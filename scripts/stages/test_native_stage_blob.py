@@ -3,9 +3,13 @@ import re
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from makefile_parts import makefile_text  # noqa: E402
 
 import check_nds_native_stage as check
 import generate_nds_native_stage as generator
@@ -64,7 +68,7 @@ class StageBlobTests(unittest.TestCase):
                          generator.fnv1a_bytes(blob[header_len:]))
 
     def test_blob_loader_is_in_the_compiled_source_list(self):
-        makefile = (self.root / "Makefile").read_text()
+        makefile = makefile_text(self.root)
         assignments = re.findall(r"(?m)^CFILES\s*(?::=|\+=)\s*(?:[^\n\\]|\\\n)*", makefile)
         self.assertIn("nds_native_stage_blob.c", "\n".join(assignments).split())
 

@@ -57,6 +57,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "menus"))
 import check_reloc_symbol_census as reloc  # noqa: E402
+sys.path.insert(0, HERE)
+from makefile_parts import makefile_text  # noqa: E402
 
 PREFIX = "NDS_"
 MACRO_RE = re.compile(r"\b(NDS_[A-Za-z0-9_]+)\b")
@@ -278,7 +280,7 @@ def harness_mentions(repo: str) -> set[str]:
 
 
 def census(repo: str) -> dict:
-    makefile = reloc.read(os.path.join(repo, "Makefile"))
+    makefile = makefile_text(repo)
     sources = Sources(repo)
     build, unresolved, empty = makefile_defines(makefile)
     dashd = dash_d_defines(repo, makefile)

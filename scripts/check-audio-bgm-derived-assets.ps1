@@ -377,7 +377,10 @@ if ((Test-Path -LiteralPath $yosterAsset -PathType Leaf) -and
     }
 }
 
-$makefile = Get-Content -LiteralPath (Join-Path $Root 'Makefile') -Raw
+# The Makefile as make reads it: each mk/ fragment included in place (P8 G).
+$makefile = [regex]::Replace((Get-Content -LiteralPath (Join-Path $Root 'Makefile') -Raw),
+    '(?m)^include \$\(PROJECT_ROOT\)/mk/([\w.-]+\.mk)[ \t]*$',
+    { param($m) (Get-Content -LiteralPath (Join-Path $Root "mk/$($m.Groups[1].Value)") -Raw).TrimEnd("`n") })
 $obsoleteBlock = [regex]::Match($makefile,
     '(?s)export NDS_AUDIO_OBSOLETE_DERIVED_FILES :=(.*?)\n(?!\t)').Groups[1].Value
 foreach ($obsolete in @('bgm_pupupu_pcm16.raw', 'bgm_win_mario_pcm16.raw',

@@ -10,6 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/menus"))
 from source_test_helpers import source as read_split  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+from makefile_parts import makefile_text  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -338,7 +340,7 @@ def no_program_arms(adapter: str) -> tuple[str, str, str]:
 
 
 def main() -> int:
-    makefile = (ROOT / "Makefile").read_text(encoding="utf-8", errors="replace")
+    makefile = makefile_text(ROOT, errors="replace")
     make_lines = logical_make_lines(makefile)
     guard_implications = make_guard_implications(make_lines)
     renderer_path = ROOT / "src/nds/nds_renderer.c"

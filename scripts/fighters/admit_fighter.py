@@ -26,6 +26,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from makefile_parts import makefile_parts, makefile_text  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Specs. Kinds are BattleShip fttypes.h ordinals. `prev` names the fighter
 # whose blocks this one is inserted after; the chain must be admitted in order.
@@ -481,6 +484,23 @@ class Tree:
         self.files[rel] = nl.join(lines)
         print(f"  + {rel}: after #if {flag} block ({hint[:40]!r})")
 
+    def makefile_part(self, anchor: str) -> str:
+        """The Makefile part -- the root file or one of its mk/ fragments
+        (P8 G) -- whose text, as this tree holds it, contains `anchor`."""
+        rels = [p.relative_to(self.root).as_posix() for p in makefile_parts(self.root)]
+        hits = [rel for rel in rels if anchor.replace("\n", self.nl(rel)) in self.text(rel)]
+        if len(hits) != 1:
+            raise SystemExit(f"Makefile: anchor in {len(hits)} parts: {anchor[:120]!r}")
+        return hits[0]
+
+    def replace_make(self, old: str, new: str) -> None:
+        self.replace(self.makefile_part(old), old, new)
+
+    def make_text(self) -> str:
+        """Every Makefile part as this tree holds it, in include order."""
+        return "".join(self.text(p.relative_to(self.root).as_posix())
+                       for p in makefile_parts(self.root))
+
     def write_new(self, rel: str, content: str) -> None:
         self.files[rel] = content
         print(f"  + {rel}: new file")
@@ -671,7 +691,7 @@ def admit_pickup_fileids(root: Path, dry: bool, check: bool) -> None:
     )
     manifest = generator.build_manifest(root)
     rows = generator.build_pickup_fileid_rows(manifest)
-    makefile = (root / "Makefile").read_text(encoding="utf-8")
+    makefile = makefile_text(root)
     production_make = (
         root / "scripts/fighters/fighter_production_files.mk"
     ).read_text(encoding="utf-8")
@@ -948,8 +968,9 @@ def admit_boss(root: Path, dry: bool) -> None:
                         (stage.ASSETS, stage.edit_assets)):
             original = stage.read(root, rel)
             pending.append((rel, original, fn(original, plan)))
-        original = stage.read(root, stage.MAKEFILE)
-        pending.append((stage.MAKEFILE, original,
+        make_rel = stage.makefile_part(root, BOSS_LIST)
+        original = stage.read(root, make_rel)
+        pending.append((make_rel, original,
                         stage.edit_makefile(original, plan, BOSS_LIST)))
         for rel, original, new in pending:
             stage.write(root, rel, new, original)
@@ -1089,8 +1110,9 @@ def admit_polygons(root: Path, dry: bool) -> None:
                         (stage.ASSETS, stage.edit_assets)):
             original = stage.read(root, rel)
             pending.append((rel, original, fn(original, plan)))
-        original = stage.read(root, stage.MAKEFILE)
-        pending.append((stage.MAKEFILE, original,
+        make_rel = stage.makefile_part(root, POLYGON_LIST)
+        original = stage.read(root, make_rel)
+        pending.append((make_rel, original,
                         stage.edit_makefile(original, plan, POLYGON_LIST)))
         for rel, original, new in pending:
             stage.write(root, rel, new, original)
@@ -1142,13 +1164,13 @@ def admit(root: Path, key: str, dry: bool) -> None:
     OPF = f"NDS_P2_{OPU}"
 
     # ---- Makefile ----------------------------------------------------------
-    T.replace("Makefile", f"NDS_P2_{PU} ?= 0\n",
+    T.replace_make(f"NDS_P2_{PU} ?= 0\n",
               f"NDS_P2_{PU} ?= 0\n"
               f"# P2-3 fighter: {N} stays opt-in until his source specials, articles, native\n"
               f"# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).\n"
               f"{F} ?= 0\n")
     if not is_variant:
-        T.replace("Makefile",
+        T.replace_make(
                   f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
                   f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
                   f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
@@ -1158,34 +1180,34 @@ def admit(root: Path, key: str, dry: bool) -> None:
         # The per-variant reloc list lives with the production manifest; until
         # it does, this aggregation expands empty and the missing Main is the
         # first thing a link/run reveals (reported at admission).
-        T.replace("Makefile",
+        T.replace_make(
                   f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
                   f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
                   f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
     if (not is_variant) or (not reuse_owner):
-        T.replace("Makefile",
+        T.replace_make(
                   f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n",
                   f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n"
                   f"NDS_NATIVE_OWNER_IMAGE_{U} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$({F}),0)\n")
-        T.replace("Makefile",
+        T.replace_make(
                   f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n",
                   f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n"
                   f"ifeq ($({F}),1)\nNDS_NATIVE_IMAGE_OWNERS += {L}\nendif\n")
-    T.replace("Makefile",
+    T.replace_make(
               f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n",
               f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n"
               f"\t\techo '#define {F} $({F})'; \\\n")
     if (not is_variant) or (not reuse_owner):
-        T.replace("Makefile",
+        T.replace_make(
                   f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{OPU} $(NDS_NATIVE_OWNER_IMAGE_{OPU})'; \\\n",
                   f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{OPU} $(NDS_NATIVE_OWNER_IMAGE_{OPU})'; \\\n"
                   f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{U} $(NDS_NATIVE_OWNER_IMAGE_{U})'; \\\n")
     tus = " ".join(S["tus"])
     prev_cfiles = re.search(rf"ifeq \(\$\(NDS_P2_{PU}\),1\)\n(?:#[^\n]*\n)*CFILES \+= [^\n]*(?:\\\n[^\n]*)*\nendif\n",
-                            T.text("Makefile").replace("\r\n", "\n"))
+                            T.make_text().replace("\r\n", "\n"))
     if not prev_cfiles:
         raise SystemExit(f"Makefile: no CFILES block for {PU}")
-    T.replace("Makefile", prev_cfiles.group(0),
+    T.replace_make(prev_cfiles.group(0),
               prev_cfiles.group(0) + f"ifeq ($({F}),1)\n# BattleShip owns {N}'s specials and articles verbatim (admit_fighter.py).\nCFILES += {tus}\nendif\n")
 
     # ---- reloc_backend_assets.c -------------------------------------------

@@ -20,6 +20,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "menus"))
 from source_test_helpers import source as read_split  # noqa: E402
+sys.path.insert(0, str(REPO / "scripts"))
+from makefile_parts import makefile_text  # noqa: E402
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -101,7 +103,7 @@ class PolygonStagedTreeTests(unittest.TestCase):
                     f"missing FileID declaration for {name}")
 
     def test_makefile_lists_all_twenty_three(self):
-        make = (REPO / "Makefile").read_text(encoding="utf-8").replace("\r\n", "\n")
+        make = makefile_text(REPO).replace("\r\n", "\n")
         for name in POLYGON_IDS:
             with self.subTest(file=name):
                 # Line continuations vary (only the list tail lacks ` \`).
