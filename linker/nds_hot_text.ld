@@ -307,6 +307,13 @@ SECTIONS {
 		*(.text.ndsComQ12)
 		*(.text.ndsF32ToFixed)
 		*(.text.ndsFighterDisplayContractProjectTarget)
+		/* Tenth pack (P8 P8, 2026-10-23), the shipping ROM's 304 B the frame
+		 * summary's recorders left (P8 P1): libgcc's unsigned divide (an
+		 * archive member, 284 B with __aeabi_uidivmod; 2.1M non-mem stall
+		 * cycles in each 800-frame heavy census, every stage) and the default
+		 * camera's 12 B forwarder. */
+		*libgcc.a:_udivsi3.o(.text)
+		*(.text.gmCameraDefaultFuncCamera)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and
