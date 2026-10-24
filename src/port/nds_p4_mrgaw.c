@@ -876,25 +876,43 @@ const NDSP4Overrides gNdsP4MrgawOverrides = {
  * makes the fireball's flash (colour animation nGMColAnimFighterMarioSpecialN,
  * which also ended the black figure), its sparkle and its FGM at frame 16;
  * the owner asked for no fireball sound (BUGS.md 2026-10-12). Chef runs the
- * script's toss alone: the flag at frame 16 (the food) and its rumble. */
+ * script's toss: MRGAW's own chef sound a frame before it, as his
+ * GameAndWatch2D.moveset_NEUTRAL_SPECIAL plays it (owner BUGS.md
+ * 2026-10-23: the hat's B was silent), the flag at frame 16 (the food) and
+ * its rumble. */
 #define MRGAW_KIRBY_HAND_JOINT 17   /* FTKIRBY_COPYMARIO_FIREBALL_SPAWN_JOINT */
 #define MRGAW_KIRBY_REFRESH_FROM 12.0F
+#define MRGAW_KIRBY_CHEF_SOUND_FRAME 15
+#define MRGAW_KIRBY_CHEF_FGM 0x614  /* MRGAW/sounds/NEUTRALB */
 #define MRGAW_KIRBY_TOSS_FRAME 16
+#define MRGAW_KIRBY_TOSS_WORD 2     /* the script's toss alone, past the sound */
 
 static const u32 sNdsP4MrgawKirbyNSPScript[] = {
+    NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, MRGAW_KIRBY_CHEF_SOUND_FRAME),
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGM, MRGAW_KIRBY_CHEF_FGM),
     NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, MRGAW_KIRBY_TOSS_FRAME),
     NDS_P4_MOTION_EVENT(nFTMotionEventSetFlag0, 1),
     NDS_P4_MOTION_EVENT(nFTMotionEventMakeRumble, 6), /* MakeRumble(0, 6) */
     NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
 };
 
-/* The status's own script from its frame: the toss, or nothing once past it
- * (a switch between ground and air keeps the frame). */
+/* The status's own script from its frame: the sound and the toss, the toss
+ * alone once past the sound, or nothing once past the toss (a switch between
+ * ground and air keeps the frame, so neither plays twice). */
 static void ndsP4MrgawKirbyNSPScript(GObj *fighter_gobj)
 {
-    ndsP4KirbySetMotionScript(ftGetStruct(fighter_gobj),
-                              (fighter_gobj->anim_frame < (f32)MRGAW_KIRBY_TOSS_FRAME) ?
-                                  sNdsP4MrgawKirbyNSPScript : NULL);
+    f32 frame = fighter_gobj->anim_frame;
+    const u32 *script = NULL;
+
+    if (frame < (f32)MRGAW_KIRBY_CHEF_SOUND_FRAME)
+    {
+        script = sNdsP4MrgawKirbyNSPScript;
+    }
+    else if (frame < (f32)MRGAW_KIRBY_TOSS_FRAME)
+    {
+        script = &sNdsP4MrgawKirbyNSPScript[MRGAW_KIRBY_TOSS_WORD];
+    }
+    ndsP4KirbySetMotionScript(ftGetStruct(fighter_gobj), script);
 }
 
 static void ndsP4MrgawKirbyNSPProcStatus(GObj *fighter_gobj)
