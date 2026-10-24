@@ -646,7 +646,9 @@ SUBSET_FILES = {
 # powerful": 0.75x Roy's speed on his attacks (OWNER_ANIM_RATE_STATUSES) and
 # 1.5x the power (OWNER_DAMAGE_SCALES); since p6r (2026-10-15) his attacks
 # are Ultimate's own timing and damage, the rate on Roy's run only.
-OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75}
+# Palutena (owner BUGS.md 2026-10-23): "speed up walking animation by 20%",
+# her walk clips against her ground speed, on her walks only.
+OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75, "palutena": 1.2}
 # The statuses a content's animation rate applies to (NDSP4Fighter
 # anim_rate_statuses); a content not listed takes it on every status. Ike
 # (owner p6h notes, 2026-10-14: "only the attack animations (minus the dash
@@ -665,6 +667,7 @@ OWNER_ANIM_RATE_STATUSES = {
     # clip at 1.0 again) and on Eruption's ends, still Roy's clips.
     "ike": sorted([0x10, 0x11, 0x13]                 # Run, RunBrake, TurnRun
                   + [0xF1, 0xF2, 0xF5, 0xF6]),        # Eruption's ends (0xEF/0xF0, 0xF3/0xF4 its charge)
+    "palutena": [0x0B, 0x0C, 0x0D],                   # WalkSlow, WalkMiddle, WalkFast
 }
 # A content's hitboxes' damage, times this as each is made (after staling:
 # NDSP4Fighter damage_scale, battleship_ftmain.c ftParamGetStaledDamage).
