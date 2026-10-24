@@ -5,7 +5,7 @@ older build.
 
 usage: python ram_ledger.py MAP [--diff OLD_MAP] [--top N] [--section NAME]
 
-MAP is a build's link map (builds/<name>/.map). Totals:
+MAP is a build's link map (builds/<name>/<target>.map, e.g. smash64ds.map). Totals:
   image            the static main-RAM sections (.crt0, .text.hot*, .main,
                    .main.rw, .main.bss and the small init tables)
   VS battle        the image: a VS battle lends the whole front-end overlay

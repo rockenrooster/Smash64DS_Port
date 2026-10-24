@@ -286,7 +286,7 @@ NDS_MN_UI_SURFACE_ASSET := $(PROJECT_ROOT)/assets/menus/mn_surfaces.bin
 NDS_MN_TITLE_ANIM_INC := \
 	$(PROJECT_ROOT)/src/nds/generated/mn_title_anim.generated.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
-	-Wl,-Map,$(notdir $*.map),--gc-sections,--emit-relocs \
+	-Wl,-Map,$(NDS_OUTPUT_BASENAME).map,--gc-sections,--emit-relocs \
 	-Wl,--wrap=nitroromGetSelf,--wrap=dvmMountVolume,--wrap=dvmUnmountVolume \
 	-Wl,--wrap=cpuGetTiming \
 	-Wl,--wrap=glTexImage2D,--wrap=glColorTableEXT,--wrap=glColorSubTableEXT \

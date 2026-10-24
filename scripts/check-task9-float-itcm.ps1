@@ -679,7 +679,7 @@ try {
         }
     }
 
-    $map = Join-Path $resolvedBuild '.map'
+    $map = Join-Path $resolvedBuild (([IO.Path]::GetFileNameWithoutExtension($resolvedElf)) + '.map')
     if (-not (Test-Path -LiteralPath $map -PathType Leaf)) {
         throw "Candidate link map was not found: $map"
     }
@@ -713,7 +713,7 @@ try {
     if ($BaselineElf) {
         $resolvedBaselineElf = (Resolve-Path -LiteralPath $BaselineElf).Path
         $baseBytes = Get-SectionBytes -Path $resolvedBaselineElf -Section '.itcm'
-        $baselineMap = Join-Path (Split-Path -Parent $resolvedBaselineElf) '.map'
+        $baselineMap = Join-Path (Split-Path -Parent $resolvedBaselineElf) (([IO.Path]::GetFileNameWithoutExtension($resolvedBaselineElf)) + '.map')
         if (-not (Test-Path -LiteralPath $baselineMap -PathType Leaf)) {
             throw "Baseline link map was not found: $baselineMap"
         }
