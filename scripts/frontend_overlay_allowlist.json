@@ -1246,6 +1246,36 @@
       "source_symbol": "ndsFrontendOverlayTryAlloc",
       "target_symbol": "__nds_frontend_select_start",
       "reason": "Linker boundary symbol: VS Results lends the select's block as its second scene-asset range (ndsFrontendOverlayBeginScene/TryAlloc); it is an address, never called or read."
+    },
+    {
+      "source_symbol": "syMainLoop",
+      "target_symbol": "gSYMainThread0Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
+    },
+    {
+      "source_symbol": "syMainLoop",
+      "target_symbol": "sSYMainThread1Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
+    },
+    {
+      "source_symbol": "syMainThread1Idle",
+      "target_symbol": "sSYMainThread5Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
+    },
+    {
+      "source_symbol": "syMainThread5",
+      "target_symbol": "sSYMainThread3Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
+    },
+    {
+      "source_symbol": "syMainThread5",
+      "target_symbol": "sSYMainThread4Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
+    },
+    {
+      "source_symbol": "syMainThread5",
+      "target_symbol": "sSYMainThread6Stack",
+      "reason": "Boot-only canary write / ignored stack top: the port runs the source's threads 1-6 on coroutine stacks of its own (libultra_os.c osStartThread uses `sp` for GObj threads only), so these arrays in the overlay BSS are written once before the first frontend load and never read (syMainVerifyStackProbes is not linked)."
     }
   ],
   "select_pairs": [

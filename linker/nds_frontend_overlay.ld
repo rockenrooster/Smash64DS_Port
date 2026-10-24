@@ -322,6 +322,16 @@ SECTIONS {
      * scene's lbRelocInitSetup. None is menu preference or campaign state.
      * Calico clears this BSS whenever frontend code is reloaded after VS. */
     .ovl.frontend.bss . (NOLOAD) : {
+        /* The source's thread stacks (sys/main.c, 18,688 B, P8 R5): the port
+         * runs threads 1-6 on coroutine stacks of its own (libultra_os.c
+         * osStartThread takes `sp` for GObj threads only) and thread 0 is the
+         * DS boot stack. Boot writes one canary word into each and nothing
+         * reads them again (syMainVerifyStackProbes is not linked), so they
+         * leave the resident image: the overlay grows by what the image
+         * loses (menus unchanged) and every battle's loan takes them. */
+        :battleship_sys_main.o (.bss.gSYMainThread0Stack .bss.sSYMainThread1Stack
+            .bss.sSYMainThread3Stack .bss.sSYMainThread4Stack
+            .bss.sSYMainThread5Stack .bss.sSYMainThread6Stack)
         :battleship_mvopeningroom.o (.bss.sMVOpeningRoomForceStatusBuffer)
         :battleship_mvopeningroom.o (.bss.sMVOpeningRoomStatusBuffer)
         :battleship_mvopeningportraits.o (.bss.sMVOpeningPortraitsForceStatusBuffer)
