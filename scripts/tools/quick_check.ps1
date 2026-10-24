@@ -24,6 +24,9 @@ param(
 # waits behind a running build; never edit sources while it runs.
 . "$PSScriptRoot\common.ps1"
 $ErrorActionPreference = 'Stop'
+# `pwsh -File quick_check.ps1 -Skip host,configs` hands the list over as one
+# string; split it, or `configs` is never skipped.
+$Skip = @($Skip | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 Set-Location $S64Repo
 $summary = Join-Path $S64Probes 'quick-check.txt'
 $lines = @("quick_check $(Get-Date -Format 's') HEAD $(git rev-parse --short HEAD)")
@@ -73,7 +76,7 @@ if ($Skip -notcontains 'configs') {
             $detail = "builds/$build"
         } catch {
             $ok = $false
-            $detail = "builds/$build: $($_.Exception.Message)"
+            $detail = "builds/${build}: $($_.Exception.Message)"
         }
         $secs = [int]((Get-Date) - $t0).TotalSeconds
         Step $c.Name $ok "$detail ${secs}s$(if ($seed) { " (seeded from $seed)" })"
@@ -93,7 +96,9 @@ if ($Skip -notcontains 'digests') {
             $jobs += Start-Job -ArgumentList $S64Repo, $gate, $tag, $stages[$i], (1 + $i), (35 * $i) -ScriptBlock {
                 param($repo, $build, $tag, $g, $slot, $delay)
                 Start-Sleep -Seconds $delay
-                & "$repo\scripts\tools\worst_case_sweep.ps1" -Build $build -Rosters '0,1,0,1/9,13,17,20' `
+                # The tick-HUD sampler finds a bare name under builds/ only
+                # when it starts with "build" (scripts/lib/build-output.ps1).
+                & "$repo\scripts\tools\worst_case_sweep.ps1" -Build "builds/$build" -Rosters '0,1,0,1/9,13,17,20' `
                     -Gkinds @($g) -Tag "$tag-$slot" -Slot $slot *> $null
             }
         }
