@@ -21,6 +21,8 @@ ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
     {
         u16 palette[32];
         u32 color;
+        u32 other;
+        s32 shared = FALSE;
         if (sNdsEntryShieldTextureName[variant] != 0u) { continue; }
         for (color = 0u; color < 32u; color++)
         {
@@ -28,10 +30,22 @@ ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
                 texture->palette[color], 0xffffffc0u,
                 sNdsEntryShieldEnvironment[variant]);
         }
-        if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
-                texture->width, texture->height, palette,
-                ndsRendererEntryEffectTextureFill, (void *)texture,
-                &sNdsEntryShieldTextureName[variant]) == FALSE)
+        /* P8 V9: the five shields are one image through five palettes. */
+        for (other = 0u; (other < 5u) && (shared == FALSE); other++)
+        {
+            if ((other != variant) && (sNdsEntryShieldTextureName[other] != 0u))
+            {
+                shared = ndsRendererHardwarePrepareIFCommonA3I5Alias(
+                    sNdsEntryShieldTextureName[other], texture->width,
+                    texture->height, palette,
+                    &sNdsEntryShieldTextureName[variant]);
+            }
+        }
+        if ((shared == FALSE) &&
+            (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+                 texture->width, texture->height, palette,
+                 ndsRendererEntryEffectTextureFill, (void *)texture,
+                 &sNdsEntryShieldTextureName[variant]) == FALSE))
         {
             return FALSE;
         }
@@ -275,6 +289,43 @@ NDS_RENDERER_COLD static void ndsRendererEntryTextureMarkLate(u8 *late)
     }
 }
 
+/* P8 V9: the generator interns byte-identical payloads, so a prepared image
+ * with the same texels, byte count, compression, size and format holds the
+ * same texels: show them through texture i's own palette instead of a second
+ * upload. FALSE: none prepared, or it cannot share. */
+NDS_RENDERER_COLD static s32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererEntryTextureShare(u32 i, const NDSEntryEffectTexture *texture,
+                             u32 texture_format)
+{
+    u32 j;
+
+    for (j = 0u; j < NDS_ENTRY_EFFECT_TEXTURE_COUNT; j++)
+    {
+        const NDSEntryEffectTexture *other = &sNdsEntryEffectTextures[j];
+
+        if ((j == i) || (sNdsRendererEntryEffectTextureName[j] == 0u) ||
+            (other->texels != texture->texels) ||
+            (other->texel_bytes != texture->texel_bytes) ||
+            (other->compression != texture->compression) ||
+            (other->width != texture->width) ||
+            (other->height != texture->height) ||
+            (other->ds_format != texture->ds_format))
+        {
+            continue;
+        }
+        if (ndsRendererHardwarePrepareIFCommonAlias(
+                sNdsRendererEntryEffectTextureName[j], texture->width,
+                texture->height, texture_format, texture->palette,
+                texture->palette_entries,
+                (texture_format == GL_RGB16) ? texture->color0_transparent : FALSE,
+                &sNdsRendererEntryEffectTextureName[i]) != FALSE)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 NDS_RENDERER_COLD static s32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
 {
@@ -322,12 +373,16 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
              * necessarily reserve index 0 for transparency. Mario's pipe uses
              * index 0 as opaque green in both CI4 images; forcing COLOR0 there
              * removes whole texel rows from otherwise valid polygons. */
-            prepared = ndsRendererHardwarePrepareIFCommonAtlas(
-                texture->width, texture->height, GL_RGB16,
-                texture->palette, 16u,
-                ndsRendererEntryEffectTextureFill, (void *)texture,
-                &sNdsRendererEntryEffectTextureName[i],
-                texture->color0_transparent);
+            prepared = ndsRendererEntryTextureShare(i, texture, GL_RGB16);
+            if (prepared == FALSE)
+            {
+                prepared = ndsRendererHardwarePrepareIFCommonAtlas(
+                    texture->width, texture->height, GL_RGB16,
+                    texture->palette, 16u,
+                    ndsRendererEntryEffectTextureFill, (void *)texture,
+                    &sNdsRendererEntryEffectTextureName[i],
+                    texture->color0_transparent);
+            }
         }
         else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A5I3)
         {
@@ -336,10 +391,14 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
                 ok = FALSE;
                 continue;
             }
-            prepared = ndsRendererHardwarePrepareIFCommonCloudAtlas(
-                texture->width, texture->height, texture->palette,
-                ndsRendererEntryEffectTextureFill, (void *)texture,
-                &sNdsRendererEntryEffectTextureName[i]);
+            prepared = ndsRendererEntryTextureShare(i, texture, GL_RGB8_A5);
+            if (prepared == FALSE)
+            {
+                prepared = ndsRendererHardwarePrepareIFCommonCloudAtlas(
+                    texture->width, texture->height, texture->palette,
+                    ndsRendererEntryEffectTextureFill, (void *)texture,
+                    &sNdsRendererEntryEffectTextureName[i]);
+            }
         }
         else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_RGBA)
         {
@@ -348,11 +407,15 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
                 ok = FALSE;
                 continue;
             }
-            prepared = ndsRendererHardwarePrepareIFCommonAtlas(
-                texture->width, texture->height, GL_RGBA,
-                NULL, 0u,
-                ndsRendererEntryEffectTextureFill, (void *)texture,
-                &sNdsRendererEntryEffectTextureName[i], FALSE);
+            prepared = ndsRendererEntryTextureShare(i, texture, GL_RGBA);
+            if (prepared == FALSE)
+            {
+                prepared = ndsRendererHardwarePrepareIFCommonAtlas(
+                    texture->width, texture->height, GL_RGBA,
+                    NULL, 0u,
+                    ndsRendererEntryEffectTextureFill, (void *)texture,
+                    &sNdsRendererEntryEffectTextureName[i], FALSE);
+            }
         }
         else
         {

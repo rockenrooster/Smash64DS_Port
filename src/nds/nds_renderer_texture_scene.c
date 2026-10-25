@@ -62,6 +62,7 @@ NDS_RENDERER_COLD void ndsRendererHardwareResetSceneTextureVram(void)
     /* P8 V5: the wallpaper tiles' block goes with the allocators. */
     ndsNativeWallpaperTilesForget();
     glResetTextures();
+    ndsPlatformGlTextureAliasReset();   /* P8 V9: no holders left */
 #if NDS_VRAM_CENSUS_LIVE
     ndsVramCensusTagReset();   /* slice 2a lab tags: every name is gone */
 #endif
@@ -237,6 +238,68 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     return TRUE;
 }
 
+/* P8 V9: an IFCommon texture with the same texels as the live `source` (the
+ * same width, height and format, the same bytes) shows them through its own
+ * palette: a name, a palette, no texel upload and no VRAM block. FALSE when
+ * it cannot share; the caller then prepares its own. */
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonAlias(
+    u32 source, u32 width, u32 height, u32 texture_format,
+    const u16 *palette, u32 palette_entries, u32 color0_transparent,
+    u32 *texture_name)
+{
+    int size_x;
+    int size_y;
+    int name = 0;
+    u32 param = (u32)TEXGEN_TEXCOORD;
+
+    if ((source == 0u) || (texture_name == NULL) ||
+        ((texture_format != GL_RGBA) &&
+         ((palette == NULL) || (palette_entries == 0u))) ||
+        (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
+        (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE))
+    {
+        return FALSE;
+    }
+    if (((texture_format == GL_RGB16) || (texture_format == GL_RGB256)) &&
+        (color0_transparent != FALSE))
+    {
+        param |= (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
+    }
+    if (*texture_name != 0u)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(texture_name);
+    }
+    ndsRendererHardwareEndBatch();
+    if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
+    {
+        return FALSE;
+    }
+    ndsRendererHardwareBindTextureState(name);
+    ndsRendererHardwareRecordBattleTextureFence(
+        NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_UPLOAD);
+    ndsRendererHardwareInvalidateGXState(
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+    if (ndsPlatformGlTextureAlias(name, (int)source, (int)texture_format,
+                                  size_x, size_y, (int)param) == FALSE)
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+        sNdsRendererHardwareBoundTextureName = 0u;
+        sNdsRendererHardwareActiveTextureEntry = NULL;
+        return FALSE;
+    }
+#if NDS_VRAM_CENSUS_LIVE
+    ndsVramCensusTagUpload();
+#endif
+    if (texture_format != GL_RGBA)
+    {
+        glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
+    }
+    *texture_name = (u32)name;
+    sNdsRendererHardwareBoundTextureName = (u32)name;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+}
+
 NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     u32 width, u32 height, const u16 palette[8],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
@@ -281,6 +344,45 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB16, palette, 16u,
         fill, user_data, texture_name, TRUE);
+}
+
+/* P8 V9: the three siblings' aliases -- their formats, palette widths and
+ * colour-0 rules, over ndsRendererHardwarePrepareIFCommonAlias. */
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonA3I5Alias(
+    u32 source, u32 width, u32 height, const u16 palette[32],
+    u32 *texture_name)
+{
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
+    return ndsRendererHardwarePrepareIFCommonAlias(
+        source, width, height, GL_RGB32_A3, palette, 32u, FALSE,
+        texture_name);
+}
+
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonCloudAlias(
+    u32 source, u32 width, u32 height, const u16 palette[8],
+    u32 *texture_name)
+{
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
+    return ndsRendererHardwarePrepareIFCommonAlias(
+        source, width, height, GL_RGB8_A5, palette, 8u, FALSE, texture_name);
+}
+
+NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareIFCommonPal16Alias(
+    u32 source, u32 width, u32 height, const u16 palette[16],
+    u32 *texture_name)
+{
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
+    return ndsRendererHardwarePrepareIFCommonAlias(
+        source, width, height, GL_RGB16, palette, 16u, TRUE, texture_name);
 }
 
 NDS_RENDERER_COLD static s32 ndsRendererImpactWaveTexelFill(u8 *pixels, u32 bytes,
@@ -437,6 +539,17 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
          variant++)
     {
         if (sNdsRendererImpactWaveTextureName[variant] != 0u)
+        {
+            continue;
+        }
+        /* P8 V9: the variants are one image through their own palettes. */
+        if ((variant != 0u) && (sNdsRendererImpactWaveTextureName[0] != 0u) &&
+            (ndsRendererHardwarePrepareIFCommonPal16Alias(
+                 sNdsRendererImpactWaveTextureName[0],
+                 NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH,
+                 NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT,
+                 sNdsRendererImpactWavePalettes[variant],
+                 &sNdsRendererImpactWaveTextureName[variant]) != FALSE))
         {
             continue;
         }
@@ -1167,6 +1280,8 @@ typedef struct NDSVramCensusMapRow
 #define NDS_VC_F_4X4 4u
 #define NDS_VC_F_HARD_ALPHA 8u
 #define NDS_VC_F_MANY_COLORS 16u
+/* P8 V9: the name shows another's block (no VRAM of its own). */
+#define NDS_VC_F_ALIAS 32u
 __attribute__((used)) NDSVramCensusMapRow gNdsVramCensusMap[NDS_VRAM_CENSUS_NAME_MAX];
 __attribute__((used)) volatile u32 gNdsVramCensusMapCount;
 /* And libnds's texture allocator blocks in address order: VRAM held without a
@@ -1461,6 +1576,10 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
             row->alphas = 0u;
             row->flags = ((tex->texFormat & (1u << 29)) != 0u) ?
                 NDS_VC_F_COLOR0_TRANSPARENT : 0u;
+            if (tex->texIndex == 0u)
+            {
+                row->flags |= NDS_VC_F_ALIAS;
+            }
             if ((tex->palIndex > 0) &&
                 ((u32)tex->palIndex < palettes->cur_size))
             {
@@ -1473,14 +1592,18 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
                 }
             }
             snap->tex_names++;
-            snap->tex_bytes += bytes;
-            snap->tex_size_field += tex->texSize;
-            snap->bytes[bucket] += bytes;
-            snap->count[bucket]++;
-            if ((addr >= 0x06860000u) && (addr < 0x06880000u))
+            /* An alias's bytes are its holder's: count each block once. */
+            if (tex->texIndex != 0u)
             {
-                snap->tex_bytes_d += bytes;
-                snap->bytes_d[bucket] += bytes;
+                snap->tex_bytes += bytes;
+                snap->tex_size_field += tex->texSize;
+                snap->bytes[bucket] += bytes;
+                snap->count[bucket]++;
+                if ((addr >= 0x06860000u) && (addr < 0x06880000u))
+                {
+                    snap->tex_bytes_d += bytes;
+                    snap->bytes_d[bucket] += bytes;
+                }
             }
         }
         if ((tex->palIndex > 0) &&

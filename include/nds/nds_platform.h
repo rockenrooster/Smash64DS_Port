@@ -38,6 +38,14 @@ enum NDSOriginalSpriteOverlayLayer {
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);
+/* P8 V9: the bound, empty texture `name` shows `source`'s texels (same type
+ * and size enums) through its own palette and parameters, with no VRAM block
+ * of its own; FALSE when it cannot. The link's glTexImage2D and
+ * glDeleteTextures wraps hand a holder's block to its aliases; the scene's
+ * glResetTextures is followed by the reset. */
+s32 ndsPlatformGlTextureAlias(int name, int source, int type,
+                              int size_x, int size_y, int params);
+void ndsPlatformGlTextureAliasReset(void);
 /* Mandatory scene workspace; reserve before optional animation caches. */
 s32 ndsPlatformReserveOriginalSpritePreview(void);
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,

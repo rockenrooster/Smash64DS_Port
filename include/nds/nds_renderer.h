@@ -1736,6 +1736,25 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
     u32 width, u32 height, const u16 palette[16],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
+/* P8 V9: the same texels as the live `source` (same size, format and bytes)
+ * through this texture's own palette, with no texel upload; texture_format is
+ * a GL_TEXTURE_TYPE_ENUM. FALSE when it cannot share: prepare one instead.
+ * Released like the atlases above. */
+s32 ndsRendererHardwarePrepareIFCommonAlias(
+    u32 source, u32 width, u32 height, u32 texture_format,
+    const u16 *palette, u32 palette_entries, u32 color0_transparent,
+    u32 *texture_name);
+/* The Cloud, A3I5 and Pal16 atlases' aliases: their formats, palette widths
+ * and colour-0 rules. */
+s32 ndsRendererHardwarePrepareIFCommonA3I5Alias(
+    u32 source, u32 width, u32 height, const u16 palette[32],
+    u32 *texture_name);
+s32 ndsRendererHardwarePrepareIFCommonCloudAlias(
+    u32 source, u32 width, u32 height, const u16 palette[8],
+    u32 *texture_name);
+s32 ndsRendererHardwarePrepareIFCommonPal16Alias(
+    u32 source, u32 width, u32 height, const u16 palette[16],
+    u32 *texture_name);
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name);
 s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_name, s32 x_q16, s32 y_q16,

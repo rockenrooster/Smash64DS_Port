@@ -2543,6 +2543,25 @@ void ndsFtrLeanAdmitCloseHoles(void);
  * emits the entry count that matches the texels it packed. */
 static s32 ndsEFManagerShieldPrepare(u32 slot, const u16 *palette)
 {
+    u32 other;
+
+    /* P8 V9: every player's shield is one image through its own palette: the
+     * first slot prepared uploads it, the others show it. */
+    for (other = 0u; other < ARRAY_COUNT(sNdsShieldTextureName); other++)
+    {
+        if ((other != slot) && (sNdsShieldTextureName[other] != 0u) &&
+#if NDS_SHIELD_TEX_A3I5
+            (ndsRendererHardwarePrepareIFCommonA3I5Alias(
+#else
+            (ndsRendererHardwarePrepareIFCommonCloudAlias(
+#endif
+                 sNdsShieldTextureName[other], NDS_SHIELD_TEX_WIDTH,
+                 NDS_SHIELD_TEX_HEIGHT, palette,
+                 &sNdsShieldTextureName[slot]) != FALSE))
+        {
+            return TRUE;
+        }
+    }
 #if NDS_SHIELD_TEX_A3I5
     if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
             NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT, palette,

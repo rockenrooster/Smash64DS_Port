@@ -54,6 +54,8 @@ def site_names(elf: Path, pcs: dict[int, int]) -> dict[int, str]:
 
 # ndsVramCensusContent's flags (nds_renderer_texture_scene.c NDS_VC_F_*).
 F_COLOR0_TRANSPARENT, F_TRANSPARENT_SHOWN, F_4X4, F_HARD_ALPHA, F_MANY = 1, 2, 4, 8, 16
+# P8 V9: the name shows another name's block (an alias): no bytes of its own.
+F_ALIAS = 32
 BITS = {1: 8, 2: 2, 3: 4, 4: 8, 5: 2, 6: 8, 7: 16}
 
 
@@ -83,6 +85,8 @@ def content_tables(rows, owner, table):
     rows = [r for r in rows if r.get("hash") is not None]
     if not rows:
         return ""
+    aliases = sum(1 for r in rows if r["flags"] & F_ALIAS)
+    rows = [r for r in rows if not r["flags"] & F_ALIAS]
     smaller, saved = [], 0
     for r in rows:
         name, size = smallest_exact(r)
@@ -106,7 +110,7 @@ def content_tables(rows, owner, table):
            f"<p>{len(rows)} textures read. Smallest exact format: {len(smaller)} textures, "
            f"{saved:,} B. Every 4x4 block exact in the compressed format: {len(four)} textures, "
            f"{four_saved:,} B (texel and index data; slot rules aside). Duplicate texels: "
-           f"{len(dups)} groups, {dup_saved:,} B.</p>"]
+           f"{len(dups)} groups, {dup_saved:,} B; {aliases} names show another's texels (V9 aliases).</p>"]
     if smaller:
         smaller.sort(key=lambda t: t[0]["bytes"] - t[2], reverse=True)
         out.append(table(["name", "owner", "format", "size", "colours", "alpha levels", "smallest", "bytes", "saved"],
