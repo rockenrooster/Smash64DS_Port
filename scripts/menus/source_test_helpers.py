@@ -13,6 +13,8 @@ SPLIT_SOURCES = {
         "nds_renderer_native_rebirth_halo.c",
         "nds_renderer_native_dl_walk.c",
         "nds_renderer_native_entry.c",
+        "nds_renderer_native_entry_textures.c",
+        "nds_renderer_native_entry_packet.c",
         "nds_renderer_native_production_runs.c",
         "nds_renderer_native_fighter_packet.c",
         "nds_renderer_native_lean_lists.c",

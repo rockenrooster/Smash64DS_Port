@@ -1307,6 +1307,7 @@ def check_runtime_contract(root: Path, source: str) -> None:
         'nds_renderer_fighter_vram.c',
         'nds_renderer_native_common.c', 'nds_renderer_native_rebirth_halo.c',
         'nds_renderer_native_dl_walk.c', 'nds_renderer_native_entry.c',
+        'nds_renderer_native_entry_textures.c', 'nds_renderer_native_entry_packet.c',
         'nds_renderer_native_production_runs.c',
         'nds_renderer_native_fighter_packet.c', 'nds_renderer_native_lean_lists.c',
         'nds_renderer_native_lean_entries.c', 'nds_renderer_native_hierarchy.c'))

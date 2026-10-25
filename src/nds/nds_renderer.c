@@ -24,6 +24,8 @@
 #include "nds_renderer_native_rebirth_halo.c"
 #include "nds_renderer_native_dl_walk.c"
 #include "nds_renderer_native_entry.c"
+#include "nds_renderer_native_entry_textures.c"
+#include "nds_renderer_native_entry_packet.c"
 #include "nds_renderer_native_production_runs.c"
 #include "nds_renderer_native_fighter_packet.c"
 #include "nds_renderer_native_lean_lists.c"
