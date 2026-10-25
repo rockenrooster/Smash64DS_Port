@@ -159,6 +159,9 @@ def main() -> int:
             header = line[len("X MAPHDR "):]
     if not rows:
         raise SystemExit(f"{args.log}: no X ROW lines")
+    for r in rows:
+        # An alias (V9) shows its holder's block: a name, no bytes of its own.
+        r["owned"] = 0 if r["flags"] & F_ALIAS else r["bytes"]
     sites = site_names(args.elf, pcs)
 
     def owner(bucket: int) -> str:
@@ -175,18 +178,18 @@ def main() -> int:
     for r in rows:
         o = by_owner[owner(r["bucket"])]
         o[0] += 1
-        o[1] += r["bytes"]
+        o[1] += r["owned"]
         o[2] += r["pal"]
         f = by_format[FORMATS.get(r["format"], str(r["format"]))]
         f[0] += 1
-        f[1] += r["bytes"]
+        f[1] += r["owned"]
 
     bars, bank_rows, unnamed = [], [], {}
     for bank, base in BANKS:
         inside = sorted((r for r in rows if base <= r["addr"] < base + BANK_BYTES), key=lambda r: r["addr"])
         if not inside:
             continue
-        used = sum(r["bytes"] for r in inside)
+        used = sum(r["owned"] for r in inside)
         free_runs, cursor = [], base
         for r in inside:
             if r["addr"] > cursor:
@@ -242,7 +245,7 @@ def main() -> int:
                          [(f, n, f"{b:,}") for f, (n, b) in sorted(by_format.items(), key=lambda kv: -kv[1][1])])
     bank_table = table(["bank", "names", "used", "free", "largest free run"],
                        [(b, n, f"{u:,}", f"{f:,}", f"{l:,}") for b, n, u, f, l in bank_rows])
-    top = sorted(rows, key=lambda r: -r["bytes"])[:30]
+    top = sorted((r for r in rows if r["owned"]), key=lambda r: -r["bytes"])[:30]
     top_table = table(["name", "owner", "format", "size", "bytes", "bank offset"],
                       [(r["name"], html.escape(owner(r["bucket"])), FORMATS.get(r["format"]),
                         f'{8 << (r["size"] & 7)}x{8 << ((r["size"] >> 3) & 7)}', f'{r["bytes"]:,}',
@@ -250,7 +253,7 @@ def main() -> int:
                               if base <= r["addr"] < base + BANK_BYTES), hex(r["addr"])))
                        for r in top])
     content_html = content_tables(rows, owner, table)
-    total = sum(r["bytes"] for r in rows)
+    total = sum(r["owned"] for r in rows)
     page = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>VRAM map</title><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
