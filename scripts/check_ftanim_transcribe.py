@@ -7,10 +7,10 @@ checker began as a token-stream equality proof against the decomp body.
 
 THAT PROOF IS NO LONGER EXPRESSIBLE, and pretending otherwise is why this file
 sat RED and unwired for weeks. `69ce92e279f` (Requirement 4) restructured the
-port body: the track table is built lazily through `NDS_R2_FTANIM_TRACKS()`
+port body: the track table is built lazily through `NDS_FTANIM_TRACKS()`
 instead of unconditionally before the loop, every AObj slot carries a second
 fixed-point representation behind `q`, the tail walk became
-`ndsR2AnimAdvanceTail`, loop-invariants were hoisted into `len_new`, and a
+`ndsAnimAdvanceTail`, loop-invariants were hoisted into `len_new`, and a
 runaway guard was added. None of that is a substitution, so no inverse rule
 table can recover the decomp text from it.
 
@@ -61,18 +61,18 @@ ADV = "AObjAnimAdvance(%s)" % EV
 # before counting. Every rule must fire; one that matches nothing means the port
 # drifted and this checker silently stopped covering it.
 MACROS = [
-    ("NDS_R2_FTANIM_PAYLOAD();",
+    ("NDS_FTANIM_PAYLOAD();",
      "payload = (%s->command.toggle) ? %s->u : 0.0F;" % (ADV, ADV)),
-    ("NDS_R2_FTANIM_TARGET(0)",
+    ("NDS_FTANIM_TARGET(0)",
      "ftAnimGetTargetValue(%s->s, i + nGCAnimTrackJointStart, 0)" % ADV),
-    ("NDS_R2_FTANIM_TARGET(1)",
+    ("NDS_FTANIM_TARGET(1)",
      "ftAnimGetTargetValue(%s->s, i + nGCAnimTrackJointStart, 1)" % ADV),
 ]
 
 # Port macros that provably carry no `AObjAnimAdvance`. Anything else still
-# spelled `NDS_R2_FTANIM_*` after expansion fails: a new macro could be hiding
+# spelled `NDS_FTANIM_*` after expansion fails: a new macro could be hiding
 # an advance from proof 1, which is the one thing this checker must never miss.
-NO_ADVANCE_MACROS = ("NDS_R2_FTANIM_ENSURE", "NDS_R2_FTANIM_TRACKS")
+NO_ADVANCE_MACROS = ("NDS_FTANIM_ENSURE", "NDS_FTANIM_TRACKS")
 
 # Locals the port body may read in an arm without assigning it there, with the
 # reason. Keep this EMPTY unless a real one appears -- an entry here is a hole
@@ -181,7 +181,7 @@ def main() -> int:
         return 0
 
     port_body = body_of(open(PORT, encoding="utf-8", errors="replace").read(),
-                        "ndsR2FtAnimParseDObjFigatree")
+                        "ndsFtAnimParseDObjFigatree")
     dec_body = body_of(open(DECOMP, encoding="utf-8", errors="replace").read(),
                        "ftAnimParseDObjFigatree")
 
@@ -209,7 +209,7 @@ def main() -> int:
     for src, dst in MACROS:
         port = port.replace(src, dst)
 
-    leftover = sorted(set(re.findall(r"NDS_R2_FTANIM_[A-Z_]+", port)))
+    leftover = sorted(set(re.findall(r"NDS_FTANIM_[A-Z_]+", port)))
     unknown = [m for m in leftover if m not in NO_ADVANCE_MACROS]
     if unknown:
         print("FAIL: unexpanded port macro(s) that may hide an "

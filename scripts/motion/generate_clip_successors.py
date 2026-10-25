@@ -15,7 +15,7 @@ deterministic replay) are named `<prefix><k>_<run>` and are merged by
 
 For every clip, the two clips that most often followed it in the SAME
 fighter's fetches, over all runs -- only clips the stream pack holds (--pack)
-and seen following it at least twice. The runtime (ndsR2AnimPrefetchIdle)
+and seen following it at least twice. The runtime (ndsAnimPrefetchIdle)
 reads those two into the motion ring asynchronously in the frame's idle time
 after the clip is installed; a wrong guess costs ring space and an ARM7 read,
 never a different frame, because a clip's bytes are the same wherever they

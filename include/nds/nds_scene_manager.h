@@ -148,7 +148,7 @@ extern volatile u32 gNdsSceneManagerUnregisteredEnterCount;
 extern volatile u32 gNdsSceneManagerCurrTransition;
 
 /* Remaining automatic hops for the scene-loop walk, and completed loops.
- * Seeded from NDS_R2_SCENE_LOOP_WALK (loop count) on the first scene entry;
+ * Seeded from NDS_SCENE_LOOP_WALK (loop count) on the first scene entry;
  * each bounded scene tail that would otherwise park spends one hop and
  * requests its successor instead. Lab only: the flag is 0 in every published
  * and Boundary configuration, where ndsSceneWalkAdvance returns FALSE without

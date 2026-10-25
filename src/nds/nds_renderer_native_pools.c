@@ -1561,16 +1561,16 @@ typedef struct NDSNativeStageOwnerExecution
      * owner already keys on, and that owner resets correctly across the entry;
      * reusing them here makes the two caches invalidate together rather than
      * leaving this one keyed on quantities a re-entry cannot move. */
-    const NDSRendererConfig *r2_prepared_config;
-    const void *r2_prepared_asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
-    u32 r2_prepared_topology_generation;
-    u32 r2_prepared_topology_stamp;
-    u64 r2_prepared_epoch_mask;
-    u32 r2_prepared_valid;
+    const NDSRendererConfig *prepared_config;
+    const void *prepared_asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    u32 prepared_topology_generation;
+    u32 prepared_topology_stamp;
+    u64 prepared_epoch_mask;
+    u32 prepared_valid;
     /* R2-02 E8. The one member of `preflight_stats` that outlives the segment
      * loop. Memoised with `epoch_mask` so eliding the loop body cannot depend
      * on which segment happens to run last. */
-    u32 r2_prepared_sync_count;
+    u32 prepared_sync_count;
 } NDSNativeStageOwnerExecution;
 
 typedef struct NDSNativeStageTopologySummary
@@ -1634,10 +1634,10 @@ static u32 sNdsNativeStagePreparedTextureProofValid;
  * produces the buckets. Predicted on the gate arm: Fast ~= one per consult per
  * frame, Sweep ~= 0 after the first, EpochBump ~= 0 mid-match. A per-frame
  * Sweep count means the epoch is moving and this lever did not engage. */
-__attribute__((used)) volatile u32 gNdsR2TexProofFastCount;
-__attribute__((used)) volatile u32 gNdsR2TexProofSweepCount;
-__attribute__((used)) volatile u32 gNdsR2TexProofSweepFailCount;
-__attribute__((used)) volatile u32 gNdsR2TextureEpochBumpCount;
+__attribute__((used)) volatile u32 gNdsTexProofFastCount;
+__attribute__((used)) volatile u32 gNdsTexProofSweepCount;
+__attribute__((used)) volatile u32 gNdsTexProofSweepFailCount;
+__attribute__((used)) volatile u32 gNdsTextureEpochBumpCount;
 
 /* Bumped wherever runs[] is (re)written -- this drop is the write seam (see
  * ndsRendererNativeStagePrepareRun) -- so a reader that verified the prepared
@@ -1674,17 +1674,17 @@ static s32 ndsRendererNativeStagePreparedTexturesProven(void)
         (sNdsNativeStagePreparedTextureProofEpoch ==
          sNdsRendererHardwareTextureKeyGeneration))
     {
-        NDS_DIAG(gNdsR2TexProofFastCount++);
+        NDS_DIAG(gNdsTexProofFastCount++);
         return TRUE;
     }
-    gNdsR2TexProofSweepCount++;
+    gNdsTexProofSweepCount++;
     for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
     {
         if (ndsRendererNativeStagePreparedTextureValid(
                 &sNdsNativeStageWs.runs[run_index]) == FALSE)
         {
             sNdsNativeStagePreparedTextureProofValid = FALSE;
-            gNdsR2TexProofSweepFailCount++;
+            gNdsTexProofSweepFailCount++;
             return FALSE;
         }
     }
@@ -1697,9 +1697,9 @@ static s32 ndsRendererNativeStagePreparedTexturesProven(void)
  * prove the elision actually engaged -- a flag that silently never fires is
  * indistinguishable from a null result, and this campaign has shipped that
  * mistake (Task 52 found the Task 36 replay structurally disabled). */
-volatile u32 gNdsR2StagePrepareReuseCount;
-volatile u32 gNdsR2StagePrepareBuildCount;
+volatile u32 gNdsStagePrepareReuseCount;
+volatile u32 gNdsStagePrepareBuildCount;
 /* R2-02 E8 engagement, for the same reason: five per frame is the elision
  * working, zero is a flag that compiled but never fired. */
-volatile u32 gNdsR2StagePreflightElideCount;
+volatile u32 gNdsStagePreflightElideCount;
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;

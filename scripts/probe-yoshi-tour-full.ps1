@@ -46,7 +46,7 @@ foreach ($definition in @(
     '#define NDS_COMPACT_BATTLE_FIGHTERS 1',
     '#define NDS_PROOF_FIGHTER0 6',
     '#define NDS_YOSHI_BUG_PROOF 1',
-    ('#define NDS_R2_PATH ' + $(if ($FastLogic) { '0' } else { '1' })),
+    ('#define NDS_PATH ' + $(if ($FastLogic) { '0' } else { '1' })),
     ('#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST ' + $(if ($FastLogic) { '1' } else { '0' }))
 )) {
     Assert-YoshiTour $text.Contains($definition) `
@@ -295,7 +295,7 @@ try {
         'commands',
         'silent',
         'printf "YOSHI_WP_GOBJ gobj=%p refusal=%u high=%u gmax=%d gactive=%d heap=%u heapmin=%u\n",weapon_gobj,gNdsWeaponPoolRefusalCount,gNdsWeaponPoolLiveHighWater,sGCCommonsMaxNum,sGCCommonsActiveNum,(unsigned int)gSYTaskmanGeneralHeap.end-(unsigned int)gSYTaskmanGeneralHeap.ptr,gNdsTaskmanGeneralHeapFreeMin',
-        'printf "YOSHI_MEM arena=%u refine=%u aobj=%u/%u effect=%u/%u animres=%u animuse=%u shield=%u pack=%u preview=%u libc=%u\n",gNdsTaskmanArenaChosenSize,gNdsTaskmanArenaRefineBytes,gNdsR2AObjPoolCount,gNdsR2AObjPoolBytes,gNdsEffectPoolDepth,gNdsEffectPoolFreeMin,gNdsR2AnimCacheArenaReservedBytes,gNdsR2AnimCacheArenaUsedBytes,gNdsShieldPoseResidentBytes,gNdsBattlePackResidentBytes,gNdsPreviewPackDataBytes,gNdsTaskmanLibcRuntimeHighWater',
+        'printf "YOSHI_MEM arena=%u refine=%u aobj=%u/%u effect=%u/%u animres=%u animuse=%u shield=%u pack=%u preview=%u libc=%u\n",gNdsTaskmanArenaChosenSize,gNdsTaskmanArenaRefineBytes,gNdsAObjPoolCount,gNdsAObjPoolBytes,gNdsEffectPoolDepth,gNdsEffectPoolFreeMin,gNdsAnimCacheArenaReservedBytes,gNdsAnimCacheArenaUsedBytes,gNdsShieldPoseResidentBytes,gNdsBattlePackResidentBytes,gNdsPreviewPackDataBytes,gNdsTaskmanLibcRuntimeHighWater',
         'continue',
         'end'
         )
@@ -332,7 +332,7 @@ try {
             'printf "YOSHI_PRESENT realtime\n"'
         }),
         'printf "YOSHI_TOUR phase=%u done=%u inputs=%u up=%u egg=%u neutral=%u catch=%u nprog=%u ndraw=%u cwait=%u cprog=%u cdraw=%u throw=%u tprog=%u tdraw=%u tret=%u retry=%u stall=%u entry=%u shared=%u lay=%u native=%u frej=%u wrej=%u erej=%u\n",gNdsYoshiBugTourPhase,gNdsYoshiBugTourDone,gNdsYoshiBugTourInputCount,gNdsYoshiBugTourUpStatusObserved,gNdsYoshiBugTourEggThrowObserved,gNdsYoshiBugTourNeutralStatusObserved,gNdsYoshiBugTourNeutralCatchObserved,gNdsYoshiBugTourNeutralProgramObserved,gNdsYoshiBugTourNeutralDrawObserved,gNdsYoshiBugTourCatchWaitObserved,gNdsYoshiBugTourCatchProgramObserved,gNdsYoshiBugTourCatchDrawObserved,gNdsYoshiBugTourThrowStatusObserved,gNdsYoshiBugTourThrowProgramObserved,gNdsYoshiBugTourThrowDrawObserved,gNdsYoshiBugTourThrowReturnObserved,gNdsYoshiBugTourRetryCount,gNdsYoshiBugTourStallPhase,gNdsYoshiBugProofEntryEggDrawCount,gNdsYoshiBugProofSharedEggDrawCount,gNdsYoshiBugProofEggLayDrawCount,gNdsYoshiBugTourNativeFailureDelta,gNdsYoshiBugTourFighterRejectDelta,gNdsYoshiBugTourWeaponRejectDelta,gNdsYoshiBugTourEffectRejectDelta',
-        'printf "YOSHI_MEMORY heap=%u heapmin=%u aobj=%u/%u latch=%u/%u/%u gmax=%d gactive=%d\n",(unsigned int)gSYTaskmanGeneralHeap.end-(unsigned int)gSYTaskmanGeneralHeap.ptr,gNdsTaskmanGeneralHeapFreeMin,gNdsR2AObjPoolCount,gNdsR2AObjPoolBytes,gNdsIFCommonGObjLatchReserveApplyCount,gNdsIFCommonGObjLatchBase,gNdsIFCommonGObjLatchLimit,sGCCommonsMaxNum,sGCCommonsActiveNum',
+        'printf "YOSHI_MEMORY heap=%u heapmin=%u aobj=%u/%u latch=%u/%u/%u gmax=%d gactive=%d\n",(unsigned int)gSYTaskmanGeneralHeap.end-(unsigned int)gSYTaskmanGeneralHeap.ptr,gNdsTaskmanGeneralHeapFreeMin,gNdsAObjPoolCount,gNdsAObjPoolBytes,gNdsIFCommonGObjLatchReserveApplyCount,gNdsIFCommonGObjLatchBase,gNdsIFCommonGObjLatchLimit,sGCCommonsMaxNum,sGCCommonsActiveNum',
         'detach',
         'quit'
     )

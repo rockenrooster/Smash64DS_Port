@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param()
 
-# Falsifier for include/nds/nds_r2_hwmath.h -- the correctly-rounded IEEE-754
+# Falsifier for include/nds/nds_hwmath.h -- the correctly-rounded IEEE-754
 # single divide built on the ARM9 64/32 divide unit. Compiles the SHIPPED kernel
 # on the host with the hardware unit stood in for by an exact C divide, and
 # grades it bit-for-bit against the host's own IEEE divide over six exhaustive
@@ -9,13 +9,13 @@ param()
 #
 # It proves the ALGORITHM half only, and says so: that the DS unit itself
 # returns the exact truncated quotient and remainder is graded in the ROM by
-# src/port/nds_r2_hwmath_bench.c against the portable software divide.
+# src/port/nds_hwmath_bench.c against the portable software divide.
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $root 'artifacts/verifier-temp/r2-hwmath'
-$source = Join-Path $PSScriptRoot 'check-r2-hwmath.c'
-$binary = Join-Path $outputDir 'check-r2-hwmath.exe'
+$source = Join-Path $PSScriptRoot 'check-hwmath.c'
+$binary = Join-Path $outputDir 'check-hwmath.exe'
 $armAssembly = Join-Path $outputDir 'arm-kernel.s'
 $compiler = Get-Command gcc -ErrorAction Stop
 $armCompiler = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gcc.exe'
@@ -36,15 +36,15 @@ if (-not (Test-Path -LiteralPath $armCompiler -PathType Leaf)) {
 # The probe is a SEPARATE translation unit, not this checker compiled for ARM:
 # the checker models the unit with a C divide, so grepping its assembly would
 # find __aeabi_ldivmod every time and prove nothing about the ROM.
-$armProbe = Join-Path $PSScriptRoot 'check-r2-hwmath-arm-probe.c'
+$armProbe = Join-Path $PSScriptRoot 'check-hwmath-arm-probe.c'
 & $armCompiler -O2 -std=c11 -Wall -Wextra -Werror `
     -march=armv5te -mtune=arm946e-s -marm `
     -S $armProbe -o $armAssembly
 if ($LASTEXITCODE -ne 0) { throw 'R2 hwmath ARM codegen probe failed.' }
 
 $assembly = Get-Content -LiteralPath $armAssembly -Raw
-$bodies = @('ndsR2HwMathProbeDivBits', 'ndsR2HwMathProbeCfxDiv64',
-            'ndsR2HwMathProbeCfxIsqrt64')
+$bodies = @('ndsHwMathProbeDivBits', 'ndsHwMathProbeCfxDiv64',
+            'ndsHwMathProbeCfxIsqrt64')
 foreach ($body in $bodies) {
     $kernel = [regex]::Match(
         $assembly, "(?ms)^${body}:\s*(.*?)^\s*\.size\s+${body}")

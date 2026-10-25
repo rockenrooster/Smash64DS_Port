@@ -208,7 +208,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
  * no-ops when this define has already taken effect, and still bounds the pool
  * if a future include order stops it from applying. */
 #undef EFFECT_ALLOC_NUM
-#define EFFECT_ALLOC_NUM NDS_R2_EFFECT_POOL
+#define EFFECT_ALLOC_NUM NDS_EFFECT_POOL
 
 /* P4: the inhale wind's per-frame proc is told apart from its registration
  * by the call's parentheses: the definition becomes the base, and the maker
@@ -1067,7 +1067,7 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
  * EFDesc effect carries the source model's display list, so it failed the test
  * and NOTHING IN THE BUILD EVER EJECTED IT. The filter was harmless while the
  * source path drew nothing; it became a leak the moment
- * NDS_R2_SOURCE_EFFECTS_FULL made those effects real. Measured before the fix:
+ * NDS_SOURCE_EFFECTS_FULL made those effects real. Measured before the fix:
  * three guards in one match left three shields drawing, link-15 draw count
  * 1 -> 2 -> 3 and never down, still +3/frame 494 tics after the first spawn.
  *
@@ -2398,7 +2398,7 @@ static void ndsEFManagerResolveAllDescOffsets(void)
 #undef NDS_EF_RESOLVE_ONE
 }
 
-/* Install NDS_R2_EFFECT_POOL as the effect-instance pool depth by truncating
+/* Install NDS_EFFECT_POOL as the effect-instance pool depth by truncating
  * the free list the source just built. See include/nds/nds_startup.h for why
  * bounding this bounds the DObj peak, and why refusal is source behaviour
  * rather than a dropped effect.
@@ -2413,12 +2413,12 @@ static void ndsEFManagerBoundEffectPool(void)
     EFStruct *ep = sEFManagerStructsAllocFree;
     s32 depth = 1;
 
-    if ((ep == NULL) || (NDS_R2_EFFECT_POOL >= EFFECT_ALLOC_NUM))
+    if ((ep == NULL) || (NDS_EFFECT_POOL >= EFFECT_ALLOC_NUM))
     {
         gNdsEffectPoolDepth = (u32)sEFManagerStructsFreeNum;
         return;
     }
-    while ((depth < NDS_R2_EFFECT_POOL) && (ep->next != NULL))
+    while ((depth < NDS_EFFECT_POOL) && (ep->next != NULL))
     {
         ep = ep->next;
         depth++;
@@ -2463,7 +2463,7 @@ static void ndsEFManagerBoundEffectPool(void)
  * world origin. Damage shrink now comes along for free: the source scales this
  * joint by ((0.65 * shield_health/55) + 0.35), which a constant could not
  * express at all. */
-#define NDS_R2_SHIELD_QUAD_SIZE 30.0F
+#define NDS_SHIELD_QUAD_SIZE 30.0F
 /* THE SOURCE'S PRIM ALPHA, because the combiner's alpha term is exactly
  * `TEXEL0_alpha * PRIMITIVE_alpha` and nothing else (SETCOMBINE FC309661
  * 552EFF7F, decoded 2026-08-06). The texel's alpha nibble is a hard 15 across
@@ -2474,7 +2474,7 @@ static void ndsEFManagerBoundEffectPool(void)
  * This briefly sat at 0xFF to fight the fold's attenuation. That was treating a
  * symptom: with coverage no longer multiplied by intensity there is nothing to
  * compensate, and 0xFF would simply be more opaque than the N64. */
-#define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
+#define NDS_SHIELD_QUAD_ALPHA 0xC0u
 /* WORLD UNITS TOWARD THE CAMERA. The bubble sits ON the fighter's YRotN joint,
  * so its depth and the fighter's body interleave and the opaque body wins
  * wherever it is nearer -- the shield reads as being inside Mario rather than
@@ -2492,14 +2492,14 @@ static void ndsEFManagerBoundEffectPool(void)
  * table -- and the quad shrinks by the distance it moved, so its size on
  * screen is the source's. The owner judges it; this is presentation, not
  * mechanics. */
-#define NDS_R2_SHIELD_QUAD_DEPTH_BIAS 150.0F
+#define NDS_SHIELD_QUAD_DEPTH_BIAS 150.0F
 /* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
  * colour packing -- red bits 0-4, green 5-9, blue 10-14. This function first
  * used 0xRRGGBB constants, and 0xff0000 read through that packing is r=0 g=0
  * b=0: the owner reported the shield as "Looks Black in color", which is
  * exactly what it was. A wrong-unit colour does not look wrong, it looks like a
  * different bug. */
-#define NDS_R2_BGR555(r, g, b) \
+#define NDS_BGR555(r, g, b) \
     ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
      ((((u32)(b) >> 3) & 31u) << 10))
 
@@ -2609,7 +2609,7 @@ static u32 ndsEFManagerShieldTexture(s32 player)
  *     per-frame cache that ndsFTParamsInvalidateFighterParts clears, and the
  *     fighter's own draw does not fill it, so reading it without the rebuild
  *     returns all zeros -- the origin again, by a second route.
- *   - Position is row 3. nds_r2_collision_mtx.h:639 pins the convention for
+ *   - Position is row 3. nds_collision_mtx.h:639 pins the convention for
  *     this engine: world[c] = sum_k local[k]*M[k][c] + M[3][c].
  *   - Size is the LENGTH OF ROW 0, which for this joint is the shield size
  *     itself: ftCommonGuardUpdateShieldCollision writes
@@ -2655,15 +2655,15 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
          * radius left a big body's front showing through the disc (owner
          * BUGS.md 2026-10-12: Bowser; "audit the rest"): the disc now sits a
          * quarter past the bubble's front, and never nearer than
-         * NDS_R2_SHIELD_QUAD_DEPTH_BIAS, so every body the bubble encloses
+         * NDS_SHIELD_QUAD_DEPTH_BIAS, so every body the bubble encloses
          * is behind it, and the size below keeps its picture. */
-        half_bubble = 0.5F * guard_scale * NDS_R2_SHIELD_QUAD_SIZE;
+        half_bubble = 0.5F * guard_scale * NDS_SHIELD_QUAD_SIZE;
         depth_bias = 2.5F * half_bubble;
-        if (depth_bias < NDS_R2_SHIELD_QUAD_DEPTH_BIAS)
+        if (depth_bias < NDS_SHIELD_QUAD_DEPTH_BIAS)
         {
-            depth_bias = NDS_R2_SHIELD_QUAD_DEPTH_BIAS;
+            depth_bias = NDS_SHIELD_QUAD_DEPTH_BIAS;
         }
-        f32 quad_size = guard_scale * NDS_R2_SHIELD_QUAD_SIZE;
+        f32 quad_size = guard_scale * NDS_SHIELD_QUAD_SIZE;
         {
             /* Moved toward the eye, the same world size looks larger: shrink
              * it by the distance it moved, so the bubble keeps the size the
@@ -2694,8 +2694,8 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
             (ndsParticleDrawOwnTextureQuad(
                  texture_name, NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT,
                  &world_pos, quad_size,
-                 NDS_R2_BGR555(0xff, 0xff, 0xff),
-                 NDS_R2_SHIELD_QUAD_ALPHA,
+                 NDS_BGR555(0xff, 0xff, 0xff),
+                 NDS_SHIELD_QUAD_ALPHA,
                  depth_bias,
                  0.0F, FALSE) != FALSE))
         {
@@ -3034,7 +3034,7 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
 
 /* THE PARTICLE-ONLY SPLIT WAS RIGHT AFTER ALL, and this is the second
  * correction -- the first one, which collapsed these eleven into
- * NDS_R2_SOURCE_EFFECTS_FULL, was reasoning from a freeze that has since been
+ * NDS_SOURCE_EFFECTS_FULL, was reasoning from a freeze that has since been
  * attributed elsewhere.
  *
  * It argued that "a GObj pulls DObjs", so calling gcMakeGObjSPAfter was as

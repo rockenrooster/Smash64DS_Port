@@ -7,7 +7,7 @@
  * exhaustion in this port presents as a total, silent, permanent ARM9 hang --
  * interrupts still enabled and still being serviced, VBlanks still counting,
  * the main loop simply never returning. Captured twice on 2026-07-29: once in
- * ndsR2AnimCacheStore mid-match, once in ftManagerSetupFilesMainKind at battle
+ * ndsAnimCacheStore mid-match, once in ftManagerSetupFilesMainKind at battle
  * start (docs/BUGS.md). It is the shared mechanism behind the "random freezes".
  *
  * decomp/ is read-only, so the fix is here. The success path is byte-for-byte
@@ -136,7 +136,7 @@ void ndsTaskmanElasticReleaseAll(void)
 /* An ARM7 read may still be landing in the general heap's free bytes (the
  * fighter motion prefetch, reloc_backend_assets.c): the reset waits for it.
  * Weak so a target without the prefetch links. */
-__attribute__((weak)) void ndsR2AnimPrefetchDrain(void)
+__attribute__((weak)) void ndsAnimPrefetchDrain(void)
 {
 }
 
@@ -144,7 +144,7 @@ void syMallocInit(SYMallocRegion *bp, u32 id, void *start, size_t size)
 {
     if (bp == &gSYTaskmanGeneralHeap)
     {
-        ndsR2AnimPrefetchDrain();
+        ndsAnimPrefetchDrain();
     }
     battleship_syMallocInit(bp, id, start, size);
     if (bp == &gSYTaskmanGeneralHeap)
@@ -158,7 +158,7 @@ void syMallocReset(SYMallocRegion *bp)
 {
     if (bp == &gSYTaskmanGeneralHeap)
     {
-        ndsR2AnimPrefetchDrain();
+        ndsAnimPrefetchDrain();
     }
     battleship_syMallocReset(bp);
     if (bp == &gSYTaskmanGeneralHeap)

@@ -1657,7 +1657,7 @@ volatile u32 gNdsParticleViewRejects;
 
 #include <nds/nds_particle_view.h>
 
-void NDS_FIGHTER_PACKET_EVICT(NDS_R2_ITCM_PACK2_CODE)
+void NDS_FIGHTER_PACKET_EVICT(NDS_ITCM_PACK2_CODE)
 ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
                                   const NDSRendererMatrix20p12 *modelview)
 {
@@ -2059,7 +2059,7 @@ ndsRendererWhispyNativeBindingFor(u32 texture_name, u32 texture_slot)
     const NDSRendererWhispyNativeBinding *binding;
 
     if (texture_slot >=
-        (NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_R2_FOX_BLASTER_GLOW_AOT))
+        (NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_FOX_BLASTER_GLOW_AOT))
     {
         return NULL;
     }

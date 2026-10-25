@@ -22,8 +22,8 @@
 #include <stdint.h>
 
 #include <nds/nds_fcmp.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_p4.h>
 
 extern sb32 func_ovl2_800F8FFC(Vec3f *position);
@@ -37,9 +37,9 @@ void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
  * its six uses it grew ftComputerCheckEvadeDistance from 236 to 1,240 B. */
 static int32_t __attribute__((noinline, target("arm"))) ndsComQ12(f32 value)
 {
-    int32_t q = ndsR2CollisionF32ToFixed(value, 12u);
+    int32_t q = ndsCollisionF32ToFixed(value, 12u);
 
-    if ((q == NDS_R2_COLLISION_F32_OVERFLOW) || (q >= NDS_COM_Q12_LIMIT) ||
+    if ((q == NDS_COLLISION_F32_OVERFLOW) || (q >= NDS_COM_Q12_LIMIT) ||
         (q <= -NDS_COM_Q12_LIMIT))
     {
         return ((ndsFcmpBits(value) & 0x80000000u) != 0u) ?
@@ -126,8 +126,8 @@ ftComputerCheckFindTarget(FTStruct *this_fp)
         return FALSE;
     }
     com->ftcom_flags_0x4A_b1 = TRUE;
-    com->target_dist = ndsR2CollisionFixedToF32(
-        (int64_t)ndsR2HwMathSqrt64Fast(distance), 12u);
+    com->target_dist = ndsCollisionFixedToF32(
+        (int64_t)ndsHwMathSqrt64Fast(distance), 12u);
 
     if (ftGetComTargetFighter(com)->ga == nMPKineticsGround)
     {

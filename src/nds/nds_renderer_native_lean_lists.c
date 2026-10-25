@@ -1217,7 +1217,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
     u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
     u32 k;
 
-    sNdsR2EpochTintTexture = 0u;
+    sNdsEpochTintTexture = 0u;
     if (epoch->action_count == 0u)
     {
         return;
@@ -1248,7 +1248,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
         shade = ndsRendererR2ResolveEpochShade(
             stats->light_color_1, stats->light_color_2, material_color,
             use_material, state->color_modulate, policy->textured);
-        tinted = (sNdsR2EpochTintTexture != 0u) ? 1u : 0u;
+        tinted = (sNdsEpochTintTexture != 0u) ? 1u : 0u;
         if ((tinted == 0u) && (use_material != 0u) &&
             (policy->textured == 0u) &&
             (((material_color >> 8) & 0x00ffffffu) != 0x00ffffffu))
@@ -1952,7 +1952,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
             expected_poly_cull | POLY_ALPHA(run_poly_alpha) | run_poly_light;
         m->prepare_reuse++;
     }
-    tint = (policy->textured == 0u) ? sNdsR2EpochTintTexture : 0u;
+    tint = (policy->textured == 0u) ? sNdsEpochTintTexture : 0u;
     NDS_FTR_LEAN_MAT_PART(m, 4u);
     if (tint != 0u)
     {
@@ -2063,7 +2063,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
                 bind->prim_from_root = (m->prim_overridden == 0u) ? 1u : 0u;
                 bind->reserved[0] = 0u;
                 bind->reserved[1] = 0u;
-                bind->rgb = sNdsR2EpochTintRgb;
+                bind->rgb = sNdsEpochTintRgb;
             }
             m->tint_binds++;
         }
@@ -2109,8 +2109,8 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
          * of the run keeps, then the prepare is invalidated so the next run
          * re-binds its own texture. */
         ndsFtrLeanPack1(pk, FIFO_TEX_COORD,
-                        (u32)TEXTURE_PACK((NDS_R2_FIGHTER_TINT_DIM / 2u) << 4,
-                                          (NDS_R2_FIGHTER_TINT_DIM / 2u) << 4));
+                        (u32)TEXTURE_PACK((NDS_FIGHTER_TINT_DIM / 2u) << 4,
+                                          (NDS_FIGHTER_TINT_DIM / 2u) << 4));
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
     }
     /* ndsRendererNativeSubmitProductionRun's emit and accounting. */
@@ -2421,7 +2421,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                  ((slot_state->spare_buf == NULL) ||
                   (slot_state->spare_gen != gNdsTaskmanHeapGeneration))) ||
                 ((des->variant_count != 0u) && (des->variant_cur != 0u)) ||
-                (des->tint_set_generation != gNdsR2FighterTintSetGeneration) ||
+                (des->tint_set_generation != gNdsFighterTintSetGeneration) ||
                 (des->tint_repatch != 0u) || (des->vtx10 != vtx10))
             {
                 continue;
@@ -2819,7 +2819,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     {
         es->key[i] = key[i];
     }
-    es->tint_set_generation = gNdsR2FighterTintSetGeneration;
+    es->tint_set_generation = gNdsFighterTintSetGeneration;
     es->tint_folds = m.tint_pending;
     es->tint_repatch = 0u;
     es->variant_count = 0u;

@@ -31,7 +31,7 @@ void ndsNetLockstepDisarm(void);
  * source's setup runs: installs the agreed seed once per match. */
 void ndsNetBattleSceneStart(void);
 
-/* Battle loop seams (src/nds/r2/nds_r2_battle.c). */
+/* Battle loop seams (src/nds/nds_battle.c). */
 void ndsNetBattleBegin(void);
 void ndsNetBattleGate(void);                  /* blocks until the batch can run */
 void ndsNetBattleInstallTick(uint32_t index); /* index 0/1 within the batch */

@@ -35,7 +35,7 @@ try {
         'detach',
         'quit 2',
         'end',
-        ("tbreak ndsR2HostBattleUpdateOnce if gNdsYoshiBugHostWatchdogTotalUpdates >= {0}" -f $AtTotal),
+        ("tbreak ndsHostBattleUpdateOnce if gNdsYoshiBugHostWatchdogTotalUpdates >= {0}" -f $AtTotal),
         'continue',
         'set $yg=sNdsFighterManagerLiveGObjs[0]',
         'set $yf=($yg != 0) ? (FTStruct *)$yg->user_data.p : (FTStruct *)0',

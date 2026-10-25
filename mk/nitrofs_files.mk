@@ -1154,15 +1154,15 @@ endif
 # (the draw path, which uploads through a texture cache with no palette slot).
 # Slice 32's baked animation bank ships only when a reader is compiled in. Empty
 # by default, so the published ROM is byte-identical until the runtime bind
-# lands -- see NDS_R2_FTANIM_DENSE above.
+# lands -- see NDS_FTANIM_DENSE above.
 export NDS_NITROFS_FTANIM_FILES :=
-ifeq ($(NDS_R2_FTANIM_DENSE),1)
+ifeq ($(NDS_FTANIM_DENSE),1)
 NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
 endif
 NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/animation/ftanim_stream_pack.bin
 
 # Slice 1 phase 5's resident figatree pack. Empty unless a reader is compiled
-# in, for the same reason as the bank above: without NDS_R2_BATTLEPACK it is
+# in, for the same reason as the bank above: without NDS_BATTLEPACK it is
 # 287,904 bytes of ROM nothing opens.
 export NDS_NITROFS_BATTLEPACK_FILES :=
 NDS_NITROFS_BATTLEPACK_FILES := $(NITROFS_DIR)/animation/battlepack_fox.bin

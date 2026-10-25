@@ -30,7 +30,7 @@ static inline u32 ndsFtrLeanFenceNow(void)
  * under a moved set is current -- the patch re-points its binds. */
 static u32 ndsFtrLeanEntryStale(const NDSFtrLeanEntryState *es, u32 fence)
 {
-    return (((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
+    return (((es->tint_set_generation != gNdsFighterTintSetGeneration) &&
              (es->tint_folds != 0u)) ||
             ((es->fence_needed != 0u) && (es->fence != fence))) ?
         TRUE : FALSE;
@@ -45,7 +45,7 @@ static u32 ndsFtrLeanEntryMatch(u32 battle_slot, u32 e, const u32 *key,
     u32 r;
 
     if ((es->valid == 0u) ||
-        ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
+        ((es->tint_set_generation != gNdsFighterTintSetGeneration) &&
          (es->tint_folds != 0u)))
     {
         return NDS_FTR_LEAN_ENTRY_NONE;
@@ -300,7 +300,7 @@ static u32 ndsFtrLeanPoolMatch(const NDSFtrLeanPoolHead *h, const u32 *key,
     u32 r;
 
     if ((es->valid == 0u) ||
-        ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
+        ((es->tint_set_generation != gNdsFighterTintSetGeneration) &&
          (es->tint_folds != 0u)))
     {
         return NDS_FTR_LEAN_ENTRY_NONE;
@@ -594,7 +594,7 @@ void ndsFtrLeanNoteKeyMiss(u32 battle_slot, const u32 *key)
                 }
             }
             why = (differs != 0u) ? 3u :
-                (es->tint_set_generation != gNdsR2FighterTintSetGeneration) ?
+                (es->tint_set_generation != gNdsFighterTintSetGeneration) ?
                 1u : 2u;
         }
         gNdsFtrLean.materialize_why[why]++;
@@ -1836,7 +1836,7 @@ ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
     {
         return nNDSFtrLeanEventFirst;
     }
-    if (state->tint_set_generation != gNdsR2FighterTintSetGeneration)
+    if (state->tint_set_generation != gNdsFighterTintSetGeneration)
     {
         if (state->tint_folds != 0u)
         {
@@ -2010,7 +2010,7 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         /* The moved set is in the old path's packet key: it re-records this
          * draw, so the shade words take that record's derivation too. */
         state->tint_repatch = 0u;
-        state->tint_set_generation = gNdsR2FighterTintSetGeneration;
+        state->tint_set_generation = gNdsFighterTintSetGeneration;
         ndsFtrLeanEntryResetShade(battle_slot, view);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_repatches++);
     }
@@ -2336,7 +2336,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     sNdsRendererHardwareBoundTextureName = 0u;
     ndsRendererForgetLibndsTexture();
     sNdsRendererHardwareActiveTextureEntry = NULL;
-    sNdsR2GxLastProjection = NULL;
+    sNdsGxLastProjection = NULL;
     sNdsRendererHardwareMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
     sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();

@@ -8,7 +8,7 @@ while `anim_wait <= 0`, each `*Block`/`Block`/`SetFlags` command adding its
 integer frame count to `anim_wait`). The port runs the same machine on a Q12
 integer (`src/nds/nds_ft_pose.c:638-645`, waits entered as `payload << 12` at
 lines 697/740/775/802/834/865/890, speed converted once per update by
-`ndsR2F32ToFixed` at line 1160, `include/nds/nds_anim_fixed.h:114`).
+`ndsAnimF32ToFixed` at line 1160, `include/nds/nds_anim_fixed.h:114`).
 
 This script runs BOTH clocks tick by tick over the speeds the game actually
 sets and the command-wait streams the live clips actually carry, and reports
@@ -22,7 +22,7 @@ WHAT IS MODELLED
     AOBJ_ANIM_CHANGED path with frame_begin 0 (`anim_wait = -anim_frame = 0`,
     then parse), which is what every live speed below enters through
     (`ftMainSetStatus(..., 0.0F, speed, ...)`).
-  * fixed chain: a bit-exact model of `ndsR2F32ToFixed(speed, bits)` for
+  * fixed chain: a bit-exact model of `ndsAnimF32ToFixed(speed, bits)` for
     bits in {12, 16, 20, 24} (round half away from zero on the magnitude,
     saturation when the post-normalisation shift exceeds 7), waits as
     `payload << bits`, subtract, parse while `<= 0`.
@@ -143,7 +143,7 @@ def f32_div(a: float, b: float) -> float:
 
 
 # --------------------------------------------------------------------------- #
-# `ndsR2F32ToFixed`, bit for bit (include/nds/nds_anim_fixed.h:114-157).
+# `ndsAnimF32ToFixed`, bit for bit (include/nds/nds_anim_fixed.h:114-157).
 
 def nds_f32_to_fixed(v: float, bits: int):
     """Returns (q, saturated)."""
@@ -539,7 +539,7 @@ def run(argv=None) -> int:
     speeds = speed_table()
     streams = real_streams(probe, notes) + synthetic_streams(args.random)
 
-    lines.append("Pose clock differential: float32 source clock vs ndsR2F32ToFixed Q-clock")
+    lines.append("Pose clock differential: float32 source clock vs ndsAnimF32ToFixed Q-clock")
     lines.append("bank: %s" % ("present, decoded live" if (probe and BANK.exists() and not args.no_bank)
                               else "absent or disabled, embedded Mario/Fox streams only"))
     for n in notes:
@@ -564,7 +564,7 @@ def run(argv=None) -> int:
         q16, sat16 = nds_f32_to_fixed(lit("16.0"), bits)
         vmax = max(s["value"] for s in speeds)
         lines.append("Q%d: 16.0F -> %d %s; largest live speed %.9g -> %d %s; first saturating magnitude 2^%d; "
-                     "largest wait/length payload that fits s32 = %d frames (NDS_R2_AQ_LEN_MAX budgets 1024)"
+                     "largest wait/length payload that fits s32 = %d frames (NDS_AQ_LEN_MAX budgets 1024)"
                      % (bits, q16, "SATURATES" if sat16 else "ok", vmax, nds_f32_to_fixed(vmax, bits)[0],
                         "SATURATES" if nds_f32_to_fixed(vmax, bits)[1] else "ok",
                         31 - bits, (1 << (31 - bits)) - 1))

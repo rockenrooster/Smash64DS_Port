@@ -215,7 +215,7 @@ static s32 ndsFxEffectsArenaValid(void)
  * Its only external entry is the weak `efManagerDamageNormalLightMakeEffect` /
  * `...HeavyMakeEffect` in reloc_backend_compat_shims.c, and
  * `battleship_efmanager.c` provides STRONG definitions of both names under
- * NDS_R2_SOURCE_EFFECTS_PARTICLE, which defaults to 1 and is not overridden by
+ * NDS_SOURCE_EFFECTS_PARTICLE, which defaults to 1 and is not overridden by
  * any target. The linker takes the strong ones. Disassembly of the published
  * ROM, 2026-08-03:
  *
@@ -367,7 +367,7 @@ void ndsFxEffectsUpdate(void)
  * It used to be a linked 22,528-byte array DMA'd in one shot. That array was
  * five whole steps of the boot-time taskman arena search (4,096 each), spent on
  * bytes that are read exactly once and then live in VRAM for the rest of the
- * run -- and it is what left NDS_R2_PARTICLE_RUNTIME=1 with no arena to boot
+ * run -- and it is what left NDS_PARTICLE_RUNTIME=1 with no arena to boot
  * into. The generator was already writing the identical payload to
  * assets/effects/, so this reads that instead.
  *

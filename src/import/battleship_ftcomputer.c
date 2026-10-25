@@ -8,14 +8,14 @@
 /* The published ROM is source-normal. Automated fast iteration explicitly
  * clears this at the pre-battle seam to skip CPU/countdown/timer work.
  *
- * NDS_R2_FOX_CPU_DEFAULT SEEDS IT FOR A HAND-PLAYED ROM, because until
+ * NDS_FOX_CPU_DEFAULT SEEDS IT FOR A HAND-PLAYED ROM, because until
  * 2026-08-06 nothing could. Clearing this needs a gdb write at
  * scVSBattleStartBattle, so every fast-iteration path was a scripted harness
  * (capture-melonds.ps1:327) and a ROM the owner launches himself always got the
  * level-3 Fox. That is the wrong default when the thing under inspection is a
  * visual effect the owner has to stand still and look at. Flag stays 1 so the
  * published battle ROM and every verifier are bit-identical to before; build
- * NDS_R2_FOX_CPU_DEFAULT=0 for a look-at-it ROM, which also skips the 3/2/1/GO
+ * NDS_FOX_CPU_DEFAULT=0 for a look-at-it ROM, which also skips the 3/2/1/GO
  * wait and freezes the match timer. */
 volatile u32 gNdsBattlePlayableFoxCpuEnabled = 1u;
 
@@ -746,7 +746,7 @@ void ftComputerProcessAll(GObj *fighter_gobj)
      * bracket has a single exit and the paused-Fox path is still charged what it
      * costs -- mechanically identical (`if (c) { A; return; } B;` ==
      * `if (c) { A; } else { B; }`), the same technique cycle 85 used on
-     * ndsR2AnimCachePreloadStep. cpuGetTiming is forward-declared for the reason
+     * ndsAnimCachePreloadStep. cpuGetTiming is forward-declared for the reason
      * given in battleship_lbparticle.c:1697; libnds nds/timers.h:255 is the
      * authority for the signature. */
 

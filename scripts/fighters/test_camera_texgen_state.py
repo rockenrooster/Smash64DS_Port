@@ -18,7 +18,7 @@ Scope actually proven here:
   * stubbed seams (NOT claimed as coverage): LookAt, Light, CObj, GObj, and
     XObj layouts reduced to the members the provider reads, the
     CObjGetStruct macro, the gGCCurrentCamera global, and the
-    ndsR2CameraCurrentLookAt battle getter. No hardware behavior is claimed.
+    ndsCameraCurrentLookAt battle getter. No hardware behavior is claimed.
   * pinned integration text in src/nds/nds_renderer_native_common.c proving
     the texgen UV rebuild calls the camera-selected getter.
 
@@ -82,7 +82,7 @@ pin(
     "battle camera kind",
 )
 pin(
-    r"return ndsR2CameraCurrentLookAt\(\);",
+    r"return ndsCameraCurrentLookAt\(\);",
     ADAPTER,
     "battle leg returns live battle data",
 )
@@ -127,7 +127,7 @@ def extract_real():
     for needle in (
         "gGCCurrentCamera",
         "CObjGetStruct",
-        "ndsR2CameraCurrentLookAt",
+        "ndsCameraCurrentLookAt",
         "NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND",
         "reset_look_at",
     ):
@@ -184,7 +184,7 @@ typedef struct GObj {
 static LookAt gBattleLookAt;
 GObj *gGCCurrentCamera = ((void *)0);
 
-const LookAt *ndsR2CameraCurrentLookAt(void)
+const LookAt *ndsCameraCurrentLookAt(void)
 {
     return &gBattleLookAt;
 }
@@ -440,7 +440,7 @@ class CameraTexgenStateTest(unittest.TestCase):
     def test_extracted_provider_keeps_both_legs(self):
         body = extract_real()
         self.assertIn("reset_look_at", body, "default leg")
-        self.assertIn("ndsR2CameraCurrentLookAt", body, "battle leg")
+        self.assertIn("ndsCameraCurrentLookAt", body, "battle leg")
 
     def test_provider_against_stub_cameras(self):
         first, second = parse_sp_reset_axes()

@@ -473,7 +473,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * ndsRelocForceLoadFighterAObj16File -- and died at its
      * `ndsRelocAssetGetPath(asset_id) == NULL` guard, because these ids live
      * under `reloc_submotions/` with source-derived names that
-     * ndsRelocAssetP2FighterAnimEntry's `reloc_animations/<stem><NNN>`
+     * ndsRelocAssetFighterAnimEntry's `reloc_animations/<stem><NNN>`
      * formatter cannot produce and no hand row here listed.
      *
      * The loader then returns NULL and ftMainSetStatus assigns fp->figatree
@@ -803,7 +803,7 @@ static const NDSFighterAnimSegment sNdsFighterAnimSegments[] = {
     NDS_KIRBY_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 };
 
-static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
+static const NDSRelocAssetEntry *ndsRelocAssetFighterAnimEntry(u32 asset_id)
 {
     static NDSRelocAssetEntry entry;
     static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
@@ -862,7 +862,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     }
     {
         const NDSRelocAssetEntry *p2_anim =
-            ndsRelocAssetP2FighterAnimEntry(asset_id);
+            ndsRelocAssetFighterAnimEntry(asset_id);
 
         if (p2_anim != NULL)
         {

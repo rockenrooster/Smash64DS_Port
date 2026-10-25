@@ -37,11 +37,11 @@ def host_source(prepare, gate, vs):
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "line %d: %s\n", __LINE__, #x); exit(1); } } while (0)
 #define TRUE 1
 #define FALSE 0
-#define NDS_R2_PARTICLE_DRAW 1
-#define NDS_R2_IMPACT_WAVE_NATIVE 1
-#define NDS_R2_REBIRTH_HALO_NATIVE 1
+#define NDS_PARTICLE_DRAW 1
+#define NDS_IMPACT_WAVE_NATIVE 1
+#define NDS_REBIRTH_HALO_NATIVE 1
 #define NDS_RENDERER_HW_TRIANGLES 1
-#define NDS_R2_ANIM_CACHE 0
+#define NDS_ANIM_CACHE 0
 #define NDS_SCENE_FLAG_ARENA_RESET 1
 #define NDS_SCENE_FLAG_MENU 2
 #define NDS_SCENE_FLAG_BATTLE 4
@@ -126,7 +126,7 @@ class BattleTextureEntryTest(unittest.TestCase):
         for path, name in (("src/port/reloc_backend_compat_shims.c", "mpCollisionSetPlayBGM"),
                            ("src/port/reloc_backend_mp_collision.c", "mpCollisionSetBGM")):
             self.assertNotIn("ndsBattlePrepareSceneTextures", function(read_split(ROOT / path), name))
-        for forbidden in ("gNdsMatchConfig", "gSCManagerTransferBattleState", "ndsR2AnimCachePreload"):
+        for forbidden in ("gNdsMatchConfig", "gSCManagerTransferBattleState", "ndsAnimCachePreload"):
             self.assertNotIn(forbidden, prepare)
         # VS prepares before its timer: textures and cartridge reads used to
         # overlap the countdown and its audio (the owner's startup hitch).

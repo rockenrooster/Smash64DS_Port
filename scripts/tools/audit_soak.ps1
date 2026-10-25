@@ -5,7 +5,7 @@ param([string]$Build = 'build-soak-s31', [int]$Slot = 12, [int]$Seconds = 400, [
       # (memory runner-slots-and-extras-limits); -PairSlot 0 starts at once.
       [int]$PairSlot = 11, [string]$PairGlob = 'au-*.log')
 # Stability audit: four-CPU matches on the soak ROM (build_soak_rom.ps1: the
-# gate ROM with NDS_R2_SOAK_MATCH_MINUTES), every item at the very high rate
+# gate ROM with NDS_SOAK_MATCH_MINUTES), every item at the very high rate
 # (-ItemRate 5), every fighter once, a stage a match (m1-m8). Per scene: heap
 # low-water, presented frames, native failures, lean declines, event-script
 # refusals; halts (DABT/OOM) and the first native failure. One line a match

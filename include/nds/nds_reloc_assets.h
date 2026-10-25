@@ -31,10 +31,10 @@ void ndsRelocReleaseSceneStatusBuffers(void);
  * because the same routine is also safe for callers that elect to step it.
  * Declared unconditionally so this header does not depend on the generated
  * config defines being visible before it; definitions/callers are guarded by
- * NDS_R2_ANIM_CACHE. */
-void ndsR2AnimCachePreloadMatch(void);
-void ndsR2AnimCachePreloadStep(void);
-s32 ndsR2AnimCachePreloadFinish(void);
+ * NDS_ANIM_CACHE. */
+void ndsAnimCachePreloadMatch(void);
+void ndsAnimCachePreloadStep(void);
+s32 ndsAnimCachePreloadFinish(void);
 /* After a source scene constructor, before its first update/draw. */
 void ndsRelocFinishSceneSetup(void);
 struct SYTaskmanSceneSetup;
@@ -44,15 +44,15 @@ void ndsRelocRecordSceneMemory(const struct SYTaskmanSceneSetup *setup);
  * cannot synchronously touch NitroFS once live audio/presentation starts.
  * Returns FALSE when the token is not a fighter animation or residency could
  * not be established; callers should keep their blocking-load fallback then. */
-s32 ndsR2AnimCachePreloadFighterFile(const void *file_id);
+s32 ndsAnimCachePreloadFighterFile(const void *file_id);
 /* CSS lazy fighter residency needs the complete initial-pose animation working
  * set reserved before the first per-kind closure load. The reservation is
  * derived from source/build identities rather than live fighter-file state. */
-s32 ndsR2AnimCacheReserveCSSWorkingSet(void);
+s32 ndsAnimCacheReserveCSSWorkingSet(void);
 /* The motion cache's elastic block bytes above the heap cursor (0: none). */
-u32 ndsR2AnimCacheElasticBytes(void);
-extern volatile u32 gNdsR2AnimCacheHits;
-extern volatile u32 gNdsR2AnimCacheMisses;
+u32 ndsAnimCacheElasticBytes(void);
+extern volatile u32 gNdsAnimCacheHits;
+extern volatile u32 gNdsAnimCacheMisses;
 /* P8 R2: the asset, stage, music and fighter-image tables name a NitroFS
  * file by its directory's code byte and its leaf (NDS_NITRO_RELOC_MENUS
  * "MNCommon"), not the whole "nitro:/reloc/reloc_menus/MNCommon": their paths
@@ -224,10 +224,10 @@ void ndsFsLock(void);
 void ndsFsUnlock(void);
 extern volatile u32 gNdsRelocAssetFormatFailCount;
 extern volatile u32 gNdsRelocAssetShortReadCount;
-extern volatile u32 gNdsR2AnimPreloadBarrierRuns;
-extern volatile u32 gNdsR2AnimPreloadBarrierSteps;
-extern volatile u32 gNdsR2AnimPreloadBarrierCompleteCount;
-extern volatile u32 gNdsR2AnimPreloadBarrierIncompleteCount;
+extern volatile u32 gNdsAnimPreloadBarrierRuns;
+extern volatile u32 gNdsAnimPreloadBarrierSteps;
+extern volatile u32 gNdsAnimPreloadBarrierCompleteCount;
+extern volatile u32 gNdsAnimPreloadBarrierIncompleteCount;
 
 /* ---- Slice 1 phase 7: the K0 after-GO zero-I/O assertion, per fighter -------
  *
@@ -242,7 +242,7 @@ extern volatile u32 gNdsR2AnimPreloadBarrierIncompleteCount;
  * asset's own fighter, and gated on the battle actually being in GO.
  *
  * THE CONTROL IS IN THE SAME RUN. Only one fighter's clips fit the arena, so
- * `NDS_R2_BATTLEPACK=1` leaves the other fighter on the generic path: index
+ * `NDS_BATTLEPACK=1` leaves the other fighter on the generic path: index
  * [NDS_K0_FIGHTER_MARIO] must read NON-ZERO wherever [NDS_K0_FIGHTER_FOX]
  * reads zero. A row that is zero on both arms proves nothing; a row that is
  * zero for the packed fighter while its neighbour counts is a deletion.

@@ -101,8 +101,8 @@ def test_bat_root_dropped_from_either_detail_fails(victim):
         context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
         assert "FSmash" in [p["name"] for p in
                             native.build_owner_root_programs(SOURCE, context)]
-    saved = native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim]
-    native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
+    saved = native.ROOT_PROGRAM_APPENDIX["ness"][victim]
+    native.ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
         row for row in saved if row[1] != BAT_ROOT)
     try:
         context = native.build_p2_owner_runtime_context(SOURCE, "ness", victim)
@@ -113,4 +113,4 @@ def test_bat_root_dropped_from_either_detail_fails(victim):
         assert "FSmash" in [p["name"] for p in
                             native.build_owner_root_programs(SOURCE, context)]
     finally:
-        native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = saved
+        native.ROOT_PROGRAM_APPENDIX["ness"][victim] = saved

@@ -31,7 +31,7 @@ $configs = [ordered]@{
     root = @('TARGET=smash64ds')
     gate = $gate
     prof = $gate + $profile
-    soak = $gate + @('NDS_R2_SOAK_MATCH_MINUTES=5')
+    soak = $gate + @('NDS_SOAK_MATCH_MINUTES=5')
     vram = $gate + @('NDS_DIAG_COUNTERS=1')
 }
 $bad = 0

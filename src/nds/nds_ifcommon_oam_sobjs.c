@@ -54,10 +54,10 @@ ndsIFCommonBattleScreenXQ22(int64_t projected_x_q22)
     if (width > 0)
     {
         return (INT64_C(128) << 22) +
-               ndsR2HwMathDivideFast(projected_x_q22 * 256, width);
+               ndsHwMathDivideFast(projected_x_q22 * 256, width);
     }
     return (INT64_C(128) << 22) +
-           ndsR2HwMathDivideFast(projected_x_q22 * 4, 5);
+           ndsHwMathDivideFast(projected_x_q22 * 4, 5);
 }
 
 static int64_t __attribute__((noinline, target("arm")))
@@ -68,10 +68,10 @@ ndsIFCommonBattleScreenYQ22(int64_t projected_y_q22)
     if (height > 0)
     {
         return (INT64_C(96) << 22) -
-               ndsR2HwMathDivideFast(projected_y_q22 * 192, height);
+               ndsHwMathDivideFast(projected_y_q22 * 192, height);
     }
     return (INT64_C(96) << 22) -
-           ndsR2HwMathDivideFast(projected_y_q22 * 4, 5);
+           ndsHwMathDivideFast(projected_y_q22 * 4, 5);
 }
 
 /* gmCameraCheckTargetInBounds at Q22: the half extents are the source's

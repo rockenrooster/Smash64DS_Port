@@ -1076,11 +1076,11 @@ try {
          'gNdsParticleRejectRingBanks[0], gNdsParticleRejectRingScripts[0], ' +
          'gNdsParticleRejectRingReasons[0], gNdsParticleRejectRingCounts[0]'),
         ('printf "ANIMCACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, ' +
-         'gNdsR2AnimCacheMisses, gNdsR2AnimCacheRejects, ' +
-         'gNdsR2AnimCacheRejectedUniqueCount, gNdsR2AnimCacheRejectedUniqueBytes, ' +
-         'gNdsR2AnimCacheArenaOverflows, gNdsR2AnimCacheArenaReserveFailCount, ' +
-         'gNdsRelocAssetPayloadReadCount, gNdsR2AnimCacheRawRecycles'),
+         'gNdsAnimCacheArenaReservedBytes, gNdsAnimCacheArenaUsedBytes, ' +
+         'gNdsAnimCacheMisses, gNdsAnimCacheRejects, ' +
+         'gNdsAnimCacheRejectedUniqueCount, gNdsAnimCacheRejectedUniqueBytes, ' +
+         'gNdsAnimCacheArenaOverflows, gNdsAnimCacheArenaReserveFailCount, ' +
+         'gNdsRelocAssetPayloadReadCount, gNdsAnimCacheRawRecycles'),
         ('printf "ANIMDIRECT=%u,%u\n", ' +
          'gNdsRelocAssetDirectReadCount, ' +
          'gNdsRelocAssetDirectFallbackCount'),
@@ -1152,7 +1152,7 @@ try {
          'gNdsSObjWallpaperFinalPixelWriteCount')
     )
     if ($StageRouteProbe) {
-        # NDS_R2_STAGE_ROUTE_PROBE keeps the native-stage reject reasons alive
+        # NDS_STAGE_ROUTE_PROBE keeps the native-stage reject reasons alive
         # at profile level 0.  The latch values alone describe only the last
         # prepare, so publish the counting array and reuse-key misses too.
         $gdbLines += @(
@@ -1176,7 +1176,7 @@ try {
              '(unsigned int)(sizeof(sNdsRendererHardwareTextureCache) / sizeof(sNdsRendererHardwareTextureCache[0])), ' +
              'sNdsRendererHardwareFrameSerial'),
             ('printf "TEXHIGH=%u,%u\n", ' +
-             'gNdsR2TextureLiveHighWater, gNdsR2TextureTouchedHighWater'),
+             'gNdsTextureLiveHighWater, gNdsTextureTouchedHighWater'),
             'set $static_i = 0',
             ('while $static_i < (sizeof(sNdsRendererHardwareStaticKeyPointers) / ' +
              'sizeof(sNdsRendererHardwareStaticKeyPointers[0]))'),
@@ -1188,13 +1188,13 @@ try {
             'set $static_i = $static_i + 1',
             'end',
             ('printf "STAGEROUTE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
-             'gNdsR2StageKeyMissInvalid, gNdsR2StageKeyMissGeneration, ' +
-             'gNdsR2StageKeyMissStamp, gNdsR2StageKeyMissConfig, ' +
-             'gNdsR2StageKeyMissAssets, ' +
-             'gNdsR2StageRejectCounts[1], gNdsR2StageRejectCounts[2], ' +
-             'gNdsR2StageRejectCounts[3], gNdsR2StageRejectCounts[4], ' +
-             'gNdsR2StageRejectCounts[5], gNdsR2StageRejectCounts[6], ' +
-             'gNdsR2StagePrepareBuildCount, gNdsR2StagePrepareReuseCount, ' +
+             'gNdsStageKeyMissInvalid, gNdsStageKeyMissGeneration, ' +
+             'gNdsStageKeyMissStamp, gNdsStageKeyMissConfig, ' +
+             'gNdsStageKeyMissAssets, ' +
+             'gNdsStageRejectCounts[1], gNdsStageRejectCounts[2], ' +
+             'gNdsStageRejectCounts[3], gNdsStageRejectCounts[4], ' +
+             'gNdsStageRejectCounts[5], gNdsStageRejectCounts[6], ' +
+             'gNdsStagePrepareBuildCount, gNdsStagePrepareReuseCount, ' +
              'gNdsRendererProfileTextureRejectReasonMask'),
             ('printf "STAGELATCH=%u,%u,%u,%u,%u,%u\n", ' +
              'gNdsRendererStageOwnerRejectCount, ' +
@@ -1202,24 +1202,24 @@ try {
              'gNdsRendererStageOwnerLastRejectReason, ' +
              'gNdsRendererTask36RendererRejectReason, ' +
              'gNdsRendererTask36PrepareRunRejectReason, ' +
-             'gNdsR2TexRejectCensusValid'),
+             'gNdsTexRejectCensusValid'),
             ('printf "TEXCENSUS=%u,%u,%u,%u,%u,%u\n", ' +
-             'gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, ' +
-             'gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusThisFrame, ' +
-             'gNdsR2TexRejectCensusEvictable, gNdsRendererProfileTextureRejectReasonMask'),
+             'gNdsTexRejectCensusFree, gNdsTexRejectCensusLive, ' +
+             'gNdsTexRejectCensusPinned, gNdsTexRejectCensusThisFrame, ' +
+             'gNdsTexRejectCensusEvictable, gNdsRendererProfileTextureRejectReasonMask'),
             ('printf "STAGETEXMISS=%u,%u,%08x,%u,%u\n", ' +
-             'gNdsR2StageTextureMissCount, gNdsR2StageTextureMissRun, ' +
-             'gNdsR2StageTextureMissHash, gNdsR2StageTextureMissArmed, ' +
-              'gNdsR2StageTextureMissSourceFrameTried'),
+             'gNdsStageTextureMissCount, gNdsStageTextureMissRun, ' +
+             'gNdsStageTextureMissHash, gNdsStageTextureMissArmed, ' +
+              'gNdsStageTextureMissSourceFrameTried'),
             ('printf "STAGETEXPROV=%u,%08x,%u,%08x\n", ' +
-             'gNdsR2StageTextureMissImageAsset, ' +
-             'gNdsR2StageTextureMissImageOffset, ' +
-             'gNdsR2StageTextureMissTlutAsset, ' +
-             'gNdsR2StageTextureMissTlutOffset'),
+             'gNdsStageTextureMissImageAsset, ' +
+             'gNdsStageTextureMissImageOffset, ' +
+             'gNdsStageTextureMissTlutAsset, ' +
+             'gNdsStageTextureMissTlutOffset'),
             ('printf "STAGETEXKEY0=%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x\n", ' +
-             'gNdsR2StageTextureMissKeyWords[0],gNdsR2StageTextureMissKeyWords[1],gNdsR2StageTextureMissKeyWords[2],gNdsR2StageTextureMissKeyWords[3],gNdsR2StageTextureMissKeyWords[4],gNdsR2StageTextureMissKeyWords[5],gNdsR2StageTextureMissKeyWords[6],gNdsR2StageTextureMissKeyWords[7],gNdsR2StageTextureMissKeyWords[8],gNdsR2StageTextureMissKeyWords[9],gNdsR2StageTextureMissKeyWords[10],gNdsR2StageTextureMissKeyWords[11],gNdsR2StageTextureMissKeyWords[12],gNdsR2StageTextureMissKeyWords[13],gNdsR2StageTextureMissKeyWords[14],gNdsR2StageTextureMissKeyWords[15],gNdsR2StageTextureMissKeyWords[16],gNdsR2StageTextureMissKeyWords[17],gNdsR2StageTextureMissKeyWords[18],gNdsR2StageTextureMissKeyWords[19],gNdsR2StageTextureMissKeyWords[20],gNdsR2StageTextureMissKeyWords[21],gNdsR2StageTextureMissKeyWords[22],gNdsR2StageTextureMissKeyWords[23],gNdsR2StageTextureMissKeyWords[24],gNdsR2StageTextureMissKeyWords[25],gNdsR2StageTextureMissKeyWords[26],gNdsR2StageTextureMissKeyWords[27],gNdsR2StageTextureMissKeyWords[28],gNdsR2StageTextureMissKeyWords[29],gNdsR2StageTextureMissKeyWords[30],gNdsR2StageTextureMissKeyWords[31],gNdsR2StageTextureMissKeyWords[32]'),
+             'gNdsStageTextureMissKeyWords[0],gNdsStageTextureMissKeyWords[1],gNdsStageTextureMissKeyWords[2],gNdsStageTextureMissKeyWords[3],gNdsStageTextureMissKeyWords[4],gNdsStageTextureMissKeyWords[5],gNdsStageTextureMissKeyWords[6],gNdsStageTextureMissKeyWords[7],gNdsStageTextureMissKeyWords[8],gNdsStageTextureMissKeyWords[9],gNdsStageTextureMissKeyWords[10],gNdsStageTextureMissKeyWords[11],gNdsStageTextureMissKeyWords[12],gNdsStageTextureMissKeyWords[13],gNdsStageTextureMissKeyWords[14],gNdsStageTextureMissKeyWords[15],gNdsStageTextureMissKeyWords[16],gNdsStageTextureMissKeyWords[17],gNdsStageTextureMissKeyWords[18],gNdsStageTextureMissKeyWords[19],gNdsStageTextureMissKeyWords[20],gNdsStageTextureMissKeyWords[21],gNdsStageTextureMissKeyWords[22],gNdsStageTextureMissKeyWords[23],gNdsStageTextureMissKeyWords[24],gNdsStageTextureMissKeyWords[25],gNdsStageTextureMissKeyWords[26],gNdsStageTextureMissKeyWords[27],gNdsStageTextureMissKeyWords[28],gNdsStageTextureMissKeyWords[29],gNdsStageTextureMissKeyWords[30],gNdsStageTextureMissKeyWords[31],gNdsStageTextureMissKeyWords[32]'),
             ('printf "STAGETEXKEY1=%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x,%08x\n", ' +
-             'gNdsR2StageTextureMissKeyWords[33],gNdsR2StageTextureMissKeyWords[34],gNdsR2StageTextureMissKeyWords[35],gNdsR2StageTextureMissKeyWords[36],gNdsR2StageTextureMissKeyWords[37],gNdsR2StageTextureMissKeyWords[38],gNdsR2StageTextureMissKeyWords[39],gNdsR2StageTextureMissKeyWords[40],gNdsR2StageTextureMissKeyWords[41],gNdsR2StageTextureMissKeyWords[42],gNdsR2StageTextureMissKeyWords[43],gNdsR2StageTextureMissKeyWords[44],gNdsR2StageTextureMissKeyWords[45],gNdsR2StageTextureMissKeyWords[46],gNdsR2StageTextureMissKeyWords[47],gNdsR2StageTextureMissKeyWords[48],gNdsR2StageTextureMissKeyWords[49],gNdsR2StageTextureMissKeyWords[50],gNdsR2StageTextureMissKeyWords[51],gNdsR2StageTextureMissKeyWords[52],gNdsR2StageTextureMissKeyWords[53],gNdsR2StageTextureMissKeyWords[54],gNdsR2StageTextureMissKeyWords[55],gNdsR2StageTextureMissKeyWords[56],gNdsR2StageTextureMissKeyWords[57],gNdsR2StageTextureMissKeyWords[58]'),
+             'gNdsStageTextureMissKeyWords[33],gNdsStageTextureMissKeyWords[34],gNdsStageTextureMissKeyWords[35],gNdsStageTextureMissKeyWords[36],gNdsStageTextureMissKeyWords[37],gNdsStageTextureMissKeyWords[38],gNdsStageTextureMissKeyWords[39],gNdsStageTextureMissKeyWords[40],gNdsStageTextureMissKeyWords[41],gNdsStageTextureMissKeyWords[42],gNdsStageTextureMissKeyWords[43],gNdsStageTextureMissKeyWords[44],gNdsStageTextureMissKeyWords[45],gNdsStageTextureMissKeyWords[46],gNdsStageTextureMissKeyWords[47],gNdsStageTextureMissKeyWords[48],gNdsStageTextureMissKeyWords[49],gNdsStageTextureMissKeyWords[50],gNdsStageTextureMissKeyWords[51],gNdsStageTextureMissKeyWords[52],gNdsStageTextureMissKeyWords[53],gNdsStageTextureMissKeyWords[54],gNdsStageTextureMissKeyWords[55],gNdsStageTextureMissKeyWords[56],gNdsStageTextureMissKeyWords[57],gNdsStageTextureMissKeyWords[58]'),
             ('printf "MISCACC=%u,%u,%u\n", ' +
              'gNdsMiscWeaponDrawTicks,gNdsMiscEffectDrawTicks,gNdsMiscParticleDrawTicks'),
             ('printf "EFPHASE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
@@ -1232,16 +1232,16 @@ try {
     if ($AnimCacheProbe) {
         $gdbLines += @(
             ('printf "ANIMRING=%u,%u,%u,%u,%u,%u\n", ' +
-             'sNdsR2AnimCacheCount, gNdsR2AnimCacheBytes, ' +
-             'gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimCacheArenaReservedBytes, ' +
-             'gNdsR2AnimCacheHits, gNdsR2AnimCacheMisses'),
+             'sNdsAnimCacheCount, gNdsAnimCacheBytes, ' +
+             'gNdsAnimCacheArenaUsedBytes, gNdsAnimCacheArenaReservedBytes, ' +
+             'gNdsAnimCacheHits, gNdsAnimCacheMisses'),
             'set $anim_i = 0',
-            'while $anim_i < sNdsR2AnimCacheCount',
+            'while $anim_i < sNdsAnimCacheCount',
             ('printf "ANIMENTRY=%u,%u,%u,%u\n", $anim_i, ' +
-             'sNdsR2AnimCache[$anim_i].asset_id, ' +
-             'sNdsR2AnimCache[$anim_i].size, ' +
-             '(unsigned int)sNdsR2AnimCache[$anim_i].payload - ' +
-             '(unsigned int)sNdsR2AnimCacheArena'),
+             'sNdsAnimCache[$anim_i].asset_id, ' +
+             'sNdsAnimCache[$anim_i].size, ' +
+             '(unsigned int)sNdsAnimCache[$anim_i].payload - ' +
+             '(unsigned int)sNdsAnimCacheArena'),
             'set $anim_i = $anim_i + 1',
             'end'
         )

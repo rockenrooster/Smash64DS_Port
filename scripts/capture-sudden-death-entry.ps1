@@ -20,7 +20,7 @@ param(
     # picture watch by construction -- one stub session per emulation run.
     # R2-07 E2. Route each stage segment at battle start, in the SAME binary, so
     # the second-entry corruption can be attributed to a route. Needs a ROM built
-    # NDS_R2_STAGE_ROUTE_PROBE=1. There are THREE routes, and the arms need all
+    # NDS_STAGE_ROUTE_PROBE=1. There are THREE routes, and the arms need all
     # three: a segment in neither mask takes R2 live (reuse the memoised prepared
     # runs), which is NOT the same as GENERIC (rebuild them from source).
     #
@@ -80,7 +80,7 @@ param(
     # stops once per IGNORED hit -- 240 blew the 180 s cap on a Task 103 build,
     # and so did 120.
     [ValidateRange(30, 3600)][int]$MatchedCameraCalls = 60,
-    # Build with NDS_R2_SECOND_ENTRY_DIAG=1 and read the second-entry
+    # Build with NDS_SECOND_ENTRY_DIAG=1 and read the second-entry
     # instruments: the per-caller allocation ledger and the MObj chain probe.
     # REQUIRED for any of the SD-LEDGER-* or SD-CHAIN-* output -- without it
     # those symbols do not exist and the reads are stripped from the script
@@ -162,18 +162,18 @@ $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 if (-not $NoBuild) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    # NDS_R2_BOTH_CPU=0 explicitly. The tie this harness wants is the one the
+    # NDS_BOTH_CPU=0 explicitly. The tie this harness wants is the one the
     # canonical Boundary configuration produces -- Mario human and idle versus the
     # level-3 Fox CPU. A both-CPU build fights, scores, and ends decisively, which
     # is precisely the run that already failed to reach Sudden Death.
     # The diag flag MUST be part of the build line, not left to the build
     # directory's previous contents. This harness rebuilds on every run, so a
-    # hand-built NDS_R2_SECOND_ENTRY_DIAG=1 ELF is silently overwritten by the
+    # hand-built NDS_SECOND_ENTRY_DIAG=1 ELF is silently overwritten by the
     # next invocation -- which is exactly what happened on 2026-07-31: the
     # allocation ledger vanished from build-sd-stg mid-investigation and two
     # runs died at the first stage.
-    $makeArgs = @("TARGET=$Target", "BUILD=$Build", 'NDS_R2_BOTH_CPU=0')
-    if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
+    $makeArgs = @("TARGET=$Target", "BUILD=$Build", 'NDS_BOTH_CPU=0')
+    if ($SecondEntryDiag) { $makeArgs += 'NDS_SECOND_ENTRY_DIAG=1' }
     make -C $root @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
@@ -183,9 +183,9 @@ $configHeader = Join-Path $root "$Build\nds_build_config.h"
 if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     $seen = [regex]::Match(
         (Get-Content -LiteralPath $configHeader -Raw),
-        '(?m)^#define\s+NDS_R2_BOTH_CPU\s+(\d+)')
+        '(?m)^#define\s+NDS_BOTH_CPU\s+(\d+)')
     if ($seen.Success -and ([int]$seen.Groups[1].Value -ne 0)) {
-        throw ('This ROM is NDS_R2_BOTH_CPU=1. Two level-3 CPUs fight to a ' +
+        throw ('This ROM is NDS_BOTH_CPU=1. Two level-3 CPUs fight to a ' +
                'decisive result, so the 0-0 tie this harness depends on cannot ' +
                'occur. Rebuild without -NoBuild.')
     }
@@ -195,11 +195,11 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     # nothing and looks like an emulator problem.
     $diagSeen = [regex]::Match(
         (Get-Content -LiteralPath $configHeader -Raw),
-        '(?m)^#define\s+NDS_R2_SECOND_ENTRY_DIAG\s+(\d+)')
+        '(?m)^#define\s+NDS_SECOND_ENTRY_DIAG\s+(\d+)')
     $diagOn = ($diagSeen.Success -and ([int]$diagSeen.Groups[1].Value -ne 0))
     if ($SecondEntryDiag -and (-not $diagOn)) {
         throw ('-SecondEntryDiag was requested but ' + $Build +
-               ' is built with NDS_R2_SECOND_ENTRY_DIAG=0, so the allocation ' +
+               ' is built with NDS_SECOND_ENTRY_DIAG=0, so the allocation ' +
                'ledger and chain probe do not exist. Re-run without -NoBuild.')
     }
     if ((-not $SecondEntryDiag) -and $diagOn) {
@@ -451,16 +451,16 @@ try {
         # meaning: a VALID that is already 1 here and still 1 at entry two, with
         # BUILD unchanged between the two reads, is a memo that outlived the
         # scene it was built for.
-        'printf "SD-M1-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
-        'printf "SD-M1-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_config',
-        'printf "SD-M1-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
-        'printf "SD-M1-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
+        'printf "SD-M1-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.prepared_valid',
+        'printf "SD-M1-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.prepared_config',
+        'printf "SD-M1-R2-BUILD=%u\n", gNdsStagePrepareBuildCount',
+        'printf "SD-M1-R2-REUSE=%u\n", gNdsStagePrepareReuseCount',
         # WHICH quantities actually move across a scene entry. R2-07 E2 keyed
         # the memo on topology_generation+stamp because the Task 36 replay owner
         # keys on them and its picture is correct -- and the rebuild still did
         # not happen, so that inference was wrong. Print the keys rather than
         # reason about them: anything equal at both stops cannot invalidate.
-        'printf "SD-M1-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        'printf "SD-M1-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.prepared_topology_generation, sNdsNativeStageOwnerExecution.prepared_topology_stamp',
         'printf "SD-M1-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
         # Entry-one baseline for the texture reject mask: it is cumulative, so
         # only the bits that are NEW at entry two belong to the second entry.
@@ -524,7 +524,7 @@ try {
         # LAST RESORT, and only for instrumented A/B runs. The natural 0-0 tie is
         # the honest reproduction and is what the default does -- but it depends
         # on neither fighter scoring in the shortened match, and heavy
-        # instrumentation breaks that: a NDS_R2_SECOND_ENTRY_DIAG build runs the
+        # instrumentation breaks that: a NDS_SECOND_ENTRY_DIAG build runs the
         # chain validator ~14,000 times per run, and the board records that input
         # sampling PHASE depends on execution speed, so a slow build diverges and
         # the CPU lands KOs it does not land otherwise (measured 2026-07-30: Fox
@@ -625,12 +625,12 @@ try {
         # the cache notice; a zero mismatch count here means the contract never
         # fired and the run proves nothing about it.
         'printf "SD-HEAP-GEN=%u\n", gNdsTaskmanHeapGeneration',
-        'printf "SD-CACHE-GEN-MISMATCH=%u\n", gNdsR2AnimCacheArenaGenerationMismatches',
-        'printf "SD-CACHE-RANGE-FAULT=%u\n", gNdsR2AnimCacheArenaRangeFaults',
-        'printf "SD-CACHE-INVALIDATIONS=%u\n", gNdsR2AnimCacheArenaInvalidations',
-        'printf "SD-CACHE-RESERVES=%u\n", gNdsR2AnimCacheArenaReserveCount',
+        'printf "SD-CACHE-GEN-MISMATCH=%u\n", gNdsAnimCacheArenaGenerationMismatches',
+        'printf "SD-CACHE-RANGE-FAULT=%u\n", gNdsAnimCacheArenaRangeFaults',
+        'printf "SD-CACHE-INVALIDATIONS=%u\n", gNdsAnimCacheArenaInvalidations',
+        'printf "SD-CACHE-RESERVES=%u\n", gNdsAnimCacheArenaReserveCount',
         # Second-entry chain validator. Only present in a
-        # NDS_R2_SECOND_ENTRY_DIAG=1 build, so these are attempted separately
+        # NDS_SECOND_ENTRY_DIAG=1 build, so these are attempted separately
         # from the counters above -- one bad expression aborts a whole printf,
         # and on an ordinary ROM every one of these is an unknown symbol.
         # TEXTURE STATE ACROSS THE SECOND ENTRY. The owner reports Sudden Death
@@ -662,14 +662,14 @@ try {
         # memo, so read it. VALID surviving the scene teardown with BUILD not
         # advancing on this entry means entry two is drawing stage geometry
         # prepared for entry one -- the reuse test is
-        # r2_prepared_config == frame->config plus an asset_bases memcmp
+        # prepared_config == frame->config plus an asset_bases memcmp
         # (nds_renderer.c), neither of which need change across a re-entry.
-        'printf "SD-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
-        'printf "SD-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_config',
-        'printf "SD-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
-        'printf "SD-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
-        'printf "SD-R2-ELIDE=%u\n", gNdsR2StagePreflightElideCount',
-        'printf "SD-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        'printf "SD-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.prepared_valid',
+        'printf "SD-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.prepared_config',
+        'printf "SD-R2-BUILD=%u\n", gNdsStagePrepareBuildCount',
+        'printf "SD-R2-REUSE=%u\n", gNdsStagePrepareReuseCount',
+        'printf "SD-R2-ELIDE=%u\n", gNdsStagePreflightElideCount',
+        'printf "SD-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.prepared_topology_generation, sNdsNativeStageOwnerExecution.prepared_topology_stamp',
         # THE THIRD SAMPLE OF A CUMULATIVE MASK. SD-M1-TEXREJECT is read just
         # after GO and SD-F-TEXREJECT 90 frames into Sudden Death; without a
         # reading at the END of match one there is no way to tell a
@@ -697,29 +697,29 @@ try {
         'printf "SD-CAM2-PFOLLOW-DIST=%f\n", gGMCameraStruct.pfollow_dist',
         'printf "SD-CAM2-VPW=%d\n", gGMCameraStruct.viewport_width',
         'printf "SD-CAM2-VPH=%d\n", gGMCameraStruct.viewport_height',
-        'printf "SD-STAGE-STEADY-ADMIT=%u\n", gNdsR2StageSteadyAdmitCount',
-        'printf "SD-STAGE-REBUILD=%u\n", gNdsR2StageTopologyRebuildCount',
-        'printf "SD-STAGE-MATREJECT=%u\n", gNdsR2StageMaterialRejectCount',
-        'printf "SD-STAGE-MATREJECT-IDX=%d\n", (int)gNdsR2StageMaterialRejectIndex',
-        'printf "SD-STAGE-MATREJECT-BINDING=%u\n", gNdsR2StageMaterialRejectBinding',
-        'printf "SD-STAGE-MATREJECT-DOBJ=%#x\n", gNdsR2StageMaterialRejectDObj',
-        'printf "SD-STAGE-MATREJECT-MOBJ=%#x\n", gNdsR2StageMaterialRejectMObj',
-        'printf "SD-STAGE-MATREJECT-WANT=%#x\n", gNdsR2StageMaterialRejectFlagsWant',
-        'printf "SD-STAGE-MATREJECT-GOT=%#x\n", gNdsR2StageMaterialRejectFlagsGot',
-        'printf "SD-STAGE-MATREJECT-GEN=%u\n", gNdsR2StageMaterialRejectHeapGen',
-        'printf "SD-WALK-BOUND-HITS=%u\n", gNdsR2MaterialWalkBoundHits',
-        'printf "SD-CHAIN-PROBES=%u\n", gNdsR2ChainProbeCount',
-        'printf "SD-CHAIN-INVALID=%u\n", gNdsR2ChainProbeInvalidCount',
-        'printf "SD-CHAIN-FIRSTBAD-PASS=%u\n", gNdsR2ChainProbeFirstBadPass',
-        'printf "SD-CHAIN-FIRSTBAD-STATUS=%u\n", gNdsR2ChainProbeFirstBad.status',
-        'printf "SD-CHAIN-FIRSTBAD-NODES=%u\n", gNdsR2ChainProbeFirstBad.nodes',
-        'printf "SD-CHAIN-FIRSTBAD-ADDR=%#x\n", gNdsR2ChainProbeFirstBad.first_bad',
-        'printf "SD-CHAIN-FIRSTBAD-DOBJ=%#x\n", gNdsR2ChainProbeFirstBad.dobj',
-        'printf "SD-CHAIN-FIRSTBAD-GEN=%u\n", gNdsR2ChainProbeFirstBad.generation',
-        'printf "SD-CHAIN-P1-STATUS=%u\n", gNdsR2ChainProbePass1.status',
-        'printf "SD-CHAIN-P1-NODES=%u\n", gNdsR2ChainProbePass1.nodes',
-        'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
-        'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes'
+        'printf "SD-STAGE-STEADY-ADMIT=%u\n", gNdsStageSteadyAdmitCount',
+        'printf "SD-STAGE-REBUILD=%u\n", gNdsStageTopologyRebuildCount',
+        'printf "SD-STAGE-MATREJECT=%u\n", gNdsStageMaterialRejectCount',
+        'printf "SD-STAGE-MATREJECT-IDX=%d\n", (int)gNdsStageMaterialRejectIndex',
+        'printf "SD-STAGE-MATREJECT-BINDING=%u\n", gNdsStageMaterialRejectBinding',
+        'printf "SD-STAGE-MATREJECT-DOBJ=%#x\n", gNdsStageMaterialRejectDObj',
+        'printf "SD-STAGE-MATREJECT-MOBJ=%#x\n", gNdsStageMaterialRejectMObj',
+        'printf "SD-STAGE-MATREJECT-WANT=%#x\n", gNdsStageMaterialRejectFlagsWant',
+        'printf "SD-STAGE-MATREJECT-GOT=%#x\n", gNdsStageMaterialRejectFlagsGot',
+        'printf "SD-STAGE-MATREJECT-GEN=%u\n", gNdsStageMaterialRejectHeapGen',
+        'printf "SD-WALK-BOUND-HITS=%u\n", gNdsMaterialWalkBoundHits',
+        'printf "SD-CHAIN-PROBES=%u\n", gNdsChainProbeCount',
+        'printf "SD-CHAIN-INVALID=%u\n", gNdsChainProbeInvalidCount',
+        'printf "SD-CHAIN-FIRSTBAD-PASS=%u\n", gNdsChainProbeFirstBadPass',
+        'printf "SD-CHAIN-FIRSTBAD-STATUS=%u\n", gNdsChainProbeFirstBad.status',
+        'printf "SD-CHAIN-FIRSTBAD-NODES=%u\n", gNdsChainProbeFirstBad.nodes',
+        'printf "SD-CHAIN-FIRSTBAD-ADDR=%#x\n", gNdsChainProbeFirstBad.first_bad',
+        'printf "SD-CHAIN-FIRSTBAD-DOBJ=%#x\n", gNdsChainProbeFirstBad.dobj',
+        'printf "SD-CHAIN-FIRSTBAD-GEN=%u\n", gNdsChainProbeFirstBad.generation',
+        'printf "SD-CHAIN-P1-STATUS=%u\n", gNdsChainProbePass1.status',
+        'printf "SD-CHAIN-P1-NODES=%u\n", gNdsChainProbePass1.nodes',
+        'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsChainProbePass2.status',
+        'printf "SD-CHAIN-P2-NODES=%u\n", gNdsChainProbePass2.nodes'
     ) + $(if ($SDFrames -gt 0) { @(
         # -SDFrames, and it has to sit BEFORE SD-DONE=1: the PowerShell reader
         # breaks its loop on that marker, so a stage marker emitted after it is
@@ -735,11 +735,11 @@ try {
         # frame boundary, so the window holds one complete Sudden Death frame and
         # the counters below describe exactly that frame's preparation.
         'printf "SD-STAGE=shot-sd2\n"',
-        'printf "SD-F-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
-        'printf "SD-F-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
-        'printf "SD-F-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
-        'printf "SD-F-R2-ELIDE=%u\n", gNdsR2StagePreflightElideCount',
-        'printf "SD-F-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        'printf "SD-F-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.prepared_valid',
+        'printf "SD-F-R2-BUILD=%u\n", gNdsStagePrepareBuildCount',
+        'printf "SD-F-R2-REUSE=%u\n", gNdsStagePrepareReuseCount',
+        'printf "SD-F-R2-ELIDE=%u\n", gNdsStagePreflightElideCount',
+        'printf "SD-F-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.prepared_topology_generation, sNdsNativeStageOwnerExecution.prepared_topology_stamp',
         'printf "SD-F-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
         'printf "SD-F-ROUTE=replay=%#x,live=%#x,generic=%#x,mixed=%#x,frames=%u\n", gNdsRendererTask36RouteLastReplayMask, gNdsRendererTask36RouteLastLiveMask, gNdsRendererTask36RouteLastGenericMask, gNdsRendererTask36RouteLastMixedMask, gNdsRendererTask36RouteFrameCount',
         # WHY the rebuild rejected. hw_reject_reason is already encoded for
@@ -765,7 +765,7 @@ try {
         # Did the second-entry cloud-atlas release actually run? Identical
         # numbers across two arms are far more often an arm that did not take
         # than an arm that did nothing.
-        'printf "SD-F-CENSUS=free=%u,live=%u,pinned=%u,thisframe=%u,evictable=%u\n", gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusThisFrame, gNdsR2TexRejectCensusEvictable',
+        'printf "SD-F-CENSUS=free=%u,live=%u,pinned=%u,thisframe=%u,evictable=%u\n", gNdsTexRejectCensusFree, gNdsTexRejectCensusLive, gNdsTexRejectCensusPinned, gNdsTexRejectCensusThisFrame, gNdsTexRejectCensusEvictable',
         # The scene-owned texture-VRAM reset: MUST read one per battle-scene
         # entry (2 after a Sudden Death run). It is the fix for the second-entry
         # stage corruption, so a frozen count is the regression. `enable` is the
@@ -824,7 +824,7 @@ try {
         # `interface_gobj->flags &= ...` with no NULL check). On N64 the particle
         # system is always live so they always exist; on this port they are
         # NDS_WEAK globals that only efparticle.c assigns, and that file is
-        # compiled only with NDS_R2_PARTICLE_RUNTIME=1. The port's own particle
+        # compiled only with NDS_PARTICLE_RUNTIME=1. The port's own particle
         # stubs NULL-check them (battle_playable_compat_stubs.c:263); the decomp
         # path does not. NULL here means the crash below is a write through a
         # null GObj, and TIME UP survives because it installs the BONUS update
@@ -1053,7 +1053,7 @@ try {
             # Symbols first. The bare SD-LEDGER-*-BEGIN/END markers name no
             # symbol, so they would survive and frame an empty block that reads
             # like a zero result rather than an absent one.
-            $_ -notmatch 'gNdsAllocLedger|gNdsR2ChainProbe|gNdsR2Stage(SteadyAdmit|TopologyRebuild|MaterialReject)|SD-LEDGER-|SD-CHAIN-'
+            $_ -notmatch 'gNdsAllocLedger|gNdsChainProbe|gNdsStage(SteadyAdmit|TopologyRebuild|MaterialReject)|SD-LEDGER-|SD-CHAIN-'
         }
     }
     # AND THE GENERAL CASE, because the filter above only covers the one flag

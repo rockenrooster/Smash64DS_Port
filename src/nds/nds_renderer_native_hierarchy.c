@@ -52,7 +52,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
          * RAW runs come here -- the cross-matrix branch above owns its own
          * emitter -- which is why the group vertex refs are bare dense ids,
          * exactly as the raw emitters read the packed corners unmasked. */
-        if (NDS_R2_STRIP_ROUTE_ON())
+        if (NDS_STRIP_ROUTE_ON())
         {
             ndsRendererNativeEmitProductionPrimitiveGroups(
                 run_index, state->texture_prepare_enabled);

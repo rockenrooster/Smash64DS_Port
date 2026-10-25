@@ -19,8 +19,8 @@
 #include <sys/obj.h>
 #include <stdint.h>
 
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_fixed_convert.h>
 #include <nds/nds_fcmp.h>
@@ -49,9 +49,9 @@ void scManagerRunPrintGObjStatus(void);
 static int32_t __attribute__((noinline, target("arm")))
 ndsCamToFixed(f32 value, unsigned int bits, int32_t limit)
 {
-    int32_t q = ndsR2CollisionF32ToFixed(value, bits);
+    int32_t q = ndsCollisionF32ToFixed(value, bits);
 
-    if ((q == NDS_R2_COLLISION_F32_OVERFLOW) || (q >= limit) || (q <= -limit))
+    if ((q == NDS_COLLISION_F32_OVERFLOW) || (q >= limit) || (q <= -limit))
     {
         uint32_t sign;
 
@@ -111,7 +111,7 @@ static int32_t ndsCamAtYFactorQ16(int32_t dist_q)
         return 1 << 15;
     }
     /* (dist - 1000) / 1000, Q16. */
-    t_q16 = (int32_t)ndsR2HwMathDivideFast(
+    t_q16 = (int32_t)ndsHwMathDivideFast(
         (int64_t)(dist_q - (1000 * NDS_CAM_ONE_Q)) << NDS_CAM_ZQ,
         1000 * NDS_CAM_ONE_Q);
     return (1 << 15) - (int32_t)(((int64_t)t_q16 * k_q16) >> NDS_CAM_ZQ);
@@ -174,7 +174,7 @@ static void ndsCamDeadUpStarQ(int32_t *x, int32_t *y)
 
     if (map_top != 0)
     {
-        *x = (int32_t)ndsR2HwMathDivideFast((int64_t)*x * top, map_top);
+        *x = (int32_t)ndsHwMathDivideFast((int64_t)*x * top, map_top);
     }
     *y = (int32_t)top << NDS_CAM_Q;
 }
@@ -490,10 +490,10 @@ static int32_t ndsCamClampDimensionsMaxQ(int32_t hz, int32_t vt, int32_t fovy)
     {
         sn = 1;
     }
-    vt = (int32_t)ndsR2HwMathDivideFast((int64_t)vt * cs, sn);
+    vt = (int32_t)ndsHwMathDivideFast((int64_t)vt * cs, sn);
     if ((w != 0) && (h != 0))
     {
-        hz = (int32_t)ndsR2HwMathDivideFast((int64_t)hz * cs * h,
+        hz = (int32_t)ndsHwMathDivideFast((int64_t)hz * cs * h,
                                             (int64_t)sn * w);
     }
     maxd = (hz > vt) ? hz : vt;
@@ -521,7 +521,7 @@ static int32_t ndsCamPanScaleQ16(int32_t dist)
     }
     /* ((1 - (dist - 2000) / 13000) * 0.05) + 0.05 */
     return NDS_CAM_PAN_LOW_Q16 +
-           (int32_t)ndsR2HwMathDivideFast(
+           (int32_t)ndsHwMathDivideFast(
                (int64_t)NDS_CAM_PAN_LOW_Q16 *
                    ((15000 * NDS_CAM_ONE_Q) - dist),
                13000 * NDS_CAM_ONE_Q);

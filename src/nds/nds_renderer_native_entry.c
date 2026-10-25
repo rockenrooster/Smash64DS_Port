@@ -807,7 +807,7 @@ u32 gNdsEntryEffectCpuLitGroups;
  * through memory, and the normal took three divides); this one reads each
  * table once and writes the four FIFO words. Same words. */
 u32 gNdsEntryEffectFastCornerGroups;
-/* Defined after NDS_R2_NORMAL_PACK, below. */
+/* Defined after NDS_NORMAL_PACK, below. */
 static u32 ndsRendererEntryEffectFastCornersReady(void);
 static void ndsRendererEntryEffectEmitFastCorners(u32 first, u32 count,
                                                   u32 lit, u32 textured);
@@ -1050,7 +1050,7 @@ static u32 ndsRendererEntryEffectStateMatches(
 #define NDS_ENTRY_EFFECT_LIGHT_COLORS \
     (NDS_RENDERER_LIGHT_COLOR_1_MASK | NDS_RENDERER_LIGHT_COLOR_2_MASK)
 
-/* Defined after NDS_R2_NORMAL_PACK, below. */
+/* Defined after NDS_NORMAL_PACK, below. */
 static inline u32 ndsRendererEntryEffectNormalWord(
     const NDSRendererInputVertex *vtx);
 static inline u32 ndsRendererEntryEffectLightWord(
@@ -3665,7 +3665,7 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void
  * 0xE0100000: light 3, which POLY_FORMAT never enables. Light 0 kept its
  * power-on zero vector, every dot product was zero, and the fighters rendered
  * with ambient only. Mask all three components. */
-#define NDS_R2_NORMAL_PACK(x, y, z) \
+#define NDS_NORMAL_PACK(x, y, z) \
     ((((u32)(x)) & 0x3ffu) | \
      (((((u32)(y)) & 0x3ffu)) << 10) | \
      (((((u32)(z)) & 0x3ffu)) << 20))
@@ -3687,7 +3687,7 @@ static s32 ndsRendererR2NormalComponent(s32 source)
 static inline u32 ndsRendererEntryEffectNormalWord(
     const NDSRendererInputVertex *vtx)
 {
-    return NDS_R2_NORMAL_PACK(
+    return NDS_NORMAL_PACK(
         (int)ndsRendererR2NormalComponent((s32)(s8)vtx->r),
         (int)ndsRendererR2NormalComponent((s32)(s8)vtx->g),
         (int)ndsRendererR2NormalComponent((s32)(s8)vtx->b));
@@ -3696,7 +3696,7 @@ static inline u32 ndsRendererEntryEffectNormalWord(
 static inline u32 ndsRendererEntryEffectLightWord(
     const NDSRendererHardwareLightDirection *direction)
 {
-    return NDS_R2_NORMAL_PACK(
+    return NDS_NORMAL_PACK(
         (int)ndsRendererR2NormalComponent(-direction->x),
         (int)ndsRendererR2NormalComponent(-direction->y),
         (int)ndsRendererR2NormalComponent(-direction->z));

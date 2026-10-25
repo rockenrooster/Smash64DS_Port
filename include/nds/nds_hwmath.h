@@ -1,5 +1,5 @@
-#ifndef NDS_R2_HWMATH_H
-#define NDS_R2_HWMATH_H
+#ifndef NDS_HWMATH_H
+#define NDS_HWMATH_H
 
 /* A correctly-rounded IEEE-754 single-precision divide built on the ARM9's
  * 64/32 divide unit.
@@ -14,13 +14,13 @@
  * whole soft-float operation, enough to sink a leaf conversion at 1.00 conv/op.
  *
  * The arithmetic lives in this header rather than in the .c for the reason
- * include/nds/nds_r2_sqrtf.h gives: scripts/check-r2-hwmath.c compiles THIS
+ * include/nds/nds_sqrtf.h gives: scripts/check-hwmath.c compiles THIS
  * file on the host and grades it against the host's own IEEE divide, so the
  * falsifier cannot pass while the ROM differs.
  *
  * The including translation unit must define, before the include:
  *
- *     static int64_t ndsR2HwMathDivideUnit(int64_t numerator,
+ *     static int64_t ndsHwMathDivideUnit(int64_t numerator,
  *                                          int32_t denominator,
  *                                          int32_t *remainder_out);
  *
@@ -61,7 +61,7 @@
  *   the textbook decision on them.
  *
  *   AND THE TIE IS UNREACHABLE, which the falsifier discovered rather than the
- *   author: scripts/check-r2-hwmath.c counted zero over 58 million graded
+ *   author: scripts/check-hwmath.c counted zero over 58 million graded
  *   pairs, and the reason is structural. A tie needs the exact quotient to have
  *   exactly 25 significant bits. ma/mb terminates in binary only when
  *   mb/gcd(ma,mb) is a power of two, and then ma/mb = (ma/g) / 2^j with
@@ -85,10 +85,10 @@
 
 #include <stdint.h>
 
-#define NDS_R2_HWMATH_FDIV_FALLBACK 0
-#define NDS_R2_HWMATH_FDIV_EXACT    1
+#define NDS_HWMATH_FDIV_FALLBACK 0
+#define NDS_HWMATH_FDIV_EXACT    1
 
-static inline int ndsR2HwMathDivBits(unsigned int a_bits, unsigned int b_bits,
+static inline int ndsHwMathDivBits(unsigned int a_bits, unsigned int b_bits,
                                      unsigned int *out)
 {
     unsigned int ea = (a_bits >> 23) & 0xffu;
@@ -105,14 +105,14 @@ static inline int ndsR2HwMathDivBits(unsigned int a_bits, unsigned int b_bits,
 
     if ((ea == 0u) || (ea == 0xffu) || (eb == 0u) || (eb == 0xffu))
     {
-        return NDS_R2_HWMATH_FDIV_FALLBACK;
+        return NDS_HWMATH_FDIV_FALLBACK;
     }
 
     sign = (a_bits ^ b_bits) & 0x80000000u;
     ma = (a_bits & 0x007fffffu) | 0x00800000u;
     mb = (b_bits & 0x007fffffu) | 0x00800000u;
 
-    quotient = (unsigned long long)ndsR2HwMathDivideUnit(
+    quotient = (unsigned long long)ndsHwMathDivideUnit(
         (int64_t)((unsigned long long)ma << 32), (int32_t)mb, &remainder);
 
     exponent = (int)ea - (int)eb + 127;
@@ -144,12 +144,12 @@ static inline int ndsR2HwMathDivBits(unsigned int a_bits, unsigned int b_bits,
 
     if ((exponent <= 0) || (exponent >= 0xff))
     {
-        return NDS_R2_HWMATH_FDIV_FALLBACK;
+        return NDS_HWMATH_FDIV_FALLBACK;
     }
 
     *out = sign | ((unsigned int)exponent << 23) |
            (significand & 0x007fffffu);
-    return NDS_R2_HWMATH_FDIV_EXACT;
+    return NDS_HWMATH_FDIV_EXACT;
 }
 
-#endif /* NDS_R2_HWMATH_H */
+#endif /* NDS_HWMATH_H */

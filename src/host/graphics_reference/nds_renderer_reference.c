@@ -655,7 +655,7 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     *list_index_io = list_index;
 }
 
-static void NDS_R2_CENSUS_EVICTED_CODE
+static void NDS_CENSUS_EVICTED_CODE
 ndsRendererScanList(const Gfx *dl,
                     const NDSRendererConfig *config,
                     NDSRendererStats *stats,
@@ -813,7 +813,7 @@ ndsRendererScanColdStateOpcode(const NDSRendererConfig *config,
     }
 }
 
-static void NDS_R2_CENSUS_EVICTED_CODE
+static void NDS_CENSUS_EVICTED_CODE
 ndsRendererScanList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats,

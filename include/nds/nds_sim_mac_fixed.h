@@ -1,5 +1,5 @@
-#ifndef NDS_R2_SIM_MAC_FIXED_H
-#define NDS_R2_SIM_MAC_FIXED_H
+#ifndef NDS_SIM_MAC_FIXED_H
+#define NDS_SIM_MAC_FIXED_H
 
 /* THE WARM-MAC EXCHANGE-RATE INSTRUMENT. Lab only; never in a published ROM.
  *
@@ -40,7 +40,7 @@
  *
  * THE EDGE CONVERSION IS THE WHOLE ANSWER AND IT IS COUNTABLE BEFORE THE RUN.
  * Both bodies are f32-in and f32-out leaves, so a per-call conversion pays one
- * ndsR2CollisionF32ToFixed / FixedToF32 per float that crosses the boundary:
+ * ndsCollisionF32ToFixed / FixedToF32 per float that crosses the boundary:
  *
  *   body                        floats in  floats out  edge conv  float ops
  *   gmCollisionGetWorldPosition     15          3          18        18
@@ -48,9 +48,9 @@
  *
  * i.e. 1.00 conversion per deleted float operation for the transform and 0.57
  * for the compose. That ratio is the R2-07 L7 footprint lesson restated as
- * arithmetic (include/nds/nds_r2_collision_mtx.h) and it is why the SUBSET
+ * arithmetic (include/nds/nds_collision_mtx.h) and it is why the SUBSET
  * SIZED BY FUNCTION IS NOT A CONVERTIBLE UNIT: what converts is a CHAIN whose
- * interior stays fixed, which is what nds_r2_collision_fixed.h is built for.
+ * interior stays fixed, which is what nds_collision_fixed.h is built for.
  * This instrument measures the leaf price so the chain's arithmetic can be done
  * with a measured constant instead of a projected one.
  *
@@ -73,7 +73,7 @@
  *      may be sunk into the shadow branch by the compiler, charging ~3 tk of
  *      it to the candidate arm.
  *
- * NOTHING HERE IS A CONVERSION AND NOTHING HERE MAY SHIP. NDS_R2_SIM_MAC_SHADOW
+ * NOTHING HERE IS A CONVERSION AND NOTHING HERE MAY SHIP. NDS_SIM_MAC_SHADOW
  * defaults to 0 and the translation unit is not linked at 0.
  */
 
@@ -83,12 +83,12 @@
 extern "C" {
 #endif
 
-#define NDS_R2_SIM_MAC_ARM_GRADE     4u
+#define NDS_SIM_MAC_ARM_GRADE     4u
 /* Repeat count, arm >> 8. Zero means one evaluation.
  *
  * IT EXISTS BECAUSE THE REAL CALL SITES ARE UNREACHABLE, AND THAT IS ITSELF A
  * MEASURED RESULT. On the first run of this instrument the whole match produced
- * gNdsR2SimMacCmpsCalls = 0 and gNdsR2SimMacXfrmCalls = 168 over 2,039 presented
+ * gNdsSimMacCmpsCalls = 0 and gNdsSimMacXfrmCalls = 168 over 2,039 presented
  * frames -- 0.082 entries a frame against gmCollisionGetWorldPosition's 45.2 and
  * func_ovl2_800ED490's 19.0. Both bodies are called almost entirely from inside
  * gmcollision.c, so no wrapper in port code can see them.
@@ -103,22 +103,22 @@ extern "C" {
  *                    bound contribution.
  * The real per-entry cost at 45.2 entries a frame is bracketed by b and a + b,
  * and quoting either one alone would be a claim this instrument cannot make. */
-#define NDS_R2_SIM_MAC_ARM_REPEAT_SHIFT 8u
+#define NDS_SIM_MAC_ARM_REPEAT_SHIFT 8u
 
 /* `.data` and not `.bss`: a zero-initialised route word moves to .bss and
  * shifts every later .data object, which is how a previous same-binary pair
  * acquired a ~10,000 tk/fr placement floor. */
-extern volatile uint32_t gNdsR2SimMacShadowArm;
+extern volatile uint32_t gNdsSimMacShadowArm;
 
 /* Engagement. A route that never fires is indistinguishable from a route that
  * fired and saved nothing, and this campaign has shipped that mistake. */
-extern volatile uint32_t gNdsR2SimMacXfrmCalls;   /* wrapper entries */
-extern volatile uint32_t gNdsR2SimMacXfrmShadow;  /* fixed evaluations */
-extern volatile uint32_t gNdsR2SimMacXfrmDecline; /* out of the kernel's domain */
-extern volatile uint32_t gNdsR2SimMacCmpsShadow;
-extern volatile uint32_t gNdsR2SimMacCmpsDecline;
-extern volatile uint32_t gNdsR2SimMacCmpsCalls;   /* cross-TU compose entries */
-extern volatile uint32_t gNdsR2SimMacDriveCalls;  /* damage-gateway drives */
+extern volatile uint32_t gNdsSimMacXfrmCalls;   /* wrapper entries */
+extern volatile uint32_t gNdsSimMacXfrmShadow;  /* fixed evaluations */
+extern volatile uint32_t gNdsSimMacXfrmDecline; /* out of the kernel's domain */
+extern volatile uint32_t gNdsSimMacCmpsShadow;
+extern volatile uint32_t gNdsSimMacCmpsDecline;
+extern volatile uint32_t gNdsSimMacCmpsCalls;   /* cross-TU compose entries */
+extern volatile uint32_t gNdsSimMacDriveCalls;  /* damage-gateway drives */
 
 /* Live-domain equivalence of the transform, graded against the decomp float
  * body's OWN result on the SAME inputs, every captured call, whole match. Units
@@ -128,20 +128,20 @@ extern volatile uint32_t gNdsR2SimMacDriveCalls;  /* damage-gateway drives */
  * Six separate scalars rather than one [6] array on purpose: reading a [N]
  * counter as a scalar through the harness silently returns its own address,
  * which cost this campaign a cycle. */
-extern volatile uint32_t gNdsR2SimMacXfrmMaxDevQ12;
-extern volatile uint32_t gNdsR2SimMacXfrmDev0;  /* dev == 0            */
-extern volatile uint32_t gNdsR2SimMacXfrmDev1;  /* 1   <= dev <= 4     */
-extern volatile uint32_t gNdsR2SimMacXfrmDev2;  /* 5   <= dev <= 16    */
-extern volatile uint32_t gNdsR2SimMacXfrmDev3;  /* 17  <= dev <= 81    */
-extern volatile uint32_t gNdsR2SimMacXfrmDev4;  /* 82  <= dev <= 4095  */
-extern volatile uint32_t gNdsR2SimMacXfrmDev5;  /* dev >= 4096         */
+extern volatile uint32_t gNdsSimMacXfrmMaxDevQ12;
+extern volatile uint32_t gNdsSimMacXfrmDev0;  /* dev == 0            */
+extern volatile uint32_t gNdsSimMacXfrmDev1;  /* 1   <= dev <= 4     */
+extern volatile uint32_t gNdsSimMacXfrmDev2;  /* 5   <= dev <= 16    */
+extern volatile uint32_t gNdsSimMacXfrmDev3;  /* 17  <= dev <= 81    */
+extern volatile uint32_t gNdsSimMacXfrmDev4;  /* 82  <= dev <= 4095  */
+extern volatile uint32_t gNdsSimMacXfrmDev5;  /* dev >= 4096         */
 
 /* Both take the float matrix the decomp body was handed. `in` is the ORIGINAL
  * point (the float body overwrites it in place) and `ref` is what the float
  * body produced from it. `arm` is the caller's single volatile read. */
-void ndsR2SimMacShadowTransform(float mtx[4][4], const float in[3],
+void ndsSimMacShadowTransform(float mtx[4][4], const float in[3],
                                 const float ref[3], uint32_t arm);
-void ndsR2SimMacShadowCompose(float mtx[4][4], uint32_t arm);
+void ndsSimMacShadowCompose(float mtx[4][4], uint32_t arm);
 
 /* Cleaned out of the D-cache at the frame-complete seam. melonDS's ReadMem has
  * no DCache lookup, and a max-deviation counter is written only when a new
@@ -152,4 +152,4 @@ void ndsR2SimMacShadowCompose(float mtx[4][4], uint32_t arm);
 }
 #endif
 
-#endif /* NDS_R2_SIM_MAC_FIXED_H */
+#endif /* NDS_SIM_MAC_FIXED_H */

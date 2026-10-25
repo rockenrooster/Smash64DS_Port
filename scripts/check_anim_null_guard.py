@@ -42,7 +42,7 @@ TARGETS = [
     (DECOMP / "src" / "ft" / "ftanim.c", "ftAnimParseDObjFigatree",
      "ftParamUpdateAnimKeys parse arm otherwise (decomp body)"),
     (ROOT / "src" / "import" / "battleship_ftanim.c",
-     "ndsR2FtAnimParseDObjFigatree",
+     "ndsFtAnimParseDObjFigatree",
      "the shipped port parser the shim selects"),
     # P2-3r2 (2026-08-23): the shipped player is one always_inline body shared
     # by gcPlayDObjAnimJoint (tra_scale = NULL) and the port's
@@ -61,13 +61,13 @@ TARGETS = [
 # why `ftParamUpdateAnimKeys` counts its own skips -- calls + skips is the
 # figure that stayed comparable across the change.
 ALLOWED_BEFORE = [
-    re.compile(r"^gNdsR2FtAnimParse\w+\+\+$"),
+    re.compile(r"^gNdsFtAnimParse\w+\+\+$"),
 ]
 
 # Macros permitted in an initialiser above the guard. These read a `volatile`
 # route word and nothing else, so a skipped call simply does not read it. A
 # real function call is still rejected: it could have an effect the skip drops.
-ALLOWED_INIT = re.compile(r"^[\w \t\*]+=\s*(?:NDS_R2_ANIM_CUT_ON\s*\([^()]*\)"
+ALLOWED_INIT = re.compile(r"^[\w \t\*]+=\s*(?:NDS_ANIM_CUT_ON\s*\([^()]*\)"
                           r"|[^()]*)\s*(?:\?[^()]*)?$")
 
 GUARD = re.compile(

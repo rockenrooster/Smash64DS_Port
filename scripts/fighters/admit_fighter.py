@@ -1245,9 +1245,9 @@ def admit(root: Path, key: str, dry: bool) -> None:
         (f"NDS_{PU}_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)", f"#if {F}\n    NDS_{U}_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)\n#endif\n"),
         (f"attr_offset = NDS_RELOC_SYMBOL_{PU}_MAIN_ATTRIBUTES;", f"#if {F}\n    else if (loaded->asset_id == NDS_RELOC_ASSET_{U}_MAIN)\n    {{\n        attr_offset = NDS_RELOC_SYMBOL_{U}_MAIN_ATTRIBUTES;\n    }}\n#endif\n"),
         (f"sNds{PN}PayloadSizes[] =", f"#if {F}\nstatic const NDSFighterPayloadSizeRow sNds{N}PayloadSizes[] =\n{{\n    NDS_{U}_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)\n}};\n#endif\n"),
-        (f"        sNds{PN}PayloadSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedPayloadSize(\n        sNds{N}PayloadSizes,\n        sizeof(sNds{N}PayloadSizes) / sizeof(sNds{N}PayloadSizes[0]),\n        asset_id);\n    if (size != 0u) return size;\n#endif\n"),
+        (f"        sNds{PN}PayloadSizes,", f"#if {F}\n    size = ndsRelocFindGeneratedPayloadSize(\n        sNds{N}PayloadSizes,\n        sizeof(sNds{N}PayloadSizes) / sizeof(sNds{N}PayloadSizes[0]),\n        asset_id);\n    if (size != 0u) return size;\n#endif\n"),
         (f"sNds{PN}AllocSizes[] =", f"#if {F}\nstatic const NDSFighterAllocSizeRow sNds{N}AllocSizes[] =\n{{\n    NDS_{U}_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)\n}};\n#endif\n"),
-        (f"        sNds{PN}AllocSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedAllocSize(\n        sNds{N}AllocSizes,\n        sizeof(sNds{N}AllocSizes) / sizeof(sNds{N}AllocSizes[0]),\n        asset_id);\n    if (size != 0u)\n    {{\n        return size;\n    }}\n#endif\n"),
+        (f"        sNds{PN}AllocSizes,", f"#if {F}\n    size = ndsRelocFindGeneratedAllocSize(\n        sNds{N}AllocSizes,\n        sizeof(sNds{N}AllocSizes) / sizeof(sNds{N}AllocSizes[0]),\n        asset_id);\n    if (size != 0u)\n    {{\n        return size;\n    }}\n#endif\n"),
     )
     for hint, block in (variant_asset_rows if is_variant else full_asset_rows):
         T.insert_after_block(rb, PF, hint, block)
@@ -1576,7 +1576,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
     else:
         og = "scripts/fighters/generate_nds_native_owners.py"
         sha = hashlib.sha256((root / "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main" / S["model"]).read_bytes()).hexdigest()
-        # P2_RUNTIME_OWNERS drives the full export and needs OWNER_JOINT_TREES /
+        # RUNTIME_OWNERS drives the full export and needs OWNER_JOINT_TREES /
         # SETUP_PARTS / cross-slot pins the variant does not pin yet (KeyError
         # 'mmario' is the first thing generation reveals). Stage only the O2R
         # identity row here; the runtime row lands with those pins.

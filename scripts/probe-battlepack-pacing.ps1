@@ -20,7 +20,7 @@ param(
 # term at all. gNdsBattlePlayablePacingVBlanks is a guest counter updated once
 # per presented frame, so differencing it at consecutive
 # ndsBattlePlayableFrameCompleteMarker stops yields that frame's present
-# interval; gNdsBattlePackLoadSteps and gNdsR2AnimCacheRejects say which frames
+# interval; gNdsBattlePackLoadSteps and gNdsAnimCacheRejects say which frames
 # streamed a chunk and which took an uncached load. Whatever excess is left over
 # after those two are subtracted is the cross-build term, and it is the only one
 # that needs a second binary to see.
@@ -46,7 +46,7 @@ if ([string]::IsNullOrWhiteSpace($Artifact)) {
         (Get-Date -Format 'yyyy-MM-dd') + "_battlepack-pacing-$Build.txt")
 }
 
-# The pack counters only exist on a NDS_R2_BATTLEPACK=1 arm; the control arm
+# The pack counters only exist on a NDS_BATTLEPACK=1 arm; the control arm
 # must still produce every other column, so they are resolved per build and
 # printed as literal 0 when absent rather than failing the run.
 $required = @(
@@ -55,8 +55,8 @@ $required = @(
     'gNdsBattlePlayablePacingVBlanks',
     'gNdsBattlePlayablePacingPresentedFrames',
     'gNdsBattlePlayablePacingLogicFrames',
-    'gNdsR2AnimCacheRejects',
-    'gNdsR2AnimCacheHits',
+    'gNdsAnimCacheRejects',
+    'gNdsAnimCacheHits',
     'gNdsBattlePackHits',
     'gNdsBattlePackMisses',
     'gNdsBattlePackLoadSteps'
@@ -121,13 +121,13 @@ try {
         'commands',
         'silent',
         'set $n = $n + 1',
-        'printf "BPP %d vbl=%u pres=%u lgc=%u steps=%u rej=%u ach=%u ph=%u pm=%u\n", $n, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePackLoadSteps, gNdsR2AnimCacheRejects, gNdsR2AnimCacheHits, gNdsBattlePackHits, gNdsBattlePackMisses',
+        'printf "BPP %d vbl=%u pres=%u lgc=%u steps=%u rej=%u ach=%u ph=%u pm=%u\n", $n, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePackLoadSteps, gNdsAnimCacheRejects, gNdsAnimCacheHits, gNdsBattlePackHits, gNdsBattlePackMisses',
         ('if $n < ' + $Hits),
         'continue',
         'end',
         'end',
         'continue',
-        'printf "BPPDONE n=%d vbl=%u pres=%u steps=%u rej=%u ach=%u ph=%u pm=%u p0=%u p1=%u\n", $n, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePackLoadSteps, gNdsR2AnimCacheRejects, gNdsR2AnimCacheHits, gNdsBattlePackHits, gNdsBattlePackMisses, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Damage',
+        'printf "BPPDONE n=%d vbl=%u pres=%u steps=%u rej=%u ach=%u ph=%u pm=%u p0=%u p1=%u\n", $n, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePackLoadSteps, gNdsAnimCacheRejects, gNdsAnimCacheHits, gNdsBattlePackHits, gNdsBattlePackMisses, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Damage',
         'printf "BPPBUCKET 2=%u 3=%u 4=%u 5=%u max=%u viol=%u\n", gNdsBattlePlayablePacingPresentIntervalBucket[2], gNdsBattlePlayablePacingPresentIntervalBucket[3], gNdsBattlePlayablePacingPresentIntervalBucket[4], gNdsBattlePlayablePacingPresentIntervalBucket[5], gNdsBattlePlayablePacingPresentIntervalMax, gNdsBattlePlayablePacingCadenceViolationCount',
         'detach',
         'quit'

@@ -50,18 +50,18 @@
  * when the geometry engine took over the multiply). Those bytes rent ITCM at
  * one to three orders of magnitude below the residents around them.
  *
- * NDS_R2_ITCM_PACK2_EVICTED_CODE keeps hot/O3/ARM exactly as
+ * NDS_ITCM_PACK2_EVICTED_CODE keeps hot/O3/ARM exactly as
  * NDS_RENDERER_HOT_CODE had them and drops only the section, so no emitted
- * instruction changes; NDS_R2_ITCM_PACK2_CODE adds a section and no more.
+ * instruction changes; NDS_ITCM_PACK2_CODE adds a section and no more.
  * artifacts/performance/2026-08-17_itcm-repack2/ carries the ranking. */
-#ifndef NDS_R2_ITCM_PACK2
-#define NDS_R2_ITCM_PACK2 1
+#ifndef NDS_ITCM_PACK2
+#define NDS_ITCM_PACK2 1
 #endif
 
-#if NDS_R2_ITCM_PACK2 && defined(__arm__)
-#define NDS_R2_ITCM_PACK2_CODE __attribute__((section(".itcm")))
+#if NDS_ITCM_PACK2 && defined(__arm__)
+#define NDS_ITCM_PACK2_CODE __attribute__((section(".itcm")))
 #else
-#define NDS_R2_ITCM_PACK2_CODE
+#define NDS_ITCM_PACK2_CODE
 #endif
 
 /* Layout control.

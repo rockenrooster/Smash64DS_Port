@@ -35,8 +35,8 @@ if ($Rosters -ne '') {
     }
 }
 $extras = @('gNdsTaskmanGeneralHeapFreeMin', 'gNdsNativeFailureLabCount', 'gNdsFtrLeanDeclineCount', 'gNdsStageProgLoads',
-    'gNdsStageProgDeclines', 'gNdsR2AnimCacheMisses', 'gNdsR2AnimCacheHits', 'gNdsAudioStorageRequests',
-    'gNdsR2AnimCacheArenaReservedBytes', 'gNdsAObjEvent32NormalizeScriptCount', 'gNdsAObjEvent32NormalizedHighWater',
+    'gNdsStageProgDeclines', 'gNdsAnimCacheMisses', 'gNdsAnimCacheHits', 'gNdsAudioStorageRequests',
+    'gNdsAnimCacheArenaReservedBytes', 'gNdsAObjEvent32NormalizeScriptCount', 'gNdsAObjEvent32NormalizedHighWater',
     'gNdsAObjEvent32CapacityLimit', 'gNdsAObjEvent32NormalizeFailCount', 'gNdsStageProgSegments', 'gNdsStageProgBytes',
     'gNdsStageProgReason', 'gNdsNativeStageLentLayerSkips', 'gNdsBattleDeadSpanServedBytes', 'gNdsBattleDeadSpanLentBytes') + $MoreGlobals
 $stages = if ($Gkinds.Count -gt 0) { $Gkinds } else { @($Gkind) }

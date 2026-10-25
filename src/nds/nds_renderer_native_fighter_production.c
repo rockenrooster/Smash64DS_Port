@@ -116,7 +116,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     {
         ndsRendererR2BuildDenseNormals();
     }
-    sNdsR2LightVectorWritten = 0u;
+    sNdsLightVectorWritten = 0u;
     /* The light colour does not depend on any matrix, so unlike the vector it
      * belongs here rather than in the shade. Keeping them separate also stops
      * one test from conflating "the colour never arrived" with "the dot product
@@ -124,7 +124,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
     /* Nothing outside this loop is known to leave GL_PROJECTION alone, so the
      * projection elide only claims what one execute can prove. */
-    sNdsR2GxLastProjection = NULL;
+    sNdsGxLastProjection = NULL;
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSRendererNativeFighterRoot *input = &inputs[root_index];

@@ -13,15 +13,15 @@
  * instead of a hash compare. Correctly rounded means the Task 37 state hash
  * must not move at all.
  *
- * The arithmetic is in include/nds/nds_r2_sqrtf.h so that
- * scripts/check-r2-fixed-sqrt.ps1 exercises this exact code on the host.
+ * The arithmetic is in include/nds/nds_sqrtf.h so that
+ * scripts/check-fixed-sqrt.ps1 exercises this exact code on the host.
  */
 
 #include "nds_scene_harness_config.h"
 
 #include <nds.h>
 
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 
 
 /* The square-root unit is one set of global registers, and the sequence is
@@ -37,7 +37,7 @@
  * about twice.
  *
  * THE MASK IS UNPRICED HEAD-ROOM AND IS DELIBERATELY LEFT IN. The ELF survey in
- * nds_r2_hwmath_unit.h shows this binary has no interrupt-context user of
+ * nds_hwmath_unit.h shows this binary has no interrupt-context user of
  * either unit at all -- the port's one registered handler is `sVBlankCount++`
  * -- so the reachability it guards against does not currently exist. Its three
  * I/O accesses cost 698 tk/fr at marginal-80 (111,705 cycles over 80 frames in
@@ -45,37 +45,37 @@
  * around them is charged too). Removing a safety property is an owner call, not
  * an optimisation, and it is recorded rather than taken.
  *
- * ndsR2HwMathSqrt64 rather than libnds's sqrt64: same registers, same 64-bit
+ * ndsHwMathSqrt64 rather than libnds's sqrt64: same registers, same 64-bit
  * mode, WITHOUT the leading poll that waits out a stale root nobody reads. Both
  * forms are graded bit-identical over 65,536 operands on four builds. */
-static unsigned int ndsR2SqrtfHardware(unsigned long long value)
+static unsigned int ndsSqrtfHardware(unsigned long long value)
 {
     unsigned int ime = REG_IME;
     unsigned int result;
 
     REG_IME = 0u;
-    result = ndsR2HwMathSqrt64(value);
+    result = ndsHwMathSqrt64(value);
     REG_IME = ime;
     return result;
 }
 
-#include <nds/nds_r2_sqrtf.h>
+#include <nds/nds_sqrtf.h>
 
 /* newlib's kernel routine, for the cases the fast path declines. Calling this
  * rather than sqrtf avoids recursing into the function being defined. */
 extern float __ieee754_sqrtf(float x);
 
-/* Not `static inline`: at NDS_R2_HWMATH_ROUTE 0 this has exactly one caller and
+/* Not `static inline`: at NDS_HWMATH_ROUTE 0 this has exactly one caller and
  * GCC inlines it, so the shipped `sqrtf` is the same function it always was. In
  * the route build it must stay out of line so BOTH arms pay one call and the
  * measured delta is the instruction selection, not the call. */
-static float ndsR2SqrtfBody(float x)
+static float ndsSqrtfBody(float x)
 {
     unsigned int bits;
     unsigned int out;
 
     __builtin_memcpy(&bits, &x, sizeof(bits));
-    if (ndsR2SqrtfBits(bits, &out) == NDS_R2_SQRTF_FALLBACK)
+    if (ndsSqrtfBits(bits, &out) == NDS_SQRTF_FALLBACK)
     {
         return __ieee754_sqrtf(x);
     }
@@ -86,7 +86,7 @@ static float ndsR2SqrtfBody(float x)
 
 float __attribute__((section(".itcm"))) sqrtf(float x)
 {
-    return ndsR2SqrtfBody(x);
+    return ndsSqrtfBody(x);
 }
 
 

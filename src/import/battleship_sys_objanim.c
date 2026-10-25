@@ -21,7 +21,7 @@ extern u32 ndsP4Event32Allowance(u32 content);
  * and `battleship_ftanim.c` includes that header whether or not this file's
  * fixed-point player is compiled in. Four bytes against a link error that only
  * appears in the P2 configuration nobody measures. */
-volatile u32 gNdsR2CubicSaturations;
+volatile u32 gNdsCubicSaturations;
 
 /* The overlay's sentinel and zero tests as bit compares (the objanim.c
  * import patch, NDS_OA_*). Same-ROM A/B word: 0 = the float compares. */
@@ -221,7 +221,7 @@ void ndsGcParseMObjMatAnimJointNow(MObj *mobj)
  * hand-rolled converter is what makes that affordable -- `(s32)(v * 4096.0f)` is
  * two soft-float calls where this is a dozen integer ops. */
 
-volatile u32 gNdsR2CubicEvals;
+volatile u32 gNdsCubicEvals;
 
 /* Cycle 109 standing-rule-7 route for the two animation cuts in this file.
  *
@@ -246,27 +246,27 @@ volatile u32 gNdsR2CubicEvals;
  *                arm you measure is then a mixture and prices nothing.
  *
  * Default 15 is the shipped behaviour, so an unpoked ROM is unaffected.
- * `-SetGlobals gNdsR2AnimCutRoute=0` is the all-pre-cut arm; bit-wise values
+ * `-SetGlobals gNdsAnimCutRoute=0` is the all-pre-cut arm; bit-wise values
  * price one cut at a time (7 = fixed-point AObj off only, 3 = that plus the
  * parser, 13 = fused multiply off only).
  *
  * .data, not .bss, and aligned(32) so it OWNS its cache line. Both are load
  * bearing: an uninitialised route would place differently between arms, and
  * gNdsFtrPlanVerify's comment in diagnostics.c records a poke being stamped
- * back to 0 by a neighbouring counter's write-back -- gNdsR2CubicEvals here
+ * back to 0 by a neighbouring counter's write-back -- gNdsCubicEvals here
  * increments on every single cubic node, so that hazard is a certainty rather
  * than a possibility.
  *
  * Compile-time gated because the route is an INSTRUMENT, not a feature. At
- * NDS_R2_ANIM_CUT_ROUTE=0 (the default, and what every published ROM builds)
- * NDS_R2_ANIM_CUT_ON folds to a constant 1, GCC dead-codes both pre-cut arms,
+ * NDS_ANIM_CUT_ROUTE=0 (the default, and what every published ROM builds)
+ * NDS_ANIM_CUT_ON folds to a constant 1, GCC dead-codes both pre-cut arms,
  * and the shipped program is exactly the no-route one -- no per-node test, no
  * spill, no footprint. "Replace, don't coexist" is a board rule with a price
  * attached, and a permanent runtime selector would pay it forever to answer a
  * question that is already answered. */
-#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#define NDS_ANIM_CUT_ON(bit) (1)
 
-/* NDS_R2_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_r2_cubic_error_bound.py`
+/* NDS_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_cubic_error_bound.py`
  * extracts everything between this marker and the matching END, prepends
  * `include/nds/nds_anim_fixed.h`, and compiles both on the host against the
  * decomp's own `gcGetInterpValueCubic`. Extraction rather than a copy so the
@@ -275,22 +275,22 @@ volatile u32 gNdsR2CubicEvals;
 
 /* Two fixed-point scales, and the split is what makes the bound affordable.
  *
- * `NDS_R2_CUBIC_VF` (12) holds joint VALUES. Their own quantum lands straight in
+ * `NDS_CUBIC_VF` (12) holds joint VALUES. Their own quantum lands straight in
  * the result, so 1/4096 of a radian or a world unit is already far finer than
  * anything gameplay can see.
  *
- * `NDS_R2_CUBIC_BF` (16) holds the four Hermite BASIS terms. Two of them carry a
+ * `NDS_CUBIC_BF` (16) holds the four Hermite BASIS terms. Two of them carry a
  * factor of `length`, so their quantum reaches the result multiplied by
  * L*|rate| -- the curve's steepness in value units per t. At Q12 that amplifier
  * put a 60-unit translation crossed in 13 frames 0.107 units off the float
- * original, measured by `check_r2_cubic_error_bound.py`. Four more bits divide
+ * original, measured by `check_cubic_error_bound.py`. Four more bits divide
  * that by 16 and cost two 32x32->64 multiplies (SMULL, one instruction each).
  *
  * They are the Q-form scales under their original names: the whole point of
  * Requirement 4 is that the AObj now STORES what this kernel used to convert. */
-#define NDS_R2_CUBIC_VF NDS_R2_AQ_VF
-#define NDS_R2_CUBIC_BF NDS_R2_AQ_BF
-#define NDS_R2_CUBIC_BONE NDS_R2_AQ_BONE
+#define NDS_CUBIC_VF NDS_AQ_VF
+#define NDS_CUBIC_BF NDS_AQ_BF
+#define NDS_CUBIC_BONE NDS_AQ_BONE
 
 /* (a * b) -> Q`bits` in one integer multiply, without `__aeabi_fmul`.
  *
@@ -301,20 +301,20 @@ volatile u32 gNdsR2CubicEvals;
  *
  * NOT bit-identical to the old path, and more accurate rather than less: the
  * old path rounded twice (once when `fmul` packed the product into an f32
- * significand, once in `ndsR2F32ToFixed`), this rounds once.
- * `check_r2_cubic_error_bound.py` measures the whole kernel against the decomp
+ * significand, once in `ndsAnimF32ToFixed`), this rounds once.
+ * `check_cubic_error_bound.py` measures the whole kernel against the decomp
  * float reference, so an accuracy gain shows up as a smaller deviation.
  *
- * Saturation matches `ndsR2F32ToFixed`: clamp, never wrap, because a wrapped
+ * Saturation matches `ndsAnimF32ToFixed`: clamp, never wrap, because a wrapped
  * `t` is a visible joint teleport where a clamped one is a held pose.
  *
  * A first attempt at this was reverted as a "hang". That verdict was retracted
  * -- the harness had a 30-second marker budget that had gone marginal, and the
  * unchanged control failed too. See the board. */
-static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
+static inline s32 ndsF32MulToFixed(f32 a, f32 b, s32 bits)
 {
-    u32 ba = ndsR2FloatBits(a);
-    u32 bb = ndsR2FloatBits(b);
+    u32 ba = ndsAnimFloatBits(a);
+    u32 bb = ndsAnimFloatBits(b);
     s32 ea = (s32)((ba >> 23) & 0xffu);
     s32 eb = (s32)((bb >> 23) & 0xffu);
     u32 sign = (ba ^ bb) & 0x80000000u;
@@ -328,7 +328,7 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
     }
     if ((ea == 0xff) || (eb == 0xff))
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return (sign != 0u) ? -0x7fffffff : 0x7fffffff;
     }
     /* Two 1.23 significands multiply to a 2.46 product in [2^46, 2^48).
@@ -340,7 +340,7 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
     if (shift >= 0)
     {
         /* p is already ~2^47, so any non-negative shift is far out of range. */
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return (sign != 0u) ? -0x7fffffff : 0x7fffffff;
     }
     if (shift < -63)
@@ -350,13 +350,13 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
     p = (p + ((s64)1 << (-shift - 1))) >> (-shift);   /* round to nearest */
     if (p > (s64)0x7fffffff)
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         p = (s64)0x7fffffff;
     }
     return (sign != 0u) ? -(s32)p : (s32)p;
 }
 
-/* `ndsR2S32ToF32Bits` / `ndsR2FixedToF32` moved to `nds_anim_fixed.h`
+/* `ndsS32ToF32Bits` / `ndsAnimFixedToF32` moved to `nds_anim_fixed.h`
  * (P2-2p6) so the fighter pose engine shares them; exact, proven over all 2^32
  * inputs by `scripts/check_s32tof32_exact.py`. */
 
@@ -371,19 +371,19 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
  * the six inlined float->fixed conversions to one copy instead of one per call
  * site, which matters because this lands in `.text.hot`'s curated 8 KiB.
  *
- * `__arm__` guards the attribute so `check_r2_cubic_error_bound.py` can still
+ * `__arm__` guards the attribute so `check_cubic_error_bound.py` can still
  * compile the extracted kernel on the host. */
 #if defined(__arm__)
-#define NDS_R2_CUBIC_ATTR __attribute__((noinline, target("arm")))
-#define NDS_R2_ANIM_Q_BODY_ATTR \
+#define NDS_CUBIC_ATTR __attribute__((noinline, target("arm")))
+#define NDS_ANIM_Q_BODY_ATTR \
     inline __attribute__((always_inline, target("arm")))
 #else
-#define NDS_R2_CUBIC_ATTR
-/* Host side (check_r2_cubic_error_bound.py extracts this region and compiles it
+#define NDS_CUBIC_ATTR
+/* Host side (check_cubic_error_bound.py extracts this region and compiles it
  * natively): an ordinary static function. Only the DS build needs the body
  * duplicated, and always_inline at the harness's -O level is a needless way to
  * fail a numeric gate that does not care where the code lives. */
-#define NDS_R2_ANIM_Q_BODY_ATTR
+#define NDS_ANIM_Q_BODY_ATTR
 #endif
 
 /* ITCM residency for the Q evaluator. Zero-wait and never evicted, against
@@ -393,13 +393,13 @@ static inline s32 ndsR2F32MulToFixed(f32 a, f32 b, s32 bits)
  * the port defines the fcmp helpers itself) and
  * ndsRendererHardwareGetLightShadeLut (404 B, the miss-path LUT builder) --
  * plus the 512 B that were already free on the tick-HUD instrument. */
-#define NDS_R2_ANIM_Q_ITCM
+#define NDS_ANIM_Q_ITCM
 
-/* `NDS_R2_AQ_T_MAX`, `NDS_R2_AQ_LEN_MAX`, `ndsR2AnimClamp` and
- * `ndsR2AnimClamp64` moved to `nds_anim_fixed.h` (P2-2p6) with the field
+/* `NDS_AQ_T_MAX`, `NDS_AQ_LEN_MAX`, `ndsAnimClamp` and
+ * `ndsAnimClamp64` moved to `nds_anim_fixed.h` (P2-2p6) with the field
  * kernel; the saturation reasoning is kept beside them there. */
 
-static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
+static NDS_CUBIC_ATTR f32 ndsCubicValueFixed(const AObj *aobj)
 {
     /* The one unavoidable real multiply: `length` advances every tick, so `t`
      * cannot be carried across evaluations.
@@ -409,13 +409,13 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
      * binary. The route test is a register `tst` present in both arms, so it
      * cancels out of the difference; it does mean the lab ROM's fused arm is
      * marginally slower than the shipped one, which is the accepted cost. */
-    s32 t = ndsR2AnimClamp(NDS_R2_ANIM_CUT_ON(2u) ?
-        ndsR2F32MulToFixed(aobj->length, aobj->length_invert,
-                           NDS_R2_CUBIC_BF) :
-        ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF),
-        NDS_R2_AQ_T_MAX);
-    s32 length_q = ndsR2AnimClamp(
-        ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF), NDS_R2_AQ_LEN_MAX);
+    s32 t = ndsAnimClamp(NDS_ANIM_CUT_ON(2u) ?
+        ndsF32MulToFixed(aobj->length, aobj->length_invert,
+                           NDS_CUBIC_BF) :
+        ndsAnimF32ToFixed(aobj->length * aobj->length_invert, NDS_CUBIC_BF),
+        NDS_AQ_T_MAX);
+    s32 length_q = ndsAnimClamp(
+        ndsAnimF32ToFixed(aobj->length, NDS_CUBIC_VF), NDS_AQ_LEN_MAX);
     s32 t2;
     s32 t3;
     s32 omt2;
@@ -426,50 +426,50 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
     s32 h_rt;
     s64 acc;
 
-    /* NDS_R2_AQ_OPAQUE (nds_anim_fixed.h): keeps each product a single
+    /* NDS_AQ_OPAQUE (nds_anim_fixed.h): keeps each product a single
      * SMULL/SMLAL instead of the 64 x 64 sequence GCC emits once it has proved
      * the truncations below are no-ops. Values unchanged. */
-    NDS_R2_AQ_OPAQUE(t);
-    NDS_R2_AQ_OPAQUE(length_q);
+    NDS_AQ_OPAQUE(t);
+    NDS_AQ_OPAQUE(length_q);
     /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
      * product. Every requantising shift rounds rather than truncates. */
-    t2 = (s32)((((s64)t * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
-    NDS_R2_AQ_OPAQUE(t2);
-    t3 = (s32)((((s64)t2 * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
-    NDS_R2_AQ_OPAQUE(t3);
+    t2 = (s32)((((s64)t * t) + (NDS_CUBIC_BONE / 2)) >> NDS_CUBIC_BF);
+    NDS_AQ_OPAQUE(t2);
+    t3 = (s32)((((s64)t2 * t) + (NDS_CUBIC_BONE / 2)) >> NDS_CUBIC_BF);
+    NDS_AQ_OPAQUE(t3);
     /* (1-t)^2 == 1 - 2t + t^2 exactly, so reuse t2 instead of squaring (1-t).
      * Cheaper by a multiply AND a shift, and it deletes that rounding step
      * rather than merely rounding it -- which matters because near t=1 the
      * square is small and a truncated one loses most of its significance. */
-    omt2 = (t2 - (2 * t)) + NDS_R2_CUBIC_BONE;
+    omt2 = (t2 - (2 * t)) + NDS_CUBIC_BONE;
     tmt = t2 - t;
-    h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_CUBIC_BONE;
+    h_vb = ((2 * t3) - (3 * t2)) + NDS_CUBIC_BONE;
     h_vt = (3 * t2) - (2 * t3);
-    NDS_R2_AQ_OPAQUE(omt2);
-    NDS_R2_AQ_OPAQUE(tmt);
+    NDS_AQ_OPAQUE(omt2);
+    NDS_AQ_OPAQUE(tmt);
     /* These two carry a factor of `length`, which is unbounded, so they are the
      * only places that need a wider intermediate for range as well as rounding.
      * Q12 value x Q16 basis, shifted by VF, is Q16 again. SMULL/SMLAL make a
      * 32x32->64 on ARM9 a single instruction; it is the 64-bit ADDS/ADCS chains
      * that arm A paid for, and there are none left here. */
-    h_rb = (s32)((((s64)length_q * omt2) + (1 << (NDS_R2_CUBIC_VF - 1))) >>
-        NDS_R2_CUBIC_VF);
+    h_rb = (s32)((((s64)length_q * omt2) + (1 << (NDS_CUBIC_VF - 1))) >>
+        NDS_CUBIC_VF);
     h_rt = (s32)((((s64)length_q * tmt) +
-        (1 << (NDS_R2_CUBIC_VF - 1))) >> NDS_R2_CUBIC_VF);
-    NDS_R2_AQ_OPAQUE(h_vb);
-    NDS_R2_AQ_OPAQUE(h_vt);
-    NDS_R2_AQ_OPAQUE(h_rb);
-    NDS_R2_AQ_OPAQUE(h_rt);
+        (1 << (NDS_CUBIC_VF - 1))) >> NDS_CUBIC_VF);
+    NDS_AQ_OPAQUE(h_vb);
+    NDS_AQ_OPAQUE(h_vt);
+    NDS_AQ_OPAQUE(h_rb);
+    NDS_AQ_OPAQUE(h_rt);
     /* Q12 x Q16 = Q28 in the accumulator, shifted back to Q12 at the end. */
-    acc = (s64)ndsR2F32ToFixed(aobj->value_base, NDS_R2_CUBIC_VF) * h_vb;
+    acc = (s64)ndsAnimF32ToFixed(aobj->value_base, NDS_CUBIC_VF) * h_vb;
 
-    NDS_DIAG(gNdsR2CubicEvals++);
-    acc += (s64)ndsR2F32ToFixed(aobj->value_target, NDS_R2_CUBIC_VF) * h_vt;
-    acc += (s64)ndsR2F32ToFixed(aobj->rate_base, NDS_R2_CUBIC_VF) * h_rb;
-    acc += (s64)ndsR2F32ToFixed(aobj->rate_target, NDS_R2_CUBIC_VF) * h_rt;
-    return ndsR2FixedToF32(
-        (s32)((acc + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF),
-        NDS_R2_CUBIC_VF);
+    NDS_DIAG(gNdsCubicEvals++);
+    acc += (s64)ndsAnimF32ToFixed(aobj->value_target, NDS_CUBIC_VF) * h_vt;
+    acc += (s64)ndsAnimF32ToFixed(aobj->rate_base, NDS_CUBIC_VF) * h_rb;
+    acc += (s64)ndsAnimF32ToFixed(aobj->rate_target, NDS_CUBIC_VF) * h_rt;
+    return ndsAnimFixedToF32(
+        (s32)((acc + (NDS_CUBIC_BONE / 2)) >> NDS_CUBIC_BF),
+        NDS_CUBIC_VF);
 }
 
 /* Requirement 4. The same three curves over an AObj that is ALREADY fixed point.
@@ -477,7 +477,7 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
  * Every conversion above is gone -- not moved, not cached, not memoised. The
  * four value inputs are loads, `length` is a load, and `t` is one SMULL against
  * the Q30 reciprocal the parser wrote instead of an f32 one it has to unpack.
- * The single `ndsR2FixedToF32` at the bottom stays: `DObj`'s pose vectors are
+ * The single `ndsAnimFixedToF32` at the bottom stays: `DObj`'s pose vectors are
  * decomp fields that collision, camera and the matrix builder all read, so the
  * float boundary moves here rather than disappearing.
  *
@@ -488,7 +488,7 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
  * count for Step and a reciprocal for Cubic, which is the original's own
  * double meaning for that field, kept rather than tidied.
  *
- * ARM, not Thumb, for the same reason `ndsR2CubicValueFixed` is: SMULL and CLZ.
+ * ARM, not Thumb, for the same reason `ndsCubicValueFixed` is: SMULL and CLZ.
  * See `thumb-hides-64bit-cost` -- a pure-precision change cost +36,032 P95
  * until one `target("arm")` attribute won -71,616 back.
  *
@@ -507,34 +507,34 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
  * out-of-line copies at different addresses from ONE source. `target("arm")`
  * is repeated on the impl because GCC refuses always_inline across a target
  * mismatch and this TU is built -mthumb. */
-static NDS_R2_ANIM_Q_BODY_ATTR f32 ndsR2AnimValueQBody(const AObj *aobj)
+static NDS_ANIM_Q_BODY_ATTR f32 ndsAnimValueQBody(const AObj *aobj)
 {
-    /* P2-2p6: the arithmetic lives in `ndsR2AnimEvalQ` (nds_anim_fixed.h),
+    /* P2-2p6: the arithmetic lives in `ndsAnimEvalQ` (nds_anim_fixed.h),
      * ONE body shared with the fighter pose engine. This wrapper only loads the
      * AObj's Q slots, counts the cubic evaluations and converts the Q12 result
      * to the f32 the DObj pose vectors still carry. The per-arm narrowing the
      * cycle-116 comment insisted on is preserved inside the kernel. */
     u32 kind = aobj->kind;
-    s32 out = ndsR2AnimEvalQ(ndsR2AQLoad(aobj->length),
-                             ndsR2AQLoad(aobj->length_invert),
-                             ndsR2AQLoad(aobj->value_base),
-                             ndsR2AQLoad(aobj->value_target),
-                             ndsR2AQLoad(aobj->rate_base),
-                             ndsR2AQLoad(aobj->rate_target), kind);
+    s32 out = ndsAnimEvalQ(ndsAQLoad(aobj->length),
+                             ndsAQLoad(aobj->length_invert),
+                             ndsAQLoad(aobj->value_base),
+                             ndsAQLoad(aobj->value_target),
+                             ndsAQLoad(aobj->rate_base),
+                             ndsAQLoad(aobj->rate_target), kind);
 
-    if (kind == NDS_R2_AQ_KIND_CUBIC)
+    if (kind == NDS_AQ_KIND_CUBIC)
     {
-        gNdsR2CubicEvals++;
+        gNdsCubicEvals++;
     }
-    return ndsR2FixedToF32(out, NDS_R2_AQ_VF);
+    return ndsAnimFixedToF32(out, NDS_AQ_VF);
 }
 
-static NDS_R2_CUBIC_ATTR NDS_R2_ANIM_Q_ITCM f32
-ndsR2AnimValueQ(const AObj *aobj)
+static NDS_CUBIC_ATTR NDS_ANIM_Q_ITCM f32
+ndsAnimValueQ(const AObj *aobj)
 {
-    return ndsR2AnimValueQBody(aobj);
+    return ndsAnimValueQBody(aobj);
 }
-/* NDS_R2_CUBIC_FIXED_KERNEL_END */
+/* NDS_CUBIC_FIXED_KERNEL_END */
 
 /* The original body with the arithmetic replaced twice over: E64's fixed cubic
  * for float AObjs, and Requirement 4's Q dispatch for the fighter ones. The
@@ -602,7 +602,7 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
          * `__aeabi_fadd` on EVERY node of every frame, Q or not. Converting the
          * speed once per DObj turns it into an integer add on the Q nodes. */
         const s32 speed_q_hoisted =
-            ndsR2F32ToFixed(speed_hoisted, NDS_R2_AQ_LF);
+            ndsAnimF32ToFixed(speed_hoisted, NDS_AQ_LF);
         /* Route bit 0. Read once per DObj -- reading it per node would put a
          * volatile load in the very loop being measured. The pre-cut arm
          * re-derives both from `dobj` per node, which is the decomp's own shape
@@ -610,7 +610,7 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
          * the loop); it keeps NDS_FCMP_NE_C rather than restoring the
          * __aeabi_fcmpeq call, because the fcmp->bit-compare change is a
          * separate landed cut and conflating the two would price neither. */
-        const u32 hoist = NDS_R2_ANIM_CUT_ON(1u) ? 1u : 0u;
+        const u32 hoist = NDS_ANIM_CUT_ON(1u) ? 1u : 0u;
 
         aobj = dobj->aobj;
 
@@ -642,14 +642,14 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
                         (((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0) ?
                             2u : 0u);
                     speed = dobj->anim_speed;
-                    speed_q = ndsR2F32ToFixed(speed, NDS_R2_AQ_LF);
+                    speed_q = ndsAnimF32ToFixed(speed, NDS_AQ_LF);
                 }
                 if ((play & 1u) != 0u)
                 {
-                    if (kind >= NDS_R2_AQ_KIND_BASE)
+                    if (kind >= NDS_AQ_KIND_BASE)
                     {
                         aobj->length =
-                            ndsR2AQStore(ndsR2AQLoad(aobj->length) + speed_q);
+                            ndsAQStore(ndsAQLoad(aobj->length) + speed_q);
                     }
                     else
                     {
@@ -658,9 +658,9 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
                 }
                 if ((play & 2u) != 0u)
                 {
-                    if (kind >= NDS_R2_AQ_KIND_BASE)
+                    if (kind >= NDS_AQ_KIND_BASE)
                     {
-                        value = ndsR2AnimValueQ(aobj);
+                        value = ndsAnimValueQ(aobj);
                     }
                     else
                     {
@@ -672,7 +672,7 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
                             break;
 
                         case nGCAnimKindCubic:
-                            value = ndsR2CubicValueFixed(aobj);
+                            value = ndsCubicValueFixed(aobj);
                             break;
 
                         case nGCAnimKindStep:
@@ -777,7 +777,7 @@ void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
  * through the player or gcGetAObjValue (below), which dispatch on `kind`. */
 
 /* One AObj into Q form before this parser writes a Q kind on it (the fighter
- * parser's ndsR2AnimAObjToQConvert): the arms carry fields forward, so a node
+ * parser's ndsAnimAObjToQConvert): the arms carry fields forward, so a node
  * written half in each form would read an f32 bit pattern as Q. */
 static void __attribute__((noinline)) ndsOAObjToQConvert(AObj *a, s32 kind)
 {
@@ -785,24 +785,24 @@ static void __attribute__((noinline)) ndsOAObjToQConvert(AObj *a, s32 kind)
     {
         /* gcAddAObjForDObj's zeros are the same word in both forms; its
          * length_invert of 1.0F is not, and a zero-payload event keeps it. */
-        a->length_invert = ndsR2AQStore(1 << NDS_R2_AQ_IF);
+        a->length_invert = ndsAQStore(1 << NDS_AQ_IF);
         return;
     }
     if (kind > nGCAnimKindCubic)
     {
         return;
     }
-    a->length_invert = ndsR2AQStore(ndsR2F32ToFixed(a->length_invert,
-        (kind == nGCAnimKindStep) ? NDS_R2_AQ_LF : NDS_R2_AQ_IF));
-    a->length = ndsR2AQStore(ndsR2F32ToFixed(a->length, NDS_R2_AQ_LF));
-    a->value_base = ndsR2AQStore(ndsR2F32ToFixed(a->value_base, NDS_R2_AQ_VF));
+    a->length_invert = ndsAQStore(ndsAnimF32ToFixed(a->length_invert,
+        (kind == nGCAnimKindStep) ? NDS_AQ_LF : NDS_AQ_IF));
+    a->length = ndsAQStore(ndsAnimF32ToFixed(a->length, NDS_AQ_LF));
+    a->value_base = ndsAQStore(ndsAnimF32ToFixed(a->value_base, NDS_AQ_VF));
     a->value_target =
-        ndsR2AQStore(ndsR2F32ToFixed(a->value_target, NDS_R2_AQ_VF));
-    a->rate_base = ndsR2AQStore(ndsR2F32ToFixed(a->rate_base,
-        (kind == nGCAnimKindLinear) ? NDS_R2_AQ_RF : NDS_R2_AQ_VF));
+        ndsAQStore(ndsAnimF32ToFixed(a->value_target, NDS_AQ_VF));
+    a->rate_base = ndsAQStore(ndsAnimF32ToFixed(a->rate_base,
+        (kind == nGCAnimKindLinear) ? NDS_AQ_RF : NDS_AQ_VF));
     a->rate_target =
-        ndsR2AQStore(ndsR2F32ToFixed(a->rate_target, NDS_R2_AQ_VF));
-    a->kind = (u8)(kind + ((s32)NDS_R2_AQ_KIND_BASE - nGCAnimKindStep));
+        ndsAQStore(ndsAnimF32ToFixed(a->rate_target, NDS_AQ_VF));
+    a->kind = (u8)(kind + ((s32)NDS_AQ_KIND_BASE - nGCAnimKindStep));
 }
 
 /* TRUE when this parser writes `track` in Q form. */
@@ -822,7 +822,7 @@ static inline AObj *ndsOATrack(DObj *dobj, AObj **track_aobjs, s32 i, u32 tq)
         a = gcAddAObjForDObj(dobj, i + nGCAnimTrackJointStart);
         track_aobjs[i] = a;
     }
-    if ((tq != 0u) && ((s32)a->kind < (s32)NDS_R2_AQ_KIND_BASE))
+    if ((tq != 0u) && ((s32)a->kind < (s32)NDS_AQ_KIND_BASE))
     {
         ndsOAObjToQConvert(a, (s32)a->kind);
     }
@@ -832,14 +832,14 @@ static inline AObj *ndsOATrack(DObj *dobj, AObj **track_aobjs, s32 i, u32 tq)
 /* 1/n as the Q30 reciprocal, rounded to nearest (n is a 15-bit payload). */
 static inline f32 ndsOARecipQ(u32 n)
 {
-    return ndsR2AQStore((s32)(((1u << NDS_R2_AQ_IF) + (n >> 1)) / n));
+    return ndsAQStore((s32)(((1u << NDS_AQ_IF) + (n >> 1)) / n));
 }
 
 /* `-anim_wait - anim_speed`, a new segment's starting length, in Q12. */
 static inline s32 ndsOASegmentStartQ(const DObj *dobj)
 {
-    return -(ndsR2F32ToFixed(dobj->anim_wait, NDS_R2_AQ_LF) +
-             ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF));
+    return -(ndsAnimF32ToFixed(dobj->anim_wait, NDS_AQ_LF) +
+             ndsAnimF32ToFixed(dobj->anim_speed, NDS_AQ_LF));
 }
 
 /* Every live node's length advanced by `speed + wait` (the two exits that
@@ -847,8 +847,8 @@ static inline s32 ndsOASegmentStartQ(const DObj *dobj)
 static void ndsOAAdvanceTail(DObj *dobj)
 {
     const f32 tail = dobj->anim_speed + dobj->anim_wait;
-    const s32 tail_q = ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF) +
-                       ndsR2F32ToFixed(dobj->anim_wait, NDS_R2_AQ_LF);
+    const s32 tail_q = ndsAnimF32ToFixed(dobj->anim_speed, NDS_AQ_LF) +
+                       ndsAnimF32ToFixed(dobj->anim_wait, NDS_AQ_LF);
     AObj *a;
 
     for (a = dobj->aobj; a != NULL; a = a->next)
@@ -857,9 +857,9 @@ static void ndsOAAdvanceTail(DObj *dobj)
         {
             continue;
         }
-        if (a->kind >= NDS_R2_AQ_KIND_BASE)
+        if (a->kind >= NDS_AQ_KIND_BASE)
         {
-            a->length = ndsR2AQStore(ndsR2AQLoad(a->length) + tail_q);
+            a->length = ndsAQStore(ndsAQLoad(a->length) + tail_q);
         }
         else
         {
@@ -960,19 +960,19 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 a->rate_base = a->rate_target;
                 if (tq != 0u)
                 {
-                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
-                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    a->value_target = ndsAQStore(ndsAnimF32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_AQ_VF));
                     AObjAnimAdvance(dobj->anim_joint.event32);
                     a->rate_target = (with_rate != 0u) ?
-                        ndsR2AQStore(ndsR2F32ToFixed(
-                            dobj->anim_joint.event32->f, NDS_R2_AQ_VF)) :
-                        ndsR2AQStore(0);
-                    a->kind = NDS_R2_AQ_KIND_CUBIC;
+                        ndsAQStore(ndsAnimF32ToFixed(
+                            dobj->anim_joint.event32->f, NDS_AQ_VF)) :
+                        ndsAQStore(0);
+                    a->kind = NDS_AQ_KIND_CUBIC;
                     if (payload_u != 0u)
                     {
                         a->length_invert = ndsOARecipQ(payload_u);
                     }
-                    a->length = ndsR2AQStore(len_q);
+                    a->length = ndsAQStore(len_q);
                 }
                 else
                 {
@@ -1029,35 +1029,35 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 if (tq != 0u)
                 {
                     const u32 was_linear =
-                        (a->kind == NDS_R2_AQ_KIND_LINEAR) ? 1u : 0u;
+                        (a->kind == NDS_AQ_KIND_LINEAR) ? 1u : 0u;
 
-                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
-                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    a->value_target = ndsAQStore(ndsAnimF32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_AQ_VF));
                     AObjAnimAdvance(dobj->anim_joint.event32);
-                    a->kind = NDS_R2_AQ_KIND_LINEAR;
+                    a->kind = NDS_AQ_KIND_LINEAR;
                     if (payload_u != 0u)
                     {
                         /* (target - base) / payload, Q16, the magnitude
                          * rounded to nearest (the fighter parser's). */
-                        s32 d = (ndsR2AQLoad(a->value_target) -
-                                 ndsR2AQLoad(a->value_base))
-                                    << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
+                        s32 d = (ndsAQLoad(a->value_target) -
+                                 ndsAQLoad(a->value_base))
+                                    << (NDS_AQ_RF - NDS_AQ_VF);
                         u32 h = payload_u >> 1;
                         s32 r = (d < 0) ?
                             -(s32)(((u32)(-d) + h) / payload_u) :
                             (s32)(((u32)d + h) / payload_u);
 
-                        a->rate_base = ndsR2AQStore(r);
+                        a->rate_base = ndsAQStore(r);
                     }
                     else if (was_linear == 0u)
                     {
                         /* The source keeps the old rate as the line's, and
                          * a Linear node holds its rate at Q16. */
-                        a->rate_base = ndsR2AQStore(ndsR2AQLoad(a->rate_base)
-                            << (NDS_R2_AQ_RF - NDS_R2_AQ_VF));
+                        a->rate_base = ndsAQStore(ndsAQLoad(a->rate_base)
+                            << (NDS_AQ_RF - NDS_AQ_VF));
                     }
-                    a->length = ndsR2AQStore(len_q);
-                    a->rate_target = ndsR2AQStore(0);
+                    a->length = ndsAQStore(len_q);
+                    a->rate_target = ndsAQStore(0);
                 }
                 else
                 {
@@ -1100,8 +1100,8 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 tq = ndsOATrackQ(i + nGCAnimTrackJointStart);
                 a = ndsOATrack(dobj, track_aobjs, i, tq);
                 a->rate_target = (tq != 0u) ?
-                    ndsR2AQStore(ndsR2F32ToFixed(dobj->anim_joint.event32->f,
-                                                 NDS_R2_AQ_VF)) :
+                    ndsAQStore(ndsAnimF32ToFixed(dobj->anim_joint.event32->f,
+                                                 NDS_AQ_VF)) :
                     dobj->anim_joint.event32->f;
                 AObjAnimAdvance(dobj->anim_joint.event32);
             }
@@ -1140,15 +1140,15 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 a->value_base = a->value_target;
                 if (tq != 0u)
                 {
-                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
-                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    a->value_target = ndsAQStore(ndsAnimF32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_AQ_VF));
                     AObjAnimAdvance(dobj->anim_joint.event32);
-                    a->kind = NDS_R2_AQ_KIND_STEP;
+                    a->kind = NDS_AQ_KIND_STEP;
                     /* Step's length_invert is a frame count (Q12). */
                     a->length_invert =
-                        ndsR2AQStore((s32)payload_u << NDS_R2_AQ_LF);
-                    a->length = ndsR2AQStore(len_q);
-                    a->rate_target = ndsR2AQStore(0);
+                        ndsAQStore((s32)payload_u << NDS_AQ_LF);
+                    a->length = ndsAQStore(len_q);
+                    a->rate_target = ndsAQStore(0);
                 }
                 else
                 {
@@ -1210,10 +1210,10 @@ void gcParseDObjAnimJoint(DObj *dobj)
                     continue;
                 }
                 a = ndsOATrack(dobj, track_aobjs, i, 0u);
-                if (a->kind >= NDS_R2_AQ_KIND_BASE)
+                if (a->kind >= NDS_AQ_KIND_BASE)
                 {
-                    a->length = ndsR2AQStore(ndsR2AQLoad(a->length) +
-                        ((s32)payload_u << NDS_R2_AQ_LF));
+                    a->length = ndsAQStore(ndsAQLoad(a->length) +
+                        ((s32)payload_u << NDS_AQ_LF));
                 }
                 else
                 {
@@ -1299,9 +1299,9 @@ void gcParseDObjAnimJoint(DObj *dobj)
  * through it, and the scaled-translate player once did. */
 f32 gcGetAObjValue(AObj *aobj)
 {
-    if (aobj->kind >= NDS_R2_AQ_KIND_BASE)
+    if (aobj->kind >= NDS_AQ_KIND_BASE)
     {
-        return ndsR2AnimValueQ(aobj);
+        return ndsAnimValueQ(aobj);
     }
     return ndsBaseGcGetAObjValue(aobj);
 }
@@ -3389,10 +3389,10 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
                 continue;
             }
             /* A Q node (the stage parser's since 2026-10-05) advances in Q. */
-            if (aobj->kind >= NDS_R2_AQ_KIND_BASE)
+            if (aobj->kind >= NDS_AQ_KIND_BASE)
             {
-                aobj->length = ndsR2AQStore(ndsR2AQLoad(aobj->length) +
-                    ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF));
+                aobj->length = ndsAQStore(ndsAQLoad(aobj->length) +
+                    ndsAnimF32ToFixed(dobj->anim_speed, NDS_AQ_LF));
                 continue;
             }
             aobj->length += dobj->anim_speed;

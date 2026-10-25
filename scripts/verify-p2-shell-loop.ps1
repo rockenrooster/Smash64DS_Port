@@ -222,10 +222,10 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             throw "verify-p2-shell-loop: $Build was built with $flag off; nothing to walk."
         }
     }
-    $sceneWalk = Get-ConfigValue -Flag 'NDS_R2_SCENE_LOOP_WALK'
-    Write-Output ("build config: NDS_R2_SCENE_LOOP_WALK={0}" -f $sceneWalk)
+    $sceneWalk = Get-ConfigValue -Flag 'NDS_SCENE_LOOP_WALK'
+    Write-Output ("build config: NDS_SCENE_LOOP_WALK={0}" -f $sceneWalk)
     if ($sceneWalk -ne 0) {
-        throw ('verify-p2-shell-loop: NDS_R2_SCENE_LOOP_WALK=' + $sceneWalk +
+        throw ('verify-p2-shell-loop: NDS_SCENE_LOOP_WALK=' + $sceneWalk +
             '. The substitute Results hop would close the laps instead of the ' +
             'scripted START, so ndsMNVSResultsSetLoadScene would never run ' +
             'and the rematch claim would be false. It must be 0 on this arm.')

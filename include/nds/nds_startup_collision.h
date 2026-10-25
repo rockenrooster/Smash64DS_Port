@@ -99,7 +99,7 @@ extern volatile u32 gNdsFighterProjectileProofSpawnCallCount;
  * body. Read by BOTH definitions of efManagerFoxBlasterGlowMakeEffect --
  * the weak one in battleship_fox_blaster.c and the AOT override in
  * battleship_efmanager.c, which is the one that links at
- * NDS_R2_FOX_BLASTER_GLOW_AOT=1. Impact glows are outside the window. */
+ * NDS_FOX_BLASTER_GLOW_AOT=1. Impact glows are outside the window. */
 extern sb32 gNdsFoxBlasterSuppressMuzzleGlow;
 extern volatile u32 gNdsFighterDamageFireCallCount;
 extern volatile u32 gNdsFighterEffectKindMask0;
@@ -140,8 +140,8 @@ extern volatile u32 gNdsGCDrawsActiveMax;
  * pre-build bound; the real low-water must stay above the floor. The final
  * value is reduced to measured live high-water plus margin after both the
  * stress and projectile-heavy rosters are sampled. */
-#ifndef NDS_R2_WEAPON_POOL
-#define NDS_R2_WEAPON_POOL 10
+#ifndef NDS_WEAPON_POOL
+#define NDS_WEAPON_POOL 10
 #endif
 /* The effect-instance pool is the same kind of DS pool-size override; it lives
  * in include/nds/nds_effects.h, beside the effect counters it is measured with. */

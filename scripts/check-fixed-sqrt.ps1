@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param()
 
-# Falsifier for NDS_R2_FIXED_SQRT (R2-03 E1). Compiles the shipped kernel from
-# include/nds/nds_r2_sqrtf.h on the host, with the DS hardware square-root unit
+# Falsifier for NDS_FIXED_SQRT (R2-03 E1). Compiles the shipped kernel from
+# include/nds/nds_sqrtf.h on the host, with the DS hardware square-root unit
 # stood in for by an exact integer root, and compares every result against the
 # host's IEEE sqrtf. sqrtf is on the gameplay path, so "close" is not the bar --
 # bit-exact is, and that is what lets the Task 37 state hash stay the gate.
@@ -10,8 +10,8 @@ param()
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $root 'artifacts/verifier-temp/r2-fixed-sqrt'
-$source = Join-Path $PSScriptRoot 'check-r2-fixed-sqrt.c'
-$binary = Join-Path $outputDir 'check-r2-fixed-sqrt.exe'
+$source = Join-Path $PSScriptRoot 'check-fixed-sqrt.c'
+$binary = Join-Path $outputDir 'check-fixed-sqrt.exe'
 $armAssembly = Join-Path $outputDir 'arm-kernel.s'
 $compiler = Get-Command gcc -ErrorAction Stop
 $armCompiler = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gcc.exe'
@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) { throw 'R2 fixed-sqrt ARM codegen probe failed.' }
 $assembly = Get-Content -LiteralPath $armAssembly -Raw
 $kernel = [regex]::Match(
     $assembly,
-    '(?ms)^ndsR2SqrtfBits:\s*(.*?)^\s*\.size\s+ndsR2SqrtfBits')
+    '(?ms)^ndsSqrtfBits:\s*(.*?)^\s*\.size\s+ndsSqrtfBits')
 if ($kernel.Success) {
     foreach ($routine in @('__aeabi_fadd', '__aeabi_fmul', '__aeabi_fdiv',
                            '__aeabi_fsub', '__ieee754_sqrtf')) {

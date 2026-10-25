@@ -206,7 +206,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * 9 -> 1 (owner, 2026-08-17). `ndsMNVSResultsSetLoadScene` advances it just
      * before this preset re-runs on a START restart, so the descriptor picks up
      * the new level on the match it belongs to rather than one match late. The
-     * NDS_R2_BOTH_CPU stress arm below deliberately does NOT ride the ladder --
+     * NDS_BOTH_CPU stress arm below deliberately does NOT ride the ladder --
      * it re-pins both fighters at level 3 so every banked measurement stays
      * comparable. */
     cfg->fighters[1].level = (u8)gNdsDemoFoxCpuLevel;
@@ -375,7 +375,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 #endif
 #endif
-#if NDS_R2_SOAK_MATCH_MINUTES
+#if NDS_SOAK_MATCH_MINUTES
     /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.
      *
      * The owner's rule this satisfies: *"if you want to run a longer soak for
@@ -387,11 +387,11 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      *
      * soak-freeze-watch.ps1 computes this from its own -MinutesToRun rather
      * than hardcoding a constant, so the match can no longer be shorter than
-     * the run that watches it. It is deliberately NOT tied to NDS_R2_BOTH_CPU:
+     * the run that watches it. It is deliberately NOT tied to NDS_BOTH_CPU:
      * the soak runs single-CPU too (-BothCpu:$false), and a gate arm and a soak
      * arm must be able to differ in match length without differing in anything
      * else. Both gate arms build with this at 0 and get the 60-second match. */
-    cfg->time_limit = NDS_R2_SOAK_MATCH_MINUTES;
+    cfg->time_limit = NDS_SOAK_MATCH_MINUTES;
 #endif
 }
 

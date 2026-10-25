@@ -961,7 +961,7 @@ fail:
  *     by scripts/fox_gun_screen_bounds.py.
  *   * GL_PROJECTION. A composed MVP in GL_MODELVIEW is only right when the
  *     projection is identity, and it is NOT identity here -- this target builds
- *     NDS_R2_FIGHTER_HW_MTX=1, so the fighter that draws immediately before
+ *     NDS_FIGHTER_HW_MTX=1, so the fighter that draws immediately before
  *     leaves the camera projection loaded. The pair loader sets identity.
  *
  * This runs immediately after the fighter's own production run, so it inherits

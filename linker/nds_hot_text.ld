@@ -100,10 +100,10 @@ SECTIONS {
 		/* P2-2p8 2026-09-27: the census section D pack for the calico bytes freed
 		 * below -- main-RAM functions at 2,400+ non-mem stall cycles a byte. */
 		*(.text.mpCollisionCheckExistLineID)
-		*(.text.ndsR2AObjLiveCount)
+		*(.text.ndsAObjLiveCount)
 		/* ndsFtrLookAtOutputs (64 B, ~5.0K cycles/byte of rent) left 2026-09-29 for
 		 * the integer lbCommonSin/Cos A/B arm. */
-		*(.text.ndsR2CamMulQ)
+		*(.text.ndsCamMulQ)
 		*(.text.gcRunGObj)
 		*(.text.syVectorMag3D)
 		*(.text.syVectorDiff3D)
@@ -114,10 +114,10 @@ SECTIONS {
 		*(.text.ndsMPGetTopologyEdgeLineID)
 		*(.text.ftDisplayLightsDrawReflect)
 		*(.text.ndsGcGetGObjLifetimeSerial)
-		*(.text.ndsR2CamSqrt64)
+		*(.text.ndsCamSqrt64)
 		*(.text.ndsFtrLookAtInputs)
 		*(.text.ndsFtrLookAtMixWords)
-		*(.text.ndsR2CamDivQ)
+		*(.text.ndsCamDivQ)
 		/* Second pack, same census, for the bytes ndsRendererCommitNativeStageSegment
 		 * and __aeabi_l2f vacated: ranked by non-mem stall less the ITCM tier's own
 		 * 0.31 cycles an instruction, per byte. ftCommonDeadCheckInterruptCommon
@@ -190,7 +190,7 @@ SECTIONS {
 		*(.text.ftCommonAttackLw3CheckInterruptCommon)
 		*(.text.gmCameraRunFuncCamera)
 		*(.text.ftComputerCheckEvadeDistance)
-		*(.text.ndsR2CameraCurrentLookAt)
+		*(.text.ndsCameraCurrentLookAt)
 		/* 2026-09-29: ndsFighterDisplayContractSetLight left ITCM (88 B, ~140 ticks a
 		 * frame) for the map-collision wall sweep's group reject. */
 		*(.text.lbCommonTan)
@@ -226,7 +226,7 @@ SECTIONS {
 		*(.text.ndsAObjEvent32CollectActiveMObjs)
 		*(.text.ndsRendererAdapterSubmitStageDLFastOnHotStack)
 		*(.text.ndsRendererAdapterCommitSegmentOnHotStack)
-		*(.text.ndsR2BattleUpdateOnHotStack)
+		*(.text.ndsBattleUpdateOnHotStack)
 		*(.text.ndsRendererAdapterBeginStageTraversal)
 		*(.text.ndsAudioFgmUpdate)
 		*(.text.ndsBaseMPProcessCheckFloorEdgeCollisionL)
@@ -447,13 +447,13 @@ SECTIONS {
 		*(.bss.gNdsParticleQuadEmitMax)
 		*(.bss.sVBlankCount)
 		*(.bss.gSYTaskmanGraphicsHeap)
-		*(.bss.sNdsR2AnimCacheArenaRawOnly)
+		*(.bss.sNdsAnimCacheArenaRawOnly)
 		*(.bss.gNdsTaskmanDLOverflowCount)
 		*(.bss.gNdsStageGCDrawAllLoopHardwareTextureBindCount)
 		*(.bss.gNdsFrameCounter)
 		*(.bss.gNdsBattlePlayablePacingDrawCalls)
 		*(.bss.gNdsControllerLivePad1Button)
-		*(.bss.sNdsR2FighterTintFailedCount)
+		*(.bss.sNdsFighterTintFailedCount)
 		*(.bss.D_80046638)
 		*(.bss.gNdsMObjSubAttachNormalizeCount)
 		*(.bss.sSYTaskmanFuncController)
@@ -524,7 +524,7 @@ SECTIONS {
 		*(.bss.sNdsRendererAdapterCameraCacheCount)
 		*(.bss.gNdsFtrPreWalkSame)
 		*(.bss.sNdsRendererHardwareNoTextureName)
-		*(.bss.gNdsR2CameraFixedPerspCalls)
+		*(.bss.gNdsCameraFixedPerspCalls)
 		*(.bss.gNdsFtPoseOracleCompares)
 		*(.bss.sNdsRendererHardwareSubmitted)
 		*(.bss.gNdsFtPoseOraclePoseMismatches)
@@ -532,9 +532,9 @@ SECTIONS {
 		*(.bss.sNdsMPLineGroupGeometry)
 		*(.bss.gNdsIFCommonHUDLowerTextMode)
 		*(.bss.gNdsFtPoseUpdates)
-		*(.bss.gNdsR2FtAnimRecipHits)
+		*(.bss.gNdsFtAnimRecipHits)
 		*(.bss.gMPCollisionUpdateTic)
-		*(.bss.sNdsR2LightVectorWritten)
+		*(.bss.sNdsLightVectorWritten)
 		*(.bss.gNdsTickHudSrcHitDetectTicks)
 		*(.bss.gNdsFtPoseOracleMismatches)
 		*(.bss.gMPCollisionGroundData)
@@ -579,7 +579,7 @@ SECTIONS {
 		*(.bss.sNdsRendererFastOwnerTriangleCount)
 		*(.bss.gGCCommonLinks)
 		*(.bss.sNdsMPLineYakumonoValue)
-		*(.bss.gNdsR2FtAnimNullSkips)
+		*(.bss.gNdsFtAnimNullSkips)
 		*(.bss.gGRCommonStruct)
 		*(.bss.gNdsFighterDLAllDrawP0HardwareTriangleCount)
 		*(.bss.sNdsFighterStatusGeneration)
@@ -596,7 +596,7 @@ SECTIONS {
 		*(.bss.gNdsItemCapsuleAlpha)
 		*(.bss.sMNStartupStatusBuffer)
 		*(.bss.sSYTaskmanDLBuffers)
-		*(.bss.gNdsR2FighterFacingLr)
+		*(.bss.gNdsFighterFacingLr)
 		*(.bss.glGlobalData)
 		/* DTCM-RESIDENT HOT SCALARS: END */
 		. = ALIGN(4);
@@ -633,7 +633,7 @@ SECTIONS {
 		 * -7,894 here and got the sign wrong.
 		 *
 		 * R2-03 E66 tried the reverse and it REGRESSED TOO. E65 split
-		 * ndsR2CubicValueFixed out as its own ARM function, shrinking
+		 * ndsCubicValueFixed out as its own ARM function, shrinking
 		 * gcPlayDObjAnimJoint 2,096 -> 272 bytes and leaving 3,944 free here; the
 		 * Task 37 census then ranked that 2,032-byte callee the #1 unplaced
 		 * candidate for the space, 1,815,752 recoverable non-mem stall cycles

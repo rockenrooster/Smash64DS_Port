@@ -15,7 +15,7 @@
  * ------------------------------------------------------------------------- */
 NDSFtrDrawMemoRouteCell gNdsFtrDrawMemoRoute
     __attribute__((used, section(".data"), aligned(32))) = {
-        NDS_R2_FTR_DRAW_MEMO, { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+        NDS_FTR_DRAW_MEMO, { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
     };
 /* Captures whose walk was replaced by a replay of the cached event list. */
 /* Captures that ran the walk with a VALID cache present, i.e. the key said the
@@ -328,7 +328,7 @@ volatile u32 gNdsRendererAdapterCustom47LastTranslateX20p12;
 volatile u32 gNdsRendererAdapterCustom47LastTranslateY20p12;
 volatile u32 gNdsRendererAdapterCustom47LastTranslateZ20p12;
 volatile u32 gNdsFighterDisplayContractSelectedCount;
-/* Written only when NDS_R2_FTR_CONTRACT_CENSUS is on. The recursive DObj walk
+/* Written only when NDS_FTR_CONTRACT_CENSUS is on. The recursive DObj walk
  * that produced them (ndsFighterDisplayContractCountFlags) cost 4,117 tk/fr
  * inside the run's largest lane and its only readers are
  * verify-battle-mariofox-gcrunall-loop-harness.ps1 and probe-ko-vfx.ps1, both

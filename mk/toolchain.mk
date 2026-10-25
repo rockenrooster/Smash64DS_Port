@@ -54,7 +54,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
 	battleship_scstaffroll.o
 
 # BattleShip source files are compiled in place. They remain the source of truth.
-SOURCES := src/nds src/nds/r2 src/nds/net src/port src/import $(BATTLESHIP_SYS)
+SOURCES := src/nds src/nds/net src/port src/import $(BATTLESHIP_SYS)
 # Do not add BattleShip's full include root globally: its N64 libc headers
 # intentionally shadow stddef/string/etc. Compatibility headers expose the
 # narrow ABI needed by each imported source slice.
@@ -165,7 +165,7 @@ NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_
 # ~3.1 MB and the particle comment below records what that costs when nothing
 # opens it. Turning this on without the runtime bind adds ROM and changes
 # nothing else.
-NDS_R2_FTANIM_DENSE ?= 0
+NDS_FTANIM_DENSE ?= 0
 NDS_FTANIM_DENSE_ASSET := $(PROJECT_ROOT)/assets/animation/ftanim_dense_bank.bin
 NDS_FTANIM_DENSE_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTMarioAnim*) \
@@ -204,7 +204,7 @@ NDS_FTANIM_STREAM_SOURCES := \
 NDS_BATTLEPACK_DIR := $(PROJECT_ROOT)/assets/animation
 NDS_BATTLEPACK_BLOB := $(NDS_BATTLEPACK_DIR)/battlepack_fox.bin
 
-NDS_R2_FTANIM_TRACK_DISPATCH ?= 1
+NDS_FTANIM_TRACK_DISPATCH ?= 1
 
 # P2-2p6 (owner ruling 2026-08-23: "do both"). The fighter pose engine,
 # `src/nds/nds_ft_pose.c`: the figatree script machine and the Q12 evaluator

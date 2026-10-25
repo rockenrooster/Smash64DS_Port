@@ -75,7 +75,7 @@ NDS_COLD GObj *ftShadowMakeShadow(GObj *fighter_gobj)
     return NULL;
 }
 
-/* Skipped-particle shims. NDS_R2_PARTICLE_RUNTIME=1 compiles the original
+/* Skipped-particle shims. NDS_PARTICLE_RUNTIME=1 compiles the original
  * lb/lbparticle.c in place (src/import/battleship_lbparticle.c), which owns
  * every symbol below. */
 

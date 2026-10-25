@@ -90,7 +90,7 @@ static void ndsMNTitleMakeLogoFireBounded(void)
     /* COUNTED AFTER THE POOLS, NOT BEFORE. This delta grades
      * mnTitleMakeLogoFire -- one GObj -- but efParticleInitAll creates two of
      * its own (the struct pool and the generator pool), and it used to create
-     * none because NDS_R2_PARTICLE_RUNTIME defaulted to 0 and the allocator was
+     * none because NDS_PARTICLE_RUNTIME defaulted to 0 and the allocator was
      * a stub. Commit 9d6f6af2f turned the runtime on by default and the delta
      * silently became 3. Nothing caught it because the same commit also pulled
      * battleship_lbparticle.c into the default build, whose call to

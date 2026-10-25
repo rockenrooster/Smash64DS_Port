@@ -784,9 +784,9 @@ void wpManagerAllocWeapons(void)
     s32 i;
 
     sWPManagerStructsAllocFree = wp =
-        syTaskmanMalloc(sizeof(WPStruct) * NDS_R2_WEAPON_POOL, 0x8);
+        syTaskmanMalloc(sizeof(WPStruct) * NDS_WEAPON_POOL, 0x8);
 
-    for (i = 0; i < (NDS_R2_WEAPON_POOL - 1); i++)
+    for (i = 0; i < (NDS_WEAPON_POOL - 1); i++)
     {
         wp[i].next = &wp[i + 1];
     }
@@ -796,7 +796,7 @@ void wpManagerAllocWeapons(void)
     }
     sWPManagerGroupID = 1;
     sWPManagerDisplayMode = nDBDisplayModeMaster;
-    gNdsWeaponPoolEntries = NDS_R2_WEAPON_POOL;
+    gNdsWeaponPoolEntries = NDS_WEAPON_POOL;
     gNdsWeaponStructBytes = (u32)sizeof(WPStruct);
     gNdsWeaponPoolRefusalCount = 0;
     gNdsWeaponPoolLiveHighWater = 0;

@@ -45,7 +45,7 @@ static PortCoroutine *sCurrentCoroutine;
  * fill). The subtrees that own most of them run here instead: zero-wait,
  * uncached and out of the 4 KB D-cache. The lean fighter list and the stage
  * GX segment commit (same-ROM WORK-H paired -18.4K), then the map-collision
- * step and the particle display proc (-7.9K); each source tick (ndsR2BattleRun,
+ * step and the particle display proc (-7.9K); each source tick (ndsBattleRun,
  * -15.4K); the stage owner prep and the fighter display proc (-11.8K);
  * deepest reach 3,876 B. Only subtrees that read no storage into a stack
  * buffer (ndsAudioStorageReadCard bounces one) and hand no stack address to

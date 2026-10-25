@@ -99,7 +99,7 @@ void ndsGRYosterCloudPlayAnimAll(GObj *gobj);
  *   existing DObj renderer rather than a Yoster-specific native packet; no
  *   native-stage packet exists for Yoster yet (generate_nds_native_stage.py is
  *   Pupupu-only -- orchestrator lane).
- * - Vapor look: at NDS_R2_PARTICLE_RUNTIME=0 the particle constructor is a
+ * - Vapor look: at NDS_PARTICLE_RUNTIME=0 the particle constructor is a
  *   stub returning NULL (same standing note as the Pupupu wrapper), so the
  *   evaporate puff is currently the FGM cue alone; banking the gryoster
  *   particle scb/txb through generate_nds_particle_banks.py is orchestrator

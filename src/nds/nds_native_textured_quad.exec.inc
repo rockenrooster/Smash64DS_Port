@@ -399,7 +399,7 @@ static void __attribute__((unused)) ndsRendererNativeQuadGuardDepth(
         position[i] = view->m[3][i] >> 12;
         distance_squared += (u64)((s64)position[i] * position[i]);
     }
-    distance = ndsR2HwMathSqrt64(distance_squared);
+    distance = ndsHwMathSqrt64(distance_squared);
     if (distance <= 1u) return;
     for (axis = 0u; axis < 2u; axis++)
     {
@@ -407,13 +407,13 @@ static void __attribute__((unused)) ndsRendererNativeQuadGuardDepth(
         u32 length;
         for (i = 0u; i < 3u; i++)
             length_squared += (u64)((s64)view->m[axis][i] * view->m[axis][i]);
-        length = ndsR2HwMathSqrt64(length_squared);
+        length = ndsHwMathSqrt64(length_squared);
         if (length > scale) scale = length;
     }
     bias = (u32)(((u64)scale * (u32)radius) >> 13);
     if (bias < 150u) bias = 150u;
     for (i = 0u; i < 3u; i++)
-        view->m[3][i] -= (s32)ndsR2HwMathDiv64(
+        view->m[3][i] -= (s32)ndsHwMathDiv64(
             (s64)position[i] * bias * 4096, (s32)distance);
 }
 

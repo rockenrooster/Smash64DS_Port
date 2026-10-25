@@ -1467,7 +1467,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     # high/low topology instead of rediscovering or hand-copying it in C.
     for fighter in fighters:
         owner_name = str(fighter["fighter"]).lower()
-        if owner_name in native_owner.P2_OWNER_MODEL_CENSUS:
+        if owner_name in native_owner.OWNER_MODEL_CENSUS:
             fighter["native_model"] = native_owner.build_p2_owner_model_inventory(
                 repo_root, owner_name
             )

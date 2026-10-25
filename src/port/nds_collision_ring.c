@@ -1,13 +1,13 @@
-/* R2-07 slice 52 -- the wired ring. include/nds/nds_r2_collision_ring.h states
+/* R2-07 slice 52 -- the wired ring. include/nds/nds_collision_ring.h states
  * what is converted, what is not, and why the split is the correctness
  * argument; this file is the transcription of func_ovl2_800EDBA4,
  * func_ovl2_800EDE00 and func_ovl2_800EDE5C (gm/gmcollision.c:332, :455, :472)
  * with the arithmetic type changed and nothing else.
  *
  * THIS TRANSLATION UNIT IS THUMB ON PURPOSE. Every 64-bit product in the
- * cluster lives behind the ndsR2CollisionFixed* entry points in
- * src/port/nds_r2_collision_fixed.c, which the Makefile builds -marm and
- * scripts/check-r2-collision-fixed.ps1 disassembles: it fails the build on any
+ * cluster lives behind the ndsCollisionFixed* entry points in
+ * src/port/nds_collision_fixed.c, which the Makefile builds -marm and
+ * scripts/check-collision-fixed.ps1 disassembles: it fails the build on any
  * __aeabi_lmul and on soft float outside the declared sine-table edge. Inlining
  * that arithmetic here instead would put SMULL-shaped code in a translation
  * unit with no SMULL, turn every multiply into a library call, and no gate
@@ -24,14 +24,14 @@
 #include <ft/fighter.h>
 #include <macros.h>
 
-#include <nds/nds_r2_collision_fixed.h>
-#include <nds/nds_r2_collision_ring.h>
+#include <nds/nds_collision_fixed.h>
+#include <nds/nds_collision_ring.h>
 
 /* The source's own bound: FTParts chains climb into a DObj *setup_dobj[18].
  * Reproducing the overflow rather than the bound would be reproducing a defect,
  * so a deeper chain declines to the float path, which has the same array and
  * the same limit. */
-#define NDS_R2_CFX_CHAIN_MAX 18
+#define NDS_CFX_CHAIN_MAX 18
 
 /* THE FALSIFIER ARM, and it is a `volatile` for a measurement reason rather
  * than a style one.
@@ -57,7 +57,7 @@
  * the volatile was there to remove. Forced into `.data` it occupies the same
  * four bytes at the same address in both. */
 volatile u32 gNdsCfxRingEnable __attribute__((used, section(".data"))) =
-    NDS_R2_COLLISION_FIXED_DISPATCH;
+    NDS_COLLISION_FIXED_DISPATCH;
 
 #if NDS_TICK_HUD
 volatile u32 gNdsCfxRingPrepareCalls __attribute__((used));
@@ -69,9 +69,9 @@ volatile u32 gNdsCfxRingInvertFixed __attribute__((used));
 volatile u32 gNdsCfxRingInvertDeclined __attribute__((used));
 volatile u32 gNdsCfxRingScaleFixed __attribute__((used));
 volatile u32 gNdsCfxRingScaleDeclined __attribute__((used));
-#define NDS_R2_CFX_COUNT(counter) ((counter)++)
+#define NDS_CFX_COUNT(counter) ((counter)++)
 #else
-#define NDS_R2_CFX_COUNT(counter) ((void)0)
+#define NDS_CFX_COUNT(counter) ((void)0)
 #endif
 
 
@@ -83,11 +83,11 @@ volatile u32 gNdsCfxRingScaleDeclined __attribute__((used));
  * to what the call does.
  *
  * The source skips the per-row scale multiply when the scale is exactly 1.0F.
- * ndsR2CfxBuildLocal always applies it, which is the same number: 1.0F converts
+ * ndsCfxBuildLocal always applies it, which is the same number: 1.0F converts
  * to exactly 2^26 at Q26 and the reduction is exact. The falsifier's float
  * reference keeps the conditionals, so the graded comparison covers the
  * difference rather than assuming it away. */
-static int ndsR2CfxLocalFromDObj(NDSR2CfxMtx *dst, DObj *dobj)
+static int ndsCfxLocalFromDObj(NDSCfxMtx *dst, DObj *dobj)
 {
     float rotate[3];
     float scale[3];
@@ -103,8 +103,8 @@ static int ndsR2CfxLocalFromDObj(NDSR2CfxMtx *dst, DObj *dobj)
     translate[1] = dobj->translate.vec.f.y;
     translate[2] = dobj->translate.vec.f.z;
 
-    NDS_R2_CFX_COUNT(gNdsCfxRingLocalsBuilt);
-    return ndsR2CollisionFixedBuildLocal(dst, gSYSinTable, rotate, scale,
+    NDS_CFX_COUNT(gNdsCfxRingLocalsBuilt);
+    return ndsCollisionFixedBuildLocal(dst, gSYSinTable, rotate, scale,
                                          translate);
 }
 
@@ -125,13 +125,13 @@ static int ndsR2CfxLocalFromDObj(NDSR2CfxMtx *dst, DObj *dobj)
  * unk_dobjtrans_0x5 is set, so it picks up exactly where this left off.
  *
  * Returns 1 when main_dobj's own world matrix is now valid. */
-static int ndsR2CfxBuildChain(DObj *main_dobj)
+static int ndsCfxBuildChain(DObj *main_dobj)
 {
-    DObj *setup_dobj[NDS_R2_CFX_CHAIN_MAX];
+    DObj *setup_dobj[NDS_CFX_CHAIN_MAX];
     DObj *second_dobj;
     FTStruct *fp;
     FTParts *parts;
-    NDSR2CfxMtx acc;
+    NDSCfxMtx acc;
     s32 depth;
     s32 i;
 
@@ -162,7 +162,7 @@ static int ndsR2CfxBuildChain(DObj *main_dobj)
              * -- this function on an earlier joint, or the decomp float path,
              * or the renderer -- and is f32, so it is read back in. One
              * quantisation per chain, not one per level. */
-            if (ndsR2CollisionFixedLoadF32(&acc, parts->mtx_translate) == 0)
+            if (ndsCollisionFixedLoadF32(&acc, parts->mtx_translate) == 0)
             {
                 return 0;
             }
@@ -172,24 +172,24 @@ static int ndsR2CfxBuildChain(DObj *main_dobj)
         {
             if (parts->transform_update_mode == 0)
             {
-                if (ndsR2CfxLocalFromDObj(&acc, second_dobj) == 0)
+                if (ndsCfxLocalFromDObj(&acc, second_dobj) == 0)
                 {
                     return 0;
                 }
-                ndsR2CollisionFixedStoreF32(parts->unk_dobjtrans_0x10, &acc);
+                ndsCollisionFixedStoreF32(parts->unk_dobjtrans_0x10, &acc);
                 parts->transform_update_mode = 1;
             }
-            else if (ndsR2CollisionFixedLoadF32(&acc,
+            else if (ndsCollisionFixedLoadF32(&acc,
                                                 parts->unk_dobjtrans_0x10) == 0)
             {
                 return 0;
             }
             /* gmCollisionCopyMatrix(mtx_translate, unk_dobjtrans_0x10) */
-            ndsR2CollisionFixedStoreF32(parts->mtx_translate, &acc);
+            ndsCollisionFixedStoreF32(parts->mtx_translate, &acc);
             parts->unk_dobjtrans_0x5 = 1;
             break;
         }
-        if (depth >= NDS_R2_CFX_CHAIN_MAX)
+        if (depth >= NDS_CFX_CHAIN_MAX)
         {
             return 0;
         }
@@ -201,8 +201,8 @@ static int ndsR2CfxBuildChain(DObj *main_dobj)
     for (i = depth - 1; i >= 0; i--)
     {
         FTParts *current = ftGetParts(setup_dobj[i]);
-        NDSR2CfxMtx local;
-        NDSR2CfxMtx world;
+        NDSCfxMtx local;
+        NDSCfxMtx world;
 
         if (current == NULL)
         {
@@ -210,32 +210,32 @@ static int ndsR2CfxBuildChain(DObj *main_dobj)
         }
         if (current->transform_update_mode == 0)
         {
-            if (ndsR2CfxLocalFromDObj(&local, setup_dobj[i]) == 0)
+            if (ndsCfxLocalFromDObj(&local, setup_dobj[i]) == 0)
             {
                 return 0;
             }
-            ndsR2CollisionFixedStoreF32(current->unk_dobjtrans_0x10, &local);
+            ndsCollisionFixedStoreF32(current->unk_dobjtrans_0x10, &local);
             current->transform_update_mode = 1;
         }
-        else if (ndsR2CollisionFixedLoadF32(&local,
+        else if (ndsCollisionFixedLoadF32(&local,
                                             current->unk_dobjtrans_0x10) == 0)
         {
             return 0;
         }
 
-        NDS_R2_CFX_COUNT(gNdsCfxRingComposes);
-        if (ndsR2CollisionFixedCompose(&world, &acc, &local) == 0)
+        NDS_CFX_COUNT(gNdsCfxRingComposes);
+        if (ndsCollisionFixedCompose(&world, &acc, &local) == 0)
         {
             return 0;
         }
-        ndsR2CollisionFixedStoreF32(current->mtx_translate, &world);
+        ndsCollisionFixedStoreF32(current->mtx_translate, &world);
         current->unk_dobjtrans_0x5 = 1;
         acc = world;
     }
     return 1;
 }
 
-void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
+void ndsCfxPrepareFighterJoint(DObj *main_dobj)
 {
     /* Sets latches: the per-tick clears must see it (reloc_backend_compat_
      * shims.c, gNdsFtPartsLatchWrites). */
@@ -259,7 +259,7 @@ void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
     {
         return;
     }
-    NDS_R2_CFX_COUNT(gNdsCfxRingPrepareCalls);
+    NDS_CFX_COUNT(gNdsCfxRingPrepareCalls);
 
     if ((parts->unk_dobjtrans_0x7 != 0) && (parts->unk_dobjtrans_0x6 != 0))
     {
@@ -268,27 +268,27 @@ void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
 
     if (parts->unk_dobjtrans_0x5 == 0)
     {
-        if (ndsR2CfxBuildChain(main_dobj) == 0)
+        if (ndsCfxBuildChain(main_dobj) == 0)
         {
-            NDS_R2_CFX_COUNT(gNdsCfxRingChainDeclined);
+            NDS_CFX_COUNT(gNdsCfxRingChainDeclined);
             return; /* leave every latch clear; the float path owns this joint */
         }
-        NDS_R2_CFX_COUNT(gNdsCfxRingChainFixed);
+        NDS_CFX_COUNT(gNdsCfxRingChainFixed);
     }
 
     /* func_ovl2_800EDE00. unk_dobjtrans_0x9C keeps its Mtx44f layout and all
      * nine of its readers; only the arithmetic that fills it changes. */
     if (parts->unk_dobjtrans_0x7 == 0)
     {
-        if (ndsR2CollisionFixedInvertF32(parts->unk_dobjtrans_0x9C,
+        if (ndsCollisionFixedInvertF32(parts->unk_dobjtrans_0x9C,
                                          parts->mtx_translate) != 0)
         {
             parts->unk_dobjtrans_0x7 = 1;
-            NDS_R2_CFX_COUNT(gNdsCfxRingInvertFixed);
+            NDS_CFX_COUNT(gNdsCfxRingInvertFixed);
         }
         else
         {
-            NDS_R2_CFX_COUNT(gNdsCfxRingInvertDeclined);
+            NDS_CFX_COUNT(gNdsCfxRingInvertDeclined);
         }
     }
 
@@ -299,17 +299,17 @@ void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
     {
         float scales[3];
 
-        if (ndsR2CollisionFixedAxisScalesF32(scales, parts->mtx_translate) != 0)
+        if (ndsCollisionFixedAxisScalesF32(scales, parts->mtx_translate) != 0)
         {
             parts->vec_scale.x = scales[0];
             parts->vec_scale.y = scales[1];
             parts->vec_scale.z = scales[2];
             parts->unk_dobjtrans_0x6 = 1;
-            NDS_R2_CFX_COUNT(gNdsCfxRingScaleFixed);
+            NDS_CFX_COUNT(gNdsCfxRingScaleFixed);
         }
         else
         {
-            NDS_R2_CFX_COUNT(gNdsCfxRingScaleDeclined);
+            NDS_CFX_COUNT(gNdsCfxRingScaleDeclined);
         }
     }
 }

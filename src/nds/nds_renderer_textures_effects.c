@@ -161,10 +161,10 @@ static inline v16 ndsRendererHardwareProjectToV16(
     else
     {
 #if defined(__arm__)
-        /* ndsR2HwMathDiv64, not libnds's div64: identical DIV_64_32 sequence
+        /* ndsHwMathDiv64, not libnds's div64: identical DIV_64_32 sequence
          * minus the leading poll, which waits out a stale quotient nobody
          * reads. Graded bit-identical over 65,536 operands on four builds. */
-        result = (v16)ndsR2HwMathDiv64(numerator, denominator);
+        result = (v16)ndsHwMathDiv64(numerator, denominator);
 #else
         result = ndsRendererHardwareClampS64ToV16(
             numerator / denominator);
@@ -1014,7 +1014,7 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
 
 /* Task 37: 100 bytes, 3.60 cycles per instruction, on the per-polygon submit
  * path. */
-static u32 NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwarePolyFmt(
+static u32 NDS_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwarePolyFmt(
     const NDSRendererStats *stats, u32 alpha)
 {
     u32 poly_id = (stats != NULL) ?
@@ -1339,7 +1339,7 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
 }
 
 
-static u32 NDS_R2_ITCM_PACK2_EVICTED_CODE
+static u32 NDS_ITCM_PACK2_EVICTED_CODE
 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
@@ -2090,7 +2090,7 @@ ndsRendererHardwareReleaseTexture(
     {
         sNdsRendererHardwareTextureKeyGeneration++;
     }
-    gNdsR2TextureEpochBumpCount++;
+    gNdsTextureEpochBumpCount++;
     memset(entry, 0, sizeof(*entry));
     return entry;
 }

@@ -4,7 +4,7 @@
 /*
  * Task 3 stage 3 -- the dense fighter-animation runtime.
  *
- * `ndsR2FtAnimParseDObjFigatree` re-derives AObj fields from static FIGATREE
+ * `ndsFtAnimParseDObjFigatree` re-derives AObj fields from static FIGATREE
  * ROM data 96.9 times a marginal frame; the PARSE half of the animation lane
  * measures 33,951 tk/fr of deletable work at rank-80 on
  * `build-c192-sitr-profile-gxc` after the irreducible animation clock (7,426)
@@ -33,7 +33,7 @@
  * (`ftanimend.c:6`, eight lines of `ftmain.c`), so they are not the lane.
  *
  * ROUTE: `gNdsFtAnimTrackDispatch` (a `volatile` word, default
- * `NDS_R2_FTANIM_TRACK_DISPATCH`). At 0 every joint takes the generic parser on
+ * `NDS_FTANIM_TRACK_DISPATCH`). At 0 every joint takes the generic parser on
  * the SAME binary and at the SAME addresses, so an A/B has no placement floor.
  */
 
@@ -80,7 +80,7 @@ s32 ndsFtAnimTrackBindJoint(DObj *dobj, s32 base, s32 index);
 /* TRUE when `p` is one of this module's cursor blocks. One range compare. */
 s32 ndsFtAnimTrackIsDense(const void *p);
 
-/* The dense replacement for `ndsR2FtAnimParseDObjFigatree`. */
+/* The dense replacement for `ndsFtAnimParseDObjFigatree`. */
 void ndsFtAnimTrackStep(DObj *root_dobj);
 
 #ifdef __cplusplus

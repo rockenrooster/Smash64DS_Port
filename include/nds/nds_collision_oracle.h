@@ -1,15 +1,15 @@
 /* The R2 fixed-point collision kernel's oracle against a real match's
  * joints (the note below says why a synthetic domain was not enough). */
 
-#ifndef SSB64_NDS_R2_COLLISION_ORACLE_H
-#define SSB64_NDS_R2_COLLISION_ORACLE_H
+#ifndef SSB64_NDS_COLLISION_ORACLE_H
+#define SSB64_NDS_COLLISION_ORACLE_H
 
 #include <PR/ultratypes.h>
 
 /* R2-07 L7, step one: measure the fixed-point collision kernel against the
  * joints a real match actually produces.
  *
- * include/nds/nds_r2_collision_mtx.h is GREEN on its host falsifier -- 0.016609
+ * include/nds/nds_collision_mtx.h is GREEN on its host falsifier -- 0.016609
  * world units against the 0.0200 bound -- but green on a SYNTHETIC domain. Its
  * own header says so: "It still has to be measured against real hurtbox
  * dimensions and real joint scales." The falsifier sweeps rotations at scales
@@ -47,19 +47,19 @@
  * Not a permanent probe. It exists to answer one question, and it comes out
  * with the commit that wires L7 in or the one that abandons it. */
 
-#define NDS_R2_COLLISION_ORACLE_BUCKETS 3u
+#define NDS_COLLISION_ORACLE_BUCKETS 3u
 /* Probe offsets from the joint origin, in whole world units. */
 /* 0.0200 world units expressed in 1/4096ths, the bound R2-03 E64b/E65 set and
  * the one the kernel's host falsifier is gated on. */
 
-void ndsR2CollisionOracleSampleFrame(void);
+void ndsCollisionOracleSampleFrame(void);
 
-extern volatile u32 gNdsR2CollisionOracleSamples;
-extern volatile u32 gNdsR2CollisionOracleSingular;
-extern volatile u32 gNdsR2CollisionOracleMaxDevQ12[
-    NDS_R2_COLLISION_ORACLE_BUCKETS];
-extern volatile u32 gNdsR2CollisionOracleOverBoundCount;
-extern volatile u32 gNdsR2CollisionOracleScaleMinQ12;
-extern volatile u32 gNdsR2CollisionOracleScaleMaxQ12;
+extern volatile u32 gNdsCollisionOracleSamples;
+extern volatile u32 gNdsCollisionOracleSingular;
+extern volatile u32 gNdsCollisionOracleMaxDevQ12[
+    NDS_COLLISION_ORACLE_BUCKETS];
+extern volatile u32 gNdsCollisionOracleOverBoundCount;
+extern volatile u32 gNdsCollisionOracleScaleMinQ12;
+extern volatile u32 gNdsCollisionOracleScaleMaxQ12;
 
 #endif

@@ -26,8 +26,8 @@ typedef long long s64;
 typedef struct { s32 x,y,z,s,t; } NDSRendererInputVertex;
 typedef struct { s32 x; } NDSRendererClipVertex20p12;
 typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
-static u32 ndsR2HwMathSqrt64(u64 v) { u64 r = 0u; while ((r + 1u) * (r + 1u) <= v) r++; return (u32)r; }
-static s32 ndsR2HwMathDiv64(s64 a, s32 b) { return (s32)(a / b); }
+static u32 ndsHwMathSqrt64(u64 v) { u64 r = 0u; while ((r + 1u) * (r + 1u) <= v) r++; return (u32)r; }
+static s32 ndsHwMathDiv64(s64 a, s32 b) { return (s32)(a / b); }
 typedef struct { s32 unused; } NDSRendererTraversalState;
 typedef struct { s32 uls,ult; u32 width,height; } NDSRendererTileState;
 typedef struct {
@@ -210,8 +210,8 @@ def test_sing_uses_live_guard_camera_bias(tmp_path):
 typedef int32_t s32; typedef int64_t s64;
 typedef uint32_t u32; typedef uint64_t u64;
 typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
-u32 ndsR2HwMathSqrt64(u64 v) { return (u32)sqrt((double)v); }
-s64 ndsR2HwMathDiv64(s64 v, s32 d) { return v/d; }
+u32 ndsHwMathSqrt64(u64 v) { return (u32)sqrt((double)v); }
+s64 ndsHwMathDiv64(s64 v, s32 d) { return v/d; }
 ''' + body + r'''
 int main(void) {
     NDSRendererMatrix20p12 v = {{{4096,0,0,0},{0,4096,0,0},{0,0,4096,0},{0,0,-1000*4096,4096}}};

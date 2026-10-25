@@ -7,8 +7,8 @@
 #include <nds/nds_mp_floor_crossing.h>
 #include <nds/nds_mp_topology.h>
 #include <nds/nds_mpprocess_source.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fixed_convert.h>
 
 MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
@@ -769,7 +769,7 @@ static inline int ndsMPLineExtentReady(MPVertexArray *ids,
  * overflow (~1,317 I-cache-fill ticks/frame of ITCM benefit at 32.60 calls a
  * frame). 2026-09-27: back in ITCM, in the room the old fighter matrix builder
  * left (census: ~1.3K ticks/frame of non-memory stall in main RAM). */
-static int NDS_R2_ITCM_PACK2_CODE
+static int NDS_ITCM_PACK2_CODE
 ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
                        u32 line_id, u32 vertex_first, u32 vertex_count,
                        f32 object_x)
@@ -890,15 +890,15 @@ ndsMPFloorDistQ12(f32 object_x, f32 object_y, s32 v1x, s32 v1y, s32 v2x,
     s32 y;
     s64 h;
 
-    x = ndsR2CollisionF32ToFixed(object_x, 12u);
-    y = ndsR2CollisionF32ToFixed(object_y, 12u);
-    if ((x == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (y == NDS_R2_COLLISION_F32_OVERFLOW))
+    x = ndsCollisionF32ToFixed(object_x, 12u);
+    y = ndsCollisionF32ToFixed(object_y, 12u);
+    if ((x == NDS_COLLISION_F32_OVERFLOW) ||
+        (y == NDS_COLLISION_F32_OVERFLOW))
     {
         return ndsMPFloorDistFloat(object_x, object_y, v1x, v1y, v2x, v2y);
     }
     h = ((s64)v1y << 12) +
-        ndsR2HwMathDivideFast(((s64)x - ((s64)v1x << 12)) *
+        ndsHwMathDivideFast(((s64)x - ((s64)v1x << 12)) *
                                   (s64)(v2y - v1y),
                               (s64)(v2x - v1x));
     return ndsFixed64ToF32(h - y, 12u);
@@ -1024,7 +1024,7 @@ static void ndsMPGetFCAnglef(Vec3f *angle, f32 v1x, f32 v1y, f32 v2x, f32 v2y,
  * prologue, `ndsStageCollisionLoopGeometryReady`, the per-kind O2R halfword
  * reads and the epilogue are the rest. Slice 36's board entry retired this on
  * E51's authority before measuring it, and had to withdraw that. */
-static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
+static s32 NDS_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
     MPLineInfo *line_info;

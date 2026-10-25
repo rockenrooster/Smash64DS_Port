@@ -481,7 +481,7 @@ extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerFuraSparkleMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerMusicNoteMakeEffect(Vec3f *pos);
 /* These five ALSO have weak stand-in definitions further down this file, which
- * NDS_R2_SOURCE_EFFECTS_PARTICLE overrides from battleship_efmanager.c. The
+ * NDS_SOURCE_EFFECTS_PARTICLE overrides from battleship_efmanager.c. The
  * attribute has to appear here, ahead of the calls below -- a plain
  * declaration followed by a weak definition after first use is unspecified
  * behaviour, and GCC says so. */
@@ -745,7 +745,7 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
  * Source-exact, and deliberately placed in ftParamMakeEffect rather than in the
  * maker switch: ftParamMakeEffect already holds fighter_gobj, so no signature
  * widens and no global is needed, and the override then also covers the
- * NDS_R2_SOURCE_EFFECTS_PARTICLE=0 substitute arm -- which the source's single
+ * NDS_SOURCE_EFFECTS_PARTICLE=0 substitute arm -- which the source's single
  * path implies and which a fix inside ndsFTParamMakeSourceEffect would miss. */
 static void ndsFTParamGetEffectJointPosition(FTStruct *fp, Vec3f *pos)
 {
@@ -885,7 +885,7 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
             nNDSVisualEffectHitNormal, &pos, 0.8F, lr, NULL);
         break;
     /* The three Flame kinds now take their real makers above and never reach
-     * here at NDS_R2_SOURCE_EFFECTS_PARTICLE=1. They are NOT dead: the flag is
+     * here at NDS_SOURCE_EFFECTS_PARTICLE=1. They are NOT dead: the flag is
      * switchable to 0 for attribution A/Bs, and that arm has no other route to
      * a fire burn. Deleting them would silently drop the burn from the arm
      * least likely to be looked at. */
@@ -899,7 +899,7 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
     case nEFKindShockSmall:
     case nEFKindPsionic:
     /* ThunderAmp takes its real maker above at
-     * NDS_R2_SOURCE_EFFECTS_PARTICLE=1 and never reaches here. Kept for the
+     * NDS_SOURCE_EFFECTS_PARTICLE=1 and never reaches here. Kept for the
      * same reason the Flame kinds are: the flag is switchable to 0 for
      * attribution A/Bs, and that arm has no other route to a self-hit burst. */
     case nEFKindThunderAmp:
@@ -1275,17 +1275,17 @@ static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
     return NULL;
 }
 
-void ndsR2AnimZeroCopyNoteBind(GObj *gobj, const void *figatree);
+void ndsAnimZeroCopyNoteBind(GObj *gobj, const void *figatree);
 
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
     figatree = ndsRelocResolveAuthoritativeForceFile(figatree);
     /* A zero-copy cache clip is now this fighter's binding (see
-     * sNdsR2AnimPins in reloc_backend_assets.c). */
+     * sNdsAnimPins in reloc_backend_assets.c). */
     if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
     {
-        ndsR2AnimZeroCopyNoteBind(root_dobj->parent_gobj, figatree);
+        ndsAnimZeroCopyNoteBind(root_dobj->parent_gobj, figatree);
     }
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;

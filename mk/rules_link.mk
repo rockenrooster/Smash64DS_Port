@@ -448,7 +448,7 @@ endif
 # has to be removed by not doing the float arithmetic (L7), not by recompiling
 # it.
 #
-# nds_r2_collision_fixed.o IS that change -- the whole-cluster fixed-point
+# nds_collision_fixed.o IS that change -- the whole-cluster fixed-point
 # narrow phase -- and it is the case where the flag is load-bearing rather than
 # marginal. Its arithmetic is 64-bit integer products (60 SMULL/SMLAL measured),
 # ARMv5TE Thumb has no SMULL, and -mthumb would turn every one of them into
@@ -456,46 +456,46 @@ endif
 # reason and was worth -511,174 ticks per Results tic. L7a's refutation does not
 # transfer, and its own paragraph says why: it was measuring FLOAT code, whose
 # helpers are libgcc and do not change mode with the caller.
-# scripts/check-r2-collision-fixed.ps1 fails on any __aeabi_lmul in this object,
+# scripts/check-collision-fixed.ps1 fails on any __aeabi_lmul in this object,
 # so losing this line is a red verifier rather than a silent regression.
 #
-# src/port/nds_r2_collision_ring.c, the wiring, is deliberately NOT in this
+# src/port/nds_collision_ring.c, the wiring, is deliberately NOT in this
 # list. It is Thumb glue -- control flow, f32 loads and f32 stores -- that calls
-# the ndsR2CollisionFixed* entry points here, so every 64-bit product in the
+# the ndsCollisionFixed* entry points here, so every 64-bit product in the
 # cluster stays inside the one object the check script disassembles. Building
 # the ring -marm too would grow it for nothing; inlining the kernels INTO it
 # would put SMULL-shaped code in a Thumb object and no gate would notice.
-nds_r2_collision_fixed.o: CFLAGS += -marm
+nds_collision_fixed.o: CFLAGS += -marm
 # Same reason: 64-bit products throughout (the fixed chain from
-# nds_r2_collision_fixed.h), which Thumb would turn into __aeabi_lmul calls.
+# nds_collision_fixed.h), which Thumb would turn into __aeabi_lmul calls.
 nds_hurtbox_reject.o: CFLAGS += -marm
-# Same rule, same reason: src/port/nds_r2_sim_mac_fixed.c holds the shadow
+# Same rule, same reason: src/port/nds_sim_mac_fixed.c holds the shadow
 # bodies of the warm-MAC exchange-rate instrument, and its whole content is
 # 64-bit integer products. A Thumb build of it would price __aeabi_lmul at 4.49
 # cyc/multiply instead of a hardware umull at 2.00 and report an exchange rate
 # that no shipped conversion would ever see.
-nds_r2_sim_mac_fixed.o: CFLAGS += -marm
+nds_sim_mac_fixed.o: CFLAGS += -marm
 # Same rule for the same reason, and here it is also the THING BEING MEASURED:
-# one of this object's arms is include/nds/nds_r2_sqrtf.h compiled in ARM state,
+# one of this object's arms is include/nds/nds_sqrtf.h compiled in ARM state,
 # against the shipped Thumb build of the identical header in
-# src/nds/r2/nds_r2_sqrtf.c. Building this object -mthumb would make both arms
+# src/nds/nds_sqrtf.c. Building this object -mthumb would make both arms
 # call __aeabi_lmul and the comparison would read zero.
-nds_r2_hwmath_bench.o: CFLAGS += -marm
-# Same rule, and this one is the SHIPPED half of it. include/nds/nds_r2_sqrtf.h
+nds_hwmath_bench.o: CFLAGS += -marm
+# Same rule, and this one is the SHIPPED half of it. include/nds/nds_sqrtf.h
 # line 73 needs a 48-bit `root * root`; ARMv5TE Thumb has no UMULL, so in Thumb
 # state that one expression is `bl __aeabi_lmul` -- visible at 0x0208b10c in
-# build-c206-shipgx0's own disassembly. src/nds/r2/nds_r2_sqrtf.c was the last
+# build-c206-shipgx0's own disassembly. src/nds/nds_sqrtf.c was the last
 # R2 kernel object still built -mthumb. -marm costs +24 B of text and takes the
 # 11,608 tk/fr sqrtf lane (8,068 sim + 3,540 draw at marginal-80) down by
 # 37%-41%. Bit-identical, not merely equivalent: build-c213-hwmath4's
-# gNdsR2HwMathBenchSqrtfMismatch is 0 over 65,536 inputs comparing exactly these
+# gNdsHwMathBenchSqrtfMismatch is 0 over 65,536 inputs comparing exactly these
 # two builds of the header.
 #
 # EXCEPT in the route build, where this object IS THE CONTROL ARM and must stay
-# -mthumb while nds_r2_sqrtf_arm.o carries the -marm body. Building both -marm
+# -mthumb while nds_sqrtf_arm.o carries the -marm body. Building both -marm
 # would make the two arms identical and the measurement would read zero -- the
 # same trap the bench block above records.
-nds_r2_sqrtf.o: CFLAGS += -marm
+nds_sqrtf.o: CFLAGS += -marm
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)

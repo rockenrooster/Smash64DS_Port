@@ -9,7 +9,7 @@ if that set is finite and known. It is: 15 opcodes, all of them handled.
 Two directions, and both matter:
 
   * An opcode DEFINED in decomp but NOT handled by
-    `ndsR2FtAnimParseDObjFigatree` means the runtime silently ignores something
+    `ndsFtAnimParseDObjFigatree` means the runtime silently ignores something
     the data can contain, so a generator that reproduces the runtime would
     inherit the same hole.
   * An opcode HANDLED by the port but NOT defined in decomp means the port has
@@ -42,11 +42,11 @@ OPCODE = re.compile(r"\bnGCAnimEvent16\w+\b")
 
 
 def parser_handled() -> set[str]:
-    """Opcodes with a `case` label inside ndsR2FtAnimParseDObjFigatree."""
+    """Opcodes with a `case` label inside ndsFtAnimParseDObjFigatree."""
     text = PARSER.read_text(encoding="utf-8", errors="replace")
-    start = text.find("void ndsR2FtAnimParseDObjFigatree")
+    start = text.find("void ndsFtAnimParseDObjFigatree")
     if start < 0:
-        sys.exit("ndsR2FtAnimParseDObjFigatree not found in %s" % PARSER)
+        sys.exit("ndsFtAnimParseDObjFigatree not found in %s" % PARSER)
     end = text.find("\n}", start)
     body = text[start:end]
     return set(re.findall(r"case\s+(nGCAnimEvent16\w+)\s*:", body))
@@ -79,7 +79,7 @@ def parser_cases() -> "list[tuple[list[str], str]]":
     write seven fields.
     """
     text = PARSER.read_text(encoding="utf-8", errors="replace")
-    start = text.find("void ndsR2FtAnimParseDObjFigatree")
+    start = text.find("void ndsFtAnimParseDObjFigatree")
     lines = text[start:text.find("\n}\n", start)].split("\n")
     sw = next(i for i, l in enumerate(lines) if "switch (command_kind)" in l)
     groups: list = []

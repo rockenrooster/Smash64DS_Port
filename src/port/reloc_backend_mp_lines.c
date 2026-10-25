@@ -202,7 +202,7 @@ static inline u32 ndsMPLinePointSegmentStart(MPVertexArray *ids,
 
 /* ITCM (2026-09-27): second in the four-CPU census admission table after
  * the wall sweep (~7.1K ticks/frame non-memory stall at 1,484 B). */
-sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
+sb32 NDS_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
                                  f32 *floor_dist, u32 *floor_flags,
                                  Vec3f *angle)
 {

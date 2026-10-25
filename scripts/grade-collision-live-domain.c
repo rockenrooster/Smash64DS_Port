@@ -16,7 +16,7 @@
  * guards' live decline rate -- checklist item 6, the one thing cycle A left
  * open -- can only be read off real matrices.
  *
- * It compiles include/nds/nds_r2_collision_fixed.h, the code that ships, and
+ * It compiles include/nds/nds_collision_fixed.h, the code that ships, and
  * grades it against a transcription of the decomp float originals
  * (gm/gmcollision.c:228 gmCollisionSetInvertMatrix and :196
  * gmCollisionGetWorldPosition) plus a double-precision exact reference. Bound is
@@ -28,7 +28,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <nds/nds_r2_collision_fixed.h>
+#include <nds/nds_collision_fixed.h>
 
 #define MAX_ROWS 65536
 #define BOUND_WORLD 0.0200
@@ -171,7 +171,7 @@ static const char *const g_decline_name[DECLINE_COUNT] = {
     "determinant", "inverse cell"
 };
 
-static int attribute_decline(const NDSR2CfxMtx *fx)
+static int attribute_decline(const NDSCfxMtx *fx)
 {
     int32_t s2[3];
     int32_t inv_s2[3];
@@ -181,34 +181,34 @@ static int attribute_decline(const NDSR2CfxMtx *fx)
 
     for (c = 0u; c < 3u; c++)
     {
-        if (ndsR2CfxAbs32(fx->r[c][0]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(fx->r[c][1]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(fx->r[c][2]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(fx->t[c]) >= NDS_R2_CFX_POS_MAX)
+        if (ndsCfxAbs32(fx->r[c][0]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(fx->r[c][1]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(fx->r[c][2]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(fx->t[c]) >= NDS_CFX_POS_MAX)
         {
             return DECLINE_RANGE;
         }
     }
-    if (ndsR2CfxRowScales(fx, s2, inv_s2, s, inv_s) == 0)
+    if (ndsCfxRowScales(fx, s2, inv_s2, s, inv_s) == 0)
     {
         return DECLINE_S2;
     }
     /* Anything left is the determinant or an inverse cell; separate them by
      * recomputing the determinant the way the kernel does. */
     {
-        int64_t c00 = ndsR2CfxShr(((int64_t)fx->r[1][1] * fx->r[2][2]) -
+        int64_t c00 = ndsCfxShr(((int64_t)fx->r[1][1] * fx->r[2][2]) -
                                       ((int64_t)fx->r[1][2] * fx->r[2][1]),
-                                  NDS_R2_CFX_ROT_BITS);
-        int64_t c10 = ndsR2CfxShr(((int64_t)fx->r[1][0] * fx->r[2][2]) -
+                                  NDS_CFX_ROT_BITS);
+        int64_t c10 = ndsCfxShr(((int64_t)fx->r[1][0] * fx->r[2][2]) -
                                       ((int64_t)fx->r[1][2] * fx->r[2][0]),
-                                  NDS_R2_CFX_ROT_BITS);
-        int64_t c20 = ndsR2CfxShr(((int64_t)fx->r[1][0] * fx->r[2][1]) -
+                                  NDS_CFX_ROT_BITS);
+        int64_t c20 = ndsCfxShr(((int64_t)fx->r[1][0] * fx->r[2][1]) -
                                       ((int64_t)fx->r[1][1] * fx->r[2][0]),
-                                  NDS_R2_CFX_ROT_BITS);
-        int64_t det = ndsR2CfxShr(((int64_t)fx->r[0][0] * c00) -
+                                  NDS_CFX_ROT_BITS);
+        int64_t det = ndsCfxShr(((int64_t)fx->r[0][0] * c00) -
                                       ((int64_t)fx->r[0][1] * c10) +
                                       ((int64_t)fx->r[0][2] * c20),
-                                  NDS_R2_CFX_ROT_BITS);
+                                  NDS_CFX_ROT_BITS);
 
         if ((det < (int64_t)(INT32_C(1) << 21)) &&
             (det > -(int64_t)(INT32_C(1) << 21)))
@@ -291,8 +291,8 @@ int main(int argc, char **argv)
     for (i = 0; i < g_count; i++)
     {
         const Sample *s = &g_samples[i];
-        NDSR2CfxMtx fx;
-        NDSR2CfxFrame frame;
+        NDSCfxMtx fx;
+        NDSCfxFrame frame;
         float finv[4][3];
         int row;
         int col;
@@ -318,9 +318,9 @@ int main(int argc, char **argv)
         {
             for (col = 0; col < 3; col++)
             {
-                fx.r[row][col] = ndsR2CollisionF32ToFixed(s->m[row][col],
-                                                          NDS_R2_CFX_ROT_BITS);
-                if (fx.r[row][col] == NDS_R2_COLLISION_F32_OVERFLOW)
+                fx.r[row][col] = ndsCollisionF32ToFixed(s->m[row][col],
+                                                          NDS_CFX_ROT_BITS);
+                if (fx.r[row][col] == NDS_COLLISION_F32_OVERFLOW)
                 {
                     overflow = 1;
                 }
@@ -328,9 +328,9 @@ int main(int argc, char **argv)
         }
         for (col = 0; col < 3; col++)
         {
-            fx.t[col] = ndsR2CollisionF32ToFixed(s->m[3][col],
-                                                 NDS_R2_CFX_POS_BITS);
-            if (fx.t[col] == NDS_R2_COLLISION_F32_OVERFLOW)
+            fx.t[col] = ndsCollisionF32ToFixed(s->m[3][col],
+                                                 NDS_CFX_POS_BITS);
+            if (fx.t[col] == NDS_COLLISION_F32_OVERFLOW)
             {
                 overflow = 1;
             }
@@ -342,7 +342,7 @@ int main(int argc, char **argv)
             continue;
         }
 
-        if (ndsR2CfxMakeFrameCofactor(&frame, &fx) == 0)
+        if (ndsCfxMakeFrameCofactor(&frame, &fx) == 0)
         {
             declines[attribute_decline(&fx)]++;
             continue;
@@ -356,7 +356,7 @@ int main(int argc, char **argv)
             for (axis = 0; axis < 3; axis++)
             {
                 double got = (double)frame.scale[axis] /
-                             (double)NDS_R2_CFX_POS_ONE;
+                             (double)NDS_CFX_POS_ONE;
                 double err = fabs(got - (double)s->vec_scale[axis]);
 
                 if (err > worst_scale_err) { worst_scale_err = err; }
@@ -386,16 +386,16 @@ int main(int argc, char **argv)
                 for (c = 0; c < 3; c++)
                 {
                     probe_d[c] = (double)probe_f[c];
-                    probe_q[c] = ndsR2CollisionF32ToFixed(probe_f[c],
-                                                          NDS_R2_CFX_POS_BITS);
+                    probe_q[c] = ndsCollisionF32ToFixed(probe_f[c],
+                                                          NDS_CFX_POS_BITS);
                 }
 
                 float_world_position(finv, probe_f, ref);
-                ndsR2CfxWorldToLocal(local, &frame, probe_q);
+                ndsCfxWorldToLocal(local, &frame, probe_q);
 
                 for (c = 0; c < 3; c++)
                 {
-                    double got = (double)local[c] / (double)NDS_R2_CFX_POS_ONE;
+                    double got = (double)local[c] / (double)NDS_CFX_POS_ONE;
                     double d = fabs(got - (double)ref[c]);
 
                     if (d > worst_vs_float)
@@ -412,7 +412,7 @@ int main(int argc, char **argv)
                     for (c = 0; c < 3; c++)
                     {
                         double got = (double)local[c] /
-                                     (double)NDS_R2_CFX_POS_ONE;
+                                     (double)NDS_CFX_POS_ONE;
                         double de = fabs(got - exact[c]);
                         double df = fabs((double)ref[c] - exact[c]);
 

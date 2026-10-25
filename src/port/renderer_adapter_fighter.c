@@ -237,8 +237,8 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
  * every caller passes). */
 #include <stdint.h>
 #include <nds/nds_p4.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 
 static const u32 sNdsProjectCols[3] = { 0u, 1u, 3u };
 static u32 sNdsProjectSrc[4][3];
@@ -248,18 +248,18 @@ static u32 sNdsProjectValid;
 static __attribute__((noinline, target("arm"))) int32_t
 ndsProjectToFixed(f32 value, u32 bits_frac, int32_t limit)
 {
-    int32_t q = ndsR2CollisionF32ToFixed(value, bits_frac);
+    int32_t q = ndsCollisionF32ToFixed(value, bits_frac);
     u32 bits;
 
     __builtin_memcpy(&bits, &value, sizeof(bits));
-    if ((q == NDS_R2_COLLISION_F32_OVERFLOW) || (q >= limit) || (q <= -limit))
+    if ((q == NDS_COLLISION_F32_OVERFLOW) || (q >= limit) || (q <= -limit))
     {
         return ((bits & 0x80000000u) != 0u) ? -limit : limit;
     }
     return q;
 }
 
-/* A rotation-row cell at Q28. ndsR2CollisionF32ToFixed declines a left shift
+/* A rotation-row cell at Q28. ndsCollisionF32ToFixed declines a left shift
  * of 7, which is every |v| in [4, 8) at Q28, although it fits; the old code
  * saturated those to 8. That is the perspective scale itself once the field of
  * view narrows under ~28 degrees (cot 12.5 = 4.52 in Master Hand's intro, cot
@@ -271,9 +271,9 @@ ndsProjectToFixed(f32 value, u32 bits_frac, int32_t limit)
 static int32_t __attribute__((target("arm")))
 ndsProjectRowToQ28(f32 value)
 {
-    int32_t q = ndsR2CollisionF32ToFixed(value, 28u);
+    int32_t q = ndsCollisionF32ToFixed(value, 28u);
 
-    if (q == NDS_R2_COLLISION_F32_OVERFLOW)
+    if (q == NDS_COLLISION_F32_OVERFLOW)
     {
         q = ndsProjectToFixed(value, 27u, INT32_C(1) << 30);
         if ((q == (INT32_C(1) << 30)) || (q == -(INT32_C(1) << 30)))
@@ -303,7 +303,7 @@ ndsProjectRatioQ22(int64_t num, int64_t den)
     {
         return 0;
     }
-    return ndsR2HwMathDivideFast(num * (INT64_C(1) << 22), den);
+    return ndsHwMathDivideFast(num * (INT64_C(1) << 22), den);
 }
 
 /* The projection's two results before they leave as floats: Q22 units of
@@ -392,8 +392,8 @@ ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
     p[1] = ndsProjectToFixed(pos->y, 12u, INT32_C(1) << 28);
     p[2] = ndsProjectToFixed(pos->z, 12u, INT32_C(1) << 28);
     ndsProjectToViewportQ22(cobj, matrix, p, &dx, &dy);
-    *dist_x = ndsR2CollisionFixedToF32(dx, 22u);
-    *dist_y = ndsR2CollisionFixedToF32(dy, 22u);
+    *dist_x = ndsCollisionFixedToF32(dx, 22u);
+    *dist_y = ndsCollisionFixedToF32(dy, 22u);
 }
 
 void ndsFighterDisplayContractProjectTarget(CObj *cobj,
@@ -950,11 +950,11 @@ static void ndsFtrDrawMemoFinish(void)
  * a stale facing behind for the next reader. `Writes` is a delta counter, not a
  * flag. Defined here, in the only translation unit that has an FTStruct, and
  * unconditionally so the renderer-side externs resolve in every configuration
- * including NDS_R2_FIGHTER_HW_LIGHT=0 builds. */
+ * including NDS_FIGHTER_HW_LIGHT=0 builds. */
 
-volatile s32 gNdsR2FighterFacingLr;
-volatile u32 gNdsR2FighterFacingSlot;
-volatile u32 gNdsR2FighterFacingWrites;
+volatile s32 gNdsFighterFacingLr;
+volatile u32 gNdsFighterFacingSlot;
+volatile u32 gNdsFighterFacingWrites;
 
 /* P2-2p8 Phase 1 slice 5 (phase1-spec.md 2.1 stage 1): the head's camera
  * LookAt below is a camera-only input. The slice 5 attribution ROM priced
@@ -975,7 +975,7 @@ volatile u32 gNdsR2FighterFacingWrites;
  * gNdsFtrLeanSlow bit 128 calls it every time (the slice 4 form, same ROM). */
 extern Mtx44f gGMCameraMatrix;
 extern Mtx *sGCMatrixProjectL;
-const LookAt *ndsR2CameraCurrentLookAt(void);
+const LookAt *ndsCameraCurrentLookAt(void);
 static const CObj *sNdsFtrLookAtCObj;
 static u32 sNdsFtrLookAtIn;
 static u32 sNdsFtrLookAtOut;
@@ -1018,7 +1018,7 @@ static u32 __attribute__((noinline)) ndsFtrLookAtOutputs(const CObj *cobj)
 
     h = ndsFtrLookAtMixWords(h, gGMCameraMatrix,
                              (u32)(sizeof(gGMCameraMatrix) / sizeof(u32)));
-    h = ndsFtrLookAtMixWords(h, ndsR2CameraCurrentLookAt(),
+    h = ndsFtrLookAtMixWords(h, ndsCameraCurrentLookAt(),
                              (u32)(sizeof(LookAt) / sizeof(u32)));
     return (h ^ (u32)cobj->projection.persp.norm) * 16777619u;
 }
@@ -1122,10 +1122,10 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFtrDrawMemoHit = 0u;
     /* See the definitions above: the renderer's shade and light-matrix
      * witnesses are unreadable without the facing that produced them. */
-    gNdsR2FighterFacingLr = (fp != NULL) ? fp->lr : 0;
-    gNdsR2FighterFacingSlot =
+    gNdsFighterFacingLr = (fp != NULL) ? fp->lr : 0;
+    gNdsFighterFacingSlot =
         (fp != NULL) ? (u32)fp->nds_slot : 0xffffffffu;
-    NDS_DIAG(gNdsR2FighterFacingWrites++);
+    NDS_DIAG(gNdsFighterFacingWrites++);
     /* Do not memoise the source entry-camera walk.  Mario/Fox Appear motions
      * deliberately mutate DOBJ_FLAG_HIDDEN inside the same status as their
      * entry animation advances.  The old memo saw the first source-hidden pose
@@ -1207,7 +1207,7 @@ static void ndsFighterCollectAllDObjsWithDL(
  * native-owner asset gate and sends Fox through the generic renderer while the
  * pistol is out.
  *
- * The DS already owns this source model part as NDS_R2_FOX_GUN_OVERLAY: the
+ * The DS already owns this source model part as NDS_FOX_GUN_OVERLAY: the
  * exact 44-vertex / 22-triangle file-315 mesh is baked separately and follows
  * the same joint-17 matrix.  Preserve the source DObj mutation for gameplay and
  * effect attachment, but remove that ONE foreign render root from the body

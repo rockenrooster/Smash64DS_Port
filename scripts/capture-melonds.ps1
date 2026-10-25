@@ -59,8 +59,8 @@ param(
     [switch]$JumpBeforePause,
     # Presses SELECT this many times between the first and the second capture.
     # SELECT is the one DS key the battle input map leaves unbound, so every
-    # lab A/B toggle ROM binds it (NDS_R2_CAMERA_FIXED_TOGGLE 2026-08-16,
-    # NDS_R2_FT_TRANSITION_PLAY_TOGGLE 2026-08-16) and every one of them then
+    # lab A/B toggle ROM binds it (NDS_CAMERA_FIXED_TOGGLE 2026-08-16,
+    # NDS_FT_TRANSITION_PLAY_TOGGLE 2026-08-16) and every one of them then
     # needs the same thing from this harness: one binary, two captures, an arm
     # flip in between. Pair it with -SecondOutput.
     #

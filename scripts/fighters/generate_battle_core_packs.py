@@ -244,7 +244,7 @@ def _native_texture_roots(fighter: str, model_id: int):
         if owner == "kirby" and detail is not None:
             # Deferred copy-hat images are emitted separately from the body.
             # Their source roots come from the same native variant contract.
-            variants = native.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+            variants = native.MODEL_PART_ROOT_VARIANTS["kirby"][detail]
             roots.update(variants[modelpart - 1][1] for modelpart in
                          native.KIRBY_COPY_HAT_MODEL_PART_IDS)
     return roots, images

@@ -7,10 +7,10 @@
  * `FIXEDPOINT_ANIMATION.md` is right that `AObj` is the problem: six `f32`
  * fields that the parser writes from `s16` figatree arguments and the evaluator
  * converts back to fixed point on every node of every frame. The c115 census
- * priced the round trip exactly -- `ndsR2CubicValueFixed` runs 176.4 times a
+ * priced the round trip exactly -- `ndsCubicValueFixed` runs 176.4 times a
  * frame at 220 instructions a call, and roughly 200 of those 220 are the six
- * inlined `ndsR2F32ToFixed`, the one `ndsR2F32MulToFixed` and the one
- * `ndsR2FixedToF32`. A Hermite evaluation is a dozen multiply-accumulates; the
+ * inlined `ndsAnimF32ToFixed`, the one `ndsF32MulToFixed` and the one
+ * `ndsAnimFixedToF32`. A Hermite evaluation is a dozen multiply-accumulates; the
  * rest is format conversion on values that started life as `s16` with
  * power-of-two scales.
  *
@@ -23,7 +23,7 @@
  * kinds and the decomp's own expressions, bit-identical.
  *
  * WHAT IS BIT-IDENTICAL. `value_base`, `value_target`, `rate_base` and
- * `rate_target` reach the shipped cubic today as `ndsR2F32ToFixed(arg * 2^-k,
+ * `rate_target` reach the shipped cubic today as `ndsAnimF32ToFixed(arg * 2^-k,
  * 12)`, and `arg * 2^-k` is exact (`check_ftanim_target_exact.py`, all 65,536 x
  * 8 inputs). Writing `round(arg * 2^(12-k))` straight from the `s16` produces
  * the same Q12 integer, so the cubic's four value inputs do not move at all.
@@ -32,54 +32,54 @@
  *
  * WHAT MOVES. `t = length / payload` is a Q30 reciprocal multiply instead of an
  * f32 one (MORE accurate: 2.3e-8 relative at payload 60 against f32's 6e-8),
- * and `length` accumulates in Q12 instead of f32. `check_r2_cubic_error_bound.py`
+ * and `length` accumulates in Q12 instead of f32. `check_cubic_error_bound.py`
  * bounds the whole pipeline against the decomp float reference and is the gate.
  *
  * This header is dependency-free on purpose -- it assumes only the `f32`/`s32`/
  * `u32`/`s64` typedefs its includer already has -- because
- * `check_r2_cubic_error_bound.py` inlines it textually into the host harness.
+ * `check_cubic_error_bound.py` inlines it textually into the host harness.
  * Do not add an `#include` to it. */
 
 /* Q12 holds joint VALUES and rates: 1/4096 of a radian or a world unit, already
  * far finer than anything gameplay can see, and the scale the shipped cubic
  * quantises to today. */
-#define NDS_R2_AQ_VF   12
+#define NDS_AQ_VF   12
 /* `length` in frames, and Step's `length_invert` (which holds a frame count,
  * not a reciprocal -- the same field carries both meanings in the original). */
-#define NDS_R2_AQ_LF   12
+#define NDS_AQ_LF   12
 /* Cubic's `length_invert`, the reciprocal 1/payload. Q30 because `t`'s error is
  * amplified by `length * rate` at the segment ends, where the Hermite rate
  * basis has slope 1: a Q24 reciprocal would have put a 60-frame segment 1e-4
  * out at t=1, which is a third of the whole error budget for nothing. */
-#define NDS_R2_AQ_IF   30
+#define NDS_AQ_IF   30
 /* The four Hermite BASIS terms. Two carry a factor of `length`, so their
  * quantum reaches the result multiplied by L*|rate|; the four extra bits over
  * Q12 divide that by 16 and cost nothing on ARM, where 32x32->64 is one SMULL. */
-#define NDS_R2_AQ_BF   16
+#define NDS_AQ_BF   16
 /* Linear's `rate_base` ONLY. Its quantum is amplified by the full block length,
  * and at Q12 the host bound measured 0.011 of the 0.02 budget going to that one
  * rounding; four more bits take it to 0.0007. Safe because Linear's rate is
  * never read by another arm -- the Cubic arms carry `rate_target` forward, and
  * Linear writes that to zero. The 4 extra bits also cannot overflow: the widest
  * value an s16 argument can reach is Q12 2^25, and 2^26 << 4 still fits s32. */
-#define NDS_R2_AQ_RF   16
-#define NDS_R2_AQ_BONE (1 << NDS_R2_AQ_BF)
+#define NDS_AQ_RF   16
+#define NDS_AQ_BONE (1 << NDS_AQ_BF)
 /* Q12 length x Q30 reciprocal -> Q16 `t`. */
-#define NDS_R2_AQ_TSH  ((NDS_R2_AQ_LF + NDS_R2_AQ_IF) - NDS_R2_AQ_BF)
+#define NDS_AQ_TSH  ((NDS_AQ_LF + NDS_AQ_IF) - NDS_AQ_BF)
 
-/* Q kinds. `>= NDS_R2_AQ_KIND_BASE` is the discriminator, and it is a compare
+/* Q kinds. `>= NDS_AQ_KIND_BASE` is the discriminator, and it is a compare
  * against a constant on a byte the evaluator already loads. */
-#define NDS_R2_AQ_KIND_BASE    5u
-#define NDS_R2_AQ_KIND_STEP    5u
-#define NDS_R2_AQ_KIND_LINEAR  6u
-#define NDS_R2_AQ_KIND_CUBIC   7u
+#define NDS_AQ_KIND_BASE    5u
+#define NDS_AQ_KIND_STEP    5u
+#define NDS_AQ_KIND_LINEAR  6u
+#define NDS_AQ_KIND_CUBIC   7u
 
 /* Saturation counter. Defined in `src/import/battleship_sys_objanim.c`; both
  * the parser and the evaluator increment it, so a clamped joint is visible in
  * `-ExtraGlobals` rather than silent. */
-extern volatile u32 gNdsR2CubicSaturations;
+extern volatile u32 gNdsCubicSaturations;
 
-static inline u32 ndsR2FloatBits(f32 v)
+static inline u32 ndsAnimFloatBits(f32 v)
 {
     u32 bits;
 
@@ -90,7 +90,7 @@ static inline u32 ndsR2FloatBits(f32 v)
 /* The Q value carried in an `f32` slot. A bit-cast, not a conversion: GCC emits
  * nothing for these, and keeping them named makes every punned access greppable
  * instead of a raw `memcpy` that reads like a bug. */
-static inline s32 ndsR2AQLoad(f32 slot)
+static inline s32 ndsAQLoad(f32 slot)
 {
     s32 v;
 
@@ -98,7 +98,7 @@ static inline s32 ndsR2AQLoad(f32 slot)
     return v;
 }
 
-static inline f32 ndsR2AQStore(s32 v)
+static inline f32 ndsAQStore(s32 v)
 {
     f32 slot;
 
@@ -111,9 +111,9 @@ static inline f32 ndsR2AQStore(s32 v)
  * this is a dozen integer ops. Saturates instead of wrapping: a wrapped joint
  * angle would be a visible teleport, a saturated one is a clamp. `bits` is
  * always a literal at the call sites, so the shifts fold. */
-static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
+static inline s32 ndsAnimF32ToFixed(f32 v, s32 bits)
 {
-    u32 bits_in = ndsR2FloatBits(v);
+    u32 bits_in = ndsAnimFloatBits(v);
     s32 exp = (s32)((bits_in >> 23) & 0xffu);
     s32 mant;
     s32 shift;
@@ -124,7 +124,7 @@ static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
     }
     if (exp == 0xff)
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return ((bits_in & 0x80000000u) != 0u) ? -0x7fffffff : 0x7fffffff;
     }
     mant = (s32)((bits_in & 0x7fffffu) | 0x800000u);   /* 1.23 fixed */
@@ -134,7 +134,7 @@ static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
     {
         if (shift > 7)
         {
-            gNdsR2CubicSaturations++;
+            gNdsCubicSaturations++;
             mant = 0x7fffffff;
         }
         else
@@ -156,14 +156,14 @@ static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
     return ((bits_in & 0x80000000u) != 0u) ? -mant : mant;
 }
 
-/* `s16 arg * 2^-k` straight to Q`NDS_R2_AQ_VF`, without ever building the f32.
+/* `s16 arg * 2^-k` straight to Q`NDS_AQ_VF`, without ever building the f32.
  *
- * `shift` is `NDS_R2_AQ_VF - k` from the decomp's own frac table read as a power
+ * `shift` is `NDS_AQ_VF - k` from the decomp's own frac table read as a power
  * of two. Non-negative shifts are exact -- an s16 scaled up cannot lose a bit --
  * and the two negative ones round the MAGNITUDE half away from zero, which is
- * what `ndsR2F32ToFixed` does, so the Q12 integer matches the one the shipped
+ * what `ndsAnimF32ToFixed` does, so the Q12 integer matches the one the shipped
  * float path produces for the same argument. */
-static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
+static inline s32 ndsAnimArgToQ(s32 arg, s32 shift)
 {
     s32 mag;
 
@@ -183,7 +183,7 @@ static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
  * (`src/nds/nds_ft_pose.c`) evaluate ONE body rather than two that can drift.
  * The arithmetic is byte-for-byte the cycle-116 kernel: the comments on the
  * shape (narrow per-arm results, SMULL-sized intermediates, clamp on `t`) are
- * kept with it. `check_r2_cubic_error_bound.py` inlines this header into its
+ * kept with it. `check_cubic_error_bound.py` inlines this header into its
  * host harness ahead of the extracted kernel, so the bound is still measured
  * against the code that ships.
  *
@@ -192,9 +192,9 @@ static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
  * every TU that includes this builds -mthumb. The host harness gets a plain
  * static inline. */
 #if defined(__arm__)
-#define NDS_R2_AQ_KERNEL_ATTR     static inline __attribute__((always_inline, target("arm")))
+#define NDS_AQ_KERNEL_ATTR     static inline __attribute__((always_inline, target("arm")))
 #else
-#define NDS_R2_AQ_KERNEL_ATTR static inline
+#define NDS_AQ_KERNEL_ATTR static inline
 #endif
 
 /* Both kernels square `t` and then cube it, and t^3 wraps an s32 well before
@@ -204,8 +204,8 @@ static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
  * With |t| <= 2 and |length| <= 1024 frames every intermediate fits an s32 with
  * room: t2 <= 2^18, t3 <= 2^19, omt2 <= 2^19, length*omt2 >> 12 <= 2^29, and the
  * s64 accumulator reaches 2^54 against its 2^63. */
-#define NDS_R2_AQ_T_MAX  (2 * NDS_R2_AQ_BONE)
-#define NDS_R2_AQ_LEN_MAX (1024 << NDS_R2_AQ_LF)
+#define NDS_AQ_T_MAX  (2 * NDS_AQ_BONE)
+#define NDS_AQ_LEN_MAX (1024 << NDS_AQ_LF)
 
 /* An empty asm that claims to rewrite `x`. The clamps below bound every s32
  * intermediate, and from those bounds GCC proves the (s32) truncations are
@@ -216,36 +216,36 @@ static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
  * 32-bit register. The values are unchanged -- this removes information from
  * the compiler, never from the arithmetic. The host harness gets a no-op. */
 #if defined(__arm__)
-#define NDS_R2_AQ_OPAQUE(x) __asm__("" : "+r"(x))
+#define NDS_AQ_OPAQUE(x) __asm__("" : "+r"(x))
 #else
-#define NDS_R2_AQ_OPAQUE(x) ((void)0)
+#define NDS_AQ_OPAQUE(x) ((void)0)
 #endif
 
-NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimClamp(s32 v, s32 limit)
+NDS_AQ_KERNEL_ATTR s32 ndsAnimClamp(s32 v, s32 limit)
 {
     if (v > limit)
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return limit;
     }
     if (v < -limit)
     {
-        NDS_DIAG(gNdsR2CubicSaturations++);
+        NDS_DIAG(gNdsCubicSaturations++);
         return -limit;
     }
     return v;
 }
 
-NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimClamp64(s64 v)
+NDS_AQ_KERNEL_ATTR s32 ndsAnimClamp64(s64 v)
 {
     if (v > (s64)0x7fffffff)
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return 0x7fffffff;
     }
     if (v < -(s64)0x7fffffff)
     {
-        gNdsR2CubicSaturations++;
+        gNdsCubicSaturations++;
         return -0x7fffffff;
     }
     return (s32)v;
@@ -255,7 +255,7 @@ NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimClamp64(s64 v)
  * `__aeabi_i2f` bit for bit including round-to-nearest-even for the |q| >= 2^24
  * inputs where an s32 does not fit a 24-bit significand
  * (`scripts/check_s32tof32_exact.py`, all 2^32 inputs). */
-NDS_R2_AQ_KERNEL_ATTR u32 ndsR2S32ToF32Bits(s32 q)
+NDS_AQ_KERNEL_ATTR u32 ndsS32ToF32Bits(s32 q)
 {
     u32 sign;
     u32 m;
@@ -288,10 +288,10 @@ NDS_R2_AQ_KERNEL_ATTR u32 ndsR2S32ToF32Bits(s32 q)
 }
 
 /* Q`bits` -> f32: the integer conversion plus an exact exponent adjust. */
-NDS_R2_AQ_KERNEL_ATTR f32 ndsR2FixedToF32(s32 q, s32 bits)
+NDS_AQ_KERNEL_ATTR f32 ndsAnimFixedToF32(s32 q, s32 bits)
 {
     f32 f;
-    u32 raw = ndsR2S32ToF32Bits(q);
+    u32 raw = ndsS32ToF32Bits(q);
 
     if ((raw & 0x7f800000u) != 0u)
     {
@@ -303,31 +303,31 @@ NDS_R2_AQ_KERNEL_ATTR f32 ndsR2FixedToF32(s32 q, s32 bits)
 
 /* The three curves over Q fields. `len` is the Q12 phase, `inv` the Q30
  * reciprocal (Cubic) or the Q12 frame count (Step), the four values Q12 --
- * except Linear's `rb`, which is the Q16 rate (`NDS_R2_AQ_RF`). Returns the
+ * except Linear's `rb`, which is the Q16 rate (`NDS_AQ_RF`). Returns the
  * Q12 value; `*is_cubic` lets the caller count evaluations without this body
  * owning a counter symbol the host harness would have to define. */
-NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimEvalQ(s32 len, s32 inv, s32 vb, s32 vt,
+NDS_AQ_KERNEL_ATTR s32 ndsAnimEvalQ(s32 len, s32 inv, s32 vb, s32 vt,
                                          s32 rb, s32 rt, u32 kind)
 {
     s32 out;
 
-    if (kind == NDS_R2_AQ_KIND_STEP)
+    if (kind == NDS_AQ_KIND_STEP)
     {
         out = (inv <= len) ? vt : vb;
     }
-    else if (kind == NDS_R2_AQ_KIND_LINEAR)
+    else if (kind == NDS_AQ_KIND_LINEAR)
     {
         s64 lin = (s64)vb + ((((s64)len * rb) +
-            (1 << (NDS_R2_AQ_RF - 1))) >> NDS_R2_AQ_RF);
+            (1 << (NDS_AQ_RF - 1))) >> NDS_AQ_RF);
 
-        out = ndsR2AnimClamp64(lin);
+        out = ndsAnimClamp64(lin);
     }
     else
     {
-        s32 lenc = ndsR2AnimClamp(len, NDS_R2_AQ_LEN_MAX);
-        s32 t = ndsR2AnimClamp(
-            (s32)((((s64)len * inv) + ((s64)1 << (NDS_R2_AQ_TSH - 1))) >>
-                NDS_R2_AQ_TSH), NDS_R2_AQ_T_MAX);
+        s32 lenc = ndsAnimClamp(len, NDS_AQ_LEN_MAX);
+        s32 t = ndsAnimClamp(
+            (s32)((((s64)len * inv) + ((s64)1 << (NDS_AQ_TSH - 1))) >>
+                NDS_AQ_TSH), NDS_AQ_T_MAX);
         s32 t2;
         s32 t3;
         s32 omt2;
@@ -338,31 +338,31 @@ NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimEvalQ(s32 len, s32 inv, s32 vb, s32 vt,
         s32 h_rt;
         s64 acc;
 
-        NDS_R2_AQ_OPAQUE(t);
-        NDS_R2_AQ_OPAQUE(lenc);
-        t2 = (s32)((((s64)t * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        NDS_R2_AQ_OPAQUE(t2);
-        t3 = (s32)((((s64)t2 * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        NDS_R2_AQ_OPAQUE(t3);
-        omt2 = (t2 - (2 * t)) + NDS_R2_AQ_BONE;
+        NDS_AQ_OPAQUE(t);
+        NDS_AQ_OPAQUE(lenc);
+        t2 = (s32)((((s64)t * t) + (NDS_AQ_BONE / 2)) >> NDS_AQ_BF);
+        NDS_AQ_OPAQUE(t2);
+        t3 = (s32)((((s64)t2 * t) + (NDS_AQ_BONE / 2)) >> NDS_AQ_BF);
+        NDS_AQ_OPAQUE(t3);
+        omt2 = (t2 - (2 * t)) + NDS_AQ_BONE;
         tmt = t2 - t;
-        h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_AQ_BONE;
+        h_vb = ((2 * t3) - (3 * t2)) + NDS_AQ_BONE;
         h_vt = (3 * t2) - (2 * t3);
-        NDS_R2_AQ_OPAQUE(omt2);
-        NDS_R2_AQ_OPAQUE(tmt);
-        h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        h_rt = (s32)((((s64)lenc * tmt) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        NDS_R2_AQ_OPAQUE(h_vb);
-        NDS_R2_AQ_OPAQUE(h_vt);
-        NDS_R2_AQ_OPAQUE(h_rb);
-        NDS_R2_AQ_OPAQUE(h_rt);
+        NDS_AQ_OPAQUE(omt2);
+        NDS_AQ_OPAQUE(tmt);
+        h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_AQ_VF - 1))) >>
+            NDS_AQ_VF);
+        h_rt = (s32)((((s64)lenc * tmt) + (1 << (NDS_AQ_VF - 1))) >>
+            NDS_AQ_VF);
+        NDS_AQ_OPAQUE(h_vb);
+        NDS_AQ_OPAQUE(h_vt);
+        NDS_AQ_OPAQUE(h_rb);
+        NDS_AQ_OPAQUE(h_rt);
         acc = (s64)vb * h_vb;
         acc += (s64)vt * h_vt;
         acc += (s64)rb * h_rb;
         acc += (s64)rt * h_rt;
-        out = ndsR2AnimClamp64((acc + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
+        out = ndsAnimClamp64((acc + (NDS_AQ_BONE / 2)) >> NDS_AQ_BF);
     }
     return out;
 }

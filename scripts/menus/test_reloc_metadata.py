@@ -26,7 +26,7 @@ typedef int32_t s32; typedef s32 sb32;
 
 class RelocMetadataTest(unittest.TestCase):
     def test_pending_fighters_use_relocation_generation(self):
-        body=function(read_split(SOURCE), 'ndsR2AnimCacheMatchFighterBytes')
+        body=function(read_split(SOURCE), 'ndsAnimCacheMatchFighterBytes')
         program=TYPES+r'''
 #define GMCOMMON_PLAYERS_MAX 4
 #define nFTKindEnumCount 4
@@ -61,18 +61,18 @@ int main(void) {
         dFTManagerDataFiles[i]=&files[i]; resident[i].owner_generation=3;
         battle.players[i].fkind=i; battle.players[i].pkind=1;
     }
-    if(ndsR2AnimCacheMatchFighterBytes()!=0 || queries) return 1;
+    if(ndsAnimCacheMatchFighterBytes()!=0 || queries) return 1;
     resident[2].owner_generation=2;
-    if(ndsR2AnimCacheMatchFighterBytes()!=1002 || queries!=1) return 2;
+    if(ndsAnimCacheMatchFighterBytes()!=1002 || queries!=1) return 2;
     battle.players[3].fkind=2;
-    if(ndsR2AnimCacheMatchFighterBytes()!=1002) return 3;
+    if(ndsAnimCacheMatchFighterBytes()!=1002) return 3;
     battle.players[2].pkind=battle.players[3].pkind=0;
-    if(ndsR2AnimCacheMatchFighterBytes()!=0) return 4;
+    if(ndsAnimCacheMatchFighterBytes()!=0) return 4;
     /* A P4 player loads its own pack; its parent's Main is never charged. */
     battle.players[2].pkind=1; contents[2]=17;
-    if(ndsR2AnimCacheMatchFighterBytes()!=0) return 6;
+    if(ndsAnimCacheMatchFighterBytes()!=0) return 6;
     contents[2]=0;
-    if(ndsR2AnimCacheMatchFighterBytes()!=1002) return 7;
+    if(ndsAnimCacheMatchFighterBytes()!=1002) return 7;
     return 0;
 }
 '''

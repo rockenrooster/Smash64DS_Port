@@ -526,7 +526,7 @@ if ((Test-Path -LiteralPath $ladderConfigPath) -and
      '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
     $expectedFoxLevel = 1
 }
-# nds_match_config.c's NDS_R2_BOTH_CPU branch runs AFTER the demo-ladder seed
+# nds_match_config.c's NDS_BOTH_CPU branch runs AFTER the demo-ladder seed
 # and deliberately re-pins both direct-battle CPUs to level 3 so stress runs
 # stay comparable. Mirror that source ordering here; otherwise a valid stress
 # descriptor is rejected solely because the shipping demo ladder is compiled
@@ -1176,7 +1176,7 @@ if ($P2ProofFighter0Kind -ge 0) {
     $makeArgs += $p2ProofAdmissionFlags
 }
 if ($BothCpu) {
-    $makeArgs += 'NDS_R2_BOTH_CPU=1'
+    $makeArgs += 'NDS_BOTH_CPU=1'
 }
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -1265,8 +1265,8 @@ if ($P2ProofFighter0Kind -ge 0) {
     }
 }
 if ($BothCpu) {
-    Assert-Condition ($bg0BuildConfigText -match '(?m)^#define NDS_R2_BOTH_CPU 1$') `
-        'Both-CPU proof requested, but the built ROM did not enable NDS_R2_BOTH_CPU.' `
+    Assert-Condition ($bg0BuildConfigText -match '(?m)^#define NDS_BOTH_CPU 1$') `
+        'Both-CPU proof requested, but the built ROM did not enable NDS_BOTH_CPU.' `
         $bg0BuildConfigText
 }
 Assert-Condition ($bg0BuildConfigText -match
@@ -2485,7 +2485,7 @@ try {
             'printf "RENDER_CI4LUT=%u,%u,%u,%u\n", gNdsRendererProfileCi4LutBuildCount, gNdsRendererProfileCi4LutReuseCount, gNdsRendererProfileCi4IndexCacheBuildCount, gNdsRendererProfileCi4IndexCacheReuseCount',
             'printf "RENDER_CI4MAP=%u,%u\n", gNdsRendererProfileCi4RepresentativePixelCount, gNdsRendererProfileCi4ReusePixelCount',
             'printf "RENDER_TEXHASH=%u,%u,%u,%u,%u\n", gNdsRendererProfileTextureLookupCallCount, gNdsRendererProfileTextureLookupProbeCount, gNdsRendererProfileTextureLookupActiveHitCount, gNdsRendererProfileTextureLookupTableHitCount, gNdsRendererProfileTextureLookupMissCount',
-            'printf "R2_TEXMEMO=%u,%u,%u,%u,%u\n", gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, gNdsR2TexMemoVerifyFail',
+            'printf "TEXMEMO=%u,%u,%u,%u,%u\n", gNdsTexMemoHitCount, gNdsTexMemoMissCount, gNdsTexMemoFillCount, gNdsTexMemoStaleCount, gNdsTexMemoVerifyFail',
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
@@ -2517,7 +2517,7 @@ try {
             # profile-owner bucket, so sample it separately instead of changing
             # the long-standing Boundary marker shape for the shipping roster.
             $hardwareCommands += ('printf "FAST_P2_FIGHTER=%u\n", gNdsRendererFastOwnerTriangleCount[{0}]' -f $p2ProductionProfileOwnerIndex)
-            $hardwareCommands += 'printf "P2_FIGHTER_GX=%u,%u,%u\n", gNdsR2GxComposeCaptures, gNdsR2GxComposeLocals, gNdsR2GxComposeDeclines'
+            $hardwareCommands += 'printf "P2_FIGHTER_GX=%u,%u,%u\n", gNdsGxComposeCaptures, gNdsGxComposeLocals, gNdsGxComposeDeclines'
             $hardwareCommands += 'printf "P2_FIGHTER_PROD=%u,%u\n", $p2_prod_success, $p2_prod_postgx_fail'
             $hardwareCommands += 'printf "P2_FIGHTER_PROD_LAST=%u,%u,%u,%u\n", $p2_prod_last_frame, $p2_prod_last_hw, $p2_prod_last_fast, $p2_prod_last_owner'
             $hardwareCommands += 'printf "P2_FIGHTER_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_generic, $p2_generic_enabled, $p2_generic_plan, $p2_generic_detailed, $p2_generic_oracle, $p2_generic_selected, $p2_generic_animlock, $p2_generic_shuffle, $p2_generic_low'
@@ -2531,7 +2531,7 @@ try {
                 # generation certificate and let BattleShip draw the suffix; do
                 # not weaken the generation check just because libnds may recycle
                 # the same numeric texture name.
-                $hardwareCommands += 'printf "P2_LINK_STAGE_TEXTURE_PROOF=%u,%u,%u,%u\n", gNdsR2TexProofFastCount, gNdsR2TexProofSweepCount, gNdsR2TexProofSweepFailCount, gNdsR2TextureEpochBumpCount'
+                $hardwareCommands += 'printf "P2_LINK_STAGE_TEXTURE_PROOF=%u,%u,%u,%u\n", gNdsTexProofFastCount, gNdsTexProofSweepCount, gNdsTexProofSweepFailCount, gNdsTextureEpochBumpCount'
             }
         }
         if ($m4CandidateEvidence) {
@@ -3247,7 +3247,7 @@ try {
     $renderCi4Lut = [regex]::Match($gdbStdout, 'RENDER_CI4LUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCi4Map = [regex]::Match($gdbStdout, 'RENDER_CI4MAP=([0-9]+),([0-9]+)')
     $renderTexHash = [regex]::Match($gdbStdout, 'RENDER_TEXHASH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $r2TexMemo = [regex]::Match($gdbStdout, 'R2_TEXMEMO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $r2TexMemo = [regex]::Match($gdbStdout, 'TEXMEMO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     # P2-1M: the shell arm prints the same tuple at the battle-start stop so

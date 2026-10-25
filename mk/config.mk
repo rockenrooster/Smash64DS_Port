@@ -127,7 +127,7 @@ NDS_STAGE_HW_COMPOSE ?= 0
 # cannot change the over-gate COUNT". That is still true of the COUNT and still
 # irrelevant to the BUDGET: the gate is P95 ticks, FTR is on nearly every frame,
 # and Requirement 7 of the 2026-08-10 goal is explicit that flat savings count.
-# One-binary A/B on gNdsR2FighterStripRoute (NDS_R2_STRIP_ROUTE=1, same ROM sha,
+# One-binary A/B on gNdsFighterStripRoute (NDS_STRIP_ROUTE=1, same ROM sha,
 # 1600 samples an arm): FTR P50 313,856 -> 302,272, WORK-H P50 952,512 ->
 # 941,312. The c115 per-PC census is why: ~28 of a corner's 40.5 cycles are the
 # GX write and the stall is per VERTEX, so 2,148 raw corners a frame becoming
@@ -207,14 +207,14 @@ NDS_FTPARTS_FLAT_MAX ?= 96
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Cycle 116. Same instrument, applied to the Task 56 fighter strips: at 1 the
 # raw-corner emitters and the primitive-group emitter are BOTH compiled and
-# `gNdsR2FighterStripRoute` selects between them at run time, so the strip A/B
+# `gNdsFighterStripRoute` selects between them at run time, so the strip A/B
 # runs on ONE binary. Task 56 was killed in 2026-07 against a control built
 # three days earlier and ~31 KB smaller, which is not a control at all on a ROM
 # whose pacing is placement-sensitive. Needs NDS_FIGHTER_PRIMITIVES >= 1
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
-NDS_R2_STRIP_ROUTE ?= 0
-# P2-2's direct-battle standing gate. Unlike NDS_R2_BOTH_CPU this has no
+NDS_STRIP_ROUTE ?= 0
+# P2-2's direct-battle standing gate. Unlike NDS_BOTH_CPU this has no
 # historical two-player meaning to preserve: it seeds four level-3 CPU fighter
 # INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
 # two fighter KINDS. Only the dedicated P2 stress target below enables it.
@@ -720,7 +720,7 @@ endif
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
 # overrides scene_harness.c's time_limit.
 #
-# It exists because this used to ride on NDS_R2_BOTH_CPU: that branch seeded a
+# It exists because this used to ride on NDS_BOTH_CPU: that branch seeded a
 # 7-minute match so a long soak would stay in gameplay, and the side effect was
 # that the both-CPU GATE arm sampled a 420-second match through a window sized
 # for a 60-second one. Measured 2026-08-05: 12.6% coverage against Boundary's
@@ -732,7 +732,7 @@ endif
 # harness that sets it. It derives the value from its own -MinutesToRun instead
 # of hardcoding one, so the match can never again be shorter than the run that
 # watches it, and it verifies the value in-guest rather than trusting this flag.
-NDS_R2_SOAK_MATCH_MINUTES ?= 0
+NDS_SOAK_MATCH_MINUTES ?= 0
 # Task 106 E0: logical updates per presented frame. Ships at 2 (the source 60 Hz
 # simulation against a 30 Hz present). Building with 1 prices what a 30 Hz
 # simulation would save; it is a sizing arm only, uncompensated, and plays at
@@ -748,7 +748,7 @@ NDS_UPDATES_PER_PRESENT ?= 2
 # 1 = memo live; 0 = the walk runs every capture exactly as before. The runtime
 # poke reaches gNdsFtrDrawMemoRoute (its own 32-byte line), so an A/B is one
 # binary and two arms.
-NDS_R2_FTR_DRAW_MEMO ?= 1
+NDS_FTR_DRAW_MEMO ?= 1
 # P2-1c. The VS shell's 2D UI kit: the SSB64 menu font, the hand cursor, the
 # Mario/Fox CSS portraits, menu SFX, and the retained text/sprite slots
 # P2-1d/1e/1f draw their screens out of. 0 compiles the whole thing out --

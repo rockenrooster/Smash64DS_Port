@@ -444,7 +444,7 @@ QUAD_ATLAS_WIDTH = 128
 # gNdsRendererParticleAtlasFailCount stayed 0 and AtlasBytes read 16,400. What
 # broke is everything that allocates AFTER it:
 #   gNdsRendererBattleStaticTextureViolationCount  0 -> 1
-#   gNdsR2StagePrepareBuildCount                   2 -> 244
+#   gNdsStagePrepareBuildCount                   2 -> 244
 # and the Results scoreboard panel (KOs/Pts/Place, the 1P/2P markers) vanished
 # from the final frame. Taking the largest free run before the interface asks
 # for one is precisely what scvsbattle.c warned about; preparing the atlas last
@@ -3844,7 +3844,7 @@ def build_pack(repo_root: Path) -> dict:
     # Yoster-only.
     item = build_item_bank(repo_root, frames_by_texture)
     # Dream Land's cells left the sheet 2026-10-04: with
-    # NDS_R2_WHISPY_NATIVE_TEXTURES (default on, and required by the Whispy
+    # NDS_WHISPY_NATIVE_TEXTURES (default on, and required by the Whispy
     # AOT) its particles draw from their own three native textures and never
     # looked these 1,536 texels up. The space seats the full efcommon closure.
     # The frames each texture's scripts show: the efcommon closure's, and

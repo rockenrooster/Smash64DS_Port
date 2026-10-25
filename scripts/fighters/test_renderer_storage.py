@@ -42,10 +42,10 @@ class RendererStorageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             d=Path(directory)
             # The packed HW-light layout only: every build sets
-            # NDS_R2_FIGHTER_HW_LIGHT, and the 16-byte base layout went
+            # NDS_FIGHTER_HW_LIGHT, and the 16-byte base layout went
             # with its branch (2026-10-21).
             for hw, size in ((1,10),):
-                program=TYPES+f'#define NDS_R2_FIGHTER_HW_LIGHT {hw}\n'+record+f'''
+                program=TYPES+f'#define NDS_FIGHTER_HW_LIGHT {hw}\n'+record+f'''
 _Static_assert(sizeof(NDSNativePreparedDenseVertex)=={size}, "vertex size");
 __attribute__((noinline)) u32 read_odd(const NDSNativePreparedDenseVertex *p) {{
     return p[1].gx_xy;
@@ -84,18 +84,18 @@ int main(void) {{
     def test_texture_memo_roundtrip_and_decline(self):
         source=read_split(ROOT/'src/nds/nds_renderer_native_common.c')
         source=source.replace('__attribute__((noinline))', '')
-        record=braced(source,r'typedef struct NDSR2RunTextureMemo\s*\{',True)
+        record=braced(source,r'typedef struct NDSRunTextureMemo\s*\{',True)
         bodies='\n'.join(function(source,name) for name in (
             'ndsRendererR2RunTextureMemoFor','ndsRendererR2RunTextureMemoApply',
             'ndsRendererR2RunTextureMemoFill'))
         counters='\n'.join('static u32 '+name+';' for name in sorted(set(re.findall(r'\bgNds\w+',bodies))))
         program=TYPES+record+'''
-#define NDS_R2_RUN_MEMO_MAX 67u
+#define NDS_RUN_MEMO_MAX 67u
 /* Rows are by run index modulo 67, tagged with the run (a P4 owner's runs
  * pass 67); a run index past the tag byte is never memoized. */
-#define NDS_R2_RUN_TEXMEMO_RUN_MAX 0xffu
+#define NDS_RUN_TEXMEMO_RUN_MAX 0xffu
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 300u
-_Static_assert(sizeof(NDSR2RunTextureMemo)==28, "memo size");
+_Static_assert(sizeof(NDSRunTextureMemo)==28, "memo size");
 typedef struct {u32 hardware_texture_ready_count, hardware_texture_format,
     hardware_texture_width, hardware_texture_height;} NDSRendererStats;
 typedef struct {s32 ready,name; u32 key_generation,last_used_frame,pinned,params;} NDSRendererHardwareTextureCacheEntry;
@@ -103,7 +103,7 @@ static NDSRendererHardwareTextureCacheEntry sNdsRendererHardwareTextureCache[300
 static const NDSRendererHardwareTextureCacheEntry *sNdsRendererHardwareActiveTextureEntry;
 static u32 sNdsRendererHardwareFrameSerial=10;
 static struct {u32 texture_memo_owner_key;} sNdsNativeFighterOwnerExecution;
-static NDSR2RunTextureMemo sNdsR2RunTextureMemo[67][4];
+static NDSRunTextureMemo sNdsRunTextureMemo[67][4];
 static u32 bound_name,bound_params,static_hits;
 static void ndsRendererHardwareBindTextureName(NDSRendererStats *s,u32 name) {(void)s;bound_name=name;}
 static void ndsRendererHardwareApplyTextureParams(u32 p) {bound_params=p;}
@@ -150,9 +150,9 @@ int main(void) {
         if(fault==9)o=-32769;
         *e=(NDSRendererHardwareTextureCacheEntry){1,(s32)n,101,0,1,0};
         sNdsRendererHardwareActiveTextureEntry=e;
-        sNdsR2RunTextureMemo[2][0].valid=1;
+        sNdsRunTextureMemo[2][0].valid=1;
         ndsRendererR2RunTextureMemoFill(2,&s,n,a,b,c,d,o);
-        CHECK(!sNdsR2RunTextureMemo[2][0].valid);
+        CHECK(!sNdsRunTextureMemo[2][0].valid);
         CHECK(!ndsRendererR2RunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
     }
     return 0;

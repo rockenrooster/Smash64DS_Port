@@ -213,9 +213,9 @@ void ndsBattlePrepareSceneTextures(void)
     /* LAST, and the order is the fix rather than a preference.
      *
      * Measured 2026-08-01 on three tick-HUD ROMs that differ only in these
-     * flags. Control and NDS_R2_PARTICLE_RUNTIME=1 both run a clean match with
+     * flags. Control and NDS_PARTICLE_RUNTIME=1 both run a clean match with
      * ViolationCount 0 and StagePrepareBuildCount 2. Adding
-     * NDS_R2_PARTICLE_DRAW=1 -- with the atlas prepared HERE, between the
+     * NDS_PARTICLE_DRAW=1 -- with the atlas prepared HERE, between the
      * static set and the interface -- aborts at the GO countdown
      * (ifCommonTrafficMakeSObj, MALLOCOVF=0, so not the heap) and, on the runs
      * that got past it, reported ViolationCount 1 with stage rebuilds 197.
@@ -313,8 +313,8 @@ static void ndsSCVSBattlePrepareBeforeTimer(void)
 static void ndsSCVSBattleStartPlayBGM(void)
 {
     ndsKirbyHatPrepareMatch();
-    ndsR2AnimCachePreloadMatch();
-    (void)ndsR2AnimCachePreloadFinish();
+    ndsAnimCachePreloadMatch();
+    (void)ndsAnimCachePreloadFinish();
     mpCollisionSetPlayBGM();
 }
 
@@ -476,7 +476,7 @@ void scVSBattleFuncUpdate(void)
 
     /* Normally exhausted by the pre-BGM barrier. Keep the bounded step here as
      * fail-open recovery if a future larger preload exceeds the barrier bound. */
-    ndsR2AnimCachePreloadStep();
+    ndsAnimCachePreloadStep();
 
     if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)
     {
@@ -543,8 +543,8 @@ void scVSBattleFuncUpdate(void)
  * 16 Gfx (128 B, 8x the measured DL0 peak) and 4 Gfx (32 B) respectively.
  * Both stay nonzero, the taskman's bounds checker remains authoritative, and
  * the two task contexts return another 320 bytes to the scene arena. */
-#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 16u)
-#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 4u)
+#define NDS_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 16u)
+#define NDS_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 4u)
 /* MEASURED BY P2-3r13, THEN BOUNDED AND CUT BY P2-3f9: 0xD000 -> 0x2000, which
  * returns 2 x 45,056 = 90,112 B of scene arena.
  *
@@ -584,7 +584,7 @@ void scVSBattleFuncUpdate(void)
  * 1,024 B to the source object arena. The material-branch path remains guarded
  * by gNdsTaskmanGraphicsHeapNoRoomCount. Future content must keep both guards
  * zero. */
-#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x600u
+#define NDS_VSBATTLE_GRAPHICS_ARENA_BYTES 0x600u
 
 /* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP
  * OUTPUT BUFFER. The source sizes it 0xC000 (decomp scvsbattle.c:41) for the
@@ -610,7 +610,7 @@ void scVSBattleFuncUpdate(void)
  * accepts every nonzero size for kind 2 and creates an RDP task only for kind 1.
  * Keep one aligned 16-byte block so the source's nonzero contract remains
  * explicit and return another 240 bytes to the battle general heap. */
-#define NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES 0x10u
+#define NDS_VSBATTLE_RDP_OUTPUT_BYTES 0x10u
 
 /* Engagement proof: the re-budget must be visible without a debugger, because
  * "the setup struct says X" and "the scene was built with X" have already
@@ -630,17 +630,17 @@ volatile u32 gNdsSCVSBattleRebudgetRdpOutputBytes;
 s32 ndsBattleSetupIsRebudgeted(const SYTaskmanSetup *setup)
 {
     return (setup->scene_setup.dl_buffer0_size ==
-            NDS_R2_VSBATTLE_DL_BUFFER0_BYTES) ? TRUE : FALSE;
+            NDS_VSBATTLE_DL_BUFFER0_BYTES) ? TRUE : FALSE;
 }
 
 void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup)
 {
-    setup->scene_setup.dl_buffer0_size = NDS_R2_VSBATTLE_DL_BUFFER0_BYTES;
-    setup->scene_setup.dl_buffer1_size = NDS_R2_VSBATTLE_DL_BUFFER1_BYTES;
+    setup->scene_setup.dl_buffer0_size = NDS_VSBATTLE_DL_BUFFER0_BYTES;
+    setup->scene_setup.dl_buffer1_size = NDS_VSBATTLE_DL_BUFFER1_BYTES;
     setup->scene_setup.graphics_arena_size =
-        NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES;
+        NDS_VSBATTLE_GRAPHICS_ARENA_BYTES;
     setup->scene_setup.rdp_output_buffer_size =
-        NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES;
+        NDS_VSBATTLE_RDP_OUTPUT_BYTES;
 }
 
 static void ndsSCVSBattleRebudgetSceneArena(void)

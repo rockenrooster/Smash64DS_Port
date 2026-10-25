@@ -169,8 +169,8 @@ def test_yoyo_root_dropped_from_either_detail_fails(victim):
         assert "YoYo" in [p["name"] for p in
                           native.build_owner_root_programs(SOURCE, context)]
 
-    saved = native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim]
-    native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
+    saved = native.ROOT_PROGRAM_APPENDIX["ness"][victim]
+    native.ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
         row for row in saved if row[1] != YOYO_ROOT)
     try:
         # The generator refuses a program whose root has no bake rather than
@@ -184,7 +184,7 @@ def test_yoyo_root_dropped_from_either_detail_fails(victim):
         assert "YoYo" in [p["name"] for p in
                           native.build_owner_root_programs(SOURCE, context)]
     finally:
-        native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = saved
+        native.ROOT_PROGRAM_APPENDIX["ness"][victim] = saved
 
 
 def test_hidden_part_census_names_the_yoyo_without_its_program():
@@ -193,17 +193,17 @@ def test_hidden_part_census_names_the_yoyo_without_its_program():
     Ness's two smashes in both details, and nothing else; restored, green."""
     assert not yoyo_census_failures()
     saved = native.OWNER_ROOT_PROGRAMS["ness"]
-    saved_appendix = dict(native.P2_ROOT_PROGRAM_APPENDIX["ness"])
+    saved_appendix = dict(native.ROOT_PROGRAM_APPENDIX["ness"])
     native.OWNER_ROOT_PROGRAMS["ness"] = tuple(
         program for program in saved if program[0] != "YoYo")
     for detail, rows in saved_appendix.items():
-        native.P2_ROOT_PROGRAM_APPENDIX["ness"][detail] = tuple(
+        native.ROOT_PROGRAM_APPENDIX["ness"][detail] = tuple(
             row for row in rows if row[1] != YOYO_ROOT)
     try:
         failures = yoyo_census_failures()
     finally:
         native.OWNER_ROOT_PROGRAMS["ness"] = saved
-        native.P2_ROOT_PROGRAM_APPENDIX["ness"].update(saved_appendix)
+        native.ROOT_PROGRAM_APPENDIX["ness"].update(saved_appendix)
     assert len(failures) == 4, failures
     assert {line.split()[1] for line in failures} == {"high", "low"}
     assert {line.split("(")[1].split(")")[0] for line in failures} == {

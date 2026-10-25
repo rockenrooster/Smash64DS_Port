@@ -8,7 +8,7 @@
  * mostly far from the attack.
  *
  * This kernel decides only "certainly a miss". It composes the joint's world
- * matrix in fixed point (include/nds/nds_r2_collision_fixed.h, host-graded to
+ * matrix in fixed point (include/nds/nds_collision_fixed.h, host-graded to
  * ~0.002 world units at depth 12) from the source's own cached locals, places
  * the hurtbox's world axis-aligned bounds around it, and rejects when the
  * attack's swept segment bounds are separated from them on some world axis by
@@ -28,25 +28,25 @@
 #include <macros.h>
 
 /* The DS divide and square-root units for the kernel's two overridable
- * hooks, as src/port/nds_r2_collision_fixed.c binds them under
- * NDS_R2_CFX_HWMATH: the same truncating 64-bit divide and floor root, proven
- * identical to the portable forms (scripts/check-r2-hwmath.ps1). The portable
+ * hooks, as src/port/nds_collision_fixed.c binds them under
+ * NDS_CFX_HWMATH: the same truncating 64-bit divide and floor root, proven
+ * identical to the portable forms (scripts/check-hwmath.ps1). The portable
  * defaults were a bit-by-bit __aeabi_ldivmod and a 32-step digit root on every
  * slot miss. */
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fcmp.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
-#define NDS_R2_CFX_DIV64(numerator, denominator) \
-    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
-#define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
-#include <nds/nds_r2_collision_fixed.h>
+#define NDS_CFX_DIV64(numerator, denominator) \
+    ndsHwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
+#define NDS_CFX_ISQRT64(value) ndsHwMathCfxIsqrt64(value)
+#include <nds/nds_collision_fixed.h>
 
 #define NDS_HB_CHAIN_MAX 18
 /* Four world units, Q12. */
-#define NDS_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
+#define NDS_HB_MARGIN_Q12 (INT32_C(4) << NDS_CFX_POS_BITS)
 /* 2026-10-05: four fighters bring ~100 joints to the hit-detection phase;
  * 64 direct-mapped slots evicted chain worlds the same tick recomposed. */
 #define NDS_HB_CACHE_SLOTS 128u
@@ -64,7 +64,7 @@ typedef struct NDSHbWorld
 {
     const DObj *dobj;
     u32 epoch;
-    NDSR2CfxMtx world;
+    NDSCfxMtx world;
     /* 1/s_min at Q26, rounded up (0 = not yet derived): s_min is the shortest
      * world row, so radius * |W[k][c]| / s_k <= radius * |W[k][c]| * this. */
     int32_t inv_smin_q26;
@@ -99,7 +99,7 @@ typedef struct NDSHbFrameSlot
 {
     const NDSHbWorld *slot;
     u32 gen;
-    NDSR2CfxFrame frame;
+    NDSCfxFrame frame;
 } NDSHbFrameSlot;
 static NDSHbFrameSlot sNdsHbFrames[NDS_HB_FRAME_SLOTS];
 
@@ -185,19 +185,19 @@ static inline s32 ndsHbSinQ15(const u16 *half, s32 index)
 static int32_t __attribute__((noinline)) ndsHbToFixed(f32 value,
                                                         u32 frac_bits)
 {
-    return ndsR2CollisionF32ToFixed(value, frac_bits);
+    return ndsCollisionF32ToFixed(value, frac_bits);
 }
 
 /* gmCollisionTransformMatrixAll's local from the DObj TRS in Q26 / Q12 (owner
  * ruling D13, 2026-10-04: the fighter joint chain is fixed point end to end).
  * The rotation terms are the source's, in its order, at Q30 from the Q15 table
  * the port's lbCommonSin reads. Two relaxations against the exact builder
- * (ndsR2CfxBuildLocal, about five times this code): the index truncates as
+ * (ndsCfxBuildLocal, about five times this code): the index truncates as
  * above, and the cosine reads the index a quarter turn on rather than indexing
  * angle + 90 degrees -- each one table step (1/4096 turn) at a rounding edge,
  * far inside the reject's four-unit margin. 0 = decline (a scale past 4, a
  * translation past 131,072 units, an angle the index declines). */
-static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
+static int ndsHbLocalFromDObj(NDSCfxMtx *dst, const DObj *dobj)
 {
     const f32 scale[3] = { dobj->scale.vec.f.x, dobj->scale.vec.f.y,
                            dobj->scale.vec.f.z };
@@ -261,9 +261,9 @@ static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
             }
             continue;
         }
-        s = ndsHbToFixed(scale[row], NDS_R2_CFX_ROT_BITS);
-        if ((s == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(s) > NDS_R2_CFX_ROT_MAX))
+        s = ndsHbToFixed(scale[row], NDS_CFX_ROT_BITS);
+        if ((s == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(s) > NDS_CFX_ROT_MAX))
         {
             return 0;
         }
@@ -271,15 +271,15 @@ static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
         {
             /* Q30 x Q26 -> Q26: at most 2^58 before the shift. */
             dst->r[row][col] =
-                (int32_t)ndsR2CfxShr((int64_t)rot[row][col] * s, 30u);
+                (int32_t)ndsCfxShr((int64_t)rot[row][col] * s, 30u);
         }
     }
     for (col = 0u; col < 3u; col++)
     {
-        const int32_t t = ndsHbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
+        const int32_t t = ndsHbToFixed(translate[col], NDS_CFX_POS_BITS);
 
-        if ((t == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(t) >= NDS_R2_CFX_POS_MAX))
+        if ((t == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(t) >= NDS_CFX_POS_MAX))
         {
             return 0;
         }
@@ -288,7 +288,7 @@ static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     return 1;
 }
 #else
-static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
+static int ndsHbLocalFromDObj(NDSCfxMtx *dst, const DObj *dobj)
 {
     const float rotate[3] = { dobj->rotate.vec.f.x, dobj->rotate.vec.f.y,
                               dobj->rotate.vec.f.z };
@@ -298,33 +298,33 @@ static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
                                  dobj->translate.vec.f.y,
                                  dobj->translate.vec.f.z };
 
-    return ndsR2CfxBuildLocal(dst, gSYSinTable, rotate, scale, translate);
+    return ndsCfxBuildLocal(dst, gSYSinTable, rotate, scale, translate);
 }
 #endif
 
 /* The joint's local, as the source would use it: its cached float local when
  * transform_update_mode is set, otherwise built from the DObj TRS in fixed
  * point (gmCollisionTransformMatrixAll's terms). */
-static int ndsHbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
+static int ndsHbLocal(NDSCfxMtx *dst, const DObj *dobj,
                         const FTParts *parts)
 {
     if (parts->transform_update_mode != 0)
     {
-        return ndsR2CfxLoadF32(dst, (float (*)[4])parts->unk_dobjtrans_0x10);
+        return ndsCfxLoadF32(dst, (float (*)[4])parts->unk_dobjtrans_0x10);
     }
     return ndsHbLocalFromDObj(dst, dobj);
 }
 
 
 #if NDS_JOINT_RESIDENT
-/* ndsR2CfxCompose for the resident walk: dst = rhs carried into lhs, the
+/* ndsCfxCompose for the resident walk: dst = rhs carried into lhs, the
  * same products with truncating reductions (2^-26 a cell, far under the Q12
  * every consumer keeps) and one unsigned range test a cell for the same
  * guards. dst may alias lhs. */
-static int ndsHbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
-                          const NDSR2CfxMtx *rhs)
+static int ndsHbCompose(NDSCfxMtx *dst, const NDSCfxMtx *lhs,
+                          const NDSCfxMtx *rhs)
 {
-    NDSR2CfxMtx out;
+    NDSCfxMtx out;
     u32 row;
     u32 col;
 
@@ -335,10 +335,10 @@ static int ndsHbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
             const int64_t cell = ((int64_t)lhs->r[0][col] * rhs->r[row][0] +
                                   (int64_t)lhs->r[1][col] * rhs->r[row][1] +
                                   (int64_t)lhs->r[2][col] * rhs->r[row][2]) >>
-                                 NDS_R2_CFX_ROT_BITS;
+                                 NDS_CFX_ROT_BITS;
 
-            if ((uint64_t)(cell + NDS_R2_CFX_ROT_MAX) >
-                (uint64_t)(2 * (int64_t)NDS_R2_CFX_ROT_MAX))
+            if ((uint64_t)(cell + NDS_CFX_ROT_MAX) >
+                (uint64_t)(2 * (int64_t)NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -350,11 +350,11 @@ static int ndsHbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
         const int64_t cell = (((int64_t)lhs->r[0][col] * rhs->t[0] +
                                (int64_t)lhs->r[1][col] * rhs->t[1] +
                                (int64_t)lhs->r[2][col] * rhs->t[2]) >>
-                              NDS_R2_CFX_ROT_BITS) +
+                              NDS_CFX_ROT_BITS) +
                              (int64_t)lhs->t[col];
 
-        if ((uint64_t)(cell + (NDS_R2_CFX_POS_MAX - 1)) >
-            (uint64_t)(2 * ((int64_t)NDS_R2_CFX_POS_MAX - 1)))
+        if ((uint64_t)(cell + (NDS_CFX_POS_MAX - 1)) >
+            (uint64_t)(2 * ((int64_t)NDS_CFX_POS_MAX - 1)))
         {
             return 0;
         }
@@ -365,11 +365,11 @@ static int ndsHbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
 }
 #define NDS_HB_COMPOSE ndsHbCompose
 #else
-#define NDS_HB_COMPOSE ndsR2CfxCompose
+#define NDS_HB_COMPOSE ndsCfxCompose
 #endif
 
 /* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
- * s2 in [NDS_R2_CFX_S2_MIN, NDS_R2_CFX_S2_MAX] = [2^22, 2^30], without the
+ * s2 in [NDS_CFX_S2_MIN, NDS_CFX_S2_MAX] = [2^22, 2^30], without the
  * divide and square-root units (P2-2p8, 2026-09-29: their busy-waits were ~18%
  * of the kernel's hottest rows). With s2 = m * 2^q + r, m the top six bits
  * (32..63), s2 >= m * 2^q, so
@@ -411,13 +411,13 @@ static int32_t ndsHbInvSqrtQ26(uint32_t s2)
 
 /* 1/s_min for the world `w` (the caller keeps it in the joint's slot).
  * 0 = decline. */
-static int32_t ndsHbInvSMinOf(const NDSR2CfxMtx *w)
+static int32_t ndsHbInvSMinOf(const NDSCfxMtx *w)
 {
     int32_t s2[3];
     int32_t s2_min;
     int32_t inv;
 
-    if (ndsR2CfxRowScales(w, s2, NULL, NULL, NULL) == 0)
+    if (ndsCfxRowScales(w, s2, NULL, NULL, NULL) == 0)
     {
         return 0;
     }
@@ -443,21 +443,21 @@ static int32_t ndsHbInvMinScaleOf(const int32_t nscale[3])
     {
         return 0;
     }
-    return (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, m) + 1;
+    return (int32_t)NDS_CFX_DIV64((int64_t)1 << 42, m) + 1;
 }
 #endif
 
 static int ndsHbVec(int32_t out[3], const Vec3f *v)
 {
-    out[0] = ndsR2CollisionF32ToFixed(v->x, NDS_R2_CFX_POS_BITS);
-    out[1] = ndsR2CollisionF32ToFixed(v->y, NDS_R2_CFX_POS_BITS);
-    out[2] = ndsR2CollisionF32ToFixed(v->z, NDS_R2_CFX_POS_BITS);
-    return ((out[0] != NDS_R2_COLLISION_F32_OVERFLOW) &&
-            (out[1] != NDS_R2_COLLISION_F32_OVERFLOW) &&
-            (out[2] != NDS_R2_COLLISION_F32_OVERFLOW) &&
-            (ndsR2CfxAbs32(out[0]) < NDS_R2_CFX_POS_MAX) &&
-            (ndsR2CfxAbs32(out[1]) < NDS_R2_CFX_POS_MAX) &&
-            (ndsR2CfxAbs32(out[2]) < NDS_R2_CFX_POS_MAX)) ? 1 : 0;
+    out[0] = ndsCollisionF32ToFixed(v->x, NDS_CFX_POS_BITS);
+    out[1] = ndsCollisionF32ToFixed(v->y, NDS_CFX_POS_BITS);
+    out[2] = ndsCollisionF32ToFixed(v->z, NDS_CFX_POS_BITS);
+    return ((out[0] != NDS_COLLISION_F32_OVERFLOW) &&
+            (out[1] != NDS_COLLISION_F32_OVERFLOW) &&
+            (out[2] != NDS_COLLISION_F32_OVERFLOW) &&
+            (ndsCfxAbs32(out[0]) < NDS_CFX_POS_MAX) &&
+            (ndsCfxAbs32(out[1]) < NDS_CFX_POS_MAX) &&
+            (ndsCfxAbs32(out[2]) < NDS_CFX_POS_MAX)) ? 1 : 0;
 }
 
 /* The four float -> Q12 edge conversions are ~100 cycles each, and a test
@@ -524,7 +524,7 @@ static NDSHbDamageMemo sNdsHbDamageMemo[NDS_HB_DAMAGE_MEMO_SLOTS];
  * decline. */
 __attribute__((used)) volatile u32 gNdsHbLocalRejects;
 
-static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
+static int ndsHbRejectLocal(const NDSCfxMtx *w, const int32_t off[3],
                               const int32_t size[3], int32_t radius,
                               const int32_t p0[3], const int32_t p1[3])
 {
@@ -536,7 +536,7 @@ static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
     u32 k;
     u32 c;
 
-    if (ndsR2CfxRowScales(w, s2, NULL, NULL, NULL) == 0)
+    if (ndsCfxRowScales(w, s2, NULL, NULL, NULL) == 0)
     {
         return 0;
     }
@@ -564,14 +564,14 @@ static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
             const u32 a = next[c];
             const u32 b = prev[c];
 
-            n[c] = ndsR2CfxShr((int64_t)w->r[i][a] * w->r[j][b] -
+            n[c] = ndsCfxShr((int64_t)w->r[i][a] * w->r[j][b] -
                                    (int64_t)w->r[i][b] * w->r[j][a],
-                               NDS_R2_CFX_ROT_BITS);
+                               NDS_CFX_ROT_BITS);
         }
-        det = ndsR2CfxShr((int64_t)w->r[k][0] * n[0] +
+        det = ndsCfxShr((int64_t)w->r[k][0] * n[0] +
                               (int64_t)w->r[k][1] * n[1] +
                               (int64_t)w->r[k][2] * n[2],
-                          NDS_R2_CFX_ROT_BITS);
+                          NDS_CFX_ROT_BITS);
         if (det < 0)
         {
             det = -det;
@@ -597,8 +597,8 @@ static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
         /* size + radius / s_k, the radius term rounded up (Q12). */
         reach = (int64_t)size[k] +
                 (((int64_t)radius * ndsHbInvSqrtQ26((uint32_t)s2[k]) +
-                  (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                 NDS_R2_CFX_ROT_BITS);
+                  (((int64_t)1 << NDS_CFX_ROT_BITS) - 1)) >>
+                 NDS_CFX_ROT_BITS);
         hi = (int64_t)off[k] + reach;
         lo = (int64_t)off[k] - reach;
         if ((hi >= ((int64_t)1 << 26)) || (hi <= -((int64_t)1 << 26)) ||
@@ -632,13 +632,13 @@ static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
  * into its slot, and a slot's tag is cleared before its world is written, so a
  * failed build never leaves a tag on a stale world (P2-2p8, 2026-09-29: the
  * previous walk read FTParts first and copied every level three times). */
-static const NDSR2CfxMtx *ndsHbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+static const NDSCfxMtx *ndsHbWorldOf(DObj *joint, NDSCfxMtx *scratch,
                                         NDSHbWorld **slot_out)
 {
     DObj *chain[NDS_HB_CHAIN_MAX];
     const FTParts *chain_parts[NDS_HB_CHAIN_MAX];
     const u32 epoch = gNdsHurtboxLatchEpoch;
-    const NDSR2CfxMtx *acc;
+    const NDSCfxMtx *acc;
     NDSHbWorld *slot;
     DObj *cursor = joint;
     s32 depth = 0;
@@ -662,7 +662,7 @@ static const NDSR2CfxMtx *ndsHbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
         }
         if (parts->unk_dobjtrans_0x5 != 0)
         {
-            if (ndsR2CfxLoadF32(scratch,
+            if (ndsCfxLoadF32(scratch,
                                 (float (*)[4])parts->mtx_translate) == 0)
             {
                 return NULL;
@@ -697,7 +697,7 @@ static const NDSR2CfxMtx *ndsHbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
     }
     while (depth > 0)
     {
-        NDSR2CfxMtx local;
+        NDSCfxMtx local;
 
         depth--;
         cursor = chain[depth];
@@ -745,13 +745,13 @@ static inline int32_t ndsHbLockInv(u32 axis, int32_t scale)
     if (scale != sNdsHbLockInvIn[axis])
     {
         sNdsHbLockInvOut[axis] =
-            (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32, scale);
+            (int32_t)NDS_CFX_DIV64((int64_t)1 << 32, scale);
         sNdsHbLockInvIn[axis] = scale;
     }
     return sNdsHbLockInvOut[axis];
 }
 
-static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
+static int ndsHbLocalLock(NDSCfxMtx *dst, int32_t nscale[3],
                             const DObj *dobj, const int32_t parent[3])
 {
     const f32 scale[3] = { dobj->scale.vec.f.x, dobj->scale.vec.f.y,
@@ -790,7 +790,7 @@ static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
     {
         int32_t s = ndsHbToFixed(scale[row], 16u);
 
-        if ((s == NDS_R2_COLLISION_F32_OVERFLOW) || (s <= 0) ||
+        if ((s == NDS_COLLISION_F32_OVERFLOW) || (s <= 0) ||
             (s >= (INT32_C(16) << 16)))
         {
             return 0;
@@ -843,15 +843,15 @@ static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
         {
             /* Q30 x Q16 >> 20 -> Q26 (the row's scale), then x Q16 >> 16
              * (the column's 1/parent scale). */
-            int64_t cell = ndsR2CfxShr((int64_t)rot[row][col] * nscale[row],
+            int64_t cell = ndsCfxShr((int64_t)rot[row][col] * nscale[row],
                                        20u);
 
             if (parent != NULL)
             {
-                cell = ndsR2CfxShr(cell * inv[col], 16u);
+                cell = ndsCfxShr(cell * inv[col], 16u);
             }
-            if ((cell > (int64_t)NDS_R2_CFX_ROT_MAX) ||
-                (cell < -(int64_t)NDS_R2_CFX_ROT_MAX))
+            if ((cell > (int64_t)NDS_CFX_ROT_MAX) ||
+                (cell < -(int64_t)NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -860,10 +860,10 @@ static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
     }
     for (col = 0u; col < 3u; col++)
     {
-        const int32_t t = ndsHbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
+        const int32_t t = ndsHbToFixed(translate[col], NDS_CFX_POS_BITS);
 
-        if ((t == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(t) >= NDS_R2_CFX_POS_MAX))
+        if ((t == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(t) >= NDS_CFX_POS_MAX))
         {
             return 0;
         }
@@ -877,13 +877,13 @@ static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
  * scale cached beside it) or one the source latched (its vec_scale latched with
  * it), or to the root; then each child's lock local carried into its parent's
  * world. *nscale_out is the joint's accumulated scale at Q16. */
-static const NDSR2CfxMtx *ndsHbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
+static const NDSCfxMtx *ndsHbWorldOfLock(DObj *joint, NDSCfxMtx *scratch,
                                             NDSHbWorld **slot_out,
                                             int32_t nscale_out[3])
 {
     DObj *chain[NDS_HB_CHAIN_MAX];
     const u32 epoch = gNdsHurtboxLatchEpoch;
-    const NDSR2CfxMtx *acc;
+    const NDSCfxMtx *acc;
     const int32_t *acc_scale;
     int32_t latched_scale[3];
     NDSHbWorld *slot;
@@ -914,7 +914,7 @@ static const NDSR2CfxMtx *ndsHbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
             /* Latched by the source's own walk this tick: its world, and the
              * accumulated scale that walk latched with it (0x6). */
             if ((parts->unk_dobjtrans_0x6 == 0) ||
-                (ndsR2CfxLoadF32(scratch,
+                (ndsCfxLoadF32(scratch,
                                  (float (*)[4])parts->mtx_translate) == 0))
             {
                 return NULL;
@@ -924,7 +924,7 @@ static const NDSR2CfxMtx *ndsHbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
             latched_scale[2] = ndsHbToFixed(parts->vec_scale.z, 16u);
             for (c = 0u; c < 3u; c++)
             {
-                if ((latched_scale[c] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+                if ((latched_scale[c] == NDS_COLLISION_F32_OVERFLOW) ||
                     (latched_scale[c] <= 0))
                 {
                     return NULL;
@@ -965,7 +965,7 @@ static const NDSR2CfxMtx *ndsHbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
     }
     while (depth > 0)
     {
-        NDSR2CfxMtx local;
+        NDSCfxMtx local;
         int32_t scale[3];
 
         depth--;
@@ -1018,10 +1018,10 @@ static const NDSHbAttackMemo *ndsHbAttackPoints(const Vec3f *pos_curr,
          (b6 ^ m->bits[6])) != 0u)
     {
         const int32_t radius =
-            ndsR2CollisionF32ToFixed(attack_size, NDS_R2_CFX_POS_BITS);
+            ndsCollisionF32ToFixed(attack_size, NDS_CFX_POS_BITS);
 
-        m->ok = ((radius != NDS_R2_COLLISION_F32_OVERFLOW) &&
-                 (ndsR2CfxAbs32(radius) < NDS_R2_CFX_POS_MAX) &&
+        m->ok = ((radius != NDS_COLLISION_F32_OVERFLOW) &&
+                 (ndsCfxAbs32(radius) < NDS_CFX_POS_MAX) &&
                  (ndsHbVec(m->p0, pos_curr) != 0) &&
                  (ndsHbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
         m->radius = radius;
@@ -1079,11 +1079,11 @@ static inline int ndsHbAxisReject(const int32_t center[3],
 
         /* radius * sum_abs * inv_smin, each reduction rounded up. */
         rad_term = ((int64_t)radius * sum_abs[c] +
-                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                   NDS_R2_CFX_ROT_BITS;
+                    (((int64_t)1 << NDS_CFX_ROT_BITS) - 1)) >>
+                   NDS_CFX_ROT_BITS;
         rad_term = (rad_term * inv_smin +
-                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                   NDS_R2_CFX_ROT_BITS;
+                    (((int64_t)1 << NDS_CFX_ROT_BITS) - 1)) >>
+                   NDS_CFX_ROT_BITS;
         ext = ext0[c] + rad_term;
         if (((int64_t)hi < (int64_t)center[c] - ext) ||
             ((int64_t)lo > (int64_t)center[c] + ext))
@@ -1124,9 +1124,9 @@ static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     const FTStruct *fp;
     const NDSHbAttackMemo *am;
     NDSHbDamageMemo *dm;
-    const NDSR2CfxMtx *w;
+    const NDSCfxMtx *w;
     NDSHbWorld *slot;
-    NDSR2CfxMtx scratch;
+    NDSCfxMtx scratch;
     int32_t center[3];
     int32_t sum_abs[3];
     int64_t ext0[3];
@@ -1156,7 +1156,7 @@ static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
             return 0;
         }
         if (ndsHbAxisReject(dm->box_center, dm->box_ext0, dm->box_sum_abs,
-                              dm->box_inv_smin, ndsR2CfxAbs32(am->radius),
+                              dm->box_inv_smin, ndsCfxAbs32(am->radius),
                               am->p0, am->p1) != 0)
         {
             NDS_DIAG(gNdsHbBoxHits++);
@@ -1243,8 +1243,8 @@ static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
             }
         }
     }
-    ndsR2CfxTransformPoint(center, w, dm->off);
-    radius = ndsR2CfxAbs32(am->radius);
+    ndsCfxTransformPoint(center, w, dm->off);
+    radius = ndsCfxAbs32(am->radius);
     for (c = 0u; c < 3u; c++)
     {
         int64_t ext = NDS_HB_MARGIN_Q12;
@@ -1254,12 +1254,12 @@ static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         /* |W| <= 2^28 (the guards), so three cells sum inside an int32. */
         for (k = 0u; k < 3u; k++)
         {
-            int64_t cell = ndsR2CfxAbs32(w->r[k][c]);
+            int64_t cell = ndsCfxAbs32(w->r[k][c]);
 
             abs_sum += (int32_t)cell;
-            ext += (cell * ndsR2CfxAbs32(dm->size[k]) +
-                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                   NDS_R2_CFX_ROT_BITS;
+            ext += (cell * ndsCfxAbs32(dm->size[k]) +
+                    (((int64_t)1 << NDS_CFX_ROT_BITS) - 1)) >>
+                   NDS_CFX_ROT_BITS;
         }
         ext0[c] = ext;
         sum_abs[c] = abs_sum;
@@ -1303,7 +1303,7 @@ static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
  * most of the soft float in a heavy four-Yoshi frame. This takes the world the
  * reject composed (cached for the latch epoch), forms the source's cofactor
  * frame at Q26 with the hardware divider, and runs the source's clip on the
- * Q12 points (include/nds/nds_r2_collision_fixed.h, the kernels R2-07 slice 53
+ * Q12 points (include/nds/nds_collision_fixed.h, the kernels R2-07 slice 53
  * proved against the float body with 0 flips over 1,938 pairs). Mechanical
  * equivalence, not identity: a segment within a fraction of a unit of a face
  * may decide the other way (owner ruling D13; the replay digest re-baselines).
@@ -1319,12 +1319,12 @@ static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
 {
     const NDSHbAttackMemo *am;
     const NDSHbDamageMemo *dm;
-    const NDSR2CfxMtx *w;
+    const NDSCfxMtx *w;
     const FTStruct *fp;
     NDSHbWorld *slot;
     NDSHbFrameSlot *fs;
-    NDSR2CfxMtx scratch;
-    NDSR2CfxFrame frame;
+    NDSCfxMtx scratch;
+    NDSCfxFrame frame;
     int result;
 
     if (ndsHbRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
@@ -1365,7 +1365,7 @@ static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         }
         else
         {
-            if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+            if ((w == NULL) || (ndsCfxMakeFrameCofactor(&frame, w) == 0))
             {
                 NDS_DIAG(gNdsHbNarrowDeclined++);
                 return -1;
@@ -1375,7 +1375,7 @@ static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                 /* 2^(26 + 16) / Q16 -> Q26; nscale > 0 by the walk's
                  * guards. */
                 frame.inv_scale[c] =
-                    (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, nscale[c]);
+                    (int32_t)NDS_CFX_DIV64((int64_t)1 << 42, nscale[c]);
             }
             if (fs != NULL)
             {
@@ -1399,7 +1399,7 @@ static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         }
         else
         {
-            if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+            if ((w == NULL) || (ndsCfxMakeFrameCofactor(&frame, w) == 0))
             {
                 NDS_DIAG(gNdsHbNarrowDeclined++);
                 return -1;
@@ -1412,10 +1412,10 @@ static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
             }
         }
     }
-    result = ndsR2CfxTestRectangle(am->p0, am->p1, am->radius,
+    result = ndsCfxTestRectangle(am->p0, am->p1, am->radius,
                                    (attack_state == 2) ? 1 : 0, &frame,
                                    dm->off, dm->size, frame.inv_scale);
-    if (result == NDS_R2_CFX_DECLINE)
+    if (result == NDS_CFX_DECLINE)
     {
         NDS_DIAG(gNdsHbNarrowDeclined++);
         return -1;
@@ -1452,7 +1452,7 @@ int ndsHurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
 
 /* Animation-lock fighters take gmCollisionSetMatrixNcs's chain in fixed point
  * (ndsHbWorldOfLock, 2026-10-05); everyone else the plain walk. */
-static const NDSR2CfxMtx *ndsJointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
+static const NDSCfxMtx *ndsJointWorldOf(DObj *joint, NDSCfxMtx *scratch)
 {
     const FTStruct *fp;
     NDSHbWorld *slot;
@@ -1483,8 +1483,8 @@ static const NDSR2CfxMtx *ndsJointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
  * 0 = declined with *vec untouched (the caller runs the float body). */
 int ndsJointWorldPosition(DObj *joint, Vec3f *vec)
 {
-    NDSR2CfxMtx scratch;
-    const NDSR2CfxMtx *w;
+    NDSCfxMtx scratch;
+    const NDSCfxMtx *w;
     int32_t p[3];
     int64_t out[3];
     u32 col;
@@ -1500,20 +1500,20 @@ int ndsJointWorldPosition(DObj *joint, Vec3f *vec)
     }
     for (col = 0u; col < 3u; col++)
     {
-        out[col] = ndsR2CfxShr((int64_t)p[0] * w->r[0][col] +
+        out[col] = ndsCfxShr((int64_t)p[0] * w->r[0][col] +
                                    (int64_t)p[1] * w->r[1][col] +
                                    (int64_t)p[2] * w->r[2][col],
-                               NDS_R2_CFX_ROT_BITS) +
+                               NDS_CFX_ROT_BITS) +
                    (int64_t)w->t[col];
-        if ((out[col] >= (int64_t)NDS_R2_CFX_POS_MAX) ||
-            (out[col] <= -(int64_t)NDS_R2_CFX_POS_MAX))
+        if ((out[col] >= (int64_t)NDS_CFX_POS_MAX) ||
+            (out[col] <= -(int64_t)NDS_CFX_POS_MAX))
         {
             return 0;
         }
     }
-    vec->x = ndsR2CollisionFixedToF32(out[0], NDS_R2_CFX_POS_BITS);
-    vec->y = ndsR2CollisionFixedToF32(out[1], NDS_R2_CFX_POS_BITS);
-    vec->z = ndsR2CollisionFixedToF32(out[2], NDS_R2_CFX_POS_BITS);
+    vec->x = ndsCollisionFixedToF32(out[0], NDS_CFX_POS_BITS);
+    vec->y = ndsCollisionFixedToF32(out[1], NDS_CFX_POS_BITS);
+    vec->z = ndsCollisionFixedToF32(out[2], NDS_CFX_POS_BITS);
     return 1;
 }
 
@@ -1527,11 +1527,11 @@ int ndsJointWorldPosition(DObj *joint, Vec3f *vec)
  * 0 = decline, nothing written (the caller runs the float builder). */
 int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
 {
-    NDSR2CfxMtx scratch;
-    NDSR2CfxMtx local;
-    NDSR2CfxMtx f;
-    NDSR2CfxMtx item;
-    const NDSR2CfxMtx *w;
+    NDSCfxMtx scratch;
+    NDSCfxMtx local;
+    NDSCfxMtx f;
+    NDSCfxMtx item;
+    const NDSCfxMtx *w;
     int32_t inv_l[3];
     int32_t inv_w[3];
     int32_t shuffle_q12[2] = { 0, 0 };
@@ -1547,20 +1547,20 @@ int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
     {
         /* A few units (dFTDisplayMainShufflePositions); OVERFLOW is
          * INT32_MIN, which the magnitude test alone would pass. */
-        shuffle_q12[0] = ndsHbToFixed(shuffle->x, NDS_R2_CFX_POS_BITS);
-        shuffle_q12[1] = ndsHbToFixed(shuffle->y, NDS_R2_CFX_POS_BITS);
-        if ((shuffle_q12[0] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (shuffle_q12[1] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(shuffle_q12[0]) >= NDS_R2_CFX_POS_ONE * 64) ||
-            (ndsR2CfxAbs32(shuffle_q12[1]) >= NDS_R2_CFX_POS_ONE * 64))
+        shuffle_q12[0] = ndsHbToFixed(shuffle->x, NDS_CFX_POS_BITS);
+        shuffle_q12[1] = ndsHbToFixed(shuffle->y, NDS_CFX_POS_BITS);
+        if ((shuffle_q12[0] == NDS_COLLISION_F32_OVERFLOW) ||
+            (shuffle_q12[1] == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(shuffle_q12[0]) >= NDS_CFX_POS_ONE * 64) ||
+            (ndsCfxAbs32(shuffle_q12[1]) >= NDS_CFX_POS_ONE * 64))
         {
             return 0;
         }
     }
     w = ndsJointWorldOf(attach->parent, &scratch);
     if ((w == NULL) || (ndsHbLocalFromDObj(&local, attach) == 0) ||
-        (ndsR2CfxRowScales(&local, NULL, NULL, NULL, inv_l) == 0) ||
-        (ndsR2CfxRowScales(w, NULL, NULL, NULL, inv_w) == 0))
+        (ndsCfxRowScales(&local, NULL, NULL, NULL, inv_l) == 0) ||
+        (ndsCfxRowScales(w, NULL, NULL, NULL, inv_w) == 0))
     {
         return 0;
     }
@@ -1569,11 +1569,11 @@ int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
         for (col = 0u; col < 3u; col++)
         {
             /* A unit cell times 1/s (s >= 1/4 by the guard): within 4. */
-            const int32_t unit = (int32_t)ndsR2CfxShr(
-                (int64_t)local.r[row][col] * inv_l[row], NDS_R2_CFX_ROT_BITS);
+            const int32_t unit = (int32_t)ndsCfxShr(
+                (int64_t)local.r[row][col] * inv_l[row], NDS_CFX_ROT_BITS);
 
-            f.r[row][col] = (int32_t)ndsR2CfxShr((int64_t)unit * inv_w[col],
-                                                 NDS_R2_CFX_ROT_BITS);
+            f.r[row][col] = (int32_t)ndsCfxShr((int64_t)unit * inv_w[col],
+                                                 NDS_CFX_ROT_BITS);
         }
         f.t[row] = local.t[row];
     }
@@ -1592,7 +1592,7 @@ int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
     m[3][0] = item.t[0] + shuffle_q12[0];
     m[3][1] = item.t[1] + shuffle_q12[1];
     m[3][2] = item.t[2];
-    m[3][3] = NDS_R2_CFX_POS_ONE;
+    m[3][3] = NDS_CFX_POS_ONE;
     return 1;
 }
 #endif /* NDS_JOINT_RESIDENT */

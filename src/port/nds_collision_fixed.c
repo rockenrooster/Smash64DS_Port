@@ -1,5 +1,5 @@
 /* Out-of-line ARM entry points for the whole-cluster fixed-point fighter
- * hurtbox narrow phase. The arithmetic is in include/nds/nds_r2_collision_fixed.h
+ * hurtbox narrow phase. The arithmetic is in include/nds/nds_collision_fixed.h
  * so the host falsifier grades the code that ships; this file exists to give it
  * addresses and, above all, to give it ARM STATE.
  *
@@ -33,12 +33,12 @@
  * pointer that survives a scene boundary) are satisfied by construction rather
  * than by a guard.
  *
- * -- with one qualification since NDS_R2_CFX_HWMATH landed. The two hooks the
- * header has carried undefined since it was written, NDS_R2_CFX_DIV64 and
- * NDS_R2_CFX_ISQRT64, are now bound to the ARM9 divide and square-root
+ * -- with one qualification since NDS_CFX_HWMATH landed. The two hooks the
+ * header has carried undefined since it was written, NDS_CFX_DIV64 and
+ * NDS_CFX_ISQRT64, are now bound to the ARM9 divide and square-root
  * coprocessors here, so the kernels touch shared MMIO state and are no longer
  * pure in the strict sense. What that costs is set out in
- * include/nds/nds_r2_hwmath_unit.h: this binary has no interrupt-context user
+ * include/nds/nds_hwmath_unit.h: this binary has no interrupt-context user
  * of either unit -- the port's one registered handler is a counter increment --
  * so a mainline sequence cannot be interleaved, and the property the purity was
  * buying (no protocol needed) still holds for the same reason it did before.
@@ -46,28 +46,28 @@
  * is a real downgrade and is why it is written down here and not only there.
  *
  * The hooks are bound in THIS translation unit and nowhere else, deliberately:
- * scripts/check-r2-collision-fixed.c compiles the same header on the host and
+ * scripts/check-collision-fixed.c compiles the same header on the host and
  * must keep the portable default, and every executing instance of a
  * divide-using kernel is instantiated out-of-line below.
  */
 
-/* NDS_R2_CFX_HWMATH arrives through the Makefile's global
+/* NDS_CFX_HWMATH arrives through the Makefile's global
  * `-include $(BUILD)/nds_build_config.h` (Makefile:2382), the same way
- * NDS_R2_COLLISION_FIXED reaches src/import/battleship_gmcollision.c. */
+ * NDS_COLLISION_FIXED reaches src/import/battleship_gmcollision.c. */
 
-#include <nds/nds_r2_collision_fixed.h>
+#include <nds/nds_collision_fixed.h>
 
-int ndsR2CollisionFixedBuildLocal(NDSR2CfxMtx *dst, const uint16_t *sin_table,
+int ndsCollisionFixedBuildLocal(NDSCfxMtx *dst, const uint16_t *sin_table,
                                   const float rotate[3], const float scale[3],
                                   const float translate[3])
 {
-    return ndsR2CfxBuildLocal(dst, sin_table, rotate, scale, translate);
+    return ndsCfxBuildLocal(dst, sin_table, rotate, scale, translate);
 }
 
-int ndsR2CollisionFixedCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
-                               const NDSR2CfxMtx *rhs)
+int ndsCollisionFixedCompose(NDSCfxMtx *dst, const NDSCfxMtx *lhs,
+                               const NDSCfxMtx *rhs)
 {
-    return ndsR2CfxCompose(dst, lhs, rhs);
+    return ndsCfxCompose(dst, lhs, rhs);
 }
 
 /* The cofactor form is the one that ships, and it is NOT the one Phase 4
@@ -76,68 +76,68 @@ int ndsR2CollisionFixedCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
  * later cycle can wire it by reaching for the obvious name; it stays in the
  * header as a static inline the falsifier keeps grading, beside the row-skew
  * measurement that explains why it lost. */
-int ndsR2CollisionFixedMakeFrame(NDSR2CfxFrame *dst, const NDSR2CfxMtx *src)
+int ndsCollisionFixedMakeFrame(NDSCfxFrame *dst, const NDSCfxMtx *src)
 {
-    return ndsR2CfxMakeFrameCofactor(dst, src);
+    return ndsCfxMakeFrameCofactor(dst, src);
 }
 
-void ndsR2CollisionFixedWorldToLocal(int32_t out[3],
-                                     const NDSR2CfxFrame *frame,
+void ndsCollisionFixedWorldToLocal(int32_t out[3],
+                                     const NDSCfxFrame *frame,
                                      const int32_t point[3])
 {
-    ndsR2CfxWorldToLocal(out, frame, point);
+    ndsCfxWorldToLocal(out, frame, point);
 }
 
-void ndsR2CollisionFixedTransformPoint(int32_t out[3], const NDSR2CfxMtx *mtx,
+void ndsCollisionFixedTransformPoint(int32_t out[3], const NDSCfxMtx *mtx,
                                        const int32_t point[3])
 {
-    ndsR2CfxTransformPoint(out, mtx, point);
+    ndsCfxTransformPoint(out, mtx, point);
 }
 
-int ndsR2CollisionFixedTestRectangle(const int32_t pos_curr[3],
+int ndsCollisionFixedTestRectangle(const int32_t pos_curr[3],
                                      const int32_t pos_prev[3], int32_t radius,
                                      int is_transfer,
-                                     const NDSR2CfxFrame *frame,
+                                     const NDSCfxFrame *frame,
                                      const int32_t offset[3],
                                      const int32_t size[3],
                                      const int32_t inv_scale[3])
 {
-    return ndsR2CfxTestRectangle(pos_curr, pos_prev, radius, is_transfer, frame,
+    return ndsCfxTestRectangle(pos_curr, pos_prev, radius, is_transfer, frame,
                                  offset, size, inv_scale);
 }
 
 /* The f32 boundary. These four are the ONLY entry points the wired ring calls,
  * and they are here rather than inlined into the ring so that every 64-bit
  * product in the cluster stays inside the one object the Makefile builds -marm
- * and check-r2-collision-fixed.ps1 disassembles. A copy inlined into a Thumb
+ * and check-collision-fixed.ps1 disassembles. A copy inlined into a Thumb
  * translation unit would be __aeabi_lmul per multiply and no gate would notice.
  *
- * ndsR2CollisionFixedInvertF32 is nds_r2_collision_mtx.h's already-graded
- * ndsR2CollisionInvertMatrix44 -- gmCollisionSetInvertMatrix's own cofactor
+ * ndsCollisionFixedInvertF32 is nds_collision_mtx.h's already-graded
+ * ndsCollisionInvertMatrix44 -- gmCollisionSetInvertMatrix's own cofactor
  * arithmetic at Q26, float in and float out, so unk_dobjtrans_0x9C keeps its
  * type, its layout and all nine of its readers. It is not restated here for the
  * same reason the sine table is not: a transcription proves the transcription.
  */
-int ndsR2CollisionFixedLoadF32(NDSR2CfxMtx *dst, float src[4][4])
+int ndsCollisionFixedLoadF32(NDSCfxMtx *dst, float src[4][4])
 {
-    return ndsR2CfxLoadF32(dst, src);
+    return ndsCfxLoadF32(dst, src);
 }
 
-void ndsR2CollisionFixedStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
+void ndsCollisionFixedStoreF32(float dst[4][4], const NDSCfxMtx *src)
 {
-    ndsR2CfxStoreF32(dst, src);
+    ndsCfxStoreF32(dst, src);
 }
 
-int ndsR2CollisionFixedAxisScalesF32(float out[3], float src[4][4])
+int ndsCollisionFixedAxisScalesF32(float out[3], float src[4][4])
 {
-    return ndsR2CfxAxisScalesF32(out, src);
+    return ndsCfxAxisScalesF32(out, src);
 }
 
-int ndsR2CollisionFixedInvertF32(float dst[4][4], float src[4][4])
+int ndsCollisionFixedInvertF32(float dst[4][4], float src[4][4])
 {
     /* The cast is the C array-qualifier wart, not a const violation: `float
      * (*)[4]` does not implicitly convert to `const float (*)[4]`, and every
      * caller here hands over an FTParts field it does not own. Taking the
      * parameter non-const keeps that cast to exactly one place. */
-    return ndsR2CollisionInvertMatrix44(dst, (const float (*)[4])src);
+    return ndsCollisionInvertMatrix44(dst, (const float (*)[4])src);
 }

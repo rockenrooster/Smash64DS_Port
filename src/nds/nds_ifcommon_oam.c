@@ -31,7 +31,7 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_fixed_convert.h>
 #include <nds/nds_fcmp.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fx_effect_census.h>
 #include <gm/generic.h>
 #include <sys/obj.h>

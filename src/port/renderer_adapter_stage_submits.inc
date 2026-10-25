@@ -1739,7 +1739,7 @@
          * OFF arm below. Without this term the item drew natively 600
          * times in a 300-present run and the stage still recorded 600
          * NO_PROGRAM failures at its own root, because the default build
-         * has NDS_R2_IMPACT_WAVE_NATIVE = 1 and takes this branch. */
+         * has NDS_IMPACT_WAVE_NATIVE = 1 and takes this branch. */
         (inishie_pakkun_native_handled == FALSE) &&
         /* The POW block owner is checked here for the identical reason. */
         (inishie_powblock_native_handled == FALSE) &&

@@ -31,18 +31,18 @@ override NDS_STAGE_HW_COMPOSE := 2
 # carry every published flag or the instrument measures a path the user is not
 # running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_R2_PATH,
 # Makefile:4203).
-ifneq ($(NDS_R2_LAB_R1_PATH),1)
-override NDS_R2_PATH := 1
+ifneq ($(NDS_LAB_R1_PATH),1)
+override NDS_PATH := 1
 endif
 # Slice 44. This is the instrument every measurement runs on, so it has to stay
 # flag-identical to the published block -- a stride on one and not the other
 # would put ~35,900 of WORK-H P95 between the ROM being judged and the ROM
 # doing the judging.
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_STAGE_VALIDATE_STRIDE := 8
+override NDS_FIGHTER_HW_LIGHT := 1
 # R2-03 E64b/E65. See the published block, including how the equivalence was
 # finally settled -- with a host error bound, not the state hash.
-ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
+ifneq ($(NDS_LAB_CUBIC_OFF),1)
 endif
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
@@ -61,7 +61,7 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # game-state policy, not merely a tighter memory budget.
 override NDS_FOUR_CPU_STRESS := 1
 override NDS_COMPACT_BATTLE_FIGHTERS := 1
-override NDS_R2_EFFECT_POOL := 38
+override NDS_EFFECT_POOL := 38
 # P2-2p8 Phase 0 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md A9): the gate
 # measures the game, not the instrument. The on-screen tick-HUD block cost
 # ~345-450K ticks on every ninth or tenth presented frame -- inside WORK-H and
@@ -91,7 +91,7 @@ ifeq ($(NDS_FOUR_CPU_ROSTER),1)
 # EXCEPT THE ROSTER ITSELF.
 #
 # P2-3r11 got four distinct kinds through a whole match by setting
-# `NDS_R2_BATTLEPACK := 0` on this arm plus a 32,768 B animation-cache trim,
+# `NDS_BATTLEPACK := 0` on this arm plus a 32,768 B animation-cache trim,
 # because each distinct fighter kind pays its own main-file tree out of the
 # taskman arena at battle setup -- Mario 54,048, Fox 119,040, Luigi 57,104,
 # Donkey 79,648 (generated alloc-size tables,
@@ -217,8 +217,8 @@ override NDS_SHIP_TELEMETRY := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_STAGE_HW_COMPOSE := 2
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_STAGE_VALIDATE_STRIDE := 8
+override NDS_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -243,7 +243,7 @@ override NDS_STAGE_SECTOR := 1
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
 ## the source depth; the P1 direct-boot/perf targets keep their measured cap.
-override NDS_R2_EFFECT_POOL := 38
+override NDS_EFFECT_POOL := 38
 override NDS_MENU_WALK := 1
 # P2-1M gate catch (2026-08-19): the P1 demo ladder is direct-boot demo
 # behaviour. In the shell game the CHARACTER SELECT decides Fox's level, so
@@ -299,11 +299,11 @@ override NDS_STAGE_HW_COMPOSE := 2
 # Runtime 2 is the accepted published battle path. Keep the free-play/root
 # shell on the same path as the published battle and realtime proof targets;
 # otherwise menu-launched matches silently fall back to the retired R1 loop.
-ifneq ($(NDS_R2_LAB_R1_PATH),1)
-override NDS_R2_PATH := 1
+ifneq ($(NDS_LAB_R1_PATH),1)
+override NDS_PATH := 1
 endif
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_STAGE_VALIDATE_STRIDE := 8
+override NDS_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -334,7 +334,7 @@ override NDS_STAGE_HYRULE := 1
 override NDS_STAGE_YAMABUKI := 1
 override NDS_STAGE_INISHIE := 1
 override NDS_STAGE_SECTOR := 1
-override NDS_R2_EFFECT_POOL := 38
+override NDS_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
 override NDS_DEMO_FOX_CPU_LADDER := 0
@@ -353,7 +353,7 @@ endif
 # shell arm above and from Boundary's own mode-163 arm; nothing here is a
 # performance surface.
 #
-# NDS_R2_SCENE_LOOP_WALK := 0, AND THAT IS THE ROW'S POINT. P2-1b's substitute
+# NDS_SCENE_LOOP_WALK := 0, AND THAT IS THE ROW'S POINT. P2-1b's substitute
 # hop used to carry the Results -> menu leg, which closed a lap without ever
 # running `ndsMNVSResultsSetLoadScene` -- the very function P2-1f rewrote for
 # the shell and could not exercise. The walk now presses START on Results
@@ -382,8 +382,8 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_STAGE_HW_COMPOSE := 2
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_STAGE_VALIDATE_STRIDE := 8
+override NDS_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -404,9 +404,9 @@ override NDS_STAGE_HYRULE := 1
 override NDS_STAGE_YAMABUKI := 1
 override NDS_STAGE_INISHIE := 1
 override NDS_STAGE_SECTOR := 1
-override NDS_R2_EFFECT_POOL := 38
+override NDS_EFFECT_POOL := 38
 endif
-# NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
+# NDS_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
 # makers -- damage slash, impact wave, catch swirl and the three random spawn
 # showers -- plus the shield, rebirth halo and Fox reflector, and the reason it
 # stayed 0 ("the battle hardware path does not consume source effect DL links")
@@ -437,7 +437,7 @@ endif
 # the weapon pool. It did move the free-min straight back to 4, the floor at
 # which non-forced effects start being refused. Cut something that is actually
 # on the heap instead.
-NDS_R2_EFFECT_POOL ?= 12
+NDS_EFFECT_POOL ?= 12
 # Checked here, after every target block has applied its overrides, so a target
 # that turns both on is accepted while a bare command-line NDS_STAGE_STEADY=1
 # without the Task 36 stage owner still fails loudly.

@@ -72,19 +72,19 @@
  *
  *   value_base/value_target/rate_target  the AUTHORED s16 disk words. The
  *     runtime value is `word * 2^-k` with `k` a per-track constant
- *     (`sNdsR2AnimFracShift`), so keeping the word is EXACT. Keeping the scaled
+ *     (`sNdsAnimFracShift`), so keeping the word is EXACT. Keeping the scaled
  *     Q12 value instead would need 24 bits for translation, and re-quantising
  *     to fit s16 would have thrown away fractional bits of every value.
  *   length          s16 Q7.  Measured -185..0 over the whole bank; exact.
  *   rate_base       s32 Q16. Authored for the cubic families, but SetVal{,Block}
  *     COMPUTES it: 753 records are fractional over -614.25..1064.80, and s16 Q4
  *     -- the only Q that fits that magnitude -- carries 81% relative error on
- *     the small values. Q16 is `NDS_R2_AQ_RF`, what the runtime already stores.
+ *     the small values. Q16 is `NDS_AQ_RF`, what the runtime already stores.
  *   length_invert   s32. Q30 for Cubic/Linear, a plain FRAME COUNT for Step --
  *     the field's double meaning is the original's, not ours. Sized s16 Q8 from
  *     its 0..64 range first, and the round-trip rejected that immediately: for a
  *     Cubic it is `1.0 / payload`, a reciprocal, and 1/17 at Q8 is off by 0.4%.
- *     Range was the wrong question for a rate. Q30 is `NDS_R2_AQ_IF`.
+ *     Range was the wrong question for a rate. Q30 is `NDS_AQ_IF`.
  *
  * `scripts/check_ftanim_dense_layout.py` asserts this struct and the emitter's
  * Python `RECORD` agree on size, offsets and Q constants. They are two halves of
@@ -93,8 +93,8 @@
  * every geometry counter. */
 
 #define NDS_ANIM_DENSE_LENGTH_Q 7
-#define NDS_ANIM_DENSE_RATE_BASE_Q 16     /* == NDS_R2_AQ_RF */
-#define NDS_ANIM_DENSE_LENGTH_INVERT_Q 30 /* == NDS_R2_AQ_IF */
+#define NDS_ANIM_DENSE_RATE_BASE_Q 16     /* == NDS_AQ_RF */
+#define NDS_ANIM_DENSE_LENGTH_INVERT_Q 30 /* == NDS_AQ_IF */
 
 /* kind in the high nibble, track index in the low nibble. Both fit: the kinds
  * are 0..7 and the joint tracks are 0..9. */

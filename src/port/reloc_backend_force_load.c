@@ -5,12 +5,12 @@
 NDS_COLD void ndsRelocFinishSceneSetup(void)
 {
     if ((gNdsSceneManagerCurrIsBattle != 0u) &&
-        (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
+        (sNdsAnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
     {
         /* VS already warms at its source BGM seam. Other battle constructors
          * reach the same cache preparation before their first update/draw. */
-        ndsR2AnimCachePreloadMatch();
-        (void)ndsR2AnimCachePreloadFinish();
+        ndsAnimCachePreloadMatch();
+        (void)ndsAnimCachePreloadFinish();
     }
 }
 
@@ -32,7 +32,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     NDS_K0_MARK(gNdsK0AfterGoAcquisitions, asset_id);
     /* The install that follows this fetch replaces the fighter's binding; its
      * old clip is not read in between, so it needs no rescue. */
-    ndsR2AnimPinsDropHeap(heap);
+    ndsAnimPinsDropHeap(heap);
 
     /* Settle arena ownership BEFORE the pack lookup, not only before the raw
      * cache find further down. The pack's bytes live in that arena, and the
@@ -41,7 +41,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * figatree pointing into memory the new scene already owns. Invalidating at
      * the seam where the invariant breaks, rather than at each reader, is the
      * shape the gMPCollisionGeometry fix settled on. */
-    ndsR2AnimCacheValidateGeneration();
+    ndsAnimCacheValidateGeneration();
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
@@ -86,7 +86,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * cache holds was loaded through that path, so it exists; only a clip the
      * cache does not hold asks the table. */
     if (
-        (ndsR2AnimCacheFind(asset_id) == NULL) &&
+        (ndsAnimCacheFind(asset_id) == NULL) &&
         (ndsRelocAssetGetPath(asset_id) == NULL))
     {
         ndsRelocRecordExternalFixupFail(asset_id);
@@ -129,20 +129,20 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     {
         u32 anim_index = asset_id - NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
 
-        NDS_DIAG(gNdsR204AnimForceLoadTotal++);
-        if (anim_index < NDS_R204_ANIM_ID_SPAN)
+        NDS_DIAG(gNdsAnimForceLoadTotal++);
+        if (anim_index < NDS_ANIM_ID_SPAN)
         {
             u32 word = anim_index >> 5;
             u32 mask = 1u << (anim_index & 31u);
 
-            if ((gNdsR204AnimSeen[word] & mask) != 0u)
+            if ((gNdsAnimSeen[word] & mask) != 0u)
             {
-                NDS_DIAG(gNdsR204AnimForceLoadRepeat++);
+                NDS_DIAG(gNdsAnimForceLoadRepeat++);
             }
             else
             {
-                gNdsR204AnimSeen[word] |= mask;
-                NDS_DIAG(gNdsR204AnimForceLoadDistinct++);
+                gNdsAnimSeen[word] |= mask;
+                NDS_DIAG(gNdsAnimForceLoadDistinct++);
             }
         }
     }
@@ -151,45 +151,45 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * byte-swap with one copy. The fixups below still run against this heap,
      * because they write absolute pointers into it. */
     {
-        const NDSR2AnimCacheEntry *cached = ndsR2AnimCacheFind(asset_id);
+        const NDSAnimCacheEntry *cached = ndsAnimCacheFind(asset_id);
         sb32 direct = FALSE;
 
         if (cached == NULL)
         {
-            cached = ndsR2AnimDirectReadEntry(asset_id);
+            cached = ndsAnimDirectReadEntry(asset_id);
             direct = (cached != NULL) ? TRUE : FALSE;
         }
         if (cached != NULL)
         {
             if (direct == FALSE)
             {
-                NDSR2AnimCacheEntry *used =
-                    (NDSR2AnimCacheEntry *)(uintptr_t)cached;
+                NDSAnimCacheEntry *used =
+                    (NDSAnimCacheEntry *)(uintptr_t)cached;
 
                 /* A use: the ring steps over this clip on its next pass. */
                 used->referenced = 1u;
-                sNdsR2AnimCacheRef[used - sNdsR2AnimCache] = 1u;
+                sNdsAnimCacheRef[used - sNdsAnimCache] = 1u;
                 if (used->prefetched != 0u)
                 {
                     used->prefetched = 0u;
-                    NDS_DIAG(gNdsR2AnimPrefetchUsed++);
+                    NDS_DIAG(gNdsAnimPrefetchUsed++);
                 }
             }
-            if (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM)
+            if (cached->aobj16_ready == NDS_ANIM_CACHE_READY_STREAM)
             {
-                const u8 *payload = ndsR2AnimPinTake(heap, cached, asset_id);
+                const u8 *payload = ndsAnimPinTake(heap, cached, asset_id);
 
                 if (payload != NULL)
                 {
                     if (direct != FALSE)
                     {
-                        gNdsR2AnimCacheMisses++;
-                        NDS_DIAG(gNdsR2AnimDirectReads++);
+                        gNdsAnimCacheMisses++;
+                        NDS_DIAG(gNdsAnimDirectReads++);
                     }
                     else
                     {
-                        gNdsR2AnimCacheHits++;
-                        gNdsR2AnimZeroCopyHits++;
+                        gNdsAnimCacheHits++;
+                        gNdsAnimZeroCopyHits++;
                     }
                     ndsFighterManagerRecordExternToken(token, payload);
                     return (void *)(uintptr_t)payload;
@@ -205,11 +205,11 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             header = cached->header;
             /* Read everything the entry holds before anything can allocate:
              * an allocation may take an elastic cache's bytes back and drop
-             * this entry (ndsR2AnimCacheElasticYield). */
+             * this entry (ndsAnimCacheElasticYield). */
             ready = cached->aobj16_ready;
             cached = NULL;
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
-            if (ready == NDS_R2_ANIM_CACHE_READY_STREAM)
+            if (ready == NDS_ANIM_CACHE_READY_STREAM)
             {
                 if (loaded == NULL)
                 {
@@ -218,11 +218,11 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                 ndsRelocMarkLoadedFileRelativeOffsets(loaded);
                 if (direct != FALSE)
                 {
-                    gNdsR2AnimCacheMisses++;
+                    gNdsAnimCacheMisses++;
                 }
                 else
                 {
-                    gNdsR2AnimCacheHits++;
+                    gNdsAnimCacheHits++;
                 }
                 ndsFighterManagerRecordExternToken(token, heap);
                 ndsRelocSetStatusBufferFile(token, heap);
@@ -237,10 +237,10 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
              * The flag is per entry: anything the prebake declined still runs
              * the pass below, unchanged. */
             if ((loaded != NULL) &&
-                (ready == NDS_R2_ANIM_CACHE_READY_PREBAKE))
+                (ready == NDS_ANIM_CACHE_READY_PREBAKE))
             {
                 loaded->format_fixups_applied = TRUE;
-                NDS_DIAG(gNdsR2AObj16PrebakeSkips++);
+                NDS_DIAG(gNdsAObj16PrebakeSkips++);
             }
             if ((loaded == NULL) ||
                 (ndsRelocFinalizeLoadedFile(loaded) == FALSE))
@@ -249,11 +249,11 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             }
             if (direct != FALSE)
             {
-                gNdsR2AnimCacheMisses++;
+                gNdsAnimCacheMisses++;
             }
             else
             {
-                gNdsR2AnimCacheHits++;
+                gNdsAnimCacheHits++;
             }
             ndsFighterManagerRecordExternToken(token, heap);
             ndsRelocSetStatusBufferFile(token, heap);
@@ -261,7 +261,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             ndsRelocSetForceStatusBufferFile(token, heap);
             return heap;
         }
-        gNdsR2AnimCacheMisses++;
+        gNdsAnimCacheMisses++;
     }
     {
         u32 stream_size = 0u;
@@ -276,8 +276,8 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             header.reloc_intern_offset = 0xffffu;
             header.reloc_extern_offset = 0xffffu;
             asset_size = stream_size;
-            ndsR2AnimCacheStore(asset_id, heap, stream_size, &header,
-                                NDS_R2_ANIM_CACHE_READY_STREAM);
+            ndsAnimCacheStore(asset_id, heap, stream_size, &header,
+                                NDS_ANIM_CACHE_READY_STREAM);
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
             if (loaded == NULL)
             {
@@ -318,8 +318,8 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     }
     /* Snapshot here: swapped, not yet fixed up. One instruction later the
      * fixups make the image position-dependent and unusable as a template. */
-    ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header,
-                        NDS_R2_ANIM_CACHE_READY_RAW);
+    ndsAnimCacheStore(asset_id, heap, (u32)asset_size, &header,
+                        NDS_ANIM_CACHE_READY_RAW);
     /* The store can wrap the raw ring over another fighter's pinned
      * zero-copy clip. That clip's rescue re-registers it and compacts
      * sNdsRelocLoadedFiles (ndsRelocPrepareFighterAnimHeapOverwrite), so
@@ -470,7 +470,7 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
          * through that record, and a stale one handed the CSS preview the
          * previous clip (Pikachu and Ness contorted after selection, the
          * selection intro cut short; owner playtest r55, 2026-09-30). */
-        ndsR2AnimPinsDropHeap(heap);
+        ndsAnimPinsDropHeap(heap);
         ndsRelocRecordAuthoritativeForceFile(heap, file);
         return file;
     }
@@ -485,25 +485,25 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         NDS_K0_MARK(gNdsK0AfterGoTokenResolves, asset_id);
 #if NDS_TICK_HUD
         /* Census: which fighter clips this match fetched (hit or read). */
-        if (asset_id < (NDS_R2_ANIM_STORED_BITS * 32u))
+        if (asset_id < (NDS_ANIM_STORED_BITS * 32u))
         {
             gNdsAnimUseBits[asset_id >> 5] |= 1u << (asset_id & 31u);
         }
 #endif
         /* Finished prefetches become entries first; this clip in flight is
          * waited for rather than read again. */
-        ndsR2AnimPrefetchPoll(asset_id);
+        ndsAnimPrefetchPoll(asset_id);
 #if NDS_LAB_CLIP_TRACE_ON
         {
-            const u32 lab_zc = gNdsR2AnimZeroCopyHits;
-            const u32 lab_hits = gNdsR2AnimCacheHits;
+            const u32 lab_zc = gNdsAnimZeroCopyHits;
+            const u32 lab_hits = gNdsAnimCacheHits;
             const u32 lab_reads = gNdsRelocAssetFighterStreamReads;
 
             file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
             ndsLabClipTraceNote(asset_id, heap,
                 (gNdsRelocAssetFighterStreamReads != lab_reads) ? 2u :
-                (gNdsR2AnimZeroCopyHits != lab_zc) ? 0u :
-                (gNdsR2AnimCacheHits != lab_hits) ? 1u : 3u);
+                (gNdsAnimZeroCopyHits != lab_zc) ? 0u :
+                (gNdsAnimCacheHits != lab_hits) ? 1u : 3u);
         }
 #else
         file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
@@ -519,8 +519,8 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         if (file != NULL)
         {
             gNdsRelocForceFighterAnimResolveCount++;
-            ndsR2AnimLearnNote(heap, asset_id);
-            ndsR2AnimPrefetchNote(asset_id);
+            ndsAnimLearnNote(heap, asset_id);
+            ndsAnimPrefetchNote(asset_id);
         }
         else
         {
@@ -1240,7 +1240,7 @@ NDS_COLD size_t ndsRelocFullLoadSize(const void *file_id)
 {
     u32 asset_id = ndsRelocAssetIDForToken(ndsRelocFileID(file_id));
     size_t bytes = ndsRelocAssetAllocSize(asset_id);
-    size_t generated = ndsRelocP2GeneratedAllocSize(asset_id);
+    size_t generated = ndsRelocGeneratedAllocSize(asset_id);
 
     if (generated > bytes)
     {

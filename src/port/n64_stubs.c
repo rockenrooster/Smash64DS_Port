@@ -35,7 +35,7 @@ OSTime osGetTime(void)
  * as newlib's sinf/cosf. These definitions replace newlib's for every caller,
  * the decomp's __sinf/__cosf included. */
 #include <stdint.h>
-#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_collision_mtx.h>
 
 #define NDS_TRIG_K_FIX UINT64_C(699970842190) /* 2^32 / 2pi at 2^10 */
 #define NDS_TRIG_PI2_Q31 UINT64_C(3373259426) /* pi / 2 at Q31 */
@@ -125,7 +125,7 @@ ndsTrigF32(f32 x, u32 want_cos)
         t = UINT64_C(0x100000000) - ((t * z) >> 32);
         v = (int64_t)((y * t) >> 32);
     }
-    return ndsR2CollisionFixedToF32((negate != 0u) ? -v : v, 32u);
+    return ndsCollisionFixedToF32((negate != 0u) ? -v : v, 32u);
 }
 
 f32 sinf(f32 value)

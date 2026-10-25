@@ -423,7 +423,7 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
 #undef gmCollisionCheckFighterAttackDamageCollide
 #undef gmCollisionCheckFighterAttackShieldCollide
 
-/* R2-07 slice 52, the wired ring. `ndsR2CfxPrepareFighterJoint` runs
+/* R2-07 slice 52, the wired ring. `ndsCfxPrepareFighterJoint` runs
  * func_ovl2_800EDBA4, func_ovl2_800EDE00 and func_ovl2_800EDE5C in fixed point
  * and sets the source's own unk_dobjtrans_0x5/0x6/0x7 latches, so the decomp
  * body below finds its float producers already satisfied and early-returns out

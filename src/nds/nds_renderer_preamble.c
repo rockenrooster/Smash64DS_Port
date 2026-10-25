@@ -16,7 +16,7 @@
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_platform.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_gx_dma.h>
@@ -100,15 +100,15 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * They stay exact and stay callable -- they move to main RAM, they do not go
  * away -- and the bytes go to residents the shipping census actually measures.
  *
- * Placement only, in both directions: NDS_R2_ITCM_PACK2_EVICTED_CODE is
+ * Placement only, in both directions: NDS_ITCM_PACK2_EVICTED_CODE is
  * NDS_RENDERER_HOT_CODE minus the section. */
-#if NDS_R2_ITCM_PACK2 && defined(__arm__)
-#define NDS_R2_ITCM_PACK2_EVICTED_CODE \
+#if NDS_ITCM_PACK2 && defined(__arm__)
+#define NDS_ITCM_PACK2_EVICTED_CODE \
     __attribute__((hot, optimize("O3"), target("arm")))
-#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
+#define NDS_ITCM_PACK2_EVICTED_PLAIN_CODE
 #else
-#define NDS_R2_ITCM_PACK2_EVICTED_CODE NDS_RENDERER_HOT_CODE
-#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE NDS_RENDERER_ITCM_CODE
+#define NDS_ITCM_PACK2_EVICTED_CODE NDS_RENDERER_HOT_CODE
+#define NDS_ITCM_PACK2_EVICTED_PLAIN_CODE NDS_RENDERER_ITCM_CODE
 #endif
 
 /* R2-03 E26 SIZING ARM ONLY -- THE SHIPPED ROM'S ITCM PACK IS UNTOUCHED.
@@ -127,7 +127,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * call it. Evicting it frees twelve times what the census needs.
  *
  * WHAT THIS ARM MAY AND MAY NOT BE READ FOR. The census's redundancy figures
- * (gNdsR2SpanDeltaRepeats, gNdsR2DeltaEffectCounts, gNdsR2SpanIdenticalOperands)
+ * (gNdsSpanDeltaRepeats, gNdsDeltaEffectCounts, gNdsSpanIdenticalOperands)
  * are COUNTS, and a count does not depend on where the code lives, so they are
  * exactly as valid here as in any build. The Task 91 tick brackets in the same
  * arm are NOT: moving 7,728 bytes out of ITCM changes instruction fetch for
@@ -141,7 +141,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * frames over 6,188 bytes -- 0.1 tk/byte, the second-cheapest rent in a table
  * whose top residents run 100,000 cyc/byte -- so the census arm and the
  * shipping arm now want the same placement for the same measured reason. */
-#define NDS_R2_CENSUS_EVICTED_CODE NDS_R2_ITCM_PACK2_EVICTED_CODE
+#define NDS_CENSUS_EVICTED_CODE NDS_ITCM_PACK2_EVICTED_CODE
 
 /* R2-03 E46. ndsRendererNativeApplyStateDelta is already ITCM-resident, but the
  * helpers its switch calls are not: in the census ELF the switch sits at
@@ -158,7 +158,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  *
  * Placement and nothing else, in the spirit of Task 82 -- no behaviour changes,
  * so a win is attributable to fetch and a null refutes the mechanism. */
-#define NDS_R2_DELTA_PATH_CODE NDS_RENDERER_ITCM_CODE
+#define NDS_DELTA_PATH_CODE NDS_RENDERER_ITCM_CODE
 
 /* Profiles 0/1 publish the shipping contract through the compact frame
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
@@ -1060,7 +1060,7 @@ static inline void ndsRendererHardwareBindTextureState(int name)
  * patch table reuses it. */
 #define NDS_NATIVE_FIGHTER_ROOT_MAX 32u
 /* P2-2 fighter packet. The four-CPU stress arm measured the four fighter draws
- * at 607,040 ticks of a 1,600,832-tick median frame (NDS_R2_DRAW_SUPPRESS_MASK
+ * at 607,040 ticks of a 1,600,832-tick median frame (NDS_DRAW_SUPPRESS_MASK
  * =15 A/B, 2026-08-23), almost all of it CPU work re-deriving and re-pushing a
  * command stream that is identical from one frame to the next. This captures
  * the stream once per fighter as packed GXFIFO words -- the format the stage
@@ -3136,7 +3136,7 @@ static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
  * the same day: a ninth seats SparkleWhite's nine (texture 45, 24x24). */
 _Static_assert(NDS_PARTICLE_QUAD_BASE_SHEETS +
                    NDS_WHISPY_NATIVE_TEXTURE_COUNT +
-                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 13u,
+                   NDS_FOX_BLASTER_GLOW_AOT <= 13u,
                "particle native textures would crowd the texture cache");
 static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
 static int sNdsRendererFoxBlasterGlowName;
@@ -3157,7 +3157,7 @@ typedef struct NDSRendererWhispyNativeBinding
 
 static NDSRendererWhispyNativeBinding
     sNdsRendererWhispyNativeBinding[
-        NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_R2_FOX_BLASTER_GLOW_AOT];
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_FOX_BLASTER_GLOW_AOT];
 /* The common particle atlas is just as immutable as Whispy's texels.  Keep
  * the exact TEXIMAGE_PARAM / PLTT_BASE pair for each sheet so the Phase-2
  * particle packet can switch sheets without calling glBindTexture from the

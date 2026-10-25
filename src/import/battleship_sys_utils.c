@@ -25,8 +25,8 @@
 
 #include <stdint.h>
 
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 
 f32 syUtilsArcTan(f32 div);
 f32 syUtilsArcTan2(f32 y, f32 x);
@@ -116,12 +116,12 @@ static int64_t __attribute__((target("arm"))) ndsAtanUnitQ30(int64_t t)
         return (int64_t)sNdsAtanQ30[index];
     }
     den = NDS_ATAN_ONE_Q30 + ((t * (int64_t)index) >> 8);
-    delta = ndsR2HwMathDivideFast(num << 30, den);
+    delta = ndsHwMathDivideFast(num << 30, den);
     d3 = (((delta * delta) >> 30) * delta) >> 30;
     /* The math unit truncates as C does: the same quotient without
      * __aeabi_ldivmod. */
     return (int64_t)sNdsAtanQ30[index] + delta -
-           ndsR2HwMathDivideFast(d3, 3);
+           ndsHwMathDivideFast(d3, 3);
 }
 
 /* atan(|x|) at Q30 from x's float bits (the sign bit is ignored). */
@@ -155,7 +155,7 @@ static int64_t ndsAtanMagQ30(u32 bits)
          * 2^(180 - exponent) / mantissa. */
         const s32 numer_shift = 180 - exponent;
         const int64_t t = (numer_shift >= 0) ?
-            ndsR2HwMathDivideFast((int64_t)1 << numer_shift,
+            ndsHwMathDivideFast((int64_t)1 << numer_shift,
                                   (int64_t)mantissa) : 0;
 
         return NDS_ATAN_HALF_PI_Q30 - ndsAtanUnitQ30(t);
@@ -181,12 +181,12 @@ int64_t __attribute__((target("arm"))) ndsUtilsAtan2Q30(int64_t y, int64_t x)
     }
     if (ay <= ax)
     {
-        a = ndsAtanUnitQ30(ndsR2HwMathDivideFast(ay << 30, ax));
+        a = ndsAtanUnitQ30(ndsHwMathDivideFast(ay << 30, ax));
     }
     else
     {
         a = NDS_ATAN_HALF_PI_Q30 -
-            ndsAtanUnitQ30(ndsR2HwMathDivideFast(ax << 30, ay));
+            ndsAtanUnitQ30(ndsHwMathDivideFast(ax << 30, ay));
     }
     if (x < 0)
     {
@@ -198,19 +198,19 @@ int64_t __attribute__((target("arm"))) ndsUtilsAtan2Q30(int64_t y, int64_t x)
 int32_t __attribute__((noinline, target("arm")))
 ndsF32ToFixed(float value, unsigned int frac_bits)
 {
-    return ndsR2CollisionF32ToFixed(value, frac_bits);
+    return ndsCollisionF32ToFixed(value, frac_bits);
 }
 
 float __attribute__((noinline, target("arm")))
 ndsFixedToF32(int32_t value, unsigned int frac_bits)
 {
-    return ndsR2CollisionFixedToF32((int64_t)value, frac_bits);
+    return ndsCollisionFixedToF32((int64_t)value, frac_bits);
 }
 
 float __attribute__((noinline, target("arm")))
 ndsFixed64ToF32(int64_t value, unsigned int frac_bits)
 {
-    return ndsR2CollisionFixedToF32(value, frac_bits);
+    return ndsCollisionFixedToF32(value, frac_bits);
 }
 
 f32 syUtilsArcTan(f32 div)
@@ -218,7 +218,7 @@ f32 syUtilsArcTan(f32 div)
     const u32 bits = ndsUtilsBits(div);
     const int64_t a = ndsAtanMagQ30(bits);
 
-    return ndsR2CollisionFixedToF32(((bits & 0x80000000u) != 0u) ? -a : a,
+    return ndsCollisionFixedToF32(((bits & 0x80000000u) != 0u) ? -a : a,
                                     30u);
 }
 
@@ -240,7 +240,7 @@ f32 __attribute__((target("arm"))) syUtilsArcTan2(f32 y, f32 x)
         {
             return 0.0F;
         }
-        return ndsR2CollisionFixedToF32((y_negative != FALSE) ?
+        return ndsCollisionFixedToF32((y_negative != FALSE) ?
                                             -NDS_ATAN_HALF_PI_Q30 :
                                             NDS_ATAN_HALF_PI_Q30,
                                         30u);
@@ -259,7 +259,7 @@ f32 __attribute__((target("arm"))) syUtilsArcTan2(f32 y, f32 x)
          * divider takes the 24-bit mantissas (a 47-bit over 24-bit divide). */
         const u32 ym = (ymag & 0x7FFFFFu) | 0x800000u;
         const u32 xm = (xmag & 0x7FFFFFu) | 0x800000u;
-        u32 q = (u32)ndsR2HwMathDivideFast((int64_t)ym << 23, (int64_t)xm);
+        u32 q = (u32)ndsHwMathDivideFast((int64_t)ym << 23, (int64_t)xm);
         s32 e = (s32)(ymag >> 23) - (s32)(xmag >> 23) + 127;
 
         /* ym / xm is in (1/2, 2), so q is in (2^22, 2^24). */
@@ -298,7 +298,7 @@ f32 __attribute__((target("arm"))) syUtilsArcTan2(f32 y, f32 x)
             a = -a;
         }
     }
-    return ndsR2CollisionFixedToF32(a, 30u);
+    return ndsCollisionFixedToF32(a, 30u);
 }
 
 /* |x| <= 1 at Q30, signed (x outside the unit range clamps; the callers below
@@ -333,7 +333,7 @@ static int64_t ndsUtilsArcSinQ30(int64_t v)
 {
     const int64_t mag = (v < 0) ? -v : v;
     const uint64_t rem = ((uint64_t)1 << 60) - (uint64_t)(mag * mag);
-    const int64_t root = (int64_t)ndsR2HwMathSqrt64Fast(rem); /* Q30 */
+    const int64_t root = (int64_t)ndsHwMathSqrt64Fast(rem); /* Q30 */
     int64_t a;
 
     if (mag == 0)
@@ -344,11 +344,11 @@ static int64_t ndsUtilsArcSinQ30(int64_t v)
     {
         /* ratio >= 1: pi/2 - atan(root / mag). */
         a = NDS_ATAN_HALF_PI_Q30 -
-            ndsAtanUnitQ30(ndsR2HwMathDivideFast(root << 30, mag));
+            ndsAtanUnitQ30(ndsHwMathDivideFast(root << 30, mag));
     }
     else
     {
-        a = ndsAtanUnitQ30(ndsR2HwMathDivideFast(mag << 30, root));
+        a = ndsAtanUnitQ30(ndsHwMathDivideFast(mag << 30, root));
     }
     return (v < 0) ? -a : a;
 }
@@ -359,13 +359,13 @@ f32 syUtilsArcSin(f32 x)
 
     if (v > NDS_ATAN_RAIL_Q30)
     {
-        return ndsR2CollisionFixedToF32(NDS_ATAN_HALF_PI_Q30, 30u);
+        return ndsCollisionFixedToF32(NDS_ATAN_HALF_PI_Q30, 30u);
     }
     if (v < -NDS_ATAN_RAIL_Q30)
     {
-        return ndsR2CollisionFixedToF32(-NDS_ATAN_HALF_PI_Q30, 30u);
+        return ndsCollisionFixedToF32(-NDS_ATAN_HALF_PI_Q30, 30u);
     }
-    return ndsR2CollisionFixedToF32(ndsUtilsArcSinQ30(v), 30u);
+    return ndsCollisionFixedToF32(ndsUtilsArcSinQ30(v), 30u);
 }
 
 f32 syUtilsArcCos(f32 x)
@@ -378,8 +378,8 @@ f32 syUtilsArcCos(f32 x)
     }
     if (v < -NDS_ATAN_RAIL_Q30)
     {
-        return ndsR2CollisionFixedToF32(NDS_ATAN_PI_Q30, 30u);
+        return ndsCollisionFixedToF32(NDS_ATAN_PI_Q30, 30u);
     }
-    return ndsR2CollisionFixedToF32(NDS_ATAN_HALF_PI_Q30 - ndsUtilsArcSinQ30(v),
+    return ndsCollisionFixedToF32(NDS_ATAN_HALF_PI_Q30 - ndsUtilsArcSinQ30(v),
                                     30u);
 }

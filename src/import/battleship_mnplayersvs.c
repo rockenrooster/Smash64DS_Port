@@ -490,8 +490,8 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * tree profiles also pin YoshiModel and keep 64 KiB.
  *
  * Every byte here comes out of the character select's scene heap BEFORE
- * ndsR2AnimCacheReserveCSSWorkingSet, which must also leave
- * NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE behind its reservation. With 64 KiB the
+ * ndsAnimCacheReserveCSSWorkingSet, which must also leave
+ * NDS_ANIM_CACHE_ARENA_KEEP_FREE behind its reservation. With 64 KiB the
  * all-content configuration (the published smash64ds and its free-play twin)
  * reached that reservation with 163,792 B free against 183,072 B required, the
  * reservation declined, and every VS preview was switched off -- the published
@@ -699,7 +699,7 @@ volatile u32 gNdsPlayersVSPreviewResidentCapacityFailCount;
  * that opened with every VS preview switched off, because its pools could not
  * be built. The stage names the refusal: 1 shared arena, 2 a closure block,
  * 3 a shared tree, 4 the animation working set (the scene heap could not also
- * keep NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE behind it). Without it the only trace
+ * keep NDS_ANIM_CACHE_ARENA_KEEP_FREE behind it). Without it the only trace
  * of that failure was an empty panel. */
 volatile u32 gNdsPlayersVSPreviewPoolFailCount;
 volatile u32 gNdsPlayersVSPreviewPoolFailStage;
@@ -975,7 +975,7 @@ static sb32 ndsMNPlayersVSPreviewPreloadAnimFile(
      * owner images land there; never let the cache's bare syTaskmanMalloc inherit
      * that shorter lifetime. */
     resident_region = ndsTaskmanSwapMallocRegion(anim_region);
-    loaded = ndsR2AnimCachePreloadFighterFile(file_id);
+    loaded = ndsAnimCachePreloadFighterFile(file_id);
     ndsTaskmanSwapMallocRegion(resident_region);
     return loaded;
 }
@@ -1842,7 +1842,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     /* Reserve every original-cast row-0 clip before the first lazy per-kind
      * acquisition can run; the cache sizer uses immutable source descriptors
      * and the same payload provider as the actual warm loader. */
-    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
+    if (ndsAnimCacheReserveCSSWorkingSet() == FALSE)
     {
         return ndsMNPlayersVSPreviewPoolFail(4u);
     }

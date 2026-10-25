@@ -200,7 +200,7 @@ def walk_geometry(model: P.O2RFile, roots: set[int]):
 def variant_roots(main: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
     """Model offsets of every alternate model-part list (part 1 up, both
     details) in the fighter's modelparts table. The native owner image draws
-    the ones it carries (P2_MODEL_PART_ROOT_VARIANTS); the others -- the
+    the ones it carries (MODEL_PART_ROOT_VARIANTS); the others -- the
     variants its pins drop, and Banjo's parts on joints without a list of
     their own -- decline the fighter's native draw whether the slot names
     a source list or a root cell, as no ROM draws a source list here, so

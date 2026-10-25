@@ -12,7 +12,7 @@ months apart:
   * Kirby's swallow-copy was native-broken for ten of eleven victims
     (`artifacts/performance/2026-09-17_p2-2p8-roster-variance/`).
   * Yoshi's grab throw made the whole fighter vanish, because
-    `P2_MODEL_PART_ROOT_VARIANTS` had no yoshi entry at all
+    `MODEL_PART_ROOT_VARIANTS` had no yoshi entry at all
     (`artifacts/performance/2026-09-17_p2-3f52-yoshi-throw-variant/`).
 
 Nothing connected the source mutation to the bake, because they live in
@@ -35,8 +35,8 @@ legitimately be baked:
   * `BASE_MODEL_PART_ROOT_VARIANTS` -- the Mario/Fox base-pair variants, merged
                                       into the owner image by
                                       `build_native_owner_payload`
-  * `P2_MODEL_PART_ROOT_VARIANTS`  -- independently admissible per-binding swap
-  * `P2_ROOT_PROGRAM_APPENDIX`     -- baked, but only reachable through a
+  * `MODEL_PART_ROOT_VARIANTS`  -- independently admissible per-binding swap
+  * `ROOT_PROGRAM_APPENDIX`     -- baked, but only reachable through a
                                       complete root program
   * a foreign model file           -- a mixed-file program root, which by
                                       definition is not in this owner's model
@@ -242,8 +242,8 @@ def baked_offsets() -> dict[str, dict[str, set[int]]]:
     """
     out: dict[str, dict[str, set[int]]] = {}
     for table in (native.BASE_MODEL_PART_ROOT_VARIANTS,
-                  native.P2_MODEL_PART_ROOT_VARIANTS,
-                  native.P2_ROOT_PROGRAM_APPENDIX):
+                  native.MODEL_PART_ROOT_VARIANTS,
+                  native.ROOT_PROGRAM_APPENDIX):
         for owner, details in table.items():
             for detail, rows in details.items():
                 out.setdefault(owner, {}).setdefault(detail, set()).update(

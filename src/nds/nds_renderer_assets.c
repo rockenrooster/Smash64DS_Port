@@ -157,10 +157,10 @@ extern void *syTaskmanMalloc(size_t size, u32 align);
  * renderer and the fighter manager cannot number owners differently. */
 
 
-/* R2-03 E29. Under NDS_R2_FIGHTER_HW_LIGHT the geometry engine lights the
+/* R2-03 E29. Under NDS_FIGHTER_HW_LIGHT the geometry engine lights the
  * fighter: all four emit paths write GFX_NORMAL from
  * sNdsNativeFighterDenseNormals and never read packed_color, and every epoch is
- * lit (gNdsR2ShadeLitEpochs == gNdsR2ExecEpochCalls == 22,296 over 480 frames),
+ * lit (gNdsShadeLitEpochs == gNdsExecEpochCalls == 22,296 over 480 frames),
  * so the per-dense-vertex loop that writes these two fields never runs. They are
  * dead weight in the middle of the struct the hot emit loop reads, and this
  * table is randomly indexed by 1,878 corners a frame against a 4 KB dcache --

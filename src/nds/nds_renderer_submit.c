@@ -358,7 +358,7 @@ static void ndsRendererBuildRawHardwareMatrix(
 }
 
 /* ITCM (2026-09-27 census: ~1.9K ticks/frame non-memory stall at 284 B). */
-static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererBuildShiftedRawHardwareMatrix(
+static s32 NDS_ITCM_PACK2_CODE ndsRendererBuildShiftedRawHardwareMatrix(
     const NDSRendererMatrix20p12 *composed,
     NDSRendererMatrix20p12 *hardware,
     u32 coordinate_shift)
@@ -540,7 +540,7 @@ static inline void ndsRendererHardwareFighterLoadModelviewWorldScaled(
     }
 }
 
-static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
+static void __attribute__((noinline)) NDS_ITCM_PACK2_EVICTED_PLAIN_CODE
 ndsRendererLoadHardwareSplitMatrices(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
@@ -582,17 +582,17 @@ ndsRendererLoadHardwareSplitMatrices(
  * one. The SHADE_SKIP half cannot be tested here -- it is #defined 4,000 lines
  * further down, next to the code it guards -- so it is asserted there. */
 
-u32 gNdsR2GxComposeRoots;
-u32 gNdsR2GxComposeMults;
-u32 gNdsR2GxComposeRestores;
-u32 gNdsR2GxComposeStores;
-u32 gNdsR2GxComposeProjectionSkips;
+u32 gNdsGxComposeRoots;
+u32 gNdsGxComposeMults;
+u32 gNdsGxComposeRestores;
+u32 gNdsGxComposeStores;
+u32 gNdsGxComposeProjectionSkips;
 
 /* Reset at the top of every execute, which is what makes pointer equality a
  * sound test for "the hardware already holds this projection". */
-static const NDSRendererMatrix20p12 *sNdsR2GxLastProjection;
+static const NDSRendererMatrix20p12 *sNdsGxLastProjection;
 
-static const NDSRendererMatrix20p12 sNdsR2GxIdentity20p12 =
+static const NDSRendererMatrix20p12 sNdsGxIdentity20p12 =
 {
     {
         { 1 << NDS_RENDERER_DS_MTX_FRAC_BITS, 0, 0, 0 },
@@ -648,7 +648,7 @@ static inline void ndsRendererHardwareFighterMultMatrixWorldScaled(
  * where a child or a cross-run corner can find it, then apply the world-unit
  * scale for the draw. GL_MODELVIEW is DS matrix mode 2, so every one of these
  * commands acts on the position and vector matrices together -- which is what
- * NDS_R2_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
+ * NDS_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
  * matrix because it only touches row 3. */
 
 /* 2026-09-27: out of ITCM (old path only; the four-CPU census never
@@ -676,15 +676,15 @@ ndsRendererLoadHardwareGxComposedMatrices(
      * each execute and the adapter cannot rewrite the projection buffer inside
      * one -- nothing between two roots changes GL_PROJECTION either, the light
      * vector write brackets GL_MODELVIEW only. */
-    if (input->projection_matrix != sNdsR2GxLastProjection)
+    if (input->projection_matrix != sNdsGxLastProjection)
     {
         ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
         ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
-        sNdsR2GxLastProjection = input->projection_matrix;
+        sNdsGxLastProjection = input->projection_matrix;
     }
     else
     {
-        NDS_DIAG(gNdsR2GxComposeProjectionSkips++);
+        NDS_DIAG(gNdsGxComposeProjectionSkips++);
     }
     ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
 
@@ -702,20 +702,20 @@ ndsRendererLoadHardwareGxComposedMatrices(
     else
     {
         MATRIX_RESTORE = input->gx_parent_slot;
-        NDS_DIAG(gNdsR2GxComposeRestores++);
+        NDS_DIAG(gNdsGxComposeRestores++);
     }
     for (i = 0u; i < (u32)input->gx_local_count; i++)
     {
         ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
     }
-    NDS_DIAG(gNdsR2GxComposeMults += (u32)input->gx_local_count);
+    NDS_DIAG(gNdsGxComposeMults += (u32)input->gx_local_count);
     if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
     {
         MATRIX_STORE = input->gx_store_slot;
-        NDS_DIAG(gNdsR2GxComposeStores++);
+        NDS_DIAG(gNdsGxComposeStores++);
     }
-    ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
-    NDS_DIAG(gNdsR2GxComposeRoots++);
+    ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsGxIdentity20p12);
+    NDS_DIAG(gNdsGxComposeRoots++);
 
     ndsRendererProfileRecordMatrixLoad();
     /* The generation memo cannot elide anything here: every binding leaves a
@@ -1027,7 +1027,7 @@ ndsRendererHardwareSubmitVertexDecalCold(
     }
 }
 
-static void NDS_R2_ITCM_PACK2_EVICTED_CODE
+static void NDS_ITCM_PACK2_EVICTED_CODE
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -1295,7 +1295,7 @@ ndsRendererHardwareClipNearIntersection(
         return;
     }
 #if defined(__arm__)
-    ratio_q16 = (s32)ndsR2HwMathDiv64((s64)from_distance * 65536, denominator);
+    ratio_q16 = (s32)ndsHwMathDiv64((s64)from_distance * 65536, denominator);
 #else
     ratio_q16 = (s32)(((s64)from_distance * 65536) / denominator);
 #endif
@@ -1624,7 +1624,7 @@ ndsRendererSubmitHardwareTriangleDepthStatsCold(
     }
 }
 
-static void NDS_R2_ITCM_PACK2_EVICTED_CODE
+static void NDS_ITCM_PACK2_EVICTED_CODE
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,

@@ -2803,7 +2803,7 @@ static void NDS_ITCM_CODE ndsFTParamsInvalidateFlatParts(
     }
 }
 
-static void NDS_R2_ITCM_PACK2_CODE
+static void NDS_ITCM_PACK2_CODE
 ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
 {
     const NDSFtPartsFlatWalk *flat;
@@ -2954,11 +2954,11 @@ sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
  * reciprocal table is compile-time-folded and therefore bit-identical to the
  * runtime divide, and the one divide that would have changed rounding was left
  * a divide on purpose. */
-void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj);
+void ndsFtAnimParseDObjFigatree(DObj *root_dobj);
 
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
-    ndsR2FtAnimParseDObjFigatree(root_dobj);
+    ndsFtAnimParseDObjFigatree(root_dobj);
 }
 
 static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
@@ -2982,17 +2982,17 @@ static s32 ndsFTStructJointLoopLimit(const FTStruct *fp)
 /* Slice 33. Route bit 32 selects the caller-side idle-joint skip below. The
  * route word is the same one the parser and player arms use; this TU only reads
  * it, and only once per joint on the arm being measured. With the route
- * compiled out (every published ROM) `NDS_R2_ANIM_CUT_ON` folds to 1 and the
+ * compiled out (every published ROM) `NDS_ANIM_CUT_ON` folds to 1 and the
  * pre-cut arm dead-codes away -- the skip is not optional, it is the shipped
  * path, because it is provably equivalent rather than an approximation. */
-#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#define NDS_ANIM_CUT_ON(bit) (1)
 
-/* Joints skipped whole. The parser's own `gNdsR2FtAnimParseCalls` stops seeing
+/* Joints skipped whole. The parser's own `gNdsFtAnimParseCalls` stops seeing
  * these, so calls + skips is the figure that stays comparable across the cut --
  * without this the parser would appear to lose a third of its callers. */
-volatile u32 gNdsR2FtAnimNullSkips;
+volatile u32 gNdsFtAnimNullSkips;
 
-void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
+void NDS_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     DObj **p_joint;
@@ -3090,7 +3090,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
              * on both paths: it indexes the joint array, so a pointer that
              * stopped advancing on idle joints would mis-scale every later
              * joint in the fighter. */
-            if (!NDS_R2_ANIM_CUT_ON(32u) ||
+            if (!NDS_ANIM_CUT_ON(32u) ||
                 NDS_FCMP_NE_C(joint->anim_wait, AOBJ_ANIM_NULL))
             {
                 if (fp->anim_desc.flags.is_anim_joint)
@@ -3114,7 +3114,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             }
             else
             {
-                NDS_DIAG(gNdsR2FtAnimNullSkips++);
+                NDS_DIAG(gNdsFtAnimNullSkips++);
             }
             if (translate_scales != NULL)
             {

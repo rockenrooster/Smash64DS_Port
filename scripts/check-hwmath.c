@@ -1,4 +1,4 @@
-/* Host falsifier for include/nds/nds_r2_hwmath.h -- the correctly-rounded
+/* Host falsifier for include/nds/nds_hwmath.h -- the correctly-rounded
  * IEEE-754 single divide built on the ARM9 64/32 divide unit.
  *
  * THE SPLIT THIS FILE EXISTS TO MAKE. The claim "the hardware divide unit can
@@ -12,10 +12,10 @@
  *
  *   HARDWARE HALF -- that the unit itself returns the exact truncated quotient
  *   and remainder. NOT provable on the host and not claimed here. It is graded
- *   in the ROM by src/port/nds_r2_hwmath_bench.c against the portable software
+ *   in the ROM by src/port/nds_hwmath_bench.c against the portable software
  *   divide on the same operands, and the same unit's square-root half already
  *   carries an in-tree bit-exactness proof through sqrtf
- *   (scripts/check-r2-fixed-sqrt.ps1).
+ *   (scripts/check-fixed-sqrt.ps1).
  *
  * Bounding the whole pipeline instead would be the mistake recorded as
  * "prove the parser half exactly".
@@ -26,8 +26,8 @@
 #include <string.h>
 
 /* The unit, modelled exactly. Both operands are positive by construction in
- * ndsR2HwMathDivBits, so the sign rules never enter. */
-static int64_t ndsR2HwMathDivideUnit(int64_t numerator, int32_t denominator,
+ * ndsHwMathDivBits, so the sign rules never enter. */
+static int64_t ndsHwMathDivideUnit(int64_t numerator, int32_t denominator,
                                      int32_t *remainder_out)
 {
     int64_t quotient = numerator / (int64_t)denominator;
@@ -39,7 +39,7 @@ static int64_t ndsR2HwMathDivideUnit(int64_t numerator, int32_t denominator,
     return quotient;
 }
 
-#include "../include/nds/nds_r2_hwmath.h"
+#include "../include/nds/nds_hwmath.h"
 
 static unsigned int gTies;
 static unsigned int gRoundUps;
@@ -113,12 +113,12 @@ static int grade(unsigned int a_bits, unsigned int b_bits)
     int status;
 
     gCases++;
-    status = ndsR2HwMathDivBits(a_bits, b_bits, &got);
+    status = ndsHwMathDivBits(a_bits, b_bits, &got);
 
     quotient = floatOf(a_bits) / floatOf(b_bits);
     want = bitsOf(quotient);
 
-    if (status == NDS_R2_HWMATH_FDIV_FALLBACK)
+    if (status == NDS_HWMATH_FDIV_FALLBACK)
     {
         gFallbacks++;
         return 1;
@@ -255,10 +255,10 @@ int main(void)
 
         for (k = 0u; k < (sizeof(kSpecial) / sizeof(kSpecial[0])); k++)
         {
-            if (ndsR2HwMathDivBits(kSpecial[k], bitsOf(1.0f), &out) !=
-                    NDS_R2_HWMATH_FDIV_FALLBACK ||
-                ndsR2HwMathDivBits(bitsOf(1.0f), kSpecial[k], &out) !=
-                    NDS_R2_HWMATH_FDIV_FALLBACK)
+            if (ndsHwMathDivBits(kSpecial[k], bitsOf(1.0f), &out) !=
+                    NDS_HWMATH_FDIV_FALLBACK ||
+                ndsHwMathDivBits(bitsOf(1.0f), kSpecial[k], &out) !=
+                    NDS_HWMATH_FDIV_FALLBACK)
             {
                 printf("SPECIAL %08x was not declined\n", kSpecial[k]);
                 return 1;
@@ -266,10 +266,10 @@ int main(void)
         }
         /* FLT_MAX / FLT_MIN_NORMAL overflows; FLT_MIN_NORMAL / FLT_MAX
          * underflows. Both must decline rather than pack a wrong exponent. */
-        if (ndsR2HwMathDivBits(0x7f7fffffu, 0x00800000u, &out) !=
-                NDS_R2_HWMATH_FDIV_FALLBACK ||
-            ndsR2HwMathDivBits(0x00800000u, 0x7f7fffffu, &out) !=
-                NDS_R2_HWMATH_FDIV_FALLBACK)
+        if (ndsHwMathDivBits(0x7f7fffffu, 0x00800000u, &out) !=
+                NDS_HWMATH_FDIV_FALLBACK ||
+            ndsHwMathDivBits(0x00800000u, 0x7f7fffffu, &out) !=
+                NDS_HWMATH_FDIV_FALLBACK)
         {
             printf("range decline missing\n");
             return 1;

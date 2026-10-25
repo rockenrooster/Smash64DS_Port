@@ -1364,7 +1364,7 @@ s32 ndsRendererExecuteNativeFighterRoot(
 /* P2-2 fighter packet: drops every recorded fighter stream and restores the
  * scene manager's clear over the framebuffer arena the streams borrow. Called
  * on entering Results, before its photo wipe reads that buffer. A no-op when
- * NDS_R2_FIGHTER_PACKET is off. */
+ * NDS_FIGHTER_PACKET is off. */
 void ndsRendererFighterPacketRelease(void);
 /* Drops recorded fighter streams without clearing the borrowed framebuffer
  * arena.  This is the setup/menu lifetime invalidator: source operations such
@@ -1706,7 +1706,7 @@ void ndsRendererHardwareArmBattleStaticTextures(void);
 /* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts
  * at two named frames and clears the running ones. Declared unconditionally so
  * this header does not depend on the generated config defines being visible
- * first; defined only under NDS_R2_FLASH_PROBE, and its one call site is guarded
+ * first; defined only under NDS_FLASH_PROBE, and its one call site is guarded
  * by the same flag. Delete with the experiment. */
 void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame);
 void ndsRendererHardwareDiscardBattleStaticTextures(void);

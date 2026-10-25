@@ -23,7 +23,7 @@ static const u32 *ndsRendererHardwareFindLightShadeLut(
  * is. The shade-LUT set stabilises before the gate window, so the builder
  * executes ZERO instructions across frames 439-2038 (per-PC census whole-match
  * column) while holding 404 bytes of zero-wait ITCM. Moved to .main so
- * ndsR2AnimValueQ -- 370.6 entries a frame, 21,719 tk/fr of instruction fetch
+ * ndsAnimValueQ -- 370.6 entries a frame, 21,719 tk/fr of instruction fetch
  * -- can have the space. Placement only; the body is untouched. */
 static const u32 *
 ndsRendererHardwareGetLightShadeLut(
@@ -309,7 +309,7 @@ void ndsRendererMtxMulRow3_20p12(const NDSRendererMatrix20p12 *lhs,
     }
 }
 
-void NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
+void NDS_ITCM_PACK2_EVICTED_PLAIN_CODE
 ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                   const NDSRendererMatrix20p12 *rhs,
                                   NDSRendererMatrix20p12 *out)
@@ -785,7 +785,7 @@ static void ndsRendererCaptureTextureLoad(NDSRendererStats *stats)
                    (stats->texture_tiles[tile].set_seen != 0u)) ? TRUE : FALSE;
 }
 
-static void NDS_FIGHTER_PACKET_EVICT(NDS_R2_DELTA_PATH_CODE)
+static void NDS_FIGHTER_PACKET_EVICT(NDS_DELTA_PATH_CODE)
 ndsRendererRecordLoadBlock(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
@@ -844,7 +844,7 @@ static void __attribute__((noinline)) ndsRendererRecordLoadTile(NDSRendererStats
     ndsRendererCaptureTextureLoad(stats);
 }
 
-static void NDS_FIGHTER_PACKET_EVICT(NDS_R2_DELTA_PATH_CODE)
+static void NDS_FIGHTER_PACKET_EVICT(NDS_DELTA_PATH_CODE)
 ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     u32 tile_index;
@@ -892,7 +892,7 @@ ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
     ndsRendererSyncTextureTile(stats);
 }
 
-static void NDS_R2_DELTA_PATH_CODE
+static void NDS_DELTA_PATH_CODE
 ndsRendererRecordSetImage(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
@@ -907,7 +907,7 @@ ndsRendererRecordSetImage(NDSRendererStats *stats, u32 w0, u32 w1)
     stats->texture_image = w1;
 }
 
-static void NDS_R2_DELTA_PATH_CODE
+static void NDS_DELTA_PATH_CODE
 ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
 {
     if (stats == NULL)
@@ -925,7 +925,7 @@ ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
 }
 
 
-static void NDS_R2_DELTA_PATH_CODE
+static void NDS_DELTA_PATH_CODE
 ndsRendererRecordSetCombine(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)

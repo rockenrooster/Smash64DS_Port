@@ -1,6 +1,6 @@
-/* Falsifier for NDS_R2_FIXED_SQRT (R2-03 E1).
+/* Falsifier for NDS_FIXED_SQRT (R2-03 E1).
  *
- * Includes the shipped kernel from include/nds/nds_r2_sqrtf.h -- not a
+ * Includes the shipped kernel from include/nds/nds_sqrtf.h -- not a
  * transcription of it -- with the DS hardware square-root unit stood in for by
  * an exact integer root. The host's sqrtf is IEEE correctly rounded, so a
  * correctly rounded implementation must agree on every bit of every normal
@@ -12,7 +12,7 @@
 #include <string.h>
 
 /* floor(sqrt(a)) -- what the DS unit returns, computed exactly. */
-static unsigned int ndsR2SqrtfHardware(unsigned long long a)
+static unsigned int ndsSqrtfHardware(unsigned long long a)
 {
     unsigned long long rem = 0, root = 0;
     int i;
@@ -29,7 +29,7 @@ static unsigned int ndsR2SqrtfHardware(unsigned long long a)
     return (unsigned int)(root >> 1);
 }
 
-#include "../include/nds/nds_r2_sqrtf.h"
+#include "../include/nds/nds_sqrtf.h"
 
 static unsigned long long checked, mismatches, fallbacks;
 
@@ -44,7 +44,7 @@ static void check(uint32_t bits)
     memcpy(&ref_bits, &ref, sizeof(ref_bits));
     checked++;
 
-    if (ndsR2SqrtfBits(bits, &out) == NDS_R2_SQRTF_FALLBACK) {
+    if (ndsSqrtfBits(bits, &out) == NDS_SQRTF_FALLBACK) {
         /* Declined on purpose; the ROM hands these to newlib unchanged, so
          * there is nothing to compare. Counted so a kernel that silently
          * declined everything could not pass. */

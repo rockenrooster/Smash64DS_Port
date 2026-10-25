@@ -2,12 +2,12 @@
 param()
 
 # Falsifier for R2-07 L7, the 20.12 collision joint-transform kernel. Compiles
-# the SHIPPED kernel from include/nds/nds_r2_collision_mtx.h on the host and
+# the SHIPPED kernel from include/nds/nds_collision_mtx.h on the host and
 # grades it in world units against a transcription of the decomp's float
 # original -- error on a transformed point, because that is the quantity
 # collision reads and a matrix-cell bound cannot be compared against a hurtbox.
 #
-# check-r2-collision-mtx.c has existed since the kernel was written; this
+# check-collision-mtx.c has existed since the kernel was written; this
 # harness did not, and the header claimed it did. It was run by hand, which is
 # why nothing noticed when the header's quoted figures went stale by a
 # revision. Registered now so the numbers cannot drift again.
@@ -15,8 +15,8 @@ param()
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $root 'artifacts/verifier-temp/r2-collision-mtx'
-$source = Join-Path $PSScriptRoot 'check-r2-collision-mtx.c'
-$binary = Join-Path $outputDir 'check-r2-collision-mtx.exe'
+$source = Join-Path $PSScriptRoot 'check-collision-mtx.c'
+$binary = Join-Path $outputDir 'check-collision-mtx.exe'
 $armAssembly = Join-Path $outputDir 'arm-kernel.s'
 $compiler = Get-Command gcc -ErrorAction Stop
 $armCompiler = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gcc.exe'
@@ -42,8 +42,8 @@ if (-not (Test-Path -LiteralPath $armCompiler -PathType Leaf)) {
 if ($LASTEXITCODE -ne 0) { throw 'R2 collision-matrix ARM codegen probe failed.' }
 
 $assembly = Get-Content -LiteralPath $armAssembly -Raw
-foreach ($name in @('ndsR2CollisionInvertMatrixQ12', 'ndsR2CollisionInvertFrame',
-                    'ndsR2CollisionWorldToLocal', 'ndsR2CollisionCompose')) {
+foreach ($name in @('ndsCollisionInvertMatrixQ12', 'ndsCollisionInvertFrame',
+                    'ndsCollisionWorldToLocal', 'ndsCollisionCompose')) {
     $kernel = [regex]::Match(
         $assembly, "(?ms)^$name`:\s*(.*?)^\s*\.size\s+$name")
     if (-not $kernel.Success) { continue }

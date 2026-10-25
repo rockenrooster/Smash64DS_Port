@@ -13,10 +13,10 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/renderer_fighter_lean.h>
-#include <nds/nds_r2_camera_fixed.h>
+#include <nds/nds_camera_fixed.h>
 #include <nds/nds_fcmp.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fixed_convert.h>
 #include <nds/nds_fox_gun.h>
 #include <nds/nds_ifcommon_oam.h>
@@ -215,7 +215,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void)
             if ((cobj->xobjs[i] != NULL) &&
                 (cobj->xobjs[i]->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
             {
-                return ndsR2CameraCurrentLookAt();
+                return ndsCameraCurrentLookAt();
             }
             /* A Reflect camera emits its own gSPLookAtX/Y. */
             if ((cobj->xobjs[i] != NULL) && (cobj->xobjs[i]->kind >= 12) &&
@@ -539,7 +539,7 @@ static u32 sNdsRendererAdapterNativeOwnerTextureCounts[
  *
  * That premise was not asserted, it was MEASURED. Slice 17 shipped a fail-closed
  * half -- a second key holding the whole 34-word hash, re-checked on every
- * fourth frame, with `gNdsR2MatKeyMissStatic` counting any disagreement. Over a
+ * fourth frame, with `gNdsMatKeyMissStatic` counting any disagreement. Over a
  * 60-second match that check ran ~14,848 times and disagreed **0** times, on top
  * of the cycle-98 census's zero material variants. The scaffold itself measured
  * +3,342 FTR -- a volatile frame-counter load and a branch per entry, plus a
@@ -2025,9 +2025,9 @@ static u32 sNdsRendererAdapterCameraCacheCount;
  * declining every owner -- one counter would have said the same thing there.
  * __attribute__((used)): these are write-only from C, so -ffunction-sections
  * plus --gc-sections drops them and Boundary fails on a missing ELF symbol. */
-__attribute__((used)) u32 gNdsR2Slice44StaleReuse;
-__attribute__((used)) u32 gNdsR2Slice44RigidChecks;
-__attribute__((used)) u32 gNdsR2Slice44RigidSkips;
+__attribute__((used)) u32 gNdsSlice44StaleReuse;
+__attribute__((used)) u32 gNdsSlice44RigidChecks;
+__attribute__((used)) u32 gNdsSlice44RigidSkips;
 static NDSRendererAdapterDObjWorldCacheEntry
     *sNdsRendererAdapterDObjWorldCache;
 static u32 sNdsRendererAdapterDObjWorldCacheFrame;

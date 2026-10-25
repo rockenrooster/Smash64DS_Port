@@ -14,8 +14,8 @@
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
-#include <nds/nds_r2_hwmath_unit.h>
-#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
 #include <nds/nds_fixed_convert.h>
 
 #include "generated/native_wallpapers.generated.inc"
@@ -107,7 +107,7 @@ static s32 ndsWallpaperScaleQ16(s64 mag_q, s32 bias)
 {
     const s64 den = mag_q + ((s64)bias << NDS_WALLPAPER_Q);
     s64 scale = (den > 0) ?
-        ndsR2HwMathDivideFast((s64)20000 << (NDS_WALLPAPER_Q + 16u), den) :
+        ndsHwMathDivideFast((s64)20000 << (NDS_WALLPAPER_Q + 16u), den) :
         NDS_WALLPAPER_SCALE_MAX_Q16;
 
     if (scale < NDS_WALLPAPER_SCALE_MIN_Q16)
@@ -195,12 +195,12 @@ ndsWallpaperPerspCompute(u32 motion, const Vec3f *eye, const Vec3f *at,
         const s32 ay = ndsF32ToFixed(at->y, NDS_WALLPAPER_Q);
         const s32 az = ndsF32ToFixed(at->z, NDS_WALLPAPER_Q);
 
-        if ((dx == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (dy == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (dz == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ax == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ay == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (az == NDS_R2_COLLISION_F32_OVERFLOW))
+        if ((dx == NDS_COLLISION_F32_OVERFLOW) ||
+            (dy == NDS_COLLISION_F32_OVERFLOW) ||
+            (dz == NDS_COLLISION_F32_OVERFLOW) ||
+            (ax == NDS_COLLISION_F32_OVERFLOW) ||
+            (ay == NDS_COLLISION_F32_OVERFLOW) ||
+            (az == NDS_COLLISION_F32_OVERFLOW))
         {
             return FALSE;
         }
@@ -208,7 +208,7 @@ ndsWallpaperPerspCompute(u32 motion, const Vec3f *eye, const Vec3f *at,
         dy -= ay;
         dz -= az;
     }
-    mag = (s64)ndsR2HwMathSqrt64Fast(((u64)((s64)dx * dx)) +
+    mag = (s64)ndsHwMathSqrt64Fast(((u64)((s64)dx * dx)) +
                                      ((u64)((s64)dy * dy)) +
                                      ((u64)((s64)dz * dz)));
     if (motion == NDS_NATIVE_BATTLE_WALLPAPER_SECTOR)
@@ -242,10 +242,10 @@ ndsWallpaperPerspCompute(u32 motion, const Vec3f *eye, const Vec3f *at,
         width = 300 * scale;
         height = 220 * scale;
         /* (angle / pi) * extent - (extent - screen) * 0.5 */
-        pos_x = (s32)ndsR2HwMathDivideFast(angle_y * width,
+        pos_x = (s32)ndsHwMathDivideFast(angle_y * width,
                                            NDS_WALLPAPER_PI_Q30) -
                 ((width - (320 << 16)) >> 1);
-        pos_y = (s32)ndsR2HwMathDivideFast(-angle_x * height,
+        pos_y = (s32)ndsHwMathDivideFast(-angle_x * height,
                                            NDS_WALLPAPER_PI_Q30) -
                 ((height - (240 << 16)) >> 1);
         if (pos_x > (10 << 16))
@@ -436,9 +436,9 @@ static s32 ndsNativeWallpaperAffine(const NDSNativeWallpaper *asset,
     /* The DS divide unit: C's truncating s64 division (the unit's own rule),
      * in place of a bit-by-bit __aeabi_ldivmod twice a frame. */
     x = (s64)*pa / 2 -
-        ndsR2HwMathDivideLead((s64)origin_x * 4 * *pa, 5);
+        ndsHwMathDivideLead((s64)origin_x * 4 * *pa, 5);
     y = (s64)*pd / 2 -
-        ndsR2HwMathDivideLead((s64)origin_y * 4 * *pd, 5);
+        ndsHwMathDivideLead((s64)origin_y * 4 * *pd, 5);
     if ((x < -134217728) || (x > 134217727) ||
         (y < -134217728) || (y > 134217727))
     {

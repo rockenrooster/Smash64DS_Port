@@ -223,7 +223,7 @@ static sb32 ndsMarioFireballHorizontalContact(
 
 /* Horizontal radius of the source collision diamond at a world-space Y.
  * map_coll.center is retained even though Mario's source value is zero so this
- * stays correct for Luigi/retunes and for NDS_R2_FIREBALL_MAP_COLL_SCALE. */
+ * stays correct for Luigi/retunes and for NDS_FIREBALL_MAP_COLL_SCALE. */
 static f32 ndsMarioFireballDiamondHalfWidth(const MPObjectColl *map_coll,
                                             f32 center_y,
                                             f32 world_y)
@@ -725,13 +725,13 @@ static void ndsMarioFireballSampleWeaponPool(void)
     u32 free_depth = 0u;
     u32 live;
 
-    while ((node != NULL) && (free_depth <= NDS_R2_WEAPON_POOL))
+    while ((node != NULL) && (free_depth <= NDS_WEAPON_POOL))
     {
         free_depth++;
         node = node->next;
     }
-    live = (free_depth <= NDS_R2_WEAPON_POOL) ?
-        ((u32)NDS_R2_WEAPON_POOL - free_depth) : 0u;
+    live = (free_depth <= NDS_WEAPON_POOL) ?
+        ((u32)NDS_WEAPON_POOL - free_depth) : 0u;
     if (live > gNdsFighterProjectileProofWeaponCountMax)
     {
         gNdsFighterProjectileProofWeaponCountMax = live;
@@ -792,10 +792,10 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
          * into floors; scaling all sides 1.5x. */
         if (wp != NULL)
         {
-            wp->coll_data.map_coll.top    *= NDS_R2_FIREBALL_MAP_COLL_SCALE;
-            wp->coll_data.map_coll.center *= NDS_R2_FIREBALL_MAP_COLL_SCALE;
-            wp->coll_data.map_coll.bottom *= NDS_R2_FIREBALL_MAP_COLL_SCALE;
-            wp->coll_data.map_coll.width  *= NDS_R2_FIREBALL_MAP_COLL_SCALE;
+            wp->coll_data.map_coll.top    *= NDS_FIREBALL_MAP_COLL_SCALE;
+            wp->coll_data.map_coll.center *= NDS_FIREBALL_MAP_COLL_SCALE;
+            wp->coll_data.map_coll.bottom *= NDS_FIREBALL_MAP_COLL_SCALE;
+            wp->coll_data.map_coll.width  *= NDS_FIREBALL_MAP_COLL_SCALE;
         }
     }
     else if (sWPManagerStructsAllocFree != NULL)

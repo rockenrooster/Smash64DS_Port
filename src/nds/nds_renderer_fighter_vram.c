@@ -1530,7 +1530,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
  * someone else while the old owner still holds it. The one owner that
  * outlives the battle is the renderer's own fighter tint set, which VS Results
  * and the character select draw with: its tiles in D go here (slice 7,
- * ndsR2FighterTintReleaseRange). */
+ * ndsFighterTintReleaseRange). */
 /* P8 V5: bank C, lent from a VS battle's first frame for its wallpaper tiles
  * (ndsPlatformVramTakeBankC), goes back as D does: locked first, so nothing
  * new lands in it while the final frame may still draw from it; the cache
@@ -1559,7 +1559,7 @@ NDS_RENDERER_COLD static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitExitBankC(void)
             (void)ndsRendererHardwareReleaseTexture(entry);
         }
     }
-    (void)ndsR2FighterTintReleaseRange(NDS_FTR_ADMIT_C_LO, NDS_FTR_ADMIT_C_HI);
+    (void)ndsFighterTintReleaseRange(NDS_FTR_ADMIT_C_LO, NDS_FTR_ADMIT_C_HI);
     ndsNativeWallpaperTilesRelease();
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -1601,7 +1601,7 @@ NDS_RENDERER_COLD void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
         }
     }
     {
-        u32 tints = ndsR2FighterTintReleaseRange(NDS_FTR_ADMIT_D_LO,
+        u32 tints = ndsFighterTintReleaseRange(NDS_FTR_ADMIT_D_LO,
                                                  NDS_FTR_ADMIT_D_HI);
 
         NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_tints += tints);

@@ -95,7 +95,7 @@ const void *ndsEffectTreeFirstDL(const struct DObj *root);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;
-/* NDS_R2_FIREBALL_QUAD runtime, owned by the weapon submit in
+/* NDS_FIREBALL_QUAD runtime, owned by the weapon submit in
  * reloc_backend_movement.c. Called from efManagerInitEffects beside the shield
  * release so the baked texture has the same match lifetime: START at the
  * results screen restarts the match, and a name held across restarts would
@@ -218,8 +218,8 @@ extern volatile u32 gNdsEFManagerSourceEffectStopCount;
  * busy, and every caller tolerates the NULL return, so an over-subscribed
  * frame drops the newest cosmetic effect exactly as the N64 does rather than
  * growing the heap. */
-#ifndef NDS_R2_EFFECT_POOL
-#define NDS_R2_EFFECT_POOL 12
+#ifndef NDS_EFFECT_POOL
+#define NDS_EFFECT_POOL 12
 #endif
 /* Depth actually installed, and the battle-time low-water of
  * sEFManagerStructsFreeNum. A low-water pinned at 4 means the pool is

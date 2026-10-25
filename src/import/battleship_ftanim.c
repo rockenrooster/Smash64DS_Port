@@ -79,7 +79,7 @@ void gcPlayMObjMatAnim(MObj *mobj);
  * the shipped parser writes the AObj in fixed point and the shipped player
  * reads it there. What that does and does not preserve is stated in
  * `include/nds/nds_anim_fixed.h` and MEASURED by
- * `scripts/check_r2_cubic_error_bound.py`, which drives this parser's own
+ * `scripts/check_cubic_error_bound.py`, which drives this parser's own
  * arithmetic end to end against the decomp float reference rather than
  * bounding the evaluator alone.
  * ------------------------------------------------------------------------- */
@@ -88,39 +88,39 @@ void gcPlayMObjMatAnim(MObj *mobj);
 #include <nds/nds_anim_fixed.h>
 
 /* Requirement 4 -- this parser is the WRITER half. The evaluator half is
- * `ndsR2AnimValueQ` in `src/import/battleship_sys_objanim.c`; the two must move
+ * `ndsAnimValueQ` in `src/import/battleship_sys_objanim.c`; the two must move
  * together, because the AObj carries state across segments (`value_base =
  * value_target`, `rate_base = rate_target`) and a half-converted list is a
  * float bit pattern read as a Q integer.
  *
  * Route bit 3 selects it on the same binary. Compiled out (the default, and
- * every published ROM) `NDS_R2_ANIM_CUT_ON` folds to a constant 1, GCC
+ * every published ROM) `NDS_ANIM_CUT_ON` folds to a constant 1, GCC
  * dead-codes the float arms, and there is no per-event test left. */
-#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#define NDS_ANIM_CUT_ON(bit) (1)
 
 /* 1/n for n in [1,255], built by the compiler. Entry 0 is a placeholder: every
  * reader is guarded by a payload-not-zero test, and `1.0f/0.0f` in a constant
  * initialiser is a diagnostic. 1 KiB of .rodata against 34,816 bytes of proven
  * static headroom - priced before writing, as the RAM rule requires. */
-#define NDS_R2R1(n)   (1.0f / (f32)(n))
-#define NDS_R2R4(n)   NDS_R2R1((n)), NDS_R2R1((n) + 1), \
-                      NDS_R2R1((n) + 2), NDS_R2R1((n) + 3)
-#define NDS_R2R16(n)  NDS_R2R4((n)), NDS_R2R4((n) + 4), \
-                      NDS_R2R4((n) + 8), NDS_R2R4((n) + 12)
-#define NDS_R2R64(n)  NDS_R2R16((n)), NDS_R2R16((n) + 16), \
-                      NDS_R2R16((n) + 32), NDS_R2R16((n) + 48)
-#define NDS_R2_RECIP_COUNT 256u
+#define NDS_RECIP1(n)   (1.0f / (f32)(n))
+#define NDS_RECIP4(n)   NDS_RECIP1((n)), NDS_RECIP1((n) + 1), \
+                      NDS_RECIP1((n) + 2), NDS_RECIP1((n) + 3)
+#define NDS_RECIP16(n)  NDS_RECIP4((n)), NDS_RECIP4((n) + 4), \
+                      NDS_RECIP4((n) + 8), NDS_RECIP4((n) + 12)
+#define NDS_RECIP64(n)  NDS_RECIP16((n)), NDS_RECIP16((n) + 16), \
+                      NDS_RECIP16((n) + 32), NDS_RECIP16((n) + 48)
+#define NDS_RECIP_COUNT 256u
 
-static const f32 sNdsR2Recip[NDS_R2_RECIP_COUNT] = {
-    0.0f, NDS_R2R1(1), NDS_R2R1(2), NDS_R2R1(3),
-    NDS_R2R4(4), NDS_R2R4(8), NDS_R2R16(12), NDS_R2R4(28),
-    NDS_R2R64(32), NDS_R2R64(96), NDS_R2R64(160), NDS_R2R16(224),
-    NDS_R2R16(240)
+static const f32 sNdsRecip[NDS_RECIP_COUNT] = {
+    0.0f, NDS_RECIP1(1), NDS_RECIP1(2), NDS_RECIP1(3),
+    NDS_RECIP4(4), NDS_RECIP4(8), NDS_RECIP16(12), NDS_RECIP4(28),
+    NDS_RECIP64(32), NDS_RECIP64(96), NDS_RECIP64(160), NDS_RECIP16(224),
+    NDS_RECIP16(240)
 };
 
-volatile u32 gNdsR2FtAnimRecipHits;
-volatile u32 gNdsR2FtAnimRecipMisses;
-volatile u32 gNdsR2FtAnimParseCalls;
+volatile u32 gNdsFtAnimRecipHits;
+volatile u32 gNdsFtAnimRecipMisses;
+volatile u32 gNdsFtAnimParseCalls;
 /* Slice 32 step 11. The parse RESUMES a script rather than re-parsing it, and
  * returns before the table walk whenever the animation has not advanced to a
  * new command. So its cost splits in two, and only one half is reducible:
@@ -132,10 +132,10 @@ volatile u32 gNdsR2FtAnimParseCalls;
  *
  * The ratio decides whether slice 32 is worth building at all, so it is
  * measured before the player is written rather than after. */
-volatile u32 gNdsR2FtAnimParseEarlyOut;
-volatile u32 gNdsR2FtAnimParseStepped;
+volatile u32 gNdsFtAnimParseEarlyOut;
+volatile u32 gNdsFtAnimParseStepped;
 
-static inline f32 ndsR2BitsToF32(u32 bits)
+static inline f32 ndsBitsToF32(u32 bits)
 {
     f32 v;
 
@@ -145,7 +145,7 @@ static inline f32 ndsR2BitsToF32(u32 bits)
 
 /* Exactly (f32)v for v < 2^16: at most 16 significant bits against f32's 24, so
  * there is no rounding decision to make. */
-static inline f32 ndsR2U16ToF32(u32 v)
+static inline f32 ndsU16ToF32(u32 v)
 {
     u32 shift;
 
@@ -154,19 +154,19 @@ static inline f32 ndsR2U16ToF32(u32 v)
         return 0.0f;
     }
     shift = (u32)__builtin_clz(v);
-    return ndsR2BitsToF32((((127u + 31u) - shift) << 23) |
+    return ndsBitsToF32((((127u + 31u) - shift) << 23) |
                           (((v << shift) & 0x7fffffffu) >> 8));
 }
 
 /* `1.0F / payload`, a table hit whenever the frame count is in range. */
-static inline f32 ndsR2Recip(u32 n)
+static inline f32 ndsRecip(u32 n)
 {
-    if (n < NDS_R2_RECIP_COUNT)
+    if (n < NDS_RECIP_COUNT)
     {
-        NDS_DIAG(gNdsR2FtAnimRecipHits++);
-        return sNdsR2Recip[n];
+        NDS_DIAG(gNdsFtAnimRecipHits++);
+        return sNdsRecip[n];
     }
-    NDS_DIAG(gNdsR2FtAnimRecipMisses++);
+    NDS_DIAG(gNdsFtAnimRecipMisses++);
     return 1.0f / (f32)n;
 }
 
@@ -176,12 +176,12 @@ static inline f32 ndsR2Recip(u32 n)
  * 1/32, 1/8192 for rates. Ids 3 and 7 (TraI) are `1/16384 - 3e-12`, which is
  * not a power of two, so they keep the original expression - there is no exact
  * shift for them and TraI is one track of ten. */
-static const u8 sNdsR2AnimFracShift[8] = { 9u, 2u, 12u, 0u, 9u, 5u, 13u, 0u };
+static const u8 sNdsAnimFracShift[8] = { 9u, 2u, 12u, 0u, 9u, 5u, 13u, 0u };
 
 /* 2026-09-27: out of ITCM. The pose engine replaced this path; the four-CPU
  * census never executed it, and its bytes went to ndsFtPosePlay. */
 static f32
-ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
+ndsAnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
 {
     s32 id;
     u32 mag;
@@ -232,15 +232,15 @@ ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
         f32 trai = (f32)arg * (1.0F / 16384.0F - (3.0F / 1000000000000.0F));
 
         return (q != 0u) ?
-            ndsR2AQStore(ndsR2F32ToFixed(trai, NDS_R2_AQ_VF)) : trai;
+            ndsAQStore(ndsAnimF32ToFixed(trai, NDS_AQ_VF)) : trai;
     }
     if (q != 0u)
     {
         /* `arg * 2^-k` quantised to Q12 is `arg << (12-k)`, and the shipped
          * cubic already quantises the f32 to exactly that. Zero needs no
          * special case here -- it shifts to zero either way. */
-        return ndsR2AQStore(ndsR2AnimArgToQ(
-            (s32)arg, NDS_R2_AQ_VF - (s32)sNdsR2AnimFracShift[id]));
+        return ndsAQStore(ndsAnimArgToQ(
+            (s32)arg, NDS_AQ_VF - (s32)sNdsAnimFracShift[id]));
     }
     if (arg == 0)
     {
@@ -248,9 +248,9 @@ ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
     }
     mag = (arg < 0) ? (u32)(-(s32)arg) : (u32)arg;
     shift = (u32)__builtin_clz(mag);
-    k = sNdsR2AnimFracShift[id];
+    k = sNdsAnimFracShift[id];
     /* mag = 1.m * 2^(31-shift), so mag * 2^-k = 1.m * 2^(31-shift-k). */
-    return ndsR2BitsToF32(
+    return ndsBitsToF32(
         ((arg < 0) ? 0x80000000u : 0u) |
         ((((127u + 31u) - shift) - k) << 23) |
         (((mag << shift) & 0x7fffffffu) >> 8));
@@ -263,17 +263,17 @@ ndsR2AnimTargetValue(s16 arg, s32 track, sb32 value_or_step, u32 q)
  * the widest that holds 1/1 without saturating, and it is derived from the same
  * compile-time-folded table the float path uses, so the two agree to the f32's
  * own precision. */
-static inline f32 ndsR2AnimRecipSlot(u32 n, u32 q)
+static inline f32 ndsAnimRecipSlot(u32 n, u32 q)
 {
-    f32 r = ndsR2Recip(n);
+    f32 r = ndsRecip(n);
 
-    return (q != 0u) ? ndsR2AQStore(ndsR2F32ToFixed(r, NDS_R2_AQ_IF)) : r;
+    return (q != 0u) ? ndsAQStore(ndsAnimF32ToFixed(r, NDS_AQ_IF)) : r;
 }
 
 /* A u16 frame count as `length`/Step's `length_invert` carries it. */
-static inline f32 ndsR2AnimFramesSlot(u32 n, f32 as_float, u32 q)
+static inline f32 ndsAnimFramesSlot(u32 n, f32 as_float, u32 q)
 {
-    return (q != 0u) ? ndsR2AQStore((s32)n << NDS_R2_AQ_LF) : as_float;
+    return (q != 0u) ? ndsAQStore((s32)n << NDS_AQ_LF) : as_float;
 }
 
 /* `-anim_wait - anim_speed`, the segment's starting phase. Loop-invariant
@@ -300,20 +300,20 @@ static inline f32 ndsR2AnimFramesSlot(u32 n, f32 as_float, u32 q)
  * three assignments are restored below; keep them per case rather than hoisting
  * to the top of the loop body, because `Block`, `Loop`, `End`, `SetTargetRate`
  * and `AddLen` must not pay for a value they never read. */
-static inline f32 ndsR2AnimSegmentStart(const DObj *root_dobj, u32 q)
+static inline f32 ndsAnimSegmentStart(const DObj *root_dobj, u32 q)
 {
     f32 v = -root_dobj->anim_wait - root_dobj->anim_speed;
 
-    return (q != 0u) ? ndsR2AQStore(ndsR2F32ToFixed(v, NDS_R2_AQ_LF)) : v;
+    return (q != 0u) ? ndsAQStore(ndsAnimF32ToFixed(v, NDS_AQ_LF)) : v;
 }
 
 /* Whichever representation the AObj is in, advance `length` by `payload`. */
-static inline void ndsR2AnimAddLength(AObj *a, u32 n, f32 as_float, u32 q)
+static inline void ndsAnimAddLength(AObj *a, u32 n, f32 as_float, u32 q)
 {
     if (q != 0u)
     {
-        a->length = ndsR2AQStore(ndsR2AQLoad(a->length) +
-            ((s32)n << NDS_R2_AQ_LF));
+        a->length = ndsAQStore(ndsAQLoad(a->length) +
+            ((s32)n << NDS_AQ_LF));
     }
     else
     {
@@ -338,44 +338,44 @@ static inline void ndsR2AnimAddLength(AObj *a, u32 n, f32 as_float, u32 q)
  * way to stop paying for it. The steady-state path is now three instructions at
  * the call site and the conversion is unchanged. */
 static void __attribute__((noinline))
-ndsR2AnimAObjToQConvert(AObj *a, s32 kind);
+ndsAnimAObjToQConvert(AObj *a, s32 kind);
 
-static inline void ndsR2AnimAObjToQ(AObj *a)
+static inline void ndsAnimAObjToQ(AObj *a)
 {
     s32 kind = (s32)a->kind;
 
-    if (kind >= (s32)NDS_R2_AQ_KIND_BASE)
+    if (kind >= (s32)NDS_AQ_KIND_BASE)
     {
         return;
     }
-    ndsR2AnimAObjToQConvert(a, kind);
+    ndsAnimAObjToQConvert(a, kind);
 }
 
 static void __attribute__((noinline))
-ndsR2AnimAObjToQConvert(AObj *a, s32 kind)
+ndsAnimAObjToQConvert(AObj *a, s32 kind)
 {
     if (kind == nGCAnimKindNone)
     {
         /* `gcAddAObjForDObj` leaves every value at 0.0F -- the same word in both
          * formats -- and `length_invert` at 1.0F, which is NOT. It is read: a
          * Cubic event with a zero payload does not overwrite it. */
-        a->length_invert = ndsR2AQStore(1 << NDS_R2_AQ_IF);
+        a->length_invert = ndsAQStore(1 << NDS_AQ_IF);
         return;
     }
     if (kind > nGCAnimKindCubic)
     {
         return;     /* nGCAnimKindSpecial: declared in objdef.h, never written */
     }
-    a->length_invert = ndsR2AQStore(ndsR2F32ToFixed(a->length_invert,
-        (kind == nGCAnimKindStep) ? NDS_R2_AQ_LF : NDS_R2_AQ_IF));
-    a->length = ndsR2AQStore(ndsR2F32ToFixed(a->length, NDS_R2_AQ_LF));
-    a->value_base = ndsR2AQStore(ndsR2F32ToFixed(a->value_base, NDS_R2_AQ_VF));
+    a->length_invert = ndsAQStore(ndsAnimF32ToFixed(a->length_invert,
+        (kind == nGCAnimKindStep) ? NDS_AQ_LF : NDS_AQ_IF));
+    a->length = ndsAQStore(ndsAnimF32ToFixed(a->length, NDS_AQ_LF));
+    a->value_base = ndsAQStore(ndsAnimF32ToFixed(a->value_base, NDS_AQ_VF));
     a->value_target =
-        ndsR2AQStore(ndsR2F32ToFixed(a->value_target, NDS_R2_AQ_VF));
-    a->rate_base = ndsR2AQStore(ndsR2F32ToFixed(a->rate_base, NDS_R2_AQ_VF));
+        ndsAQStore(ndsAnimF32ToFixed(a->value_target, NDS_AQ_VF));
+    a->rate_base = ndsAQStore(ndsAnimF32ToFixed(a->rate_base, NDS_AQ_VF));
     a->rate_target =
-        ndsR2AQStore(ndsR2F32ToFixed(a->rate_target, NDS_R2_AQ_VF));
-    a->kind = (u8)(kind + ((s32)NDS_R2_AQ_KIND_BASE - nGCAnimKindStep));
+        ndsAQStore(ndsAnimF32ToFixed(a->rate_target, NDS_AQ_VF));
+    a->kind = (u8)(kind + ((s32)NDS_AQ_KIND_BASE - nGCAnimKindStep));
 }
 
 /* The two script-exhausted exits run the same tail loop over the AObj list.
@@ -383,19 +383,19 @@ ndsR2AnimAObjToQConvert(AObj *a, s32 kind)
  * macro: textually identical sites must not be able to drift. `anim_speed +
  * anim_wait` is hoisted out of the loop, which is pure loop-invariant motion --
  * neither field is written inside it -- so the float arm is bit-identical. */
-static void ndsR2AnimAdvanceTail(DObj *root_dobj, u32 q)
+static void ndsAnimAdvanceTail(DObj *root_dobj, u32 q)
 {
     f32 tail = root_dobj->anim_speed + root_dobj->anim_wait;
-    s32 tail_q = (q != 0u) ? ndsR2F32ToFixed(tail, NDS_R2_AQ_LF) : 0;
+    s32 tail_q = (q != 0u) ? ndsAnimF32ToFixed(tail, NDS_AQ_LF) : 0;
     AObj *a = root_dobj->aobj;
 
     while (a != NULL)
     {
         if (a->kind != nGCAnimKindNone)
         {
-            if (a->kind >= NDS_R2_AQ_KIND_BASE)
+            if (a->kind >= NDS_AQ_KIND_BASE)
             {
-                a->length = ndsR2AQStore(ndsR2AQLoad(a->length) + tail_q);
+                a->length = ndsAQStore(ndsAQLoad(a->length) + tail_q);
             }
             else
             {
@@ -411,15 +411,15 @@ static void ndsR2AnimAdvanceTail(DObj *root_dobj, u32 q)
  * and the second advance happens ONLY when the toggle bit is set - that
  * asymmetry is the format (a payload word follows the command only when the
  * toggle says so), not an accident. */
-#define NDS_R2_FTANIM_PAYLOAD()                                              \
+#define NDS_FTANIM_PAYLOAD()                                              \
     (payload_u =                                                             \
         (AObjAnimAdvance(root_dobj->anim_joint.event16)->command.toggle)      \
             ? AObjAnimAdvance(root_dobj->anim_joint.event16)->u              \
             : 0u,                                                            \
-     payload = ndsR2U16ToF32(payload_u))
+     payload = ndsU16ToF32(payload_u))
 
-#define NDS_R2_FTANIM_TARGET(vos)                                            \
-    ndsR2AnimTargetValue(                                                    \
+#define NDS_FTANIM_TARGET(vos)                                            \
+    ndsAnimTargetValue(                                                    \
         AObjAnimAdvance(root_dobj->anim_joint.event16)->s,                   \
         i + nGCAnimTrackJointStart, (vos), q)
 
@@ -442,23 +442,23 @@ static void ndsR2AnimAdvanceTail(DObj *root_dobj, u32 q)
  * `anim_joint.event16 == NULL` exit never does.
  *
  * Every read is covered. An audit of the 41 `track_aobjs[i]` reads against the
- * 7 `NDS_R2_FTANIM_ENSURE()` sites found exactly one block reading without it,
+ * 7 `NDS_FTANIM_ENSURE()` sites found exactly one block reading without it,
  * `nGCAnimEvent16SetTranslateInterp`, which the source already flags as "the
- * only creation site outside NDS_R2_FTANIM_ENSURE". Both trigger the build.
+ * only creation site outside NDS_FTANIM_ENSURE". Both trigger the build.
  * Missing a site would NOT crash -- ENSURE allocates on NULL -- it would
  * silently create a duplicate AObj, which is why the audit came first.
  *
  * Behind route bit 16 because it is not bit-identical: the walk also MIGRATES
  * each joint node to Q form, so a node the script never writes migrates later
  * (or not at all) and is played by the float arm meanwhile. Both arms are
- * correct -- `gcPlayDObjAnimJoint` and `ndsR2AnimAdvanceTail` each dispatch on
- * `kind >= NDS_R2_AQ_KIND_BASE` -- and the difference is inside the Q bound
+ * correct -- `gcPlayDObjAnimJoint` and `ndsAnimAdvanceTail` each dispatch on
+ * `kind >= NDS_AQ_KIND_BASE` -- and the difference is inside the Q bound
  * already proven for Requirement 4, but it is a difference, so it gets an A/B
  * on one binary rather than an assertion. */
 /* 2026-09-27: out of ITCM. The pose engine replaced this path; the four-CPU
  * census never executed it, and its bytes went to ndsFtPosePlay. */
 static void
-ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
+ndsAnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
                                      s32 count, u32 q)
 {
     AObj *current_aobj = root_dobj->aobj;
@@ -477,26 +477,26 @@ ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
                 current_aobj;
             if (q != 0u)
             {
-                ndsR2AnimAObjToQ(current_aobj);
+                ndsAnimAObjToQ(current_aobj);
             }
         }
         current_aobj = current_aobj->next;
     }
 }
 
-#define NDS_R2_FTANIM_TRACKS()                                               \
+#define NDS_FTANIM_TRACKS()                                               \
     do {                                                                     \
         if (tracks_built == 0u)                                                  \
         {                                                                    \
-            ndsR2AnimBuildTrackTable(root_dobj, track_aobjs,                 \
+            ndsAnimBuildTrackTable(root_dobj, track_aobjs,                 \
                                      (s32)ARRAY_COUNT(track_aobjs), q);      \
             tracks_built = 1u;                                                   \
         }                                                                    \
     } while (0)
 
-#define NDS_R2_FTANIM_ENSURE()                                               \
+#define NDS_FTANIM_ENSURE()                                               \
     do {                                                                     \
-        NDS_R2_FTANIM_TRACKS();                                      \
+        NDS_FTANIM_TRACKS();                                      \
         if (track_aobjs[i] == NULL)                                          \
         {                                                                    \
             track_aobjs[i] =                                                 \
@@ -504,24 +504,24 @@ ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
         }                                                                    \
         if (q != 0u)                                                         \
         {                                                                    \
-            ndsR2AnimAObjToQ(track_aobjs[i]);                                \
+            ndsAnimAObjToQ(track_aobjs[i]);                                \
         }                                                                    \
     } while (0)
 
 /* P2-2p6 exports for the fighter pose engine (`src/nds/nds_ft_pose.c`): the
  * Q12 target word and the Q30 reciprocal, the same two bodies the parser
  * above writes into AObjs, so the engine's tracks carry bit-identical values. */
-s32 ndsR2FtAnimTargetQ(s16 arg, s32 track, sb32 value_or_step)
+s32 ndsFtAnimTargetQ(s16 arg, s32 track, sb32 value_or_step)
 {
-    return ndsR2AQLoad(ndsR2AnimTargetValue(arg, track, value_or_step, 1u));
+    return ndsAQLoad(ndsAnimTargetValue(arg, track, value_or_step, 1u));
 }
 
-s32 ndsR2FtAnimRecipQ30(u32 n)
+s32 ndsFtAnimRecipQ30(u32 n)
 {
-    return ndsR2AQLoad(ndsR2AnimRecipSlot(n, 1u));
+    return ndsAQLoad(ndsAnimRecipSlot(n, 1u));
 }
 
-void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
+void ndsFtAnimParseDObjFigatree(DObj *root_dobj)
 {
     AObj *track_aobjs[nGCAnimTrackJointEnd - nGCAnimTrackJointStart + 1];
     AObj *current_aobj;
@@ -534,22 +534,22 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
     /* Requirement 4. Read once per call: with the route compiled out this folds
      * to 1 and every float arm below dead-codes away.
      *
-     * Gated on NDS_R2_CUBIC_FIXED because that flag is what compiles the Q
+     * Gated on NDS_CUBIC_FIXED because that flag is what compiles the Q
      * PLAYER in. Without it `gcPlayDObjAnimJoint` is the decomp's own, whose
      * switch has no case for a Q kind -- so writing one here would silently
      * stop every joint animating, in exactly the configuration (bare `make`,
      * the P2 ROM) that nobody measures. */
-    const u32 q = NDS_R2_ANIM_CUT_ON(8u) ? 1u : 0u;
-    const u8 kind_step = (u8)(q ? NDS_R2_AQ_KIND_STEP : nGCAnimKindStep);
-    const u8 kind_linear = (u8)(q ? NDS_R2_AQ_KIND_LINEAR : nGCAnimKindLinear);
-    const u8 kind_cubic = (u8)(q ? NDS_R2_AQ_KIND_CUBIC : nGCAnimKindCubic);
+    const u32 q = NDS_ANIM_CUT_ON(8u) ? 1u : 0u;
+    const u8 kind_step = (u8)(q ? NDS_AQ_KIND_STEP : nGCAnimKindStep);
+    const u8 kind_linear = (u8)(q ? NDS_AQ_KIND_LINEAR : nGCAnimKindLinear);
+    const u8 kind_cubic = (u8)(q ? NDS_AQ_KIND_CUBIC : nGCAnimKindCubic);
     f32 len_new = 0.0F;
     /* Route bit 16 defers the table build to first use; 0 keeps the eager walk,
      * so both arms live in one binary and `-SetGlobals` picks between them. */
-    const u32 lazy_tracks = NDS_R2_ANIM_CUT_ON(16u) ? 1u : 0u;
+    const u32 lazy_tracks = NDS_ANIM_CUT_ON(16u) ? 1u : 0u;
     u32 tracks_built = 0u;
 
-    gNdsR2FtAnimParseCalls++;
+    gNdsFtAnimParseCalls++;
 
     if (NDS_FCMP_NE_C(root_dobj->anim_wait, AOBJ_ANIM_NULL))
     {
@@ -565,23 +565,23 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
 
             if (NDS_FCMP_GT0(root_dobj->anim_wait))
             {
-                gNdsR2FtAnimParseEarlyOut++;
+                gNdsFtAnimParseEarlyOut++;
                 return;
             }
         }
-        gNdsR2FtAnimParseStepped++;
+        gNdsFtAnimParseStepped++;
         /* Migrate the ones this parser owns, not the whole list: an AObj
          * outside the joint range belongs to another writer and its float kind
          * is the right one for it. Route bit 16 moves this to first use. */
         if (lazy_tracks == 0u)
         {
-            NDS_R2_FTANIM_TRACKS();
+            NDS_FTANIM_TRACKS();
         }
         do
         {
             if (root_dobj->anim_joint.event16 == NULL)
             {
-                ndsR2AnimAdvanceTail(root_dobj, q);
+                ndsAnimAdvanceTail(root_dobj, q);
                 root_dobj->anim_frame = root_dobj->anim_wait;
                 root_dobj->parent_gobj->anim_frame = root_dobj->anim_wait;
                 root_dobj->anim_wait = AOBJ_ANIM_END;
@@ -595,8 +595,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetVal0RateBlock:
             case nGCAnimEvent16SetVal0Rate:
                 flags = root_dobj->anim_joint.event16->command.flags;
-                NDS_R2_FTANIM_PAYLOAD();
-                len_new = ndsR2AnimSegmentStart(root_dobj, q);
+                NDS_FTANIM_PAYLOAD();
+                len_new = ndsAnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -607,10 +607,10 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
+                        NDS_FTANIM_ENSURE();
                         track_aobjs[i]->value_base =
                             track_aobjs[i]->value_target;
-                        track_aobjs[i]->value_target = NDS_R2_FTANIM_TARGET(0);
+                        track_aobjs[i]->value_target = NDS_FTANIM_TARGET(0);
 
                         track_aobjs[i]->rate_base = track_aobjs[i]->rate_target;
                         track_aobjs[i]->rate_target = 0.0F;
@@ -620,7 +620,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                         if (payload_u != 0u)
                         {
                             track_aobjs[i]->length_invert =
-                                ndsR2AnimRecipSlot(payload_u, q);
+                                ndsAnimRecipSlot(payload_u, q);
                         }
                         track_aobjs[i]->length = len_new;
                     }
@@ -634,8 +634,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetValBlock:
             case nGCAnimEvent16SetVal:
                 flags = root_dobj->anim_joint.event16->command.flags;
-                NDS_R2_FTANIM_PAYLOAD();
-                len_new = ndsR2AnimSegmentStart(root_dobj, q);
+                NDS_FTANIM_PAYLOAD();
+                len_new = ndsAnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -646,10 +646,10 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
+                        NDS_FTANIM_ENSURE();
                         track_aobjs[i]->value_base =
                             track_aobjs[i]->value_target;
-                        track_aobjs[i]->value_target = NDS_R2_FTANIM_TARGET(0);
+                        track_aobjs[i]->value_target = NDS_FTANIM_TARGET(0);
 
                         track_aobjs[i]->kind = kind_linear;
 
@@ -665,15 +665,15 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                             if (q != 0u)
                             {
                                 s32 d =
-                                    (ndsR2AQLoad(track_aobjs[i]->value_target) -
-                                     ndsR2AQLoad(track_aobjs[i]->value_base))
-                                        << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
+                                    (ndsAQLoad(track_aobjs[i]->value_target) -
+                                     ndsAQLoad(track_aobjs[i]->value_base))
+                                        << (NDS_AQ_RF - NDS_AQ_VF);
                                 u32 h = payload_u >> 1;
                                 s32 r = (d < 0) ?
                                     -(s32)(((u32)(-d) + h) / payload_u) :
                                     (s32)(((u32)d + h) / payload_u);
 
-                                track_aobjs[i]->rate_base = ndsR2AQStore(r);
+                                track_aobjs[i]->rate_base = ndsAQStore(r);
                             }
                             else
                             {
@@ -695,8 +695,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetValRateBlock:
             case nGCAnimEvent16SetValRate:
                 flags = root_dobj->anim_joint.event16->command.flags;
-                NDS_R2_FTANIM_PAYLOAD();
-                len_new = ndsR2AnimSegmentStart(root_dobj, q);
+                NDS_FTANIM_PAYLOAD();
+                len_new = ndsAnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -707,20 +707,20 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
+                        NDS_FTANIM_ENSURE();
                         track_aobjs[i]->value_base =
                             track_aobjs[i]->value_target;
-                        track_aobjs[i]->value_target = NDS_R2_FTANIM_TARGET(0);
+                        track_aobjs[i]->value_target = NDS_FTANIM_TARGET(0);
 
                         track_aobjs[i]->rate_base = track_aobjs[i]->rate_target;
-                        track_aobjs[i]->rate_target = NDS_R2_FTANIM_TARGET(1);
+                        track_aobjs[i]->rate_target = NDS_FTANIM_TARGET(1);
 
                         track_aobjs[i]->kind = kind_cubic;
 
                         if (payload_u != 0u)
                         {
                             track_aobjs[i]->length_invert =
-                                ndsR2AnimRecipSlot(payload_u, q);
+                                ndsAnimRecipSlot(payload_u, q);
                         }
                         track_aobjs[i]->length = len_new;
                     }
@@ -734,7 +734,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetTargetRate:
                 flags = root_dobj->anim_joint.event16->command.flags;
 
-                NDS_R2_FTANIM_PAYLOAD();
+                NDS_FTANIM_PAYLOAD();
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -745,8 +745,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
-                        track_aobjs[i]->rate_target = NDS_R2_FTANIM_TARGET(1);
+                        NDS_FTANIM_ENSURE();
+                        track_aobjs[i]->rate_target = NDS_FTANIM_TARGET(1);
                     }
                 }
                 break;
@@ -755,7 +755,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 if (AObjAnimAdvance(
                         root_dobj->anim_joint.event16)->command.toggle)
                 {
-                    root_dobj->anim_wait += ndsR2U16ToF32(
+                    root_dobj->anim_wait += ndsU16ToF32(
                         AObjAnimAdvance(root_dobj->anim_joint.event16)->u);
                 }
                 break;
@@ -763,8 +763,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetValAfterBlock:
             case nGCAnimEvent16SetValAfter:
                 flags = root_dobj->anim_joint.event16->command.flags;
-                NDS_R2_FTANIM_PAYLOAD();
-                len_new = ndsR2AnimSegmentStart(root_dobj, q);
+                NDS_FTANIM_PAYLOAD();
+                len_new = ndsAnimSegmentStart(root_dobj, q);
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -775,10 +775,10 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
+                        NDS_FTANIM_ENSURE();
                         track_aobjs[i]->value_base =
                             track_aobjs[i]->value_target;
-                        track_aobjs[i]->value_target = NDS_R2_FTANIM_TARGET(0);
+                        track_aobjs[i]->value_target = NDS_FTANIM_TARGET(0);
 
                         track_aobjs[i]->kind = kind_step;
 
@@ -787,7 +787,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                          * the field, so the Q form keeps it in `length`'s
                          * scale and the compare stays a compare. */
                         track_aobjs[i]->length_invert =
-                            ndsR2AnimFramesSlot(payload_u, payload, q);
+                            ndsAnimFramesSlot(payload_u, payload, q);
                         track_aobjs[i]->length = len_new;
 
                         track_aobjs[i]->rate_target = 0.0F;
@@ -820,7 +820,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent1611:
                 flags = root_dobj->anim_joint.event16->command.flags;
 
-                NDS_R2_FTANIM_PAYLOAD();
+                NDS_FTANIM_PAYLOAD();
 
                 for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
                      i++, flags = flags >> 1)
@@ -831,8 +831,8 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                     }
                     if (flags & 1)
                     {
-                        NDS_R2_FTANIM_ENSURE();
-                        ndsR2AnimAddLength(track_aobjs[i], payload_u, payload,
+                        NDS_FTANIM_ENSURE();
+                        ndsAnimAddLength(track_aobjs[i], payload_u, payload,
                                            q);
                     }
                 }
@@ -841,7 +841,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
             case nGCAnimEvent16SetTranslateInterp:
                 /* The one block that reads the table without ENSURE, per the
                  * audit and per the comment further down. */
-                NDS_R2_FTANIM_TRACKS();
+                NDS_FTANIM_TRACKS();
                 AObjAnimAdvance(root_dobj->anim_joint.event16);
 
                 if (track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart] ==
@@ -849,10 +849,10 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 {
                     track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart] =
                         gcAddAObjForDObj(root_dobj, nGCAnimTrackTraI);
-                    /* The only creation site outside NDS_R2_FTANIM_ENSURE. */
+                    /* The only creation site outside NDS_FTANIM_ENSURE. */
                     if (q != 0u)
                     {
-                        ndsR2AnimAObjToQ(
+                        ndsAnimAObjToQ(
                             track_aobjs[nGCAnimTrackTraI -
                                 nGCAnimTrackJointStart]);
                     }
@@ -866,7 +866,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 break;
 
             case nGCAnimEvent16End:
-                ndsR2AnimAdvanceTail(root_dobj, q);
+                ndsAnimAdvanceTail(root_dobj, q);
                 root_dobj->anim_frame = root_dobj->anim_wait;
                 root_dobj->parent_gobj->anim_frame = root_dobj->anim_wait;
                 root_dobj->anim_wait = AOBJ_ANIM_END;
@@ -887,7 +887,7 @@ void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj)
                 if (AObjAnimAdvance(
                         root_dobj->anim_joint.event16)->command.toggle)
                 {
-                    root_dobj->anim_wait += ndsR2U16ToF32(
+                    root_dobj->anim_wait += ndsU16ToF32(
                         AObjAnimAdvance(root_dobj->anim_joint.event16)->u);
                 }
                 break;

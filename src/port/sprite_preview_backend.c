@@ -226,7 +226,7 @@ static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
  * calls per frame the prologue and epilogue cost more than the arithmetic they guard.
  * Only two call sites exist, so the size cost is bounded at roughly one extra copy.
  *
- * The opposite of E65's choice on `ndsR2CubicValueFixed`, and for a reason worth
+ * The opposite of E65's choice on `ndsCubicValueFixed`, and for a reason worth
  * keeping straight: that one is `noinline` to hold ONE copy of six inlined conversions
  * inside `.text.hot`'s curated 8 KiB. This blitter is not in `.text.hot`, so that
  * constraint does not apply here. */

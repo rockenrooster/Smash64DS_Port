@@ -20,7 +20,7 @@
  * per bounce -- one per generator band -- drawn inside the existing particle GX
  * batch. No root particle, no generators, no transform, no bytecode, no runtime
  * trig/atan2/sqrt, no runtime texture conversion, no dynamic allocation. Three
- * quads instead of six. Gated by NDS_R2_FIREGRIND_NATIVE; owner-playtested and
+ * quads instead of six. Gated by NDS_FIREGRIND_NATIVE; owner-playtested and
  * accepted 2026-08-07, so the native path is on by default.
  *
  * The draw is owned by lbParticleDrawTextures (battleship_lbparticle.c), which

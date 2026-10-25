@@ -12,7 +12,7 @@ than replacing one: the live vector grows 14 -> 15 and every binding from joint
 20 onward shifts by one. No `(binding, offset)` variant row can express that --
 the runtime resolver rejects on `root_count` before it ever compares offsets --
 so the pose needs a complete `OWNER_ROOT_PROGRAMS["ness"]` program plus its
-`P2_ROOT_PROGRAM_APPENDIX` bake.
+`ROOT_PROGRAM_APPENDIX` bake.
 
 Without the bake the owner declines, and a packed fighter that declines is
 `ndsPreviewPackLoadHalt(20, kind)`: a Ness Results win with the Win3 draw would
@@ -204,8 +204,8 @@ def test_win3_root_dropped_from_either_detail_fails(victim):
         context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
         assert native.build_owner_root_programs(SOURCE, context)
 
-    saved = native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim]
-    native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
+    saved = native.ROOT_PROGRAM_APPENDIX["ness"][victim]
+    native.ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
         row for row in saved if row[1] != WIN3_ROOT)
     try:
         # The generator must refuse to build a program whose root has no bake,
@@ -218,7 +218,7 @@ def test_win3_root_dropped_from_either_detail_fails(victim):
         assert failures, "dropping the %s bake left the census green" % victim
         assert all(("part 1 %s" % victim) in line for line in failures), failures
     finally:
-        native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = saved
+        native.ROOT_PROGRAM_APPENDIX["ness"][victim] = saved
 
     # The table is restored, so the census is green again and a later test in
     # this session cannot inherit the removal.

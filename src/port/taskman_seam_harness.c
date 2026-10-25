@@ -828,12 +828,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
-#if NDS_R2_PATH
+#if NDS_PATH
         /* R2-01. src/nds/r2 owns battle scene flow. The Runtime 1 loop below
          * stays in the tree as the oracle (plan S6) but is not compiled into
          * this arm, so the two can never both drive the scene. */
         {
-            ndsR2BattleRun();
+            ndsBattleRun();
         }
 #else
         {
@@ -953,7 +953,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                          (gSCManagerBattleState != NULL)) ?
                             (u32)gSCManagerBattleState->game_status :
                             0xffffffffu;
-                    /* Slice 1 phase 7's gate; see ndsR2HostBattleUpdateOnce.
+                    /* Slice 1 phase 7's gate; see ndsHostBattleUpdateOnce.
                      * Both loops publish it, because which one runs depends on
                      * the harness mode and a gate that is only armed on one
                      * path reads zero for the wrong reason. */
@@ -1100,7 +1100,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
 #endif
         }
-#endif /* NDS_R2_PATH -- R2-01 selects src/nds/r2 instead of the loop above */
+#endif /* NDS_PATH -- R2-01 selects src/nds/r2 instead of the loop above */
 #else
         ndsSeamSceneUpdate();
         dSYTaskmanUpdateCount++;

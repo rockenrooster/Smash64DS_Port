@@ -7,11 +7,11 @@ param(
     [string]$Build = 'build-r2-bothcpu',
     [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     [switch]$NoBuild,
-    # NDS_R2_BOTH_CPU, passed to make explicitly. Defaults ON because the default
+    # NDS_BOTH_CPU, passed to make explicitly. Defaults ON because the default
     # -Build IS the both-CPU stress ROM, and because the flag defaults to 0 in the
     # Makefile: until 2026-07-30 this script built `build-r2-bothcpu` WITHOUT
     # passing it, so the directory said both-CPU and the generated
-    # nds_build_config.h said `NDS_R2_BOTH_CPU 0`. A soak run that way has a human
+    # nds_build_config.h said `NDS_BOTH_CPU 0`. A soak run that way has a human
     # player on P1, never produces the CPU-vs-CPU tie, and therefore never enters
     # Sudden Death at all -- which is the only thing this ROM exists to reproduce
     # (docs/BUGS.md, Sudden Death row). Set -BothCpu:$false for a single-CPU soak.
@@ -46,11 +46,11 @@ param(
     # spend more than the question needs -- this is the most expensive run in
     # the project (docs/VERIFYING.md, Run Economics).
     [ValidateRange(0.5, 12.0)][double]$MinutesToRun = 2.5,
-    # THE MATCH TIMER, in game minutes, forwarded as NDS_R2_SOAK_MATCH_MINUTES.
+    # THE MATCH TIMER, in game minutes, forwarded as NDS_SOAK_MATCH_MINUTES.
     # -1 = auto (the default and the right answer almost always), 0 = leave the
     # harness seeding alone (the canonical one-minute Time match), 1..7 = force.
     #
-    # This used to be seeded at 7 inside scene_harness.c's NDS_R2_BOTH_CPU
+    # This used to be seeded at 7 inside scene_harness.c's NDS_BOTH_CPU
     # branch, so every both-CPU build got a 420-second match whether it was
     # soaking or being measured. It cost the campaign every both-CPU tick
     # figure: the gate arm sampled frames 440-2040 of a 7-minute match, which is
@@ -136,14 +136,14 @@ param(
     # This is tick-HUD-specific by construction. On a ROM whose bottom screen is
     # not the HUD, use the cadence form.
     [switch]$PressStartOnResults,
-    # Build with NDS_R2_SECOND_ENTRY_DIAG=1 so the per-caller allocation ledger
+    # Build with NDS_SECOND_ENTRY_DIAG=1 so the per-caller allocation ledger
     # and the MObj chain probe exist. Required before the reported-globals list
-    # below can name any gNdsAllocLedger* or gNdsR2ChainProbe* symbol: without
+    # below can name any gNdsAllocLedger* or gNdsChainProbe* symbol: without
     # it they are absent, and an absent symbol reads as a deleted counter rather
     # than a flag that was never passed.
     [switch]$SecondEntryDiag,
     # Any other `NAME=VALUE` make flags this soak's build needs, e.g.
-    # `-MakeFlags NDS_R2_PARTICLE_RUNTIME=1,NDS_R2_PARTICLE_DRAW=1`.
+    # `-MakeFlags NDS_PARTICLE_RUNTIME=1,NDS_PARTICLE_DRAW=1`.
     #
     # This exists because -BothCpu and -SecondEntryDiag were the only two flags
     # this script forwarded, and a flag it does not forward is a flag the rebuild
@@ -219,7 +219,7 @@ if ($resolvedMatchMinutes -lt 0) {
     }
 }
 Write-Host ("soak match timer: {0}" -f $(if ($resolvedMatchMinutes -gt 0) {
-    "$resolvedMatchMinutes game minute(s) (NDS_R2_SOAK_MATCH_MINUTES)" }
+    "$resolvedMatchMinutes game minute(s) (NDS_SOAK_MATCH_MINUTES)" }
     else { 'canonical 1-minute match (harness default, no override)' }))
 
 # This script exposed a -NoBuild switch and never built anything: the switch only
@@ -238,9 +238,9 @@ if (-not $NoBuild) {
     # exact bug on 2026-07-31 and overwrote a hand-built diag ELF, which cost two
     # runs that printed nothing and read like an emulator hang.
     $makeArgs = @("TARGET=$Target", "BUILD=$Build",
-                  "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)",
-                  "NDS_R2_SOAK_MATCH_MINUTES=$resolvedMatchMinutes")
-    if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
+                  "NDS_BOTH_CPU=$([int][bool]$BothCpu)",
+                  "NDS_SOAK_MATCH_MINUTES=$resolvedMatchMinutes")
+    if ($SecondEntryDiag) { $makeArgs += 'NDS_SECOND_ENTRY_DIAG=1' }
     $makeArgs += $MakeFlags
     make -C $root @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -262,9 +262,9 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     $wantBothCpu = [int][bool]$BothCpu
     $seen = [regex]::Match(
         (Get-Content -LiteralPath $configHeader -Raw),
-        '(?m)^#define\s+NDS_R2_BOTH_CPU\s+(\d+)')
+        '(?m)^#define\s+NDS_BOTH_CPU\s+(\d+)')
     if ($seen.Success -and ([int]$seen.Groups[1].Value -ne $wantBothCpu)) {
-        throw ("Soak ROM is NDS_R2_BOTH_CPU=$($seen.Groups[1].Value) but " +
+        throw ("Soak ROM is NDS_BOTH_CPU=$($seen.Groups[1].Value) but " +
                "-BothCpu asked for $wantBothCpu. A both-CPU soak that is not " +
                'both-CPU never creates the tie and never reaches Sudden Death, ' +
                'and it looks exactly like a clean run. Rebuild without -NoBuild.')
@@ -279,10 +279,10 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     # it before the minutes are spent.
     $soakSeen = [regex]::Match(
         (Get-Content -LiteralPath $configHeader -Raw),
-        '(?m)^#define\s+NDS_R2_SOAK_MATCH_MINUTES\s+(\d+)')
+        '(?m)^#define\s+NDS_SOAK_MATCH_MINUTES\s+(\d+)')
     if ($soakSeen.Success -and
         ([int]$soakSeen.Groups[1].Value -ne $resolvedMatchMinutes)) {
-        throw ("Soak ROM is NDS_R2_SOAK_MATCH_MINUTES=$($soakSeen.Groups[1].Value) " +
+        throw ("Soak ROM is NDS_SOAK_MATCH_MINUTES=$($soakSeen.Groups[1].Value) " +
                "but this run resolved $resolvedMatchMinutes. The match timer and " +
                'the run length would disagree, so the run would watch a Results ' +
                'screen and call it NO-FREEZE. Rebuild without -NoBuild.')
@@ -293,11 +293,11 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
     # was never passed".
     $diagSeen = [regex]::Match(
         (Get-Content -LiteralPath $configHeader -Raw),
-        '(?m)^#define\s+NDS_R2_SECOND_ENTRY_DIAG\s+(\d+)')
+        '(?m)^#define\s+NDS_SECOND_ENTRY_DIAG\s+(\d+)')
     if ($SecondEntryDiag -and
         (-not ($diagSeen.Success -and ([int]$diagSeen.Groups[1].Value -ne 0)))) {
         throw ('-SecondEntryDiag was requested but ' + $Build + ' is built ' +
-               'with NDS_R2_SECOND_ENTRY_DIAG=0, so the allocation ledger and ' +
+               'with NDS_SECOND_ENTRY_DIAG=0, so the allocation ledger and ' +
                'chain probe do not exist. Rebuild without -NoBuild.')
     }
     # And the same rule, generalised, for every -MakeFlags entry. -NoBuild runs
@@ -640,11 +640,11 @@ try {
             # Minutes, seeded to 1 at scene_harness.c:182. Read so the soak can
             # say how much of its own runtime was actually gameplay.
             'gSCManagerTransferBattleState.time_limit',
-            'gNdsR2AnimCacheArenaUsedBytes',
-            'gNdsR2AnimCacheArenaOverflows',
-            'gNdsR2AnimCacheFills',
-            'gNdsR2AnimCacheHits',
-            'gNdsR2AnimCacheRejects',
+            'gNdsAnimCacheArenaUsedBytes',
+            'gNdsAnimCacheArenaOverflows',
+            'gNdsAnimCacheFills',
+            'gNdsAnimCacheHits',
+            'gNdsAnimCacheRejects',
             # Slice 1 phase 5. State must read 1 (READY) -- 2/3/4 mean the linked
             # blob failed its magic/version/extent check, which is a build
             # mismatch, not a runtime fault. Hits are the acquisitions the
@@ -699,17 +699,17 @@ try {
             # left the live region without a rewind. ReservedBytes is 0 whenever
             # the cache is running unbacked, which is the state that sends every
             # animation load to the shared heap and refills the freeze class.
-            'gNdsR2AnimCacheArenaReserveCount',
-            'gNdsR2AnimCacheArenaReserveFailCount',
-            'gNdsR2AnimCacheArenaReservedBytes',
-            'gNdsR2AnimCacheArenaGenerationMismatches',
-            'gNdsR2AnimCacheArenaRangeFaults',
-            'gNdsR2AnimCacheArenaInvalidations',
+            'gNdsAnimCacheArenaReserveCount',
+            'gNdsAnimCacheArenaReserveFailCount',
+            'gNdsAnimCacheArenaReservedBytes',
+            'gNdsAnimCacheArenaGenerationMismatches',
+            'gNdsAnimCacheArenaRangeFaults',
+            'gNdsAnimCacheArenaInvalidations',
             # The arithmetic behind the last refusal. Overflows beside
             # ReservedBytes cannot say whether the arena was full or the request
             # was absurd; these two can.
-            'gNdsR2AnimCacheArenaOverflowLastSize',
-            'gNdsR2AnimCacheArenaOverflowLastUsed',
+            'gNdsAnimCacheArenaOverflowLastSize',
+            'gNdsAnimCacheArenaOverflowLastUsed',
             # The VS battle scene arena re-budget (battleship_scvsbattle.c).
             # 0 here means the graphics heap is back at the N64's 0xD000 and the
             # shield freeze is armed again; the byte figure is the engagement
@@ -813,9 +813,9 @@ try {
             # structurally disabled and silently indistinguishable from a null
             # result. Reuse should dominate Build; Build climbing across the
             # second entry is the fast path dropping out.
-            'gNdsR2StagePrepareReuseCount',
-            'gNdsR2StagePrepareBuildCount',
-            'gNdsR2StagePreflightElideCount',
+            'gNdsStagePrepareReuseCount',
+            'gNdsStagePrepareBuildCount',
+            'gNdsStagePreflightElideCount',
             # THE CLIFF, on every run rather than only on the one that fell off
             # it. ifCommonSetMaxNumGObj caps the GObj pool the moment the
             # general heap drops under 25,600 bytes free, and past that cap the
@@ -827,7 +827,7 @@ try {
             # it is living on borrowed GObjs. Read the margin, not the verdict.
             'sGCCommonsMaxNum',
             'sGCCommonsActiveNum',
-            # R2-07 clause 2, present only with NDS_R2_PARTICLE_RUNTIME=1 (the
+            # R2-07 clause 2, present only with NDS_PARTICLE_RUNTIME=1 (the
             # nm filter below drops them otherwise). Load result and reject count
             # say the bank is sound; Live/Max are the pool high-water, which is
             # the no-gameplay-allocation contract (SwitchPlan 3.11) made visible;
@@ -900,10 +900,10 @@ try {
             'gNdsParticlePupupuScriptsPacked',
             'gNdsRendererTask36ReplayArenaStaleCount',
             # WHY the native stage owner refused. Present at
-            # NDS_R2_STAGE_ROUTE_PROBE=1 (or profile level 1), which is the only
+            # NDS_STAGE_ROUTE_PROBE=1 (or profile level 1), which is the only
             # way to tell a topology change from a texture-upload failure from a
             # binding rejection -- seven sites set these. Needed because
-            # NDS_R2_PARTICLE_DRAW=1 turns StagePrepareBuildCount 2 -> 197 and
+            # NDS_PARTICLE_DRAW=1 turns StagePrepareBuildCount 2 -> 197 and
             # puts 196 of 566 frames at five or more VBlanks, one per rejection,
             # while its own tick cost is only ~10,000 in MISC.
             # These two are LATCHES, reset at the top of every prepare, so an
@@ -913,33 +913,33 @@ try {
             # what answer "why 197".
             'gNdsRendererTask36RendererRejectReason',
             'gNdsRendererTask36PrepareRunRejectReason',
-            'gNdsR2StageKeyMissInvalid',
-            'gNdsR2StageKeyMissGeneration',
-            'gNdsR2StageKeyMissStamp',
-            'gNdsR2StageKeyMissConfig',
-            'gNdsR2StageKeyMissAssets',
+            'gNdsStageKeyMissInvalid',
+            'gNdsStageKeyMissGeneration',
+            'gNdsStageKeyMissStamp',
+            'gNdsStageKeyMissConfig',
+            'gNdsStageKeyMissAssets',
             # 1 policy mismatch, 2 stage source texture unresolved, 3 visit
             # range, 4 dense vertex index, 5 degenerate clip w, 6 alpha unset.
-            'gNdsR2StageRejectCounts[1]',
-            'gNdsR2StageRejectCounts[2]',
-            'gNdsR2StageRejectCounts[3]',
-            'gNdsR2StageRejectCounts[4]',
-            'gNdsR2StageRejectCounts[5]',
-            'gNdsR2StageRejectCounts[6]',
+            'gNdsStageRejectCounts[1]',
+            'gNdsStageRejectCounts[2]',
+            'gNdsStageRejectCounts[3]',
+            'gNdsStageRejectCounts[4]',
+            'gNdsStageRejectCounts[5]',
+            'gNdsStageRejectCounts[6]',
             # The LAST link in that chain, and it already existed: R2-07 E2
             # ungated the reason mask and a first-rejection cache census on
-            # NDS_R2_STAGE_ROUTE_PROBE for exactly this question. TEXIMAGE in
+            # NDS_STAGE_ROUTE_PROBE for exactly this question. TEXIMAGE in
             # the mask means the eviction retry ran out of things to evict,
             # which is two different failures with two different fixes --
             # texture VRAM full (bytes) or every slot pinned/touched-this-frame
             # (slots) -- and the census separates them.
             'gNdsRendererProfileTextureRejectReasonMask',
-            'gNdsR2TexRejectCensusValid',
-            'gNdsR2TexRejectCensusFree',
-            'gNdsR2TexRejectCensusLive',
-            'gNdsR2TexRejectCensusPinned',
-            'gNdsR2TexRejectCensusThisFrame',
-            'gNdsR2TexRejectCensusEvictable',
+            'gNdsTexRejectCensusValid',
+            'gNdsTexRejectCensusFree',
+            'gNdsTexRejectCensusLive',
+            'gNdsTexRejectCensusPinned',
+            'gNdsTexRejectCensusThisFrame',
+            'gNdsTexRejectCensusEvictable',
             # BUGS.md: "sometimes Mario's fireballs don't spawn". These two make
             # the report falsifiable without a new probe -- the import already
             # counts both sides of the call (battleship_mario_fireball.c).
@@ -965,7 +965,7 @@ try {
             # see it.
             'gNdsTaskmanGeneralHeapFreeMin',
             'gNdsGCDrawsActiveMax',
-            # NDS_R2_EFFECT_POOL, installed depth and battle low-water. Pinned
+            # NDS_EFFECT_POOL, installed depth and battle low-water. Pinned
             # at 4 means cosmetic effects are being refused (the source's own
             # five-free cut) and the depth is too small; 0 means the forced
             # reserve the KO burst relies on is being consumed too.
@@ -1027,20 +1027,20 @@ try {
             'gNdsFtPublicLastCommonFGM',
             'gNdsFtPublicCallStartCount',
             'gNdsFtPublicLastCallFGM',
-            # R2-07 L7 step one, present only at NDS_R2_COLLISION_L7_ORACLE=1.
+            # R2-07 L7 step one, present only at NDS_COLLISION_L7_ORACLE=1.
             # MaxDevQ12[0..2] are the answer, in 1/4096 world units at probe
             # offsets of 1/4/16 units; the gate is 82 (0.0200 world units).
             # ScaleMin/Max settle which falsifier domain SSB64 actually visits
             # -- inside 0.90-1.10 (3686..4506) the kernel is already proven,
             # out at 0.25-2.00 (1024..8192) it is not.
-            'gNdsR2CollisionOracleSamples',
-            'gNdsR2CollisionOracleSingular',
-            'gNdsR2CollisionOracleMaxDevQ12[0]',
-            'gNdsR2CollisionOracleMaxDevQ12[1]',
-            'gNdsR2CollisionOracleMaxDevQ12[2]',
-            'gNdsR2CollisionOracleOverBoundCount',
-            'gNdsR2CollisionOracleScaleMinQ12',
-            'gNdsR2CollisionOracleScaleMaxQ12',
+            'gNdsCollisionOracleSamples',
+            'gNdsCollisionOracleSingular',
+            'gNdsCollisionOracleMaxDevQ12[0]',
+            'gNdsCollisionOracleMaxDevQ12[1]',
+            'gNdsCollisionOracleMaxDevQ12[2]',
+            'gNdsCollisionOracleOverBoundCount',
+            'gNdsCollisionOracleScaleMinQ12',
+            'gNdsCollisionOracleScaleMaxQ12',
             # THE FGM ALLOWLIST, made visible on any natural run. A cue the game
             # asks for and the pack does not carry fails closed and is silent,
             # which is how five announcer lines went missing without a single
@@ -1211,10 +1211,10 @@ try {
             # every entry), so a 0 across a rematch chain is the failure, not
             # the success. Fast/Sweep are the positive control: Sweep staying
             # tiny while Fast tracks ~10/frame is the win still being taken.
-            'gNdsR2TexProofFastCount',
-            'gNdsR2TexProofSweepCount',
-            'gNdsR2TexProofSweepFailCount',
-            'gNdsR2TextureEpochBumpCount',
+            'gNdsTexProofFastCount',
+            'gNdsTexProofSweepCount',
+            'gNdsTexProofSweepFailCount',
+            'gNdsTextureEpochBumpCount',
             # HANDOFF's latent cliff, made readable across a MULTI-match run.
             # sNdsAObjEvent32NormalizedCount reached 973 of its 1,024 cap after
             # one minute, and the overflow branch does not fail loudly: it
@@ -1318,7 +1318,7 @@ try {
                 # never exits, so the extra time proves nothing about gameplay.
                 $matchMinutes = $counter['gSCManagerTransferBattleState.time_limit']
                 # THE MATCH TIMER, READ OUT OF THE GUEST. This is the only proof
-                # that the soak got the match it asked for: NDS_R2_SOAK_MATCH_MINUTES
+                # that the soak got the match it asked for: NDS_SOAK_MATCH_MINUTES
                 # is a build flag, and reading a flag's default proves nothing about
                 # what the ROM seeded. The expected value is what THIS run resolved,
                 # so a build/soak mismatch cannot pass as a clean run.
@@ -1523,8 +1523,8 @@ try {
              'gNdsVSResultsTickCount'),
             # Separate printfs on purpose: one missing symbol fails its whole
             # command, and COUNTERS must not be lost to an absent arena counter.
-            ('printf "ANIMARENA=%u,%u\n", gNdsR2AnimCacheArenaUsedBytes, ' +
-             'gNdsR2AnimCacheArenaOverflows'),
+            ('printf "ANIMARENA=%u,%u\n", gNdsAnimCacheArenaUsedBytes, ' +
+             'gNdsAnimCacheArenaOverflows'),
             # The taskman arena is chosen by a downward calloc search at boot, so
             # ANY growth in static BSS can push it over the 0x130000 = 1245184
             # cliff and cost ~237 KB in one step. A heap-exhaustion freeze is
@@ -1598,7 +1598,7 @@ try {
             # the GO countdown with a perfectly healthy allocator, which is
             # exactly what MALLOCOVF=0 plus a park in __excpt_entry looks like.
             # It has bitten this port twice (the source-sized particle pools,
-            # then NDS_R2_PARTICLE_DRAW's .text). GENERALFREE is the number that
+            # then NDS_PARTICLE_DRAW's .text). GENERALFREE is the number that
             # decides whether a candidate fix has to find bytes or change the
             # threshold; COMMONSMAX is -1 while the cap has never fired.
             ('printf "GENERALHEAP=start=%p,ptr=%p,end=%p,free=%d\n", ' +
@@ -1614,7 +1614,7 @@ try {
              '(char *)gSYTaskmanGraphicsHeap.start')
             # The particle counters belong on the FREEZE path too, not only on
             # the clean-run path they were added to. 2026-07-31: the arena fix
-            # let NDS_R2_PARTICLE_RUNTIME=1 reach the battle and then abort near
+            # let NDS_PARTICLE_RUNTIME=1 reach the battle and then abort near
             # ifCommonTrafficMakeSObj, and the one question that capture could
             # not answer was whether the bank had loaded at all -- because these
             # are read only when the run does NOT freeze, which is exactly the
@@ -1649,7 +1649,7 @@ try {
                 # battle's pinned static set, and the interface's own OAM
                 # atlases are prepared from the same pool. A 2026-08-01 abort at
                 # the GO countdown -- ifCommonTrafficMakeSObj, MALLOCOVF=0, so
-                # not the heap -- appeared only with NDS_R2_PARTICLE_DRAW=1, and
+                # not the heap -- appeared only with NDS_PARTICLE_DRAW=1, and
                 # the capture could not say whether the atlas had taken VRAM the
                 # interface then could not get, because none of these were read.
                 'gNdsRendererParticleAtlasPrepareCount',

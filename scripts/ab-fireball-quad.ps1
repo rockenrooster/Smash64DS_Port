@@ -426,9 +426,9 @@ $controlBuild = 'build-fireball-ab-control'
 $quadBuild = 'build-fireball-ab-quad'
 if (-not $NoBuild) {
     # One build at a time: the asset generators share paths outside $(BUILD).
-    make -C $root "TARGET=$target" "BUILD=$controlBuild" NDS_R2_FIREBALL_QUAD=0
+    make -C $root "TARGET=$target" "BUILD=$controlBuild" NDS_FIREBALL_QUAD=0
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    make -C $root "TARGET=$target" "BUILD=$quadBuild" NDS_R2_FIREBALL_QUAD=1
+    make -C $root "TARGET=$target" "BUILD=$quadBuild" NDS_FIREBALL_QUAD=1
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 $controlRom = Resolve-Smash64DSBuildOutput `

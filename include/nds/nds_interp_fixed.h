@@ -49,34 +49,34 @@
  * its first is the parent's last). Neither can change a result. */
 
 #if defined(__arm__) && defined(ARM9)
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 #define NDS_IFX_ARM __attribute__((target("arm")))
 
 /* The math unit's 64-bit square root as a pipeline: start one, run the next
  * sample's Horner while the unit works, then collect it. */
 static inline void ndsIfxSqrtMode(void)
 {
-    NDS_R2_HWMATH_SQRTCNT = (uint16_t)NDS_R2_HWMATH_SQRT_64;
+    NDS_HWMATH_SQRTCNT = (uint16_t)NDS_HWMATH_SQRT_64;
 }
 
 static inline void ndsIfxSqrtStart(uint64_t value)
 {
-    NDS_R2_HWMATH_SQRT_PARAM = value;
+    NDS_HWMATH_SQRT_PARAM = value;
 }
 
 static inline uint32_t ndsIfxSqrtResult(void)
 {
-    while ((NDS_R2_HWMATH_SQRTCNT & NDS_R2_HWMATH_BUSY) != 0u)
+    while ((NDS_HWMATH_SQRTCNT & NDS_HWMATH_BUSY) != 0u)
     {
     }
-    return NDS_R2_HWMATH_SQRT_RESULT;
+    return NDS_HWMATH_SQRT_RESULT;
 }
 
 static inline uint64_t ndsIfxDiv6432(uint64_t numerator, uint32_t denominator,
                                      uint32_t *remainder)
 {
     int32_t rem;
-    const uint64_t q = (uint64_t)ndsR2HwMathDivide6432(
+    const uint64_t q = (uint64_t)ndsHwMathDivide6432(
         (int64_t)numerator, (int32_t)denominator, &rem);
 
     *remainder = (uint32_t)rem;

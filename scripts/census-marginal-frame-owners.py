@@ -51,7 +51,7 @@ single capture says a function costs N cycles of `icache_fill`; it cannot say
 whether flipping one switch MOVED work from `issue` into `icache_fill`, which is
 the question a candidate/control pair is run to answer. It requires the two arms
 to have IDENTICAL CODE LAYOUT -- one runtime-gated `.data` word apart, the
-`NDS_R2_*_DISPATCH` shape -- because it joins the two captures ON THE PROGRAM
+`NDS_*_DISPATCH` shape -- because it joins the two captures ON THE PROGRAM
 COUNTER. It verifies that itself from the two symbol tables and refuses
 otherwise; a relinked pair would silently attribute one arm's PCs to the other
 arm's functions.

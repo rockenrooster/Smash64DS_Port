@@ -186,7 +186,7 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
  * differently depending on whether its draw was prepared or replayed --
  * precisely the fresh-versus-replay comparison the P04/K02/J01 audit asks for.
  *
- * NDS_R2_LIGHT_VECTOR_STRETCH_FIX divides the LIVE word by |M L| instead of
+ * NDS_LIGHT_VECTOR_STRETCH_FIX divides the LIVE word by |M L| instead of
  * |L| when the vector matrix stretches past a 1/32 deadband. This function
  * cannot: it patches words into a recorded packet outside the draw, with no
  * vector matrix to read and no un-stale value to read it from -- and a cached
@@ -194,9 +194,9 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
  * to add. So it deliberately stays on the r25 arithmetic.
  *
  * That is SAFE ONLY WHILE THE REPAIR NEVER FIRES, which on a rigid chain it
- * provably never does (scripts/check-r2-light-stretch.py CLAIM 2: the repaired
+ * provably never does (scripts/check-light-stretch.py CLAIM 2: the repaired
  * word is bit-identical there). The condition is therefore countable rather
- * than assumed: if a run shows gNdsR2LightMatrixStretchApplied advancing at
+ * than assumed: if a run shows gNdsLightMatrixStretchApplied advancing at
  * all, the mechanism is real, this twin is wrong for that fighter, and it must
  * be reconciled before acceptance -- do not read a green screenshot as proof
  * while that counter is non-zero. */
@@ -209,16 +209,16 @@ static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
 
     if (length_squared > 0)
     {
-        u32 length = ndsR2HwMathSqrt64((u64)length_squared);
+        u32 length = ndsHwMathSqrt64((u64)length_squared);
 
         if (length != 0u)
         {
-            nx = (s32)ndsR2HwMathDiv64(-(s64)x * 511, (s32)length);
-            ny = (s32)ndsR2HwMathDiv64(-(s64)y * 511, (s32)length);
-            nz = (s32)ndsR2HwMathDiv64(-(s64)z * 511, (s32)length);
+            nx = (s32)ndsHwMathDiv64(-(s64)x * 511, (s32)length);
+            ny = (s32)ndsHwMathDiv64(-(s64)y * 511, (s32)length);
+            nz = (s32)ndsHwMathDiv64(-(s64)z * 511, (s32)length);
         }
     }
-    return NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+    return NDS_NORMAL_PACK((int)nx, (int)ny, (int)nz);
 }
 
 #if NDS_LINK

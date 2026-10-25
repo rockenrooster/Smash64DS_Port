@@ -102,7 +102,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_FIGHTER_LEGACY_EXEC=$(NDS_FIGHTER_LEGACY_EXEC)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
-	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
+	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_PATH)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

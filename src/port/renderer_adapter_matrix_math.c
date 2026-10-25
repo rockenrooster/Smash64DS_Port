@@ -61,7 +61,7 @@ static void ndsRendererAdapterCameraLookAtReflect(
     f32 up_x, f32 up_y, f32 up_z)
 {
     (void)look_at;
-    ndsR2CameraLookAtReflect20p12(out, NULL, eye_x, eye_y, eye_z,
+    ndsCameraLookAtReflect20p12(out, NULL, eye_x, eye_y, eye_z,
                                   at_x, at_y, at_z, up_x, up_y, up_z);
 }
 
@@ -69,7 +69,7 @@ static void ndsRendererAdapterCameraPerspFast(
     NDSRendererMatrix20p12 *out, u16 *persp_norm,
     f32 fovy, f32 aspect, f32 near, f32 far, f32 scale)
 {
-    ndsR2CameraPerspFast20p12(out, persp_norm, fovy, aspect, near, far,
+    ndsCameraPerspFast20p12(out, persp_norm, fovy, aspect, near, far,
                               scale);
 }
 
@@ -368,33 +368,33 @@ ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
     siny = ndsRendererAdapterFighterSinFromIndex(indexy);
     cosy = ndsRendererAdapterFighterCosFromIndex(indexy);
 
-#define NDS_R2_RS20P12(value) ndsRendererAdapterRoundShift20p12((s32)(value))
+#define NDS_RS20P12(value) ndsRendererAdapterRoundShift20p12((s32)(value))
 
-    dst->m[0][0] = NDS_R2_RS20P12((cosp * cosy) >> 14);
-    dst->m[0][1] = NDS_R2_RS20P12((cosp * siny) >> 14);
-    dst->m[0][2] = NDS_R2_RS20P12(-sinp * 2);
+    dst->m[0][0] = NDS_RS20P12((cosp * cosy) >> 14);
+    dst->m[0][1] = NDS_RS20P12((cosp * siny) >> 14);
+    dst->m[0][2] = NDS_RS20P12(-sinp * 2);
     dst->m[0][3] = 0;
 
-    dst->m[1][0] = NDS_R2_RS20P12(
+    dst->m[1][0] = NDS_RS20P12(
         ((((sinr * sinp) >> 15) * cosy) >> 14) - ((cosr * siny) >> 14));
-    dst->m[1][1] = NDS_R2_RS20P12(
+    dst->m[1][1] = NDS_RS20P12(
         ((((sinr * sinp) >> 15) * siny) >> 14) + ((cosr * cosy) >> 14));
-    dst->m[1][2] = NDS_R2_RS20P12((sinr * cosp) >> 14);
+    dst->m[1][2] = NDS_RS20P12((sinr * cosp) >> 14);
     dst->m[1][3] = 0;
 
-    dst->m[2][0] = NDS_R2_RS20P12(
+    dst->m[2][0] = NDS_RS20P12(
         ((((cosr * sinp) >> 15) * cosy) >> 14) + ((sinr * siny) >> 14));
-    dst->m[2][1] = NDS_R2_RS20P12(
+    dst->m[2][1] = NDS_RS20P12(
         ((((cosr * sinp) >> 15) * siny) >> 14) - ((sinr * cosy) >> 14));
-    dst->m[2][2] = NDS_R2_RS20P12((cosr * cosp) >> 14);
+    dst->m[2][2] = NDS_RS20P12((cosr * cosp) >> 14);
     dst->m[2][3] = 0;
 
-    dst->m[3][0] = NDS_R2_RS20P12(fixed_x);
-    dst->m[3][1] = NDS_R2_RS20P12(fixed_y);
-    dst->m[3][2] = NDS_R2_RS20P12(fixed_z);
-    dst->m[3][3] = NDS_R2_RS20P12(0x00010000);
+    dst->m[3][0] = NDS_RS20P12(fixed_x);
+    dst->m[3][1] = NDS_RS20P12(fixed_y);
+    dst->m[3][2] = NDS_RS20P12(fixed_z);
+    dst->m[3][3] = NDS_RS20P12(0x00010000);
 
-#undef NDS_R2_RS20P12
+#undef NDS_RS20P12
     return TRUE;
 }
 
@@ -1817,7 +1817,7 @@ ndsRendererAdapterBuildDObjLocalMatrix(
 }
 
 /* ITCM (2026-09-27 census: ~0.45K ticks/frame non-memory stall at 72 B). */
-static u32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
+static u32 NDS_ITCM_PACK2_CODE ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
 {
     u32 i;
 

@@ -1,5 +1,5 @@
-#ifndef NDS_R2_CAMERA_FIXED_H
-#define NDS_R2_CAMERA_FIXED_H
+#ifndef NDS_CAMERA_FIXED_H
+#define NDS_CAMERA_FIXED_H
 
 /* Q20.12 camera + projection chain.
  *
@@ -32,7 +32,7 @@
  * fractional bits. A Q20.12 kernel lands in the same representable set; only
  * the INTERMEDIATE rounding differs.
  *
- * The float chain and its route word (gNdsR2CameraFixedEnabled) were deleted
+ * The float chain and its route word (gNdsCameraFixedEnabled) were deleted
  * 2026-10-06; this is the only camera arithmetic.
  *
  * THE DIVIDE AND THE ROOT ARE THE DS HARDWARE UNITS, never a library 64-bit
@@ -53,25 +53,25 @@ extern "C" {
  * from a route that fired and saved nothing, and this campaign has shipped that
  * mistake. Every one of these is written by live code, so --gc-sections keeps
  * it; each also carries `used` rather than relying on that. */
-extern volatile u32 gNdsR2CameraFixedLookAtCalls;
-extern volatile u32 gNdsR2CameraFixedPerspCalls;
-extern volatile u32 gNdsR2CameraFixedFloatLookAtCalls;
-extern volatile u32 gNdsR2CameraFixedFloatPerspCalls;
-extern volatile u32 gNdsR2CameraFixedGameCalls;
-extern volatile u32 gNdsR2CameraFixedGameFloatCalls;
+extern volatile u32 gNdsCameraFixedLookAtCalls;
+extern volatile u32 gNdsCameraFixedPerspCalls;
+extern volatile u32 gNdsCameraFixedFloatLookAtCalls;
+extern volatile u32 gNdsCameraFixedFloatPerspCalls;
+extern volatile u32 gNdsCameraFixedGameCalls;
+extern volatile u32 gNdsCameraFixedGameFloatCalls;
 /* Must read hard zero. Saturate = a value outside Q20.12's +/-524,288;
  * degenerate = a zero-length vector the float form would have divided by. */
-extern volatile u32 gNdsR2CameraFixedSaturateCount;
-extern volatile u32 gNdsR2CameraFixedDegenerateCount;
+extern volatile u32 gNdsCameraFixedSaturateCount;
+extern volatile u32 gNdsCameraFixedDegenerateCount;
 /* The >32000 rescale pass. 0 in this match on the float arm (ndsCameraCatCamera
  * is entered exactly 2.000/frame against gmCameraLookAtFuncMatrix's 2.000), so
  * a non-zero reading on the fixed arm is a divergence, not a cold path. */
-extern volatile u32 gNdsR2CameraFixedRescaleCount;
+extern volatile u32 gNdsCameraFixedRescaleCount;
 
 /* Q20.12 look-at with reflectance directions. `l` may be NULL: the renderer's
  * three call sites pass a local LookAt that nothing reads, so the six
  * FTOFRAC8 conversions are skipped there rather than computed and dropped. */
-void ndsR2CameraLookAtReflect20p12(NDSRendererMatrix20p12 *out, LookAt *l,
+void ndsCameraLookAtReflect20p12(NDSRendererMatrix20p12 *out, LookAt *l,
                                    f32 eye_x, f32 eye_y, f32 eye_z,
                                    f32 at_x, f32 at_y, f32 at_z,
                                    f32 up_x, f32 up_y, f32 up_z);
@@ -80,14 +80,14 @@ void ndsR2CameraLookAtReflect20p12(NDSRendererMatrix20p12 *out, LookAt *l,
  * live Fast3D LookAt state. Keep GMCamera private to the camera/decomp TU:
  * including gm/generic.h from the renderer unity TU also drags the decomp sys
  * headers in through a second include route and redefines SYMallocRegion. */
-const LookAt *ndsR2CameraCurrentLookAt(void);
+const LookAt *ndsCameraCurrentLookAt(void);
 
 /* Reflection state selected by the active source camera, including the
  * Fast3D reset directions used by ordinary menu cameras. */
 const LookAt *ndsRendererAdapterCurrentLookAt(void);
 
 /* Q20.12 fast perspective. `persp_norm` may be NULL, exactly as decomp's. */
-void ndsR2CameraPerspFast20p12(NDSRendererMatrix20p12 *out, u16 *persp_norm,
+void ndsCameraPerspFast20p12(NDSRendererMatrix20p12 *out, u16 *persp_norm,
                                f32 fovy, f32 aspect, f32 near, f32 far,
                                f32 scale);
 
@@ -95,4 +95,4 @@ void ndsR2CameraPerspFast20p12(NDSRendererMatrix20p12 *out, u16 *persp_norm,
 }
 #endif
 
-#endif /* NDS_R2_CAMERA_FIXED_H */
+#endif /* NDS_CAMERA_FIXED_H */

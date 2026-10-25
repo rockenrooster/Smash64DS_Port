@@ -14,7 +14,7 @@ unswap, no per-command bit re-encode, no absolute pointers, no loaded-file
 registration, no status-node aliasing, no token->path discovery.
 
 THE CONSUMER DECIDES THE FORMAT, and there is exactly one:
-`ndsR2FtAnimParseDObjFigatree` (`src/import/battleship_ftanim.c:492`) walks
+`ndsFtAnimParseDObjFigatree` (`src/import/battleship_ftanim.c:492`) walks
 `root_dobj->anim_joint.event16` -- an `AObjEvent16 *` -- one u16 at a time,
 reading `command.opcode/.flags/.toggle`, `->u` and `->s`. So a clip IS a u16
 array in the native bitfield order, plus one entry point per animated DObj.

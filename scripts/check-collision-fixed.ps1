@@ -7,20 +7,20 @@ param(
 #
 # Two gates, and the second is not optional decoration.
 #
-# 1. NUMERIC. Compiles include/nds/nds_r2_collision_fixed.h -- the code that
+# 1. NUMERIC. Compiles include/nds/nds_collision_fixed.h -- the code that
 #    ships -- on the host and grades every kernel against a transcription of the
 #    decomp float originals, in world units, over the domain the game visits.
 #    The enumerable halves (the sine table, the index arithmetic, the integer
 #    square root over every live s^2) are exhaustive, not sampled.
 #
-# 2. CODEGEN. Builds src/port/nds_r2_collision_fixed.c for the real target and
+# 2. CODEGEN. Builds src/port/nds_collision_fixed.c for the real target and
 #    checks the produced ARM. Two failures are inexpressible after this:
 #      * __aeabi_lmul anywhere. ARMv5TE Thumb has no SMULL, so a 64-bit product
 #        compiled -mthumb becomes a library call and the fixed-point form ends
 #        up DEARER than the float it replaced (memory: "Thumb hides 64-bit
 #        cost"). The Makefile builds this object -marm; this is what notices if
 #        that rule is ever lost.
-#      * soft float outside ndsR2CollisionFixedBuildLocal. That one function is
+#      * soft float outside ndsCollisionFixedBuildLocal. That one function is
 #        the declared float edge -- the animation hands it three f32 angles and
 #        the table index needs a multiply and a float-to-int -- and it is
 #        allowed exactly nine such calls. Anywhere else, a stray float
@@ -30,9 +30,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $root 'artifacts/verifier-temp/r2-collision-fixed'
-$source = Join-Path $PSScriptRoot 'check-r2-collision-fixed.c'
-$kernelSource = Join-Path $root 'src/port/nds_r2_collision_fixed.c'
-$binary = Join-Path $outputDir 'check-r2-collision-fixed.exe'
+$source = Join-Path $PSScriptRoot 'check-collision-fixed.c'
+$kernelSource = Join-Path $root 'src/port/nds_collision_fixed.c'
+$binary = Join-Path $outputDir 'check-collision-fixed.exe'
 $armAssembly = Join-Path $outputDir 'arm-kernel.s'
 $armObject = Join-Path $outputDir 'arm-kernel.o'
 $compiler = Get-Command gcc -ErrorAction Stop
@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) { throw 'R2 fixed-collision falsifier failed to compile
 
 # Tee rather than filter. A pattern filter cannot see a multi-line failure, and
 # this repo has lost load-bearing lines to Select-Object four times.
-$log = Join-Path $outputDir 'check-r2-collision-fixed.txt'
+$log = Join-Path $outputDir 'check-collision-fixed.txt'
 & $binary 2>&1 | Tee-Object -FilePath $log
 $numericExit = $LASTEXITCODE
 if ($OutputPath) {
@@ -77,7 +77,7 @@ $currentFunction = ''
 $softFloat = @('__aeabi_fadd', '__aeabi_fmul', '__aeabi_fdiv', '__aeabi_fsub',
                '__aeabi_dmul', '__aeabi_ddiv', '__aeabi_f2d', '__aeabi_d2f',
                '__aeabi_f2iz', '__aeabi_i2f')
-$floatEdge = 'ndsR2CollisionFixedBuildLocal'
+$floatEdge = 'ndsCollisionFixedBuildLocal'
 # Six angle-to-index conversions: each is one __aeabi_fmul and one
 # __aeabi_f2iz, and the three cosines add 90 degrees to the ANGLE first, so
 # 6 + 6 + 3 = 15. A budget rather than a boolean because the number is the
@@ -121,7 +121,7 @@ if ($smullCount -lt 32) {
 }
 
 $sizes = & $armNm --print-size --size-sort $armObject |
-    Where-Object { $_ -match ' [Tt] ndsR2CollisionFixed' }
+    Where-Object { $_ -match ' [Tt] ndsCollisionFixed' }
 Write-Output 'R2 fixed-collision ARM text, per entry point:'
 $sizes | ForEach-Object { Write-Output "  $_" }
 Write-Output ("R2 fixed-collision check passed: gated domains within bound, " +

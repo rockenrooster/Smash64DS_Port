@@ -200,7 +200,7 @@ class IntroTransientContextTest(unittest.TestCase):
 typedef unsigned u32; typedef int sb32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_R2_FIGHTER_NO_ORACLE 1
+#define NDS_FIGHTER_NO_ORACLE 1
 #define NDS_RENDERER_PROFILE_LEVEL 0
 #define NDS_INTRO_TRANSIENT_SCRATCH_SLOT 0u
 #define nSCKind1PIntro 14

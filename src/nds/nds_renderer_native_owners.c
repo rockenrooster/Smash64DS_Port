@@ -1401,14 +1401,14 @@ static s32 ndsRendererNativeStagePrepareRun(
 
     /* R2-07 leg A. THE write seam for runs[]: this function is its only writer,
      * so dropping the certificate here removes the class rather than an
-     * instance (slice 30). The drop beside gNdsR2StagePrepareBuildCount is the
+     * instance (slice 30). The drop beside gNdsStagePrepareBuildCount is the
      * instance and is deliberately kept -- redundant but free, and deleting it
      * would be a second change with its own failure mode, which is slice 30's
      * own precedent for exactly this situation.
      *
      * The seam is the one that matters because the instance is not complete in
-     * every configuration: with NDS_R2_STAGE_ROUTE_PROBE on, a segment can be
-     * forced generic and re-prepared while r2_reuse is still 1, i.e. without
+     * every configuration: with NDS_STAGE_ROUTE_PROBE on, a segment can be
+     * forced generic and re-prepared while prepared_reuse is still 1, i.e. without
      * the rebuild branch ever running. That path is `#define ... FALSE` in
      * every shipping and gate target, so this line changes no measured
      * behaviour -- it stops the guard depending on a probe flag being off. */
@@ -2169,7 +2169,7 @@ static void ndsRendererNativeStageHwEndSegment(void)
  * inlined it until the segment fast path grew that function past the
  * called-once growth limit; the out-of-line copy then landed in .itcm (2 KB)
  * and overflowed it. */
-static inline __attribute__((always_inline)) s32 NDS_R2_ITCM_PACK2_CODE
+static inline __attribute__((always_inline)) s32 NDS_ITCM_PACK2_CODE
 ndsRendererNativeStageBeginRun(
     const NDSNativeStageRun *native_run,
     const NDSNativeStagePreparedRun *run,
@@ -3013,27 +3013,27 @@ s32 ndsRendererPrepareNativeStageOwner(
      * config and asset set. epoch_mask must be restored with it: PrepareRun
      * accumulates it and the Task 36 replay capture and segment-0 hash consume
      * it after the loop. */
-    u32 r2_reuse =
-        ((sNdsNativeStageOwnerExecution.r2_prepared_valid != 0u) &&
+    u32 prepared_reuse =
+        ((sNdsNativeStageOwnerExecution.prepared_valid != 0u) &&
          (ndsRendererNativeStagePreparedTexturesProven() != FALSE) &&
-         (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation ==
+         (sNdsNativeStageOwnerExecution.prepared_topology_generation ==
           frame->topology_generation) &&
-         (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp ==
+         (sNdsNativeStageOwnerExecution.prepared_topology_stamp ==
           frame->topology_stamp) &&
-         (sNdsNativeStageOwnerExecution.r2_prepared_config == frame->config) &&
-         (memcmp(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
+         (sNdsNativeStageOwnerExecution.prepared_config == frame->config) &&
+         (memcmp(sNdsNativeStageOwnerExecution.prepared_asset_bases,
                  frame->asset_bases,
-                 sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases))
+                 sizeof(sNdsNativeStageOwnerExecution.prepared_asset_bases))
           == 0)) ? 1u : 0u;
 
-    if (r2_reuse != 0u)
+    if (prepared_reuse != 0u)
     {
-        epoch_mask = sNdsNativeStageOwnerExecution.r2_prepared_epoch_mask;
-        NDS_DIAG(gNdsR2StagePrepareReuseCount++);
+        epoch_mask = sNdsNativeStageOwnerExecution.prepared_epoch_mask;
+        NDS_DIAG(gNdsStagePrepareReuseCount++);
     }
     else
     {
-        NDS_DIAG(gNdsR2StagePrepareBuildCount++);
+        NDS_DIAG(gNdsStagePrepareBuildCount++);
         /* R2-07 leg A. The table about to be written is not the table the
          * standing proof was taken on, and a rebuild is not an epoch event, so
          * the proof must be dropped here or a fresh run would inherit its
@@ -3102,9 +3102,9 @@ s32 ndsRendererPrepareNativeStageOwner(
 
         /* Prepared runs, epoch mask and sync count already have owners;
          * no replay snapshot consumes these state/traversal temporaries. */
-        if (r2_reuse != 0u)
+        if (prepared_reuse != 0u)
         {
-            NDS_DIAG(gNdsR2StagePreflightElideCount++);
+            NDS_DIAG(gNdsStagePreflightElideCount++);
             continue;
         }
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
@@ -3190,7 +3190,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
                 }
-                if (r2_reuse == 0u)
+                if (prepared_reuse == 0u)
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -3244,8 +3244,8 @@ s32 ndsRendererPrepareNativeStageOwner(
     stats->triangle_command_count = NDS_NATIVE_STAGE_TRIANGLE_COMMAND_COUNT;
     /* R2-02 E8: taken from the memo when the loop body was elided, so the
      * result does not depend on whether the last segment was replay-served. */
-    stats->sync_command_count = (r2_reuse != 0u) ?
-        sNdsNativeStageOwnerExecution.r2_prepared_sync_count :
+    stats->sync_command_count = (prepared_reuse != 0u) ?
+        sNdsNativeStageOwnerExecution.prepared_sync_count :
         sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
     sNdsNativeStageOwnerExecution.stats = stats;
     sNdsNativeStageOwnerExecution.committed_segments = 0u;
@@ -3254,18 +3254,18 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsNativeStageWarmUploads = 0u;
     /* The table is only publishable as reusable once the whole owner prepare
      * has accepted -- a run that rejected mid-loop leaves runs[] torn. */
-    sNdsNativeStageOwnerExecution.r2_prepared_config = frame->config;
-    sNdsNativeStageOwnerExecution.r2_prepared_topology_generation =
+    sNdsNativeStageOwnerExecution.prepared_config = frame->config;
+    sNdsNativeStageOwnerExecution.prepared_topology_generation =
         frame->topology_generation;
-    sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp =
+    sNdsNativeStageOwnerExecution.prepared_topology_stamp =
         frame->topology_stamp;
-    memcpy(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
+    memcpy(sNdsNativeStageOwnerExecution.prepared_asset_bases,
            frame->asset_bases,
-           sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases));
-    sNdsNativeStageOwnerExecution.r2_prepared_epoch_mask = epoch_mask;
-    sNdsNativeStageOwnerExecution.r2_prepared_sync_count =
+           sizeof(sNdsNativeStageOwnerExecution.prepared_asset_bases));
+    sNdsNativeStageOwnerExecution.prepared_epoch_mask = epoch_mask;
+    sNdsNativeStageOwnerExecution.prepared_sync_count =
         stats->sync_command_count;
-    sNdsNativeStageOwnerExecution.r2_prepared_valid = 1u;
+    sNdsNativeStageOwnerExecution.prepared_valid = 1u;
 
 done:
     if (accepted == FALSE)
@@ -3280,7 +3280,7 @@ done:
         sNdsNativeStageOwnerExecution.active = FALSE;
         /* Any fallback invalidates the table: runs[] may be torn, and the
          * reason it rejected may be exactly that the topology moved. */
-        sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
+        sNdsNativeStageOwnerExecution.prepared_valid = 0u;
     }
     return accepted;
 }

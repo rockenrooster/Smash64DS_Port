@@ -894,7 +894,7 @@ static const NDSFighterPayloadSizeRow sNdsKirbyPayloadSizes[] =
 };
 #undef NDS_PAYLOAD_SIZE_ROW
 
-static size_t ndsRelocP2FindGeneratedPayloadSize(
+static size_t ndsRelocFindGeneratedPayloadSize(
     const NDSFighterPayloadSizeRow *rows, u32 count, u32 asset_id)
 {
     u32 lo = 0u;
@@ -921,9 +921,9 @@ static size_t ndsRelocP2FindGeneratedPayloadSize(
     return 0u;
 }
 
-NDS_COLD static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
+NDS_COLD static size_t ndsRelocGeneratedPayloadSize(u32 asset_id)
 {
-    size_t size = ndsRelocP2FindGeneratedPayloadSize(
+    size_t size = ndsRelocFindGeneratedPayloadSize(
         sNdsBaseFighterPayloadSizes,
         sizeof(sNdsBaseFighterPayloadSizes) /
             sizeof(sNdsBaseFighterPayloadSizes[0]),
@@ -934,61 +934,61 @@ NDS_COLD static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
         return size;
     }
 #if NDS_LUIGI
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsLuigiPayloadSizes,
         sizeof(sNdsLuigiPayloadSizes) / sizeof(sNdsLuigiPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
 #if NDS_DONKEY
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsDonkeyPayloadSizes,
         sizeof(sNdsDonkeyPayloadSizes) / sizeof(sNdsDonkeyPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
 #if NDS_CAPTAIN
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsCaptainPayloadSizes,
         sizeof(sNdsCaptainPayloadSizes) /
             sizeof(sNdsCaptainPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsSamusPayloadSizes,
         sizeof(sNdsSamusPayloadSizes) / sizeof(sNdsSamusPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #if NDS_LINK
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsLinkPayloadSizes,
         sizeof(sNdsLinkPayloadSizes) / sizeof(sNdsLinkPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsPikachuPayloadSizes,
         sizeof(sNdsPikachuPayloadSizes) /
             sizeof(sNdsPikachuPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsYoshiPayloadSizes,
         sizeof(sNdsYoshiPayloadSizes) / sizeof(sNdsYoshiPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsNessPayloadSizes,
         sizeof(sNdsNessPayloadSizes) / sizeof(sNdsNessPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsPurinPayloadSizes,
         sizeof(sNdsPurinPayloadSizes) / sizeof(sNdsPurinPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
-    size = ndsRelocP2FindGeneratedPayloadSize(
+    size = ndsRelocFindGeneratedPayloadSize(
         sNdsKirbyPayloadSizes,
         sizeof(sNdsKirbyPayloadSizes) / sizeof(sNdsKirbyPayloadSizes[0]),
         asset_id);
@@ -1035,7 +1035,7 @@ NDS_COLD static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         return loaded;
     }
 
-    asset_size = ndsRelocP2GeneratedPayloadSize(asset_id);
+    asset_size = ndsRelocGeneratedPayloadSize(asset_id);
     if (asset_size != 0u)
     {
         is_generated_payload = TRUE;
@@ -1333,7 +1333,7 @@ static s32 ndsRelocExternTreeSliceStartAsset(NDSRelocExternTreeSlice *slice,
         return FALSE;
     }
 
-    expected_size = ndsRelocP2GeneratedPayloadSize(asset_id);
+    expected_size = ndsRelocGeneratedPayloadSize(asset_id);
     if ((expected_size != 0u) && (expected_size != asset_size))
     {
         ndsRelocRecordExternalFixupFail(asset_id);
@@ -1761,7 +1761,7 @@ static const NDSFighterAllocSizeRow sNdsKirbyAllocSizes[] =
 };
 #undef NDS_ALLOC_SIZE_ROW
 
-static size_t ndsRelocP2FindGeneratedAllocSize(
+static size_t ndsRelocFindGeneratedAllocSize(
     const NDSFighterAllocSizeRow *rows, u32 count, u32 asset_id)
 {
     u32 lo = 0u;
@@ -1788,7 +1788,7 @@ static size_t ndsRelocP2FindGeneratedAllocSize(
     return 0u;
 }
 
-NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
+NDS_COLD static size_t ndsRelocGeneratedAllocSize(u32 asset_id)
 {
     size_t size;
 
@@ -1806,7 +1806,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
      * reloc-aligned.  The sorted u16/u16 table is ~half the linked footprint of
      * the compiler's sparse switch table and binary search is still tiny beside
      * the NitroFS metadata walk it replaces. */
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsBaseFighterAllocSizes,
         sizeof(sNdsBaseFighterAllocSizes) /
             sizeof(sNdsBaseFighterAllocSizes[0]),
@@ -1816,7 +1816,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
         return size;
     }
 #if NDS_LUIGI
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsLuigiAllocSizes,
         sizeof(sNdsLuigiAllocSizes) / sizeof(sNdsLuigiAllocSizes[0]),
         asset_id);
@@ -1826,7 +1826,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     }
 #endif
 #if NDS_DONKEY
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsDonkeyAllocSizes,
         sizeof(sNdsDonkeyAllocSizes) / sizeof(sNdsDonkeyAllocSizes[0]),
         asset_id);
@@ -1836,7 +1836,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     }
 #endif
 #if NDS_CAPTAIN
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsCaptainAllocSizes,
         sizeof(sNdsCaptainAllocSizes) / sizeof(sNdsCaptainAllocSizes[0]),
         asset_id);
@@ -1845,7 +1845,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
         return size;
     }
 #endif
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsSamusAllocSizes,
         sizeof(sNdsSamusAllocSizes) / sizeof(sNdsSamusAllocSizes[0]),
         asset_id);
@@ -1854,7 +1854,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
         return size;
     }
 #if NDS_LINK
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsLinkAllocSizes,
         sizeof(sNdsLinkAllocSizes) / sizeof(sNdsLinkAllocSizes[0]),
         asset_id);
@@ -1863,7 +1863,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
         return size;
     }
 #endif
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsPikachuAllocSizes,
         sizeof(sNdsPikachuAllocSizes) / sizeof(sNdsPikachuAllocSizes[0]),
         asset_id);
@@ -1871,7 +1871,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     {
         return size;
     }
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsYoshiAllocSizes,
         sizeof(sNdsYoshiAllocSizes) / sizeof(sNdsYoshiAllocSizes[0]),
         asset_id);
@@ -1879,7 +1879,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     {
         return size;
     }
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsNessAllocSizes,
         sizeof(sNdsNessAllocSizes) / sizeof(sNdsNessAllocSizes[0]),
         asset_id);
@@ -1887,7 +1887,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     {
         return size;
     }
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsPurinAllocSizes,
         sizeof(sNdsPurinAllocSizes) / sizeof(sNdsPurinAllocSizes[0]),
         asset_id);
@@ -1895,7 +1895,7 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     {
         return size;
     }
-    size = ndsRelocP2FindGeneratedAllocSize(
+    size = ndsRelocFindGeneratedAllocSize(
         sNdsKirbyAllocSizes,
         sizeof(sNdsKirbyAllocSizes) / sizeof(sNdsKirbyAllocSizes[0]),
         asset_id);
@@ -1923,7 +1923,7 @@ NDS_COLD size_t lbRelocGetFileSize(const void *file_id)
     }
     if (sNdsRelocStatusBufferCount == 0)
     {
-        generated_alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
+        generated_alloc_size = ndsRelocGeneratedAllocSize(asset_id);
         if (generated_alloc_size != 0u)
         {
             return generated_alloc_size;

@@ -15,7 +15,7 @@ per node and, as its own comment predicted, could not buy residency. Only a
 smaller node does.
 
 **The value fields are exact, which was a measurement result and not a choice.**
-`ndsR2AnimTargetValue` scales each disk word by a per-track power of two, so the
+`ndsAnimTargetValue` scales each disk word by a per-track power of two, so the
 stored Q12 values need up to 24 bits (translation) and cannot be s16. Storing
 the *authored* s16 word instead, with the group's shift applied at runtime, is
 exact -- where re-quantising to a coarser Q would have discarded fractional bits
@@ -25,7 +25,7 @@ The record is NOT lossless overall, and `--verify` prints what it costs rather
 than letting the relaxed comparison absorb it: `rate_base` at Q16 is off by at
 most 7.3e-06 (0.0011% relative) and `length_invert` at Q30 by 4.6e-10
 (0.000006%). Both are the widths the shipped runtime already stores these in --
-`NDS_R2_AQ_RF` 16 and `NDS_R2_AQ_IF` 30 -- so the dense bank inherits the Q form's
+`NDS_AQ_RF` 16 and `NDS_AQ_IF` 30 -- so the dense bank inherits the Q form's
 existing error rather than adding a second one.
 
 Nothing here is assumed. Every field is range-checked against its declared
@@ -67,8 +67,8 @@ VERSION = 1
 # -- a RECIPROCAL -- and 1/17 at Q8 is 15/256, off by 0.4%. Range was the wrong
 # question; a rate needs precision. The parser's own comment records the field's
 # double meaning: Step stores a FRAME COUNT there, everything else a reciprocal.
-# So it is s32 and read per kind, exactly as the runtime does -- `NDS_R2_AQ_IF`
-# is 30 and `ndsR2AnimRecipSlot` writes `ndsR2F32ToFixed(r, 30)`.
+# So it is s32 and read per kind, exactly as the runtime does -- `NDS_AQ_IF`
+# is 30 and `ndsAnimRecipSlot` writes `ndsAnimF32ToFixed(r, 30)`.
 #
 # `rate_base` is the one field that cannot be s16, and the emitter found that
 # rather than the design assuming it. It is an authored word for the cubic
@@ -79,8 +79,8 @@ VERSION = 1
 # is a visibly wrong interpolation rate, not a rounding detail.
 #
 # So the field is s32 at Q16 -- which is not a new approximation but exactly
-# what the shipped runtime already stores: `NDS_R2_AQ_RF` is 16, and the Q arm
-# of the parser writes `ndsR2AQStore(r)` with `r` the rounded Q16 ratio.
+# what the shipped runtime already stores: `NDS_AQ_RF` is 16, and the Q arm
+# of the parser writes `ndsAQStore(r)` with `r` the rounded Q16 ratio.
 #
 # The record therefore costs 20 bytes, not the 14 the first sizing predicted --
 # both widenings were forced by the round-trip, not chosen. It is still 44.4%
@@ -113,11 +113,11 @@ TERM_END, TERM_LOOP = 1, 2
 OP_SETFLAGS, OP_INTERP = 14, 12
 
 LENGTH_Q = 7
-LENGTH_INVERT_Q = 30             # NDS_R2_AQ_IF, for Cubic/Linear reciprocals
-RATE_BASE_Q = 16                 # NDS_R2_AQ_RF
+LENGTH_INVERT_Q = 30             # NDS_AQ_IF, for Cubic/Linear reciprocals
+RATE_BASE_Q = 16                 # NDS_AQ_RF
 S16_MIN, S16_MAX = -32768, 32767
 S32_MIN, S32_MAX = -(1 << 31), (1 << 31) - 1
-KIND_STEP_Q, KIND_STEP_F = 5, 1  # NDS_R2_AQ_KIND_STEP / nGCAnimKindStep
+KIND_STEP_Q, KIND_STEP_F = 5, 1  # NDS_AQ_KIND_STEP / nGCAnimKindStep
 
 
 def _load(name):

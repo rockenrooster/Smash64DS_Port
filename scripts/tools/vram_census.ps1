@@ -3,7 +3,7 @@ param([string]$Build = 'build-sweep-s67', [int[]]$Gkinds = @(43), [string]$Kinds
       [switch]$NoCensus,
       [string[]]$Counters = @('gNdsParticleQuadResidentSheets', 'gNdsParticleAnimSheetFailCount',
                               'gNdsLabParticleReserveTaken', 'gNdsParticleQuadMissCount', 'gNdsRendererParticleAtlasFailCount',
-                              'gNdsRendererBattleStaticTextureViolationCount', 'gNdsR2StagePrepareBuildCount',
+                              'gNdsRendererBattleStaticTextureViolationCount', 'gNdsStagePrepareBuildCount',
                               'gNdsStageGCDrawAllLoopHardwareTextureRejectCount',
                               'gNdsFighterDLAllDrawHardwareTextureRejectCount'))
 # Texture VRAM over a four-CPU match on a gate ROM built with

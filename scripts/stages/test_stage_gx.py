@@ -337,7 +337,7 @@ static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
 static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
 static u32 sNdsFighterPacketDmaPending, gNdsStageProgDmas;
 static u32 sNdsRendererHardwareBoundTextureName, sNdsRendererHardwareMatrixLoaded, sNdsRendererHardwareTriangleBatchOpen;
-static void *sNdsRendererHardwareActiveTextureEntry, *sNdsR2GxLastProjection;
+static void *sNdsRendererHardwareActiveTextureEntry, *sNdsGxLastProjection;
 static u32 regs[3], GFX_FIFO, spans[8][2], waits, alphas;
 /* The call order: S a span's state, W a wait on the DMA, D a DMA armed,
  * E the Task 36 segment end, B the batch end. */

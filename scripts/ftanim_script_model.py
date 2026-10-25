@@ -3,7 +3,7 @@
 
 This is the front half of the AOT dense-track generator and the reference the
 replay proof compares against. It executes the same fifteen opcodes
-`ndsR2FtAnimParseDObjFigatree` executes and records TWO timelines:
+`ndsFtAnimParseDObjFigatree` executes and records TWO timelines:
 
   * per-track AObj state after every command, and
   * the **gameplay callbacks** (`func_anim` with tag -2 at Loop, -1 at End).
@@ -177,7 +177,7 @@ def _apply(t: Track, op: str, payload: float, run: Run) -> None:
         t.rate_target = payload
         return
     if op == "Event1611":
-        t.length += payload         # ndsR2AnimAddLength
+        t.length += payload         # ndsAnimAddLength
         return
     if op.startswith("SetValAfter"):
         t.value_base = t.value_target
@@ -228,7 +228,7 @@ def run_commands(cmds, is_anim_root=True, anim_speed=1.0, anim_wait=0.0):
 
     `anim_speed` is a DObj field rather than script data, so it is a parameter;
     `length` is written as `-anim_wait - anim_speed`, the segment start the
-    parser computes in `ndsR2AnimSegmentStart`.
+    parser computes in `ndsAnimSegmentStart`.
     """
     tracks = [Track() for _ in range(TRACKS)]
     run = Run()

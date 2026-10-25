@@ -75,7 +75,7 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseFrame);
  * pose seams that need the wait in Q12 read it once through this. */
 static inline s32 ndsFtPoseWaitQ(const NdsFtPoseJoint *joint)
 {
-    return ndsR2F32ToFixed(ndsR2AQStore((s32)joint->wait_bits), NDS_R2_AQ_LF);
+    return ndsAnimF32ToFixed(ndsAQStore((s32)joint->wait_bits), NDS_AQ_LF);
 }
 
 /* The runaway accounting the generic parser already keeps: a malformed script
@@ -89,13 +89,13 @@ extern volatile u32 gNdsObjAnimRunawayOpcode;
 
 /* `battleship_ftanim.c`'s Q writers, exported so the values a track carries
  * are the parser's own words. */
-s32 ndsR2FtAnimTargetQ(s16 arg, s32 track, sb32 value_or_step);
-s32 ndsR2FtAnimRecipQ30(u32 n);
+s32 ndsFtAnimTargetQ(s16 arg, s32 track, sb32 value_or_step);
+s32 ndsFtAnimRecipQ30(u32 n);
 /* decomp sys/interp.c, the TraI spline. */
 void syInterpCubic(Vec3f *out, void *desc, f32 t);
 
 /* The live AObj count, for sizing the AObj pool the engine displaces. */
-u32 ndsR2AObjLiveCount(void);
+u32 ndsAObjLiveCount(void);
 
 static NdsFtPose sNdsFtPose[NDS_FT_POSE_FIGHTERS];
 
@@ -168,7 +168,7 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * ndsF32SubBits/ndsF32AddBits; payload adds convert the integer to float bits
  * exactly (n < 2^24); `wait <= 0` is `sign bit set or magnitude zero`;
  * negation flips the sign bit; publication is a bit copy instead of
- * ndsR2FixedToF32. The held-body path does NOT touch the clock: ndsFtPoseParse
+ * ndsAnimFixedToF32. The held-body path does NOT touch the clock: ndsFtPoseParse
  * (the wait/frame step) runs every tick for every joint and only ndsFtPosePlay
  * (track evaluation) is held, so the `held`/`catch_up` multiplies in
  * SegmentStart, AdvanceTail and Play are POSE-side (track lengths, Q12,
@@ -178,7 +178,7 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * differential at 0 mismatches. */
 #define NDS_FT_POSE_RUNNING 1.0F
 
-/* `NDS_R2_AQ_VF - k` per track class, the shifts `ndsR2AnimArgToQ` applies:
+/* `NDS_AQ_VF - k` per track class, the shifts `ndsAnimArgToQ` applies:
  * values 1/512, 1/4, 1/4096 and rates 1/512, 1/32, 1/8192 read as powers of
  * two. Scale rates (2^-13, a negative shift that rounds) and TraI (not a power
  * of two) are stored pre-converted, so their eval shift is 0. */
@@ -327,7 +327,7 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
         (u32)nFTPartsJointNumMax : count;
     /* Scene-lifetime, from the taskman general heap exactly where the AObj
      * nodes this replaces would have been carved; rewound with the scene. The
-     * AObj pool (`NDS_R2_AOBJ_POOL_COUNT`) shrinks by the same measure. */
+     * AObj pool (`NDS_AOBJ_POOL_COUNT`) shrinks by the same measure. */
     /* P2-2p8: each pose slot owns a fixed block of ARM9 shared WRAM
      * (include/nds/nds_arm9_wram.h): the player's joints and tracks are
      * read every evaluated tick, and a WRAM line fill is about half a
@@ -453,7 +453,7 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     dobj->anim_joint.event16 = script;
     dobj->anim_wait = AOBJ_ANIM_CHANGED;
     dobj->anim_frame = anim_frame;
-    joint->frame_bits = ndsR2FloatBits(anim_frame);
+    joint->frame_bits = ndsAnimFloatBits(anim_frame);
     joint->wait_bits = 0u;
     if (entry < 32u)
     {
@@ -491,9 +491,9 @@ void ndsFtPoseUnbind(GObj *gobj)
     }
 }
 
-void ndsR2AnimPinsDropGObj(GObj *gobj);
+void ndsAnimPinsDropGObj(GObj *gobj);
 
-/* A zero-copy clip moved (reloc_backend_assets.c, ndsR2AnimPinRescue): every
+/* A zero-copy clip moved (reloc_backend_assets.c, ndsAnimPinRescue): every
  * script cursor and TraI descriptor this fighter's joints hold inside
  * [base, base + size) moves by `delta`. */
 void ndsFtPoseRelocateScripts(GObj *gobj, const void *base, u32 size,
@@ -534,7 +534,7 @@ void ndsFtPoseRelease(GObj *gobj)
 {
     NdsFtPose *pose = ndsFtPoseFind(gobj);
 
-    ndsR2AnimPinsDropGObj(gobj);
+    ndsAnimPinsDropGObj(gobj);
     if (pose == NULL)
     {
         return;
@@ -560,7 +560,7 @@ void ndsFtPoseRelease(GObj *gobj)
 
 /* ---- the script cursor (ft/ftanim.c:73, in the port's Q form) ------------ */
 
-/* Exactly (f32)v for v < 2^16 -- `ndsR2U16ToF32` in battleship_ftanim.c. */
+/* Exactly (f32)v for v < 2^16 -- `ndsU16ToF32` in battleship_ftanim.c. */
 static inline f32 ndsFtPoseU16ToF32(u32 v)
 {
     u32 shift;
@@ -610,7 +610,7 @@ static inline NdsFtPoseTrack *ndsFtPoseTrackFor(NdsFtPose *pose,
     /* gcAddAObjForDObj (decomp sys/objman.c:1187): these are distinct source
      * fields. A zero-payload command preserves whichever one it does not
      * write, so they cannot share storage in the compact player. */
-    t->length_invert = 1 << NDS_R2_AQ_IF;
+    t->length_invert = 1 << NDS_AQ_IF;
     t->rate_linear_q = 0;
     t->value_base = 0;
     t->value_target = 0;
@@ -639,7 +639,7 @@ static inline s16 ndsFtPoseArg(s16 arg, u32 i, sb32 value_or_step)
     if ((i == (u32)(nGCAnimTrackTraI - nGCAnimTrackJointStart)) ||
         ((value_or_step != 0) && (i >= 7u)))
     {
-        return (s16)ndsR2FtAnimTargetQ(arg, (s32)i + nGCAnimTrackJointStart,
+        return (s16)ndsFtAnimTargetQ(arg, (s32)i + nGCAnimTrackJointStart,
                                        value_or_step);
     }
     return arg;
@@ -700,7 +700,7 @@ static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
 }
 
 /* The Q30 reciprocal a Cubic segment's `length_invert` takes (P2-2p8,
- * 2026-09-29). ndsR2FtAnimRecipQ30 is a Thumb call into battleship_ftanim.c --
+ * 2026-09-29). ndsFtAnimRecipQ30 is a Thumb call into battleship_ftanim.c --
  * the compile-time reciprocal table, then the f32 -> Q30 conversion -- made
  * for every Cubic track a parse writes, and a status change's first parse
  * writes most of a clip's tracks. Payloads are frame counts, so the first 256
@@ -717,7 +717,7 @@ static void __attribute__((noinline, cold)) ndsFtPoseRecipFill(void)
     sNdsFtPoseRecipQ30[0] = 0;
     for (n = 1u; n < NDS_FT_POSE_RECIP_LUT; n++)
     {
-        sNdsFtPoseRecipQ30[n] = ndsR2FtAnimRecipQ30(n);
+        sNdsFtPoseRecipQ30[n] = ndsFtAnimRecipQ30(n);
     }
     sNdsFtPoseRecipFilled = 1u;
 }
@@ -733,7 +733,7 @@ ndsFtPoseRecipQ30(u32 n)
         }
         return sNdsFtPoseRecipQ30[n];
     }
-    return ndsR2FtAnimRecipQ30(n);
+    return ndsFtAnimRecipQ30(n);
 }
 
 /* Returns the payload word and advances the cursor past the command word and
@@ -763,9 +763,9 @@ ndsFtPoseSeedBase(NdsFtPoseTrack *t, const DObj *dobj, u32 i)
     {
         return;
     }
-    q = ndsR2F32ToFixed(*(const f32 *)(const void *)
+    q = ndsAnimF32ToFixed(*(const f32 *)(const void *)
                             ((const u8 *)dobj + sNdsFtPoseStoreOffset[i]),
-                        NDS_R2_AQ_VF);
+                        NDS_AQ_VF);
     if (t->shift_val != 0u)
     {
         q = (q + (1 << (t->shift_val - 1u))) >> t->shift_val;
@@ -851,7 +851,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->rate_base = t->rate_target;
                 t->rate_target = 0;
-                t->kind = NDS_R2_AQ_KIND_CUBIC;
+                t->kind = NDS_AQ_KIND_CUBIC;
                 ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
@@ -886,7 +886,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
-                t->kind = NDS_R2_AQ_KIND_LINEAR;
+                t->kind = NDS_AQ_KIND_LINEAR;
                 ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
@@ -894,7 +894,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                      * into the Q16 rate -- battleship_ftanim.c's own arm. */
                     s32 d = (((s32)t->value_target << t->shift_val) -
                              ((s32)t->value_base << t->shift_val))
-                            << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
+                            << (NDS_AQ_RF - NDS_AQ_VF);
                     u32 h = payload_u >> 1;
 
                     t->rate_linear_q = (d < 0) ?
@@ -933,7 +933,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->rate_base = t->rate_target;
                 t->rate_target = NDS_FT_POSE_TARGET(1);
-                t->kind = NDS_R2_AQ_KIND_CUBIC;
+                t->kind = NDS_AQ_KIND_CUBIC;
                 ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
@@ -995,10 +995,10 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
-                t->kind = NDS_R2_AQ_KIND_STEP;
+                t->kind = NDS_AQ_KIND_STEP;
                 ndsFtPoseTrackEnableEval(joint, i);
                 /* Step's `length_invert` is a FRAME COUNT in length's scale. */
-                t->length_invert = (s32)payload_u << NDS_R2_AQ_LF;
+                t->length_invert = (s32)payload_u << NDS_AQ_LF;
                 t->length = len_new;
                 t->rate_target = 0;
             }
@@ -1035,7 +1035,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                     continue;
                 }
                 t = ndsFtPoseTrackFor(pose, joint, i);
-                t->length += (s32)payload_u << NDS_R2_AQ_LF;
+                t->length += (s32)payload_u << NDS_AQ_LF;
             }
             break;
 
@@ -1165,14 +1165,14 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
         {
             continue;
         }
-        rb_q = (t->kind == NDS_R2_AQ_KIND_LINEAR) ?
+        rb_q = (t->kind == NDS_AQ_KIND_LINEAR) ?
             t->rate_linear_q : ((s32)t->rate_base << t->shift_rate);
-        value = ndsR2FixedToF32(
-            ndsR2AnimEvalQ(t->length, t->length_invert,
+        value = ndsAnimFixedToF32(
+            ndsAnimEvalQ(t->length, t->length_invert,
                            (s32)t->value_base << t->shift_val,
                            (s32)t->value_target << t->shift_val, rb_q,
                            (s32)t->rate_target << t->shift_rate,
-                           t->kind), NDS_R2_AQ_VF);
+                           t->kind), NDS_AQ_VF);
         evals++;
         /* The nine direct tracks store through an offset table (one load, one
          * store) rather than a ten-way switch; TraI and the translate-scaled
@@ -1292,8 +1292,8 @@ static inline u32 ndsFtPoseWholeStep(NdsFtPose *pose, NdsFtPoseJoint *joint,
     u32 frame;
 
     if ((pose->speed_bits != 0x3f800000u) ||
-        (ndsR2FloatBits(dobj->anim_wait) !=
-         ndsR2FloatBits(NDS_FT_POSE_RUNNING)) ||
+        (ndsAnimFloatBits(dobj->anim_wait) !=
+         ndsAnimFloatBits(NDS_FT_POSE_RUNNING)) ||
         (ndsFtPoseWholeValue(joint->wait_bits, &wait) == 0u) ||
         (wait < 2u) ||
         (ndsFtPoseWholeValue(joint->frame_bits, &frame) == 0u))
@@ -1357,7 +1357,7 @@ ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
     }
     if (pose->gobj_frame_pending != 0u)
     {
-        pose->clock_gobj->anim_frame = ndsR2AQStore((s32)pose->gobj_frame_bits);
+        pose->clock_gobj->anim_frame = ndsAQStore((s32)pose->gobj_frame_bits);
     }
 }
 
@@ -1382,8 +1382,8 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
         const f32 speed = (root->child != NULL) ? root->child->anim_speed :
                                                   root->anim_speed;
 
-        pose->speed_q = ndsR2F32ToFixed(speed, NDS_R2_AQ_LF);
-        pose->speed_bits = ndsR2FloatBits(speed);
+        pose->speed_q = ndsAnimF32ToFixed(speed, NDS_AQ_LF);
+        pose->speed_bits = ndsAnimFloatBits(speed);
     }
     pose->gobj_frame_pending = 0u;
 
@@ -1481,7 +1481,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
     }
     if (pose->gobj_frame_pending != 0u)
     {
-        pose->clock_gobj->anim_frame = ndsR2AQStore((s32)pose->gobj_frame_bits);
+        pose->clock_gobj->anim_frame = ndsAQStore((s32)pose->gobj_frame_bits);
     }
 }
 
@@ -1546,7 +1546,7 @@ ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
     (void)gNdsFtPoseTrackOverflow;
     (void)gNdsFtPoseRunMaskFallbacks;
     {
-        u32 live = ndsR2AObjLiveCount();
+        u32 live = ndsAObjLiveCount();
 
         if (live > gNdsFtPoseAObjLiveMax)
         {

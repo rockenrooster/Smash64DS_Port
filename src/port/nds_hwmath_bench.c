@@ -23,7 +23,7 @@
  * number below as a lower bound on the in-situ cost and an upper bound on the
  * saving.
  *
- * THE BASELINE ARM IS NOT OPTIONAL. gNdsR2HwMathBenchBaseTicks times the loop,
+ * THE BASELINE ARM IS NOT OPTIONAL. gNdsHwMathBenchBaseTicks times the loop,
  * the operand generator and the sink store with no kernel at all. Every other
  * arm's honest cost is its own ticks minus that one. Reporting an arm's raw
  * ticks would charge each kernel for an LCG it does not have.
@@ -33,7 +33,7 @@
  * is directly comparable with SIMSIDE.md section 3's tk/call column
  * (__aeabi_fdiv 59.19, sqrtf 144.62, __aeabi_fmul 13.23).
  *
- * LAB ONLY. NDS_R2_HWMATH_BENCH defaults to 0 and at 0 this translation unit is
+ * LAB ONLY. NDS_HWMATH_BENCH defaults to 0 and at 0 this translation unit is
  * not linked at all, so a published ROM is byte-identical with or without it.
  */
 

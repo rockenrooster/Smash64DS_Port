@@ -1297,11 +1297,11 @@ Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
  * below is unchanged from lbcommon.c:321 and :340 -- including cos adding 90
  * degrees to the ANGLE before the multiply, which is not the same as adding
  * 0x400 to the index after it. */
-#include <nds/nds_r2_collision_fixed.h>
+#include <nds/nds_collision_fixed.h>
 
 /* P2-2p8 (2026-09-29): the same two expressions without soft float.
  *
- * `(s32)(x * 651.8986206F)` is ndsR2CfxAngleIndexBits' rounded integer
+ * `(s32)(x * 651.8986206F)` is ndsCfxAngleIndexBits' rounded integer
  * product (proven equal to the float expression over every binary32 input
  * whose product fits s32; the rest still evaluate the float expression), and
  * `(f32)v * (1.0F / 32768.0F)` of a u16 table entry is exact -- float(v)
@@ -1320,7 +1320,7 @@ ndsLbCommonSinTableBits(f32 x)
     u32 out = 0u;
 
     __builtin_memcpy(&bits, &x, sizeof(bits));
-    if (ndsR2CfxAngleIndexBits(bits, &index) == 0)
+    if (ndsCfxAngleIndexBits(bits, &index) == 0)
     {
         index = (s32)(x * 651.8986206F);
     }

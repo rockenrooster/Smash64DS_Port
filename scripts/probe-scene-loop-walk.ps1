@@ -17,7 +17,7 @@ param(
 )
 
 # P2-1b leak evidence. Reads the scene manager's per-entry arena ring out of a
-# ROM built with NDS_R2_SCENE_LOOP_WALK=<loops>, which drives
+# ROM built with NDS_SCENE_LOOP_WALK=<loops>, which drives
 # menu -> battle -> results -> menu automatically instead of parking.
 #
 # WHAT THE NUMBERS MEAN. `syTaskmanStartTask` rewinds the taskman general arena
@@ -53,7 +53,7 @@ if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
     throw "scene-loop-walk probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
 $walkMatch = [regex]::Match((Get-Content -LiteralPath $buildConfig -Raw),
-    '(?m)^#define\s+NDS_R2_SCENE_LOOP_WALK\s+(\d+)u?$')
+    '(?m)^#define\s+NDS_SCENE_LOOP_WALK\s+(\d+)u?$')
 $walkValue = if ($walkMatch.Success) { $walkMatch.Groups[1].Value } else { 'absent' }
 $walkRequested = ($walkValue -ne '0') -and ($walkValue -ne 'absent')
 if (-not $walkRequested) {
@@ -61,12 +61,12 @@ if (-not $walkRequested) {
         # Asking for the walk and silently measuring a ROM that parks after one
         # scene would read as "no leak" having exercised one entry.
         throw ("scene-loop-walk probe: $Build was built with " +
-            "NDS_R2_SCENE_LOOP_WALK=$walkValue, so the ROM does not close the " +
+            "NDS_SCENE_LOOP_WALK=$walkValue, so the ROM does not close the " +
             'loop on its own. Pass -AllowNoWalk to read the ring anyway.')
     }
-    Write-Output 'build config: NDS_R2_SCENE_LOOP_WALK=0 (-AllowNoWalk): reading the ROM own scene sequence, not a loop.'
+    Write-Output 'build config: NDS_SCENE_LOOP_WALK=0 (-AllowNoWalk): reading the ROM own scene sequence, not a loop.'
 } else {
-    Write-Output ("build config: NDS_R2_SCENE_LOOP_WALK={0}" -f $walkValue)
+    Write-Output ("build config: NDS_SCENE_LOOP_WALK={0}" -f $walkValue)
 }
 
 $required = @(
@@ -88,7 +88,7 @@ $required = @(
     'gNdsSceneManagerRingTransition'
 )
 # The walk counters are referenced only by the walk tails, so --gc-sections
-# drops them from a NDS_R2_SCENE_LOOP_WALK=0 build even though they carry
+# drops them from a NDS_SCENE_LOOP_WALK=0 build even though they carry
 # __attribute__((used)) -- `used` binds the compiler, not the linker. Required
 # when the walk is compiled in, absent by construction when it is not.
 if ($walkRequested) {

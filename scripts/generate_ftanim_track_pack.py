@@ -3,8 +3,8 @@
 prove the rows reproduce the shipped parser exactly.
 
 Task 3 of the owner's queue: *animation representation*. The measured mechanism
-is the PARSE half of the animation lane -- `ndsR2FtAnimParseDObjFigatree` +
-`ndsR2AnimBuildTrackTable` + `ndsR2AnimTargetValue` + `ndsR2AnimAObjToQConvert`,
+is the PARSE half of the animation lane -- `ndsFtAnimParseDObjFigatree` +
+`ndsAnimBuildTrackTable` + `ndsAnimTargetValue` + `ndsAnimAObjToQConvert`,
 41,376 tk/fr at rank-80 on `build-c192-sitr-profile-gxc`
 (`artifacts/performance/2026-08-15_sitr-direct-children/`). It re-derives AObj
 node fields from static ROM bytes 96.94 times a marginal frame.
@@ -20,9 +20,9 @@ the row stores only what is authored: the kind, the track mask, the frame count
 and the s16 target words.
 
 AUTHORED VALUES ARE STORED UNCHANGED, and that is a size result as much as a
-fidelity one. `ndsR2AnimTargetValue` scales an s16 by a per-track power of two,
+fidelity one. `ndsAnimTargetValue` scales an s16 by a per-track power of two,
 so the Q12 word it writes needs up to 26 bits and is a pure left shift of the
-authored word (`ndsR2AnimArgToQ`, `nds_anim_fixed.h:166`). Storing the s16 and
+authored word (`ndsAnimArgToQ`, `nds_anim_fixed.h:166`). Storing the s16 and
 shifting at run time is exact AND half the size of storing the Q word.
 
 THE PROOF HAS THREE LAYERS, because a single one of them would be a tautology.
@@ -40,7 +40,7 @@ THE PROOF HAS THREE LAYERS, because a single one of them would be a tautology.
      side can see the other's input, which is what makes this a test.
   C. QUANTISATION EXACTNESS. Layers A and B are representation independent, so
      they would still pass if the runtime shift were wrong. Layer C closes that
-     by evaluating the shipped `ndsR2AnimTargetValue(..., q=1)` expression over
+     by evaluating the shipped `ndsAnimTargetValue(..., q=1)` expression over
      every (track, value-or-rate, authored word) triple the corpus actually
      contains and comparing it to the shift the runtime would apply.
 
@@ -133,13 +133,13 @@ model = _load("ftanim_script_model")
 # The shipped quantisation, in Python, for layer C.
 
 def f32_to_fixed(v: float, bits: int) -> int:
-    """`ndsR2F32ToFixed` -- round to nearest, magnitude symmetric."""
+    """`ndsAnimF32ToFixed` -- round to nearest, magnitude symmetric."""
     scaled = v * (1 << bits)
     return int(scaled + 0.5) if scaled >= 0 else -int(-scaled + 0.5)
 
 
 def arg_to_q(arg: int, shift: int) -> int:
-    """`ndsR2AnimArgToQ` (nds_anim_fixed.h:166)."""
+    """`ndsAnimArgToQ` (nds_anim_fixed.h:166)."""
     if shift >= 0:
         return arg << shift
     mag = -arg if arg < 0 else arg
@@ -148,7 +148,7 @@ def arg_to_q(arg: int, shift: int) -> int:
 
 
 def target_value_q(arg: int, bit: int, is_rate: bool) -> int:
-    """`ndsR2AnimTargetValue(arg, bit + JointStart, is_rate, q=1)`, verbatim."""
+    """`ndsAnimTargetValue(arg, bit + JointStart, is_rate, q=1)`, verbatim."""
     tid = TRACK_ID[bit] + (4 if is_rate else 0)
     if tid in (3, 7):
         return f32_to_fixed(arg * TRAI_SCALE, AQ_VF)
@@ -410,7 +410,7 @@ def replay(rows, start, limit, anim_speed=1.0, break_chain=False):
             m >>= 1
         if is_block or kind == K_BLOCK:
             # A `*Block` command with the toggle clear carries no payload word
-            # and advances the clock by zero -- `NDS_R2_FTANIM_PAYLOAD()` sets
+            # and advances the clock by zero -- `NDS_FTANIM_PAYLOAD()` sets
             # `payload_u = 0` in that case, so the add still happens.
             anim_wait += (frames or 0)
         states.append(d.snapshot())
@@ -585,7 +585,7 @@ def _note(ex, clip, si, why):
 
 def layer_c(clips):
     """Every (track, value/rate, authored word) the corpus contains, checked
-    against the shipped `ndsR2AnimTargetValue(..., q=1)` expression."""
+    against the shipped `ndsAnimTargetValue(..., q=1)` expression."""
     alphabet = set()
     for clip in clips:
         for cmds in clip["scripts"]:
@@ -806,9 +806,9 @@ def verify_c_pack(chosen, rows, entries, dirs):
 
 
 def nds_f32_to_fixed(v: float, bits: int) -> int:
-    """`ndsR2F32ToFixed` (nds_anim_fixed.h:114) BIT FOR BIT, not an approximation.
+    """`ndsAnimF32ToFixed` (nds_anim_fixed.h:114) BIT FOR BIT, not an approximation.
 
-    The dense stepper replaces `ndsR2AnimRecipSlot(payload, 1)` -- a table read
+    The dense stepper replaces `ndsAnimRecipSlot(payload, 1)` -- a table read
     plus this conversion, on the hot path -- with one `ldr` from the table
     emitted below. That is only a deletion if the emitted word is the SAME word,
     so this reproduces the shipped algorithm rather than `round(v * 2**bits)`.
@@ -833,7 +833,7 @@ def nds_f32_to_fixed(v: float, bits: int) -> int:
 
 
 def recip_q_table(n=256):
-    """`sNdsR2Recip[i]` folded to Q30, the word the Cubic arms store in
+    """`sNdsRecip[i]` folded to Q30, the word the Cubic arms store in
     `length_invert`. Entry 0 is a placeholder -- every reader is guarded by a
     payload-not-zero test, exactly as in the shipped parser."""
     out = [0]
@@ -878,9 +878,9 @@ def emit_c(path, chosen, rows, entries, dirs, sizes, budget):
         out.append("    " + " ".join("0x%04xu," % w for w in u16[i:i + 12]))
     out.append("};")
     out.append("")
-    out.append("/* `ndsR2AnimRecipSlot(n, 1)` precomputed: the Q30 reciprocal the")
+    out.append("/* `ndsAnimRecipSlot(n, 1)` precomputed: the Q30 reciprocal the")
     out.append(" * Cubic arms store in `length_invert`, produced by this file's")
-    out.append(" * bit-for-bit model of `ndsR2F32ToFixed`. The dense stepper reads")
+    out.append(" * bit-for-bit model of `ndsAnimF32ToFixed`. The dense stepper reads")
     out.append(" * it instead of running the conversion per row. */")
     out.append("static const s32 sNdsFtAnimTrackRecipQ[256] = {")
     tab = recip_q_table()

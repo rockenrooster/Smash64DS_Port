@@ -218,7 +218,7 @@ static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
 /* Task 37: 132 bytes at 8.54 cycles per instruction, called from every texture
  * bind and resolve. Small, hot, and reached from many different call sites --
  * the shape that never stays resident in a shared instruction cache. */
-static u32 NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwareTextureSourceBytes(
+static u32 NDS_ITCM_PACK2_EVICTED_PLAIN_CODE ndsRendererHardwareTextureSourceBytes(
     u32 format, u32 size, u32 texels)
 {
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)

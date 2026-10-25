@@ -551,7 +551,7 @@ void grCommonSetupInitAll(void)
          * has since been rewound. Nulling here is before ndsBaseGRCommonSetupInitAll
          * builds the ground, so it is ahead of every reader.
          *
-         * Inert today only because NDS_R2_PARTICLE_RUNTIME=0 makes the
+         * Inert today only because NDS_PARTICLE_RUNTIME=0 makes the
          * constructor a stub returning NULL, so the guard skips and nothing is
          * dereferenced. It arms itself the moment that flag goes to 1, which is
          * the first thing R2-07 clause 2 does -- so this is a precondition of

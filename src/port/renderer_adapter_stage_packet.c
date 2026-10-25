@@ -1119,13 +1119,13 @@ static void ndsRendererAdapterValidateHwStageWorld(
              rigid_slot < workspace->steady_rigid_binding_count;
              rigid_slot++)
         {
-            if ((rigid_slot % NDS_R2_STAGE_VALIDATE_STRIDE) !=
+            if ((rigid_slot % NDS_STAGE_VALIDATE_STRIDE) !=
                 workspace->slice44_validate_cursor)
             {
-                NDS_DIAG(gNdsR2Slice44RigidSkips++);
+                NDS_DIAG(gNdsSlice44RigidSkips++);
                 continue;
             }
-            NDS_DIAG(gNdsR2Slice44RigidChecks++);
+            NDS_DIAG(gNdsSlice44RigidChecks++);
             binding_index = workspace->steady_rigid_bindings[rigid_slot];
             if (ndsRendererAdapterStageWorldSourceKeyMatches(
                     workspace->binding_dobjs[binding_index],
@@ -1452,7 +1452,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * in phase and every frame does the same amount of work. */
     workspace->slice44_validate_cursor =
         (u8)((workspace->slice44_validate_cursor + 1u) %
-             NDS_R2_STAGE_VALIDATE_STRIDE);
+             NDS_STAGE_VALIDATE_STRIDE);
     ndsRendererAdapterValidateHwStageWorld(workspace);
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
@@ -1670,7 +1670,7 @@ void ndsRendererAdapterFinishNativeStageOwner(void)
 /* Always compiled, unlike the validator below: this counts how often the
  * material write walk's capacity guard actually fires, and a guard whose hit
  * count nobody can read is indistinguishable from one that never runs. */
-volatile u32 gNdsR2MaterialWalkBoundHits;
+volatile u32 gNdsMaterialWalkBoundHits;
 
 
 /* Cycle 110. The fighter material snapshot is a pure function of `mobj->sub`
@@ -1703,15 +1703,15 @@ volatile u32 gNdsR2MaterialWalkBoundHits;
  * reach the census inside the build wrapper, and the hierarchy call site passes
  * no keys, so a skipping production path and a never-skipping one can produce
  * the same census. These two count the decision itself. */
-volatile u32 gNdsR2MatKeySkip;
-volatile u32 gNdsR2MatKeyBuild;
+volatile u32 gNdsMatKeySkip;
+volatile u32 gNdsMatKeyBuild;
 /* And WHY a build happened, because the two answers point at different fixes.
  * Identity: the row holds a different MObj than last frame, so the block for
  * this one is sitting in some other row -- fix is a stable row assignment.
  * Inputs: same MObj, hash moved -- fix would be a narrower key, which is
  * already refuted. Guessing between them once cost a build. */
-volatile u32 gNdsR2MatKeyMissIdentity;
-volatile u32 gNdsR2MatKeyMissInputs;
+volatile u32 gNdsMatKeyMissIdentity;
+volatile u32 gNdsMatKeyMissInputs;
 #endif
 
 /* Hashes all 30 words of MObjSub, including the six the builder never reads
@@ -1917,7 +1917,7 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
              * cannot both be true. This counter is what tells them apart: a run
              * that is freeze-free with this still at zero proves the guard was
              * not the cure and the real cause is still live. */
-            NDS_DIAG(gNdsR2MaterialWalkBoundHits++);
+            NDS_DIAG(gNdsMaterialWalkBoundHits++);
             /* Report what the snapshot holds so the caller rolls back exactly
              * the entries this walk mutated, no more and no fewer. */
             *out_count = count;
@@ -1942,20 +1942,20 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
                 (keys[count].hash == hash))
             {
 #if NDS_TICK_HUD
-                NDS_DIAG(gNdsR2MatKeySkip++);
+                NDS_DIAG(gNdsMatKeySkip++);
 #endif
                 count++;
                 continue;
             }
 #if NDS_TICK_HUD
-            NDS_DIAG(gNdsR2MatKeyBuild++);
+            NDS_DIAG(gNdsMatKeyBuild++);
             if (keys[count].mobj != mobj)
             {
-                NDS_DIAG(gNdsR2MatKeyMissIdentity++);
+                NDS_DIAG(gNdsMatKeyMissIdentity++);
             }
             else
             {
-                NDS_DIAG(gNdsR2MatKeyMissInputs++);
+                NDS_DIAG(gNdsMatKeyMissInputs++);
             }
 #endif
         }
@@ -2453,7 +2453,7 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
     {
         /* P2-3f9. THE ONE UNBOUNDED GRAPHICS-HEAP WRITER, MADE COUNTABLE.
          * Every other writer on this port has a source bound (see the note on
-         * NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES in battleship_scvsbattle.c);
+         * NDS_VSBATTLE_GRAPHICS_ARENA_BYTES in battleship_scvsbattle.c);
          * this table is sized by the DObj's own material chain and so cannot
          * be bounded from a header. It has always refused rather than
          * overrun -- which is why an undersized heap shows up here as a

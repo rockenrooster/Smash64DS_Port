@@ -22,8 +22,8 @@
 #include <nds/nds_gx_dma.h>
 #include <nds/generated/nds_fighter_admission.generated.h>
 #include <nds/nds_reloc_assets.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fixed_convert.h>
 
 /* Slice 2b BSS diet: the per-root arrays hold the most DL-bearing joints any
@@ -497,7 +497,7 @@ static inline s32 ndsFtrLeanLockInv(u32 axis, s32 inv)
     if (inv != sNdsFtrLeanLockInvIn[axis])
     {
         sNdsFtrLeanLockInvOut[axis] =
-            (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv);
+            (s32)ndsHwMathDivideFast((s64)1 << 24, inv);
         sNdsFtrLeanLockInvIn[axis] = inv;
     }
     return sNdsFtrLeanLockInvOut[axis];
@@ -554,12 +554,12 @@ ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
     inv_x = accum[0];
     inv_y = accum[1];
     inv_z = accum[2];
-    cells[9] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.x, 16u);
-    cells[10] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.y, 16u);
-    cells[11] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.z, 16u);
-    if ((cells[9] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (cells[10] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (cells[11] == NDS_R2_COLLISION_F32_OVERFLOW))
+    cells[9] = ndsCollisionF32ToFixed(dobj->translate.vec.f.x, 16u);
+    cells[10] = ndsCollisionF32ToFixed(dobj->translate.vec.f.y, 16u);
+    cells[11] = ndsCollisionF32ToFixed(dobj->translate.vec.f.z, 16u);
+    if ((cells[9] == NDS_COLLISION_F32_OVERFLOW) ||
+        (cells[10] == NDS_COLLISION_F32_OVERFLOW) ||
+        (cells[11] == NDS_COLLISION_F32_OVERFLOW))
     {
         gNdsFtrLeanLockFail |= 4u;
         return FALSE;
@@ -588,11 +588,11 @@ ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
         gNdsFtrLeanLockFail |= 16u;
         return FALSE;
     }
-    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.x, 16u);
+    s = ndsCollisionF32ToFixed(dobj->scale.vec.f.x, 16u);
     vec_x = (s32)(((s64)s * inv_x) >> 16);
-    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.y, 16u);
+    s = ndsCollisionF32ToFixed(dobj->scale.vec.f.y, 16u);
     vec_y = (s32)(((s64)s * inv_y) >> 16);
-    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.z, 16u);
+    s = ndsCollisionF32ToFixed(dobj->scale.vec.f.z, 16u);
     vec_z = (s32)(((s64)s * inv_z) >> 16);
     if ((vec_x < 0) || (vec_y < 0) || (vec_z < 0) ||
         (vec_x >= (64 << 16)) || (vec_y >= (64 << 16)) ||
@@ -2216,8 +2216,8 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         /* The old path latches this every draw; so does the lean one, so the
          * statics read after this draw are the same in both routes. */
         ndsRendererAdapterSetShuffleOffset(fp);
-        shuffle_x = sNdsR2ShuffleWorldX;
-        shuffle_y = sNdsR2ShuffleWorldY;
+        shuffle_x = sNdsShuffleWorldX;
+        shuffle_y = sNdsShuffleWorldY;
         NDS_FTR_LEAN_GUARD_PART(6u, mark);
         t1 = NDS_FTR_LEAN_CLOCK();
         NDS_FTR_LEAN_TCTR(gNdsFtrLean.guard_ticks += t1 - t0);

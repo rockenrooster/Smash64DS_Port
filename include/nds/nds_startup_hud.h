@@ -377,7 +377,7 @@ extern volatile u32 gNdsPainterSlotFgOverBand;
  * it had already computed?
  *
  * The stage settled exactly this question for free with
- * gNdsR2StagePrepareReuseCount/BuildCount at 99.9% reuse (cycle 93). The
+ * gNdsStagePrepareReuseCount/BuildCount at 99.9% reuse (cycle 93). The
  * fighter owner validate had no such pair, so a cache hit and a cache miss were
  * indistinguishable and any deletion here would have been a guess. */
 extern volatile u32 gNdsFtrPreValidateReuse;

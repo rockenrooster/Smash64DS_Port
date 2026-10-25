@@ -715,7 +715,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
         u32 use_texture;
         u32 triangle;
         u32 use_gx_group =
-            ((NDS_R2_REBIRTH_HALO_GX_GROUP_MASK & (1u << group_index)) != 0u) ?
+            ((NDS_REBIRTH_HALO_GX_GROUP_MASK & (1u << group_index)) != 0u) ?
                 TRUE : FALSE;
         u32 use_hw_light = FALSE;
 

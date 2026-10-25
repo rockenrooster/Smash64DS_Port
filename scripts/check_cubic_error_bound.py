@@ -12,16 +12,16 @@ gameplay moved.
 The right instrument for a non-bit-exact change is an error bound. This is it.
 
 It extracts the shipped kernels out of `src/import/battleship_sys_objanim.c`
-between the `NDS_R2_CUBIC_FIXED_KERNEL_BEGIN/END` markers, prepends
+between the `NDS_CUBIC_FIXED_KERNEL_BEGIN/END` markers, prepends
 `include/nds/nds_anim_fixed.h`, takes the reference out of the decomp verbatim,
 compiles them on the host, and sweeps the input domain the animation data
 actually produces. Extraction, not a copy, so the bound is always measured
 against the code that ships.
 
-Cycle 116 (Requirement 4) added a second candidate: `ndsR2AnimValueQ`, which
+Cycle 116 (Requirement 4) added a second candidate: `ndsAnimValueQ`, which
 reads an AObj that is ALREADY fixed point, and the parser half that writes it.
 The parser half is checked EXHAUSTIVELY rather than bounded -- over all 65,536
-s16 arguments on each of the six power-of-two tracks, `ndsR2AnimArgToQ` must
+s16 arguments on each of the six power-of-two tracks, `ndsAnimArgToQ` must
 produce the same Q12 integer the shipped float path produces by converting
 `arg * 2^-k`. If that holds, the Q form's four value inputs are not an
 approximation at all, and the only thing left to bound is `t` and `length`.
@@ -30,7 +30,7 @@ The host models the N64 faithfully for this purpose: both are IEEE-754 single
 precision, round-to-nearest.
 
 Usage:
-    python scripts/check_r2_cubic_error_bound.py [--json PATH] [--verbose]
+    python scripts/check_cubic_error_bound.py [--json PATH] [--verbose]
 """
 
 import argparse
@@ -52,8 +52,8 @@ FTANIM_PORT = os.path.join(ROOT, "src", "import", "battleship_ftanim.c")
 FTANIM_DECOMP = os.path.join(
     ROOT, "decomp", "BattleShip-main", "decomp", "src", "ft", "ftanim.c"
 )
-BEGIN = "NDS_R2_CUBIC_FIXED_KERNEL_BEGIN"
-END = "NDS_R2_CUBIC_FIXED_KERNEL_END"
+BEGIN = "NDS_CUBIC_FIXED_KERNEL_BEGIN"
+END = "NDS_CUBIC_FIXED_KERNEL_END"
 
 # The gate. A joint value reaches gameplay only through
 # gmCollisionGetFighterPartsWorldPosition (gm/gmcollision.c:489), which places
@@ -78,7 +78,7 @@ def extract_kernel() -> str:
     # The BEGIN marker sits inside a comment block; start after that block
     # closes, or the remaining prose leaks in as code.
     body = text[text.index("*/", begin) + 2 : text.rfind("/*", begin, end)]
-    for name in ("ndsR2CubicValueFixed", "ndsR2AnimValueQ"):
+    for name in ("ndsCubicValueFixed", "ndsAnimValueQ"):
         if name not in body:
             sys.exit("FAIL: extracted region does not contain %s." % name)
     return body
@@ -102,19 +102,19 @@ def extract_header() -> str:
             continue
         if stripped.startswith("#endif /* NDS_ANIM_FIXED_H */"):
             continue
-        if stripped.startswith("extern volatile u32 gNdsR2CubicSaturations"):
+        if stripped.startswith("extern volatile u32 gNdsCubicSaturations"):
             continue
         out.append(line)
     body = "\n".join(out)
-    for name in ("ndsR2AQLoad", "ndsR2AQStore", "ndsR2AnimArgToQ",
-                 "ndsR2F32ToFixed", "NDS_R2_AQ_IF"):
+    for name in ("ndsAQLoad", "ndsAQStore", "ndsAnimArgToQ",
+                 "ndsAnimF32ToFixed", "NDS_AQ_IF"):
         if name not in body:
             sys.exit("FAIL: %s missing from %s." % (name, ANIM_HEADER))
     return body
 
 
 def extract_frac_tables():
-    """The decomp's `fracs[]` and the port's `sNdsR2AnimFracShift[]`, read from
+    """The decomp's `fracs[]` and the port's `sNdsAnimFracShift[]`, read from
     source. Hardcoding either here would let the shipped table drift away from
     the one this checker proves exhaustive agreement against, which is the only
     way this check could silently stop meaning anything."""
@@ -132,16 +132,16 @@ def extract_frac_tables():
 
     port = open(FTANIM_PORT, encoding="utf-8", errors="replace").read()
     match = re.search(
-        r"sNdsR2AnimFracShift\[8\]\s*=\s*\{([^}]*)\}", port
+        r"sNdsAnimFracShift\[8\]\s*=\s*\{([^}]*)\}", port
     )
     if not match:
-        sys.exit("FAIL: sNdsR2AnimFracShift not found in %s." % FTANIM_PORT)
+        sys.exit("FAIL: sNdsAnimFracShift not found in %s." % FTANIM_PORT)
     shifts = [
         int(entry.strip().rstrip("u"))
         for entry in match.group(1).split(",") if entry.strip()
     ]
     if len(shifts) != 8:
-        sys.exit("FAIL: sNdsR2AnimFracShift has %d entries." % len(shifts))
+        sys.exit("FAIL: sNdsAnimFracShift has %d entries." % len(shifts))
     return fracs, shifts
 
 
@@ -183,14 +183,14 @@ typedef struct AObj {
     u8 kind;
 } AObj;
 
-static unsigned int gNdsR2CubicEvals;
-static volatile u32 gNdsR2CubicSaturations;
+static unsigned int gNdsCubicEvals;
+static volatile u32 gNdsCubicSaturations;
 
 /* The standing-rule-7 A/B route gate the kernels read. Defined the way a
  * PUBLISHED build defines it -- constant 1 -- so the bound is measured on the
  * FUSED path, the only arm whose error needs bounding: route 0 is the decomp's
  * own float expression, whose deviation from itself is zero by construction. */
-#define NDS_R2_ANIM_CUT_ON(bit) (1)
+#define NDS_ANIM_CUT_ON(bit) (1)
 
 /* ---- include/nds/nds_anim_fixed.h, inlined from disk ---- */
 __HEADER__
@@ -201,7 +201,7 @@ __REFERENCE__
 /* ---- candidates, extracted from the shipped TU ---- */
 __KERNEL__
 
-/* The decomp's own `fracs[]` and the port's `sNdsR2AnimFracShift[]`, both read
+/* The decomp's own `fracs[]` and the port's `sNdsAnimFracShift[]`, both read
  * out of source by the driver rather than retyped here. */
 static const f32 FRACS[8] = { __FRACS__ };
 static const int FRAC_SHIFT[8] = { __FRACSHIFT__ };
@@ -237,7 +237,7 @@ static void account(f32 ref, f32 got, const AObj *at, double slope,
     if (!isfinite((double)ref)) {
         return;
     }
-    if (gNdsR2CubicSaturations != sat_before) {
+    if (gNdsCubicSaturations != sat_before) {
         saturating++;
         return;             /* saturation is its own report, not an error bar */
     }
@@ -260,7 +260,7 @@ static void probe(f32 li, f32 L, f32 vb, f32 vt, f32 rb, f32 rt)
     AObj a;
     AObj shown;
     f32 ref, got;
-    unsigned int sat_before = gNdsR2CubicSaturations;
+    unsigned int sat_before = gNdsCubicSaturations;
     double slope = fabs((double)rb) > fabs((double)rt) ?
         fabs((double)rb) : fabs((double)rt);
 
@@ -277,17 +277,17 @@ static void probe(f32 li, f32 L, f32 vb, f32 vt, f32 rb, f32 rt)
         /* Built the way the Q PARSER builds it: a Q30 reciprocal, Q12 frames,
          * Q12 values. This measures the STORAGE change and the kernel together,
          * which is the only honest way to price a representation change. */
-        a.kind = (u8)NDS_R2_AQ_KIND_CUBIC;
-        a.length_invert = ndsR2AQStore(ndsR2F32ToFixed(li, NDS_R2_AQ_IF));
-        a.length = ndsR2AQStore(ndsR2F32ToFixed(L, NDS_R2_AQ_LF));
-        a.value_base = ndsR2AQStore(ndsR2F32ToFixed(vb, NDS_R2_AQ_VF));
-        a.value_target = ndsR2AQStore(ndsR2F32ToFixed(vt, NDS_R2_AQ_VF));
-        a.rate_base = ndsR2AQStore(ndsR2F32ToFixed(rb, NDS_R2_AQ_VF));
-        a.rate_target = ndsR2AQStore(ndsR2F32ToFixed(rt, NDS_R2_AQ_VF));
-        got = ndsR2AnimValueQ(&a);
+        a.kind = (u8)NDS_AQ_KIND_CUBIC;
+        a.length_invert = ndsAQStore(ndsAnimF32ToFixed(li, NDS_AQ_IF));
+        a.length = ndsAQStore(ndsAnimF32ToFixed(L, NDS_AQ_LF));
+        a.value_base = ndsAQStore(ndsAnimF32ToFixed(vb, NDS_AQ_VF));
+        a.value_target = ndsAQStore(ndsAnimF32ToFixed(vt, NDS_AQ_VF));
+        a.rate_base = ndsAQStore(ndsAnimF32ToFixed(rb, NDS_AQ_VF));
+        a.rate_target = ndsAQStore(ndsAnimF32ToFixed(rt, NDS_AQ_VF));
+        got = ndsAnimValueQ(&a);
     } else {
         a = shown;
-        got = ndsR2CubicValueFixed(&a);
+        got = ndsCubicValueFixed(&a);
     }
     account(ref, got, &shown, slope * (double)L, sat_before);
 }
@@ -356,9 +356,9 @@ static void sweep_linear(const float *mags, size_t mag_count)
                         float vb = sb ? -mags[bi] : mags[bi];
                         float vt = st ? -mags[ti] : mags[ti];
                         float rate = (vt - vb) / (float)payload;
-                        s32 qvb = ndsR2F32ToFixed(vb, NDS_R2_AQ_VF);
-                        s32 qvt = ndsR2F32ToFixed(vt, NDS_R2_AQ_VF);
-                        s32 d = (qvt - qvb) << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
+                        s32 qvb = ndsAnimF32ToFixed(vb, NDS_AQ_VF);
+                        s32 qvt = ndsAnimF32ToFixed(vt, NDS_AQ_VF);
+                        s32 d = (qvt - qvb) << (NDS_AQ_RF - NDS_AQ_VF);
                         u32 h = (u32)payload >> 1;
                         s32 qr = (d < 0) ?
                             -(s32)(((u32)(-d) + h) / (u32)payload) :
@@ -366,7 +366,7 @@ static void sweep_linear(const float *mags, size_t mag_count)
                         for (step = 0; step <= payload; step++) {
                             AObj a;
                             AObj shown;
-                            unsigned int sat_before = gNdsR2CubicSaturations;
+                            unsigned int sat_before = gNdsCubicSaturations;
                             f32 L = (f32)step;
                             f32 ref = vb + (L * rate);
 
@@ -379,15 +379,15 @@ static void sweep_linear(const float *mags, size_t mag_count)
                             shown.kind = 0;
 
                             a = shown;
-                            a.kind = (u8)NDS_R2_AQ_KIND_LINEAR;
-                            a.length = ndsR2AQStore(
-                                ndsR2F32ToFixed(L, NDS_R2_AQ_LF));
-                            a.value_base = ndsR2AQStore(qvb);
-                            a.value_target = ndsR2AQStore(qvt);
-                            a.rate_base = ndsR2AQStore(qr);
-                            a.rate_target = ndsR2AQStore(0);
-                            a.length_invert = ndsR2AQStore(0);
-                            account(ref, ndsR2AnimValueQ(&a), &shown,
+                            a.kind = (u8)NDS_AQ_KIND_LINEAR;
+                            a.length = ndsAQStore(
+                                ndsAnimF32ToFixed(L, NDS_AQ_LF));
+                            a.value_base = ndsAQStore(qvb);
+                            a.value_target = ndsAQStore(qvt);
+                            a.rate_base = ndsAQStore(qr);
+                            a.rate_target = ndsAQStore(0);
+                            a.length_invert = ndsAQStore(0);
+                            account(ref, ndsAnimValueQ(&a), &shown,
                                     fabs((double)rate) * (double)L, sat_before);
                         }
                     }
@@ -421,23 +421,23 @@ static long long step_mismatches(const float *mags, size_t mag_count,
                             AObj a;
                             f32 L = (f32)step;
                             f32 ref = ((float)payload <= L) ? vt : vb;
-                            f32 refq = ndsR2FixedToF32(
-                                ndsR2F32ToFixed(ref, NDS_R2_AQ_VF),
-                                NDS_R2_AQ_VF);
+                            f32 refq = ndsAnimFixedToF32(
+                                ndsAnimF32ToFixed(ref, NDS_AQ_VF),
+                                NDS_AQ_VF);
 
-                            a.kind = (u8)NDS_R2_AQ_KIND_STEP;
+                            a.kind = (u8)NDS_AQ_KIND_STEP;
                             a.length_invert =
-                                ndsR2AQStore(payload << NDS_R2_AQ_LF);
-                            a.length = ndsR2AQStore(
-                                ndsR2F32ToFixed(L, NDS_R2_AQ_LF));
-                            a.value_base = ndsR2AQStore(
-                                ndsR2F32ToFixed(vb, NDS_R2_AQ_VF));
-                            a.value_target = ndsR2AQStore(
-                                ndsR2F32ToFixed(vt, NDS_R2_AQ_VF));
-                            a.rate_base = ndsR2AQStore(0);
-                            a.rate_target = ndsR2AQStore(0);
+                                ndsAQStore(payload << NDS_AQ_LF);
+                            a.length = ndsAQStore(
+                                ndsAnimF32ToFixed(L, NDS_AQ_LF));
+                            a.value_base = ndsAQStore(
+                                ndsAnimF32ToFixed(vb, NDS_AQ_VF));
+                            a.value_target = ndsAQStore(
+                                ndsAnimF32ToFixed(vt, NDS_AQ_VF));
+                            a.rate_base = ndsAQStore(0);
+                            a.rate_target = ndsAQStore(0);
                             (*total)++;
-                            if (ndsR2AnimValueQ(&a) != refq) {
+                            if (ndsAnimValueQ(&a) != refq) {
                                 bad++;
                             }
                         }
@@ -465,9 +465,9 @@ static long long parser_mismatches(void)
             continue;       /* not a power of two: keeps the float expression */
         }
         for (arg = -32768; arg <= 32767; arg++) {
-            s32 viaf = ndsR2F32ToFixed((f32)arg * FRACS[id], NDS_R2_AQ_VF);
-            s32 viaq = ndsR2AnimArgToQ((s32)arg,
-                                       NDS_R2_AQ_VF - FRAC_SHIFT[id]);
+            s32 viaf = ndsAnimF32ToFixed((f32)arg * FRACS[id], NDS_AQ_VF);
+            s32 viaq = ndsAnimArgToQ((s32)arg,
+                                       NDS_AQ_VF - FRAC_SHIFT[id]);
 
             if (viaf != viaq) {
                 bad++;

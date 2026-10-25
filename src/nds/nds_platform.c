@@ -3340,7 +3340,7 @@ void ndsPlatformSchedulePresentAtVBlank(u32 vblank)
  * (reloc_backend_assets.c) issues and lands its ARM7 reads there, checking
  * ndsPlatformTicksToPresentVBlank before each bounded step so the present
  * never moves. Weak so a target without the prefetch links. */
-__attribute__((weak)) void ndsR2AnimPrefetchIdle(void)
+__attribute__((weak)) void ndsAnimPrefetchIdle(void)
 {
 }
 
@@ -3373,7 +3373,7 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     sEarliestPresentVBlank = 0u;
     NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
     sIdlePresentVBlank = earliest;
-    ndsR2AnimPrefetchIdle();
+    ndsAnimPrefetchIdle();
     swiWaitForVBlank();
     /* The first retrace after the flush swapped the frame in: the palette
      * rewrites its draws queued land now, before line 214 renders it. */
@@ -3530,7 +3530,7 @@ static void ndsPlatformPresentLeadWait(u32 swap)
     }
     sIdlePresentVBlank = swap;
     sIdleLeadLines = lead;
-    ndsR2AnimPrefetchIdle();
+    ndsAnimPrefetchIdle();
     for (;;)
     {
         const u32 count = sVBlankCount;
@@ -3638,7 +3638,7 @@ u32 ndsPlatformPresentLeadRetire(void)
     else
     {
         sIdlePresentVBlank = sNdsPresentLeadSwap;
-        ndsR2AnimPrefetchIdle();
+        ndsAnimPrefetchIdle();
     }
     NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
     at = mailboxRecv(&sNdsPresentMail);

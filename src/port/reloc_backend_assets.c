@@ -1065,11 +1065,11 @@ static u32 sNdsRelocLoadedFilesEpoch;
  * would have put it. A fetch drops the fighter's pins first: the install that
  * always follows replaces the binding, and nothing reads the old clip between
  * the two. The bytes the pose engine reads are the cached bytes either way. */
-#define NDS_R2_ANIM_PIN_SLOTS 8u
-#define NDS_R2_ANIM_PIN_FREE 0u
-#define NDS_R2_ANIM_PIN_PENDING 1u
-#define NDS_R2_ANIM_PIN_BOUND 2u
-typedef struct NDSR2AnimPin
+#define NDS_ANIM_PIN_SLOTS 8u
+#define NDS_ANIM_PIN_FREE 0u
+#define NDS_ANIM_PIN_PENDING 1u
+#define NDS_ANIM_PIN_BOUND 2u
+typedef struct NDSAnimPin
 {
     u8 *heap;
     FTStruct *fp;
@@ -1080,21 +1080,21 @@ typedef struct NDSR2AnimPin
     u32 generation;
     u32 state;
     NDSRelocAssetHeader header;
-} NDSR2AnimPin;
-static NDSR2AnimPin sNdsR2AnimPins[NDS_R2_ANIM_PIN_SLOTS];
-__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyHits;
-__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyRescues;
-__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyDrops;
+} NDSAnimPin;
+static NDSAnimPin sNdsAnimPins[NDS_ANIM_PIN_SLOTS];
+__attribute__((used)) volatile u32 gNdsAnimZeroCopyHits;
+__attribute__((used)) volatile u32 gNdsAnimZeroCopyRescues;
+__attribute__((used)) volatile u32 gNdsAnimZeroCopyDrops;
 
-static const NDSR2AnimPin *ndsR2AnimPinForPayload(const void *payload)
+static const NDSAnimPin *ndsAnimPinForPayload(const void *payload)
 {
     u32 i;
 
-    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    for (i = 0u; i < NDS_ANIM_PIN_SLOTS; i++)
     {
-        const NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
+        const NDSAnimPin *pin = &sNdsAnimPins[i];
 
-        if ((pin->state != NDS_R2_ANIM_PIN_FREE) &&
+        if ((pin->state != NDS_ANIM_PIN_FREE) &&
             (pin->payload == (const u8 *)payload) &&
             (pin->generation == gNdsTaskmanHeapGeneration))
         {

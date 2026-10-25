@@ -125,8 +125,8 @@ u8 ndsMatchConfigClampPublishedHandicap(u8 handicap);
 /* PRESET: the canonical VS demo match -- Mario versus a level-3 CPU Fox on
  * Dream Land, one-minute Time match, items off. This is what harness mode 163
  * used to spell out inline, and it is the only place the build-time match flags
- * (`NDS_DEV_LIVE_INPUT_PREVIEW`, `NDS_DEMO_FOX_CPU_LADDER`, `NDS_R2_BOTH_CPU`,
- * `NDS_R2_SOAK_MATCH_MINUTES`) are read. Keeping them here leaves the apply
+ * (`NDS_DEV_LIVE_INPUT_PREVIEW`, `NDS_DEMO_FOX_CPU_LADDER`, `NDS_BOTH_CPU`,
+ * `NDS_SOAK_MATCH_MINUTES`) are read. Keeping them here leaves the apply
  * step free of build configuration, so exactly one function decides what the
  * match is. */
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg);

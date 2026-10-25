@@ -72,7 +72,7 @@ static s32 ndsFighterMagnifyScaleQ12(CObj *camera)
     s64 dx = ndsFighterMagnifyQ(camera->vec.eye.x, 4u) - ndsFighterMagnifyQ(camera->vec.at.x, 4u);
     s64 dy = ndsFighterMagnifyQ(camera->vec.eye.y, 4u) - ndsFighterMagnifyQ(camera->vec.at.y, 4u);
     s64 dz = ndsFighterMagnifyQ(camera->vec.eye.z, 4u) - ndsFighterMagnifyQ(camera->vec.at.z, 4u);
-    s64 d_q4 = ndsR2HwMathSqrt64Fast((u64)((dx * dx) + (dy * dy) + (dz * dz)));
+    s64 d_q4 = ndsHwMathSqrt64Fast((u64)((dx * dx) + (dy * dy) + (dz * dz)));
     s64 w_q12;
     s64 scale;
 
@@ -87,7 +87,7 @@ static s32 ndsFighterMagnifyScaleQ12(CObj *camera)
         return NDS_FIGHTER_MAGNIFY_MAX_SCALE_Q12;
     }
     /* Q12: P11 and P23 are Q12, D is Q4 (the x16). */
-    scale = ndsR2HwMathDivideFast((s64)600 * persp.m[1][1] *
+    scale = ndsHwMathDivideFast((s64)600 * persp.m[1][1] *
                                       (gGMCameraStruct.viewport_height / 2) * 4096 * 16,
                                   d_q4 * w_q12 * 18);
     return (s32)((scale > NDS_FIGHTER_MAGNIFY_MAX_SCALE_Q12) ?
@@ -119,13 +119,13 @@ static void ndsFighterMagnifyPosition(s32 px, s32 py, s32 scale_q12, s32 *x, s32
         /* |py / px| > up / right: the top or bottom edge. */
         *y = (py > 0) ? up : down;
         *x = ndsFighterMagnifyClamp(
-            (s32)ndsR2HwMathDivideFast((s64)*y * px, py), left, right);
+            (s32)ndsHwMathDivideFast((s64)*y * px, py), left, right);
     }
     else
     {
         *x = (px > 0) ? right : left;
         *y = ndsFighterMagnifyClamp(
-            (s32)ndsR2HwMathDivideFast((s64)*x * py, px), down, up);
+            (s32)ndsHwMathDivideFast((s64)*x * py, px), down, up);
     }
 }
 
@@ -133,13 +133,13 @@ static void ndsFighterMagnifyPosition(s32 px, s32 py, s32 scale_q12, s32 *x, s32
  * down) at Q12, the battle 3D's mapping: 300 x 220 onto 256 x 192. */
 static s32 ndsFighterMagnifyScreenX(s32 x_q12)
 {
-    return (128 << 12) + (s32)ndsR2HwMathDivideFast((s64)x_q12 * 256,
+    return (128 << 12) + (s32)ndsHwMathDivideFast((s64)x_q12 * 256,
                                                      gGMCameraStruct.viewport_width);
 }
 
 static s32 ndsFighterMagnifyScreenY(s32 y_q12)
 {
-    return (96 << 12) - (s32)ndsR2HwMathDivideFast((s64)y_q12 * 192,
+    return (96 << 12) - (s32)ndsHwMathDivideFast((s64)y_q12 * 192,
                                                     gGMCameraStruct.viewport_height);
 }
 
@@ -268,9 +268,9 @@ static void ndsFighterMagnifyDrawAll(void)
                                    gMPCollisionGroundData->fog_color.b) : 0u;
         /* The arrow turned to atan2(py, px) - 90 degrees and scaled by
          * magnify_scale / 2, about the bubble's centre. */
-        len = ndsR2HwMathSqrt64Fast((u64)(((s64)px * px) + ((s64)py * py)));
-        ux = (len > 0) ? (s32)ndsR2HwMathDivideFast((s64)px * 4096, len) : 0;
-        uy = (len > 0) ? (s32)ndsR2HwMathDivideFast((s64)py * 4096, len) : 4096;
+        len = ndsHwMathSqrt64Fast((u64)(((s64)px * px) + ((s64)py * py)));
+        ux = (len > 0) ? (s32)ndsHwMathDivideFast((s64)px * 4096, len) : 0;
+        uy = (len > 0) ? (s32)ndsHwMathDivideFast((s64)py * 4096, len) : 4096;
         for (k = 0u; k < 3u; k++)
         {
             s64 mx = arrow[k][0];

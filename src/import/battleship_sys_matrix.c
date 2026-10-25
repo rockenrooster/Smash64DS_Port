@@ -7,14 +7,14 @@
  * three are exact. FTOFIX32 and the scale multiply by a power of two, which
  * only moves the exponent, and __aeabi_f2iz truncates toward zero, saturating
  * past 2^31 and returning 0 for NaN (ndsMatrixFloatToFix reproduces each
- * case). The angle index is ndsR2CfxAngleIndex, proven equal to the source's
+ * case). The angle index is ndsCfxAngleIndex, proven equal to the source's
  * rounded binary32 product (it evaluates the float expression itself where the
  * proof does not reach). The source text is untouched; only the two macros
  * are redefined for this translation unit. */
 #include <sys/audio.h>
 #include <macros.h>
 #include <PR/gu.h>
-#include <nds/nds_r2_collision_fixed.h>
+#include <nds/nds_collision_fixed.h>
 
 /* (s32)(value * 2^shift) exactly as the float multiply and __aeabi_f2iz give
  * it, for shift <= 16. One ARM copy, called: inlined at every FTOFIX32 the
@@ -63,7 +63,7 @@ ndsMatrixFloatToFix(f32 value, u32 shift)
     (__builtin_constant_p(x) ? (long)((x) * (float)0x00010000) :           \
                                ndsMatrixFloatToFix((x), 16u))
 #undef SINTABLE_RAD_TO_ID
-#define SINTABLE_RAD_TO_ID(x) ndsR2CfxAngleIndex(x)
+#define SINTABLE_RAD_TO_ID(x) ndsCfxAngleIndex(x)
 
 #define syMatrixTraRotRpyRSca ndsBaseSyMatrixTraRotRpyRSca
 #define syMatrixF2L ndsBaseSyMatrixF2L

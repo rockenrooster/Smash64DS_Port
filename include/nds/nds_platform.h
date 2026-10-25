@@ -247,7 +247,7 @@ u32 ndsPlatformHeldKeys(void);
  * This has now been diagnosed three times as three separate defects:
  *   * R2-04 E2, the FPS-HUD group, measured frame-by-frame in
  *     `artifacts/verification/2026-08-15_fpshud-publication.txt`;
- *   * `KNOWN_ISSUES.md`'s `phaseLag=-1` under NDS_R2_CAMERA_MATRIX_LEAN=3
+ *   * `KNOWN_ISSUES.md`'s `phaseLag=-1` under NDS_CAMERA_MATRIX_LEAN=3
  *     (2026-08-09), which held that lever off by default for six days;
  *   * the resident-battlepack arm's `drawLead=-1` (2026-08-15).
  * In every one the counter written FIRST is the one that reads low, and in

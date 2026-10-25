@@ -1,6 +1,6 @@
 /* Falsifier for the R2-07 L7 collision matrix kernel.
  *
- * Compiles include/nds/nds_r2_collision_mtx.h -- the code that will ship -- and
+ * Compiles include/nds/nds_collision_mtx.h -- the code that will ship -- and
  * runs it against a transcription of the decomp's float originals
  * (func_ovl2_800ED490 and gmCollisionSetInvertMatrix, gm/gmcollision.c) over
  * joint matrices built the way gmCollisionTransformMatrixAll builds them.
@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../include/nds/nds_r2_collision_mtx.h"
+#include "../include/nds/nds_collision_mtx.h"
 
 typedef float Mtx44f[4][4];
 
@@ -115,26 +115,26 @@ static void BuildJoint(Mtx44f m, float rx, float ry, float rz,
 
 /* ---- conversion ------------------------------------------------------- */
 
-static void ToFixed(NDSR2CollisionMtx *out, Mtx44f in)
+static void ToFixed(NDSCollisionMtx *out, Mtx44f in)
 {
     for (int r = 0; r < 4; r++)
     {
         for (int c = 0; c < 3; c++)
         {
-            double v = (double)in[r][c] * NDS_R2_COLLISION_MTX_ONE;
+            double v = (double)in[r][c] * NDS_COLLISION_MTX_ONE;
             out->m[r][c] = (int32_t)(v < 0.0 ? v - 0.5 : v + 0.5);
         }
     }
 }
 
-static double Cell(const NDSR2CollisionMtx *m, int r, int c)
+static double Cell(const NDSCollisionMtx *m, int r, int c)
 {
-    return (double)m->m[r][c] / NDS_R2_COLLISION_MTX_ONE;
+    return (double)m->m[r][c] / NDS_COLLISION_MTX_ONE;
 }
 
 static int32_t ToFixedScalar(double v)
 {
-    double s = v * NDS_R2_COLLISION_MTX_ONE;
+    double s = v * NDS_COLLISION_MTX_ONE;
     return (int32_t)(s < 0.0 ? s - 0.5 : s + 0.5);
 }
 
@@ -142,7 +142,7 @@ static int32_t ToFixedScalar(double v)
  * query point to 20.12 (the caller holds a Vec3f, so that conversion is real
  * cost and belongs inside the measurement), carry it through the frame, and
  * compare against the float inverse applied to the unquantised point. */
-static double FrameError(Mtx44f finv, const NDSR2CollisionMtx *frame,
+static double FrameError(Mtx44f finv, const NDSCollisionMtx *frame,
                          double px, double py, double pz)
 {
     int32_t p[3];
@@ -152,13 +152,13 @@ static double FrameError(Mtx44f finv, const NDSR2CollisionMtx *frame,
     p[0] = ToFixedScalar(px);
     p[1] = ToFixedScalar(py);
     p[2] = ToFixedScalar(pz);
-    ndsR2CollisionWorldToLocal(local, frame, p);
+    ndsCollisionWorldToLocal(local, frame, p);
 
     for (int c = 0; c < 3; c++)
     {
         double fv = (double)finv[0][c] * px + (double)finv[1][c] * py +
                     (double)finv[2][c] * pz + (double)finv[3][c];
-        double xv = (double)local[c] / NDS_R2_COLLISION_MTX_ONE;
+        double xv = (double)local[c] / NDS_COLLISION_MTX_ONE;
         double d = fabs(fv - xv);
 
         if (d > worst) { worst = d; }
@@ -168,7 +168,7 @@ static double FrameError(Mtx44f finv, const NDSR2CollisionMtx *frame,
 
 /* Error in world units: transform the same point by both matrices. This is the
  * quantity collision reads, so it is the quantity the bound is stated in. */
-static double PointError(Mtx44f f, const NDSR2CollisionMtx *x,
+static double PointError(Mtx44f f, const NDSCollisionMtx *x,
                          double px, double py, double pz)
 {
     double worst = 0.0;
@@ -236,7 +236,7 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
     for (int i = 0; i < cases; i++)
     {
         Mtx44f a, b, fdst;
-        NDSR2CollisionMtx xa, xb, xdst;
+        NDSCollisionMtx xa, xb, xdst;
         double sx = Rand(scale_lo, scale_hi);
         double sy = Rand(scale_lo, scale_hi);
         double sz = Rand(scale_lo, scale_hi);
@@ -256,7 +256,7 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
         ToFixed(&xb, b);
 
         FloatCompose(fdst, a, b);
-        ndsR2CollisionCompose(&xdst, &xa, &xb);
+        ndsCollisionCompose(&xdst, &xa, &xb);
         {
             double e = PointError(fdst, &xdst, Rand(-20, 20), Rand(-20, 20),
                                   Rand(-20, 20));
@@ -269,9 +269,9 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
             /* Zeroed only to satisfy -Wmaybe-uninitialized: it is read solely
              * under `xok`, which is exactly when the kernel wrote it, but that
              * is not visible to the optimiser once the kernel inlines. */
-            NDSR2CollisionMtx xframe = {{{0}}};
+            NDSCollisionMtx xframe = {{{0}}};
             int fok = FloatInvert(finv, a);
-            int xok = ndsR2CollisionInvertFrame(&xframe, &xa);
+            int xok = ndsCollisionInvertFrame(&xframe, &xa);
 
             /* The WIRED form, graded on the same case, same RNG stream. It
              * must be measured against the same float inverse and the same
@@ -282,7 +282,7 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
              * quantisations are part of the answer collision reads. */
             {
                 Mtx44f xmtx = {{0}};
-                int ok = ndsR2CollisionInvertMatrix44(xmtx, (const float (*)[4])a);
+                int ok = ndsCollisionInvertMatrix44(xmtx, (const float (*)[4])a);
 
                 if (fok && ok)
                 {
@@ -356,8 +356,8 @@ int main(void)
     printf("  %-14s %11s %10s %10s %10s %10s %10s  %s\n", "scale domain",
            "range", "compose max", "mean", "frame max", "mean", "matrix max",
            "gate");
-    printf("  'frame' is ndsR2CollisionInvertFrame, the reference form.\n"
-           "  'matrix' is ndsR2CollisionInvertMatrix44 -- the WIRED one, float\n"
+    printf("  'frame' is ndsCollisionInvertFrame, the reference form.\n"
+           "  'matrix' is ndsCollisionInvertMatrix44 -- the WIRED one, float\n"
            "  in and float out, including both conversions. It is gated too:\n"
            "  the form the ROM runs is the form that has to hold the bound. It\n"
            "  reads the rotation block at 6.26 rather than 20.12, which is why\n"
@@ -381,7 +381,7 @@ int main(void)
            "  to amplify; the frame column is not, and losing 0.49 on the\n"
            "  conservative domain is what chose which form gets wired. Live\n"
            "  play measured a single joint scale of 1.114-1.120 anyway\n"
-           "  (NDS_R2_COLLISION_L7_ORACLE, 460 samples).\n");
+           "  (NDS_COLLISION_L7_ORACLE, 460 samples).\n");
     if (fail)
     {
         printf("\nRED: the gated domain exceeds %.4f. Not fit to wire in.\n",

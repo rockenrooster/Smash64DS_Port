@@ -403,24 +403,24 @@ def synthesize(hat: HatSource, tex_where: dict, tex_file: int, vanilla: bytes,
 class GeneratorState:
     """The owner generator's module state a hat build patches, restored after."""
 
-    NAMES = ("OWNER_O2R_ASSETS", "P2_MODEL_PART_ROOT_VARIANTS", "KIRBY_COPY_HAT_MODEL_PART_IDS",
+    NAMES = ("OWNER_O2R_ASSETS", "MODEL_PART_ROOT_VARIANTS", "KIRBY_COPY_HAT_MODEL_PART_IDS",
              "KIRBY_TRIO_CONTEXTS", "KIRBY_TRIO_EXTRA_JOINT_HEADS",
              "build_kirby_trio_faithful_specs")
 
     def __init__(self):
         self.saved = {n: getattr(O, n) for n in self.NAMES}
         self.saved["OWNER_O2R_ASSETS"] = dict(O.OWNER_O2R_ASSETS)
-        self.saved["P2_MODEL_PART_ROOT_VARIANTS"] = {
-            k: dict(v) for k, v in O.P2_MODEL_PART_ROOT_VARIANTS.items()}
+        self.saved["MODEL_PART_ROOT_VARIANTS"] = {
+            k: dict(v) for k, v in O.MODEL_PART_ROOT_VARIANTS.items()}
 
     def restore(self):
         for n, v in self.saved.items():
             if n == "OWNER_O2R_ASSETS":
                 O.OWNER_O2R_ASSETS.clear()
                 O.OWNER_O2R_ASSETS.update(v)
-            elif n == "P2_MODEL_PART_ROOT_VARIANTS":
-                O.P2_MODEL_PART_ROOT_VARIANTS.clear()
-                O.P2_MODEL_PART_ROOT_VARIANTS.update({k: dict(d) for k, d in v.items()})
+            elif n == "MODEL_PART_ROOT_VARIANTS":
+                O.MODEL_PART_ROOT_VARIANTS.clear()
+                O.MODEL_PART_ROOT_VARIANTS.update({k: dict(d) for k, d in v.items()})
             else:
                 setattr(O, n, v)
         clear_caches()
@@ -430,9 +430,9 @@ class GeneratorState:
         sha = hashlib.sha256(payload_path.read_bytes()).hexdigest()
         O.OWNER_O2R_ASSETS["kirby"] = (rel, KIRBY_MODEL_FILE, sha)
         for detail in DETAILS:
-            specs = list(O.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail])
+            specs = list(O.MODEL_PART_ROOT_VARIANTS["kirby"][detail])
             specs[base - 1] = (specs[base - 1][0], offsets[detail])
-            O.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail] = tuple(specs)
+            O.MODEL_PART_ROOT_VARIANTS["kirby"][detail] = tuple(specs)
         if base not in O.KIRBY_COPY_HAT_MODEL_PART_IDS:
             O.KIRBY_COPY_HAT_MODEL_PART_IDS = tuple(O.KIRBY_COPY_HAT_MODEL_PART_IDS) + (base,)
         if (base, 0) not in O.KIRBY_TRIO_CONTEXTS:
@@ -568,7 +568,7 @@ def main() -> int:
         ctx = O.build_p2_owner_runtime_context(REPO, "kirby", detail)
         resident[detail] = {row[0]: (row, light)
                             for row, light in zip(ctx["roots"], ctx["light_preamble_indices"])}
-        source_offsets[detail] = [spec[1] for spec in O.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]]
+        source_offsets[detail] = [spec[1] for spec in O.MODEL_PART_ROOT_VARIANTS["kirby"][detail]]
 
     built = []  # (hat, base, {detail: (context, program)})
     texture_bytes = {}

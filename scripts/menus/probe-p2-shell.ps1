@@ -151,7 +151,7 @@ foreach ($flag in @('NDS_UI_KIT', 'NDS_MENU_SHELL')) {
     }
     Write-Output ("build config: {0}={1}" -f $flag, $m.Groups[1].Value)
 }
-foreach ($flag in @('NDS_MENU_WALK', 'NDS_R2_SCENE_LOOP_WALK',
+foreach ($flag in @('NDS_MENU_WALK', 'NDS_SCENE_LOOP_WALK',
                     'NDS_HARNESS_FAST_LOGIC', 'NDS_DEV_SCENE_HARNESS',
                     'NDS_RENDERER_PROFILE_LEVEL', 'NDS_TICK_HUD',
                     'NDS_DEBUG_HUD', 'NDS_R204_FPSHUD_SHADOW')) {
@@ -559,7 +559,7 @@ try {
         # are the authoritative relocation read counters plus the P2-3 native
         # owner-image loader, sampled at every scene boundary so a PlayersVS ->
         # Maps delta proves whether the live CSS performed storage I/O.
-        'printf "CSSIO %d hdr=%u payload=%u ownerload=%u ownerbytes=%u animhit=%u animmiss=%u warm=%u/%u arena=%u/%u reservefail=%u warmfail=%u reject=%u overflow=%u\n", $n, gNdsRelocAssetHeaderReadCount, gNdsRelocAssetPayloadReadCount, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes, gNdsR2AnimCacheHits, gNdsR2AnimCacheMisses, gNdsR2AnimWarmLoaded, gNdsR2AnimWarmBytes, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimCacheArenaReserveFailCount, gNdsR2AnimWarmFailed, gNdsR2AnimCacheRejects, gNdsR2AnimCacheArenaOverflows',
+        'printf "CSSIO %d hdr=%u payload=%u ownerload=%u ownerbytes=%u animhit=%u animmiss=%u warm=%u/%u arena=%u/%u reservefail=%u warmfail=%u reject=%u overflow=%u\n", $n, gNdsRelocAssetHeaderReadCount, gNdsRelocAssetPayloadReadCount, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes, gNdsAnimCacheHits, gNdsAnimCacheMisses, gNdsAnimWarmLoaded, gNdsAnimWarmBytes, gNdsAnimCacheArenaReservedBytes, gNdsAnimCacheArenaUsedBytes, gNdsAnimCacheArenaReserveFailCount, gNdsAnimWarmFailed, gNdsAnimCacheRejects, gNdsAnimCacheArenaOverflows',
         'printf "CSSRES %d try=%08x ready=%08x main=%08x sub=%08x anim=%08x owner=%08x\n", $n, gNdsPlayersVSPreviewResidentPrepareMask, gNdsPlayersVSPreviewResidentReadyMask, gNdsPlayersVSPreviewResidentMainFailMask, gNdsPlayersVSPreviewResidentSubmotionFailMask, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsPlayersVSPreviewResidentOwnerFailMask',
         'printf "CSSREBUILDIO %d rebuild=%u payload=%u max=%u\n", $n, gNdsPlayersVSPreviewRebuildCount, gNdsPlayersVSPreviewRebuildPayloadReadCount, gNdsPlayersVSPreviewRebuildPayloadReadMax',
         'printf "CSSRESACT %d acq=%u hit=%u cached=%u load=%u finish=%u payload=%u max=%u retry=%u fail=%u\n", $n, gNdsPlayersVSPreviewAcquireCount, gNdsPlayersVSPreviewAcquireHitCount, gNdsPlayersVSPreviewAcquireCachedHitCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquirePayloadReadCount, gNdsPlayersVSPreviewAcquirePayloadReadMax, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewAcquireFailCount',

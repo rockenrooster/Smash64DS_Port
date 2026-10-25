@@ -77,8 +77,8 @@ CFILES += nds_ftr_lean_kernel.c
 # arm's link input set is unchanged rather than merely equivalent -- an empty
 # translation unit still enters the link and this project has measured
 # re-addressing collateral from far less (Tasks 87-89/94/95).
-ifeq ($(NDS_R2_PATH),1)
-CFILES += nds_r2_battle.c
+ifeq ($(NDS_PATH),1)
+CFILES += nds_battle.c
 endif
 # P2-4 first stage: Yoshi's Island ground logic (decomp gryoster.c import).
 # Flag off, the TU is not linked at all, so the default arm is unchanged.
@@ -122,7 +122,7 @@ endif
 ifeq ($(NDS_STAGE_SECTOR),1)
 CFILES += battleship_grsector_ground.c
 endif
-CFILES += nds_r2_sqrtf.c
+CFILES += nds_sqrtf.c
 CFILES += nds_hurtbox_reject.c
 CFILES += nds_fast_mem.c
 CFILES += nds_shield_pose.c
@@ -440,13 +440,13 @@ CFILES += nds_particle_banks.c
 CFILES += battleship_libultra_gu_mtxutil.c
 CFILES += battleship_lbparticle.c
 # DS-native FireGrind. The accepted path is on by default; setting
-# NDS_R2_FIREGRIND_NATIVE=0 retains no-op stubs for control/fallback builds.
+# NDS_FIREGRIND_NATIVE=0 retains no-op stubs for control/fallback builds.
 # Lives with the particle runtime because its draw integration is inside
 # lbParticleDrawTextures.
 CFILES += nds_firegrind.c
 CFILES += battleship_fox_reflector.c
 # Fox's blaster model part, as data. Unconditional because the module's whole
-# body is inside #if NDS_R2_FOX_GUN_OVERLAY -- at 0 it compiles to nothing and
+# body is inside #if NDS_FOX_GUN_OVERLAY -- at 0 it compiles to nothing and
 # costs no ROM, which is cheaper to reason about than a second flag in the file
 # list that has to stay in step with the one in the sources.
 CFILES += nds_fox_gun.c

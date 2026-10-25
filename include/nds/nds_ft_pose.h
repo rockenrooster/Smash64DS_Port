@@ -11,13 +11,13 @@
  * list, one Hermite/linear/step evaluation per node, one f32 store per track).
  * On the four-CPU arm that lane is ~170K ARM9 ticks per presented frame
  * (`artifacts/performance/2026-08-23_p2-2-fourcpu-profile128-promoted/`):
- * `gcPlayDObjAnimJoint` 38K, `ndsR2AnimValueQ` 36K, the parser 28K,
+ * `gcPlayDObjAnimJoint` 38K, `ndsAnimValueQ` 36K, the parser 28K,
  * `ndsFTParamsInvalidateSubtree` 27K, `ftParamUpdateAnimKeys` 18K, the track
  * table rebuild 6K, and the list walks are memory stalls on 36-byte nodes
  * scattered through the arena.
  *
  * WHAT IT IS. The SAME script state machine and the SAME Q12 evaluator
- * (`ndsR2AnimEvalQ`, one body shared through `nds_anim_fixed.h`) over compact
+ * (`ndsAnimEvalQ`, one body shared through `nds_anim_fixed.h`) over compact
  * per-fighter state: each bound joint owns a contiguous array of up to ten
  * `NdsFtPoseTrack`s (28 bytes, fixed point, no `next`, no list), indexed by a
  * ten-entry slot map the parser fills on a track's first write exactly where
@@ -75,7 +75,7 @@
  * <<10/<<7, scale <<0) -- except the two non-shift classes (scale rates, whose
  * 2^-13 frac rounds, and TraI, whose frac is not a power of two), which the
  * parser stores already in Q12 because both fit an s16. The kernel therefore
- * sees the same Q12 integers the AObj path's `ndsR2AnimArgToQ` produced. `kind`
+ * sees the same Q12 integers the AObj path's `ndsAnimArgToQ` produced. `kind`
  * is the Q kind (5 Step, 6 Linear, 7 Cubic) or 0 for a slot the script created
  * but has not written a kind to (the source's nGCAnimKindNone). */
 typedef struct NdsFtPoseTrack

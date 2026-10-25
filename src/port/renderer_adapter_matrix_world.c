@@ -97,7 +97,7 @@ ndsRendererAdapterMvpMod1Q(CObj *cobj, NDSRendererAdapterMvpMod1Q *out)
     s64 e;
     s64 m;
 
-    e = (s64)ndsR2HwMathSqrt64Fast((u64)((dx * dx) + (dz * dz)));
+    e = (s64)ndsHwMathSqrt64Fast((u64)((dx * dx) + (dz * dz)));
     out->zero = (e == 0) ? TRUE : FALSE;
     if (out->zero != FALSE)
     {
@@ -105,9 +105,9 @@ ndsRendererAdapterMvpMod1Q(CObj *cobj, NDSRendererAdapterMvpMod1Q *out)
         out->l2_q30 = 0;
         return;
     }
-    m = (s64)ndsR2HwMathSqrt64Fast((u64)((d * d) + (e * e)));
-    out->l1_q30 = (s32)ndsR2HwMathDivideFast(d << 30, m);
-    out->l2_q30 = (s32)ndsR2HwMathDivideFast(e << 30, m);
+    m = (s64)ndsHwMathSqrt64Fast((u64)((d * d) + (e * e)));
+    out->l1_q30 = (s32)ndsHwMathDivideFast(d << 30, m);
+    out->l2_q30 = (s32)ndsHwMathDivideFast(e << 30, m);
 }
 
 /* Q30 x Q12 -> Q12, rounded. */
@@ -147,8 +147,8 @@ ndsRendererAdapterMvpKind48RowsQ(const NDSRendererAdapterMvpMod1Q *mod1,
         }
     }
     out->m[3][3] = 1 << 12;
-    if ((mod1->zero != FALSE) || (sx == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (sy == NDS_R2_COLLISION_F32_OVERFLOW))
+    if ((mod1->zero != FALSE) || (sx == NDS_COLLISION_F32_OVERFLOW) ||
+        (sy == NDS_COLLISION_F32_OVERFLOW))
     {
         return;
     }
@@ -1166,7 +1166,7 @@ static inline sb32 ndsRendererAdapterWords3Equal(const u32 *key,
         TRUE : FALSE;
 }
 
-static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
+static sb32 NDS_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
     DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
 {
     u32 i;
@@ -1496,7 +1496,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
 
         if (entry->validated_frame != frame)
         {
-            NDS_DIAG(gNdsR2Slice44StaleReuse++);
+            NDS_DIAG(gNdsSlice44StaleReuse++);
         }
         return hit;
     }

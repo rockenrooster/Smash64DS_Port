@@ -602,7 +602,7 @@ void ndsMenuShellRunStartup(void)
      * P2-1d-1 ROOT CAUSE, not scoped to FGM 157: ndsAudioAssetLoadFenced (which
      * loads the FGM pack, nds_audio_fgm.c's ndsAudioFgmLoadFenced included) had
      * exactly three call sites before this one -- battleship_scvsbattle.c:469
-     * and the two ndsR2HostBattlePrepare/is_battle_playable sites in
+     * and the two ndsHostBattlePrepare/is_battle_playable sites in
      * taskman_seam.c -- all battle-entry only. Every menu-shell FGM request
      * made before battle starts therefore found gNdsAudioFgmLoaded == 0 and
      * sNdsAudioFgmEntries[] all-zero: not a missing pack entry, a pack that had

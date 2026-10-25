@@ -1754,7 +1754,7 @@ void ndsP4EntryFileEnsure(FTStruct *fp)
     {
         return;
     }
-    cache = ndsR2AnimCacheElasticBytes();
+    cache = ndsAnimCacheElasticBytes();
     data = ndsRelocLoadDeferredEntryFile(fp->nds_p4_content,
                                          NDS_P4_ENTRY_DEFER_KEEP_FREE +
                                          ((cache < NDS_P4_ENTRY_DEFER_CACHE_FLOOR) ?

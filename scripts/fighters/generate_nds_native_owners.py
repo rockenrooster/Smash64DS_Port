@@ -2100,7 +2100,7 @@ def build_p2_owner_source_export(
 # reloc/source-layout drift while leaving Mario/Fox's older byte-hash oracle
 # untouched.  The fields are source IR + DS topology facts, not hand-authored
 # gameplay parameters.
-P2_OWNER_MODEL_CENSUS = {
+OWNER_MODEL_CENSUS = {
     "luigi": {
         "high": (23, 56, 42, 320, 32, 20, 14, 264, 960, 9, 44, 8, 70),
         "low": (25, 61, 32, 200, 20, 20, 14, 181, 600, 4, 44, 8, 46),
@@ -2206,7 +2206,7 @@ P2_OWNER_MODEL_CENSUS = {
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
 # build flag beside the owner name so generation and runtime selection cannot
 # silently disagree about which independent table set owns a slot.
-P2_RUNTIME_OWNERS = (
+RUNTIME_OWNERS = (
     ("luigi", "NDS_LUIGI"),
     ("donkey", "NDS_DONKEY"),
     ("captain", "NDS_CAPTAIN"),
@@ -2308,7 +2308,7 @@ BASE_MODEL_PART_ROOT_VARIANTS = {
 # not merely one admitted root, so they intentionally stay out of this table;
 # they need a topology-owner solution rather than pretending to be a variant of
 # a canonical binding.
-P2_MODEL_PART_ROOT_VARIANTS = {
+MODEL_PART_ROOT_VARIANTS = {
     # Luigi is Mario's skeleton with Mario's two model-part joints, and his VS
     # Results Win2 pose (scsubsysdataluigi.c D_ovl1_803917A0) sets both:
     # SetModelPartID(16, 1) and (10, 1). 221_LuigiMain.c modelparts_desc_0x05C
@@ -2532,7 +2532,7 @@ P2_MODEL_PART_ROOT_VARIANTS = {
 }
 
 # Roots that exist only while a complete alternate source topology is live.
-# Unlike P2_MODEL_PART_ROOT_VARIANTS, these must NEVER be admitted as an
+# Unlike MODEL_PART_ROOT_VARIANTS, these must NEVER be admitted as an
 # independent `(canonical binding, root offset)` replacement.  They are baked
 # into the resident owner image so a complete root program can reference them,
 # but runtime selection is only through that program's exact ordered vector.
@@ -2542,7 +2542,7 @@ P2_MODEL_PART_ROOT_VARIANTS = {
 # joints 17..22 and modelpart 1 on joint 24.  Five chain links share the exact
 # same source DL 0x9140; one resident self-contained RAW bake is sufficient and
 # the complete program reuses it under each live DObj matrix.
-P2_ROOT_PROGRAM_APPENDIX = {
+ROOT_PROGRAM_APPENDIX = {
     # 0x2c20/0x2ce8 are joints 24 and 25 as they draw when nothing replaces
     # them, which is the forward smash.  Catch reaches the same two joints but
     # its motion sets 24 to modelpart 1 and hides 25, so neither offset was ever
@@ -2635,7 +2635,7 @@ P2_ROOT_PROGRAM_APPENDIX = {
 
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
 # modelparts_desc_0x0CC.  Modelpart 0 is the canonical head and is not present
-# in P2_MODEL_PART_ROOT_VARIANTS; 1, 2 and 14 are inhale/Stone/face content
+# in MODEL_PART_ROOT_VARIANTS; 1, 2 and 14 are inhale/Stone/face content
 # that remains part of the match-resident owner.  The eleven hats are emitted
 # as deferred NitroFS images by generate_nds_native_owner_images.py.
 KIRBY_COPY_HAT_MODEL_PART_IDS = tuple(range(3, 14))
@@ -2653,7 +2653,7 @@ KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET = 0x00F8
 
 
 def _p2_owner_variant_specs(owner_name: str, detail: str):
-    specs = P2_MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(detail, ())
+    specs = MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(detail, ())
     if owner_name != "kirby":
         return specs
     resident_joint6 = tuple(
@@ -2669,7 +2669,7 @@ def _p2_owner_variant_specs(owner_name: str, detail: str):
 
 
 def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
-    return P2_ROOT_PROGRAM_APPENDIX.get(owner_name, {}).get(detail, ())
+    return ROOT_PROGRAM_APPENDIX.get(owner_name, {}).get(detail, ())
 
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
@@ -2832,7 +2832,7 @@ OWNER_ROOT_PROGRAMS = {
     # second model-part word anywhere in the clip, so this ONE event is the
     # whole program. 238_NessMainMotion.c's other model-part writes are
     # replacements of already-drawable joints and stay in
-    # P2_MODEL_PART_ROOT_VARIANTS -- except the yo-yo smashes' (30, 0), which
+    # MODEL_PART_ROOT_VARIANTS -- except the yo-yo smashes' (30, 0), which
     # lands on a hidden joint (YoYo, below).
     #
     # Derived from the demo scripts, not from a captured root count: the other
@@ -2959,7 +2959,7 @@ if LINK_INTRO_PROGRAM:
         ("Intro", ((22, 1), (23, 1), (24, 1), (11, 2))),
     )
     for _detail in ("high", "low"):
-        P2_ROOT_PROGRAM_APPENDIX["link"][_detail] += (
+        ROOT_PROGRAM_APPENDIX["link"][_detail] += (
             (5, 0xa100), (10, 0x93b8), (11, 0x94f0), (12, 0x9b98))
 
 LINK_ROOT_PROGRAM_EXPECTED_PARENTS = {
@@ -3112,7 +3112,7 @@ def kirby_trio_head_offset(detail: str, head_mp: int) -> int:
     """
     if (head_mp, 0) not in KIRBY_TRIO_CONTEXTS:
         raise ValueError(f"kirby trio: unknown head modelpart {head_mp}")
-    specs = P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+    specs = MODEL_PART_ROOT_VARIANTS["kirby"][detail]
     return specs[head_mp - 1][1]
 
 
@@ -3461,7 +3461,7 @@ def _append_kirby_trio_sections(repo_root, detail, context):
             # and differ only in s/t. Shade the body row from itself.
             #
             # This is exact in the shipped configuration, where the alias has
-            # no reader at all: under NDS_R2_FIGHTER_HW_LIGHT the active
+            # no reader at all: under NDS_FIGHTER_HW_LIGHT the active
             # tables never bind dense_color_source (NDS_IMG_BIND_COLOR in
             # `nds_renderer_assets.c`) and prepared-dense drops shaded_rgba,
             # so the GX lights every vertex from its own word -- which is
@@ -3698,7 +3698,7 @@ def build_p2_owner_model_inventory(
     decoder that produced the shipping Mario/Fox owner.  It deliberately does
     not mutate or append to the frozen P2-2 generated program.
     """
-    if owner_name not in P2_OWNER_MODEL_CENSUS:
+    if owner_name not in OWNER_MODEL_CENSUS:
         raise ValueError(f"no P2 native-owner census for {owner_name}")
 
     relative_path, file_id, expected_hash = OWNER_O2R_ASSETS[owner_name]
@@ -3785,10 +3785,10 @@ def build_p2_owner_model_inventory(
             len(dense_corners), cross_run_count,
             root_prefix_light_count, intra_root_light_count, restore_count,
         )
-        if census != P2_OWNER_MODEL_CENSUS[owner_name][detail]:
+        if census != OWNER_MODEL_CENSUS[owner_name][detail]:
             raise ValueError(
                 f"{owner_name} {detail} native-model census {census} != "
-                f"{P2_OWNER_MODEL_CENSUS[owner_name][detail]}"
+                f"{OWNER_MODEL_CENSUS[owner_name][detail]}"
             )
 
         unique_light_preambles = sorted({
@@ -6857,7 +6857,7 @@ def build_p2_owner_runtime_context(
         dense_vertices, runs, run_first_unique, run_unique_count,
         run_unique_dense, run_metadata)
 
-    expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
+    expected = OWNER_MODEL_CENSUS[owner_name][detail]
     # Keep the standing source census on the canonical JointTree exactly as it
     # was before variants existed.  The variant IR is an additive executable
     # appendix, so admitting it must never move the qualified baseline.
@@ -7377,7 +7377,7 @@ def build_p2_kirby_hat_runtime_context(
     cached = _KIRBY_HAT_CONTEXT_CACHE.get(cache_key)
     if cached is not None:
         return cached
-    all_specs = P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+    all_specs = MODEL_PART_ROOT_VARIANTS["kirby"][detail]
     if len(all_specs) < 14:
         raise ValueError("Kirby joint-6 modelpart variant table is incomplete")
     hat_spec = all_specs[copy_modelpart_id - 1]
@@ -7690,7 +7690,7 @@ def _assert_owner_root_program_vertex_cache(
         # A replacement PAIR may keep the weld its canonical pair has: Link's
         # intro hands 0x94f0/0x9b98 read each other's cache exactly as
         # canonical 0x2ef0/0x3398 do at the same two bindings, and the
-        # appendix bakes them in that order (P2_ROOT_PROGRAM_APPENDIX).
+        # appendix bakes them in that order (ROOT_PROGRAM_APPENDIX).
         if (root_offsets[binding] in new_offsets and binding != 0 and
                 binding_set == {binding - 1, binding} and
                 root_offsets[binding - 1] in new_offsets and
@@ -8689,7 +8689,7 @@ def build_owner_root_programs(
         ]
         copy_link_offsets = tuple(root[0] for root in copy_link_roots)
         expected_copy_link = (
-            P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+            MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
                 KIRBY_COPY_LINK_MODELPART_ID - 1][1],
             context["roots"][1][0], context["roots"][2][0],
             KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET,
@@ -8751,7 +8751,7 @@ def build_owner_root_programs(
         copy_transition_offsets = tuple(
             root[0] for root in copy_transition_roots)
         expected_copy_transition = (
-            P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+            MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
                 KIRBY_COPY_LINK_MODELPART_ID - 1][1],
             *(root[0] for root in context["roots"][1:canonical_count]),
         )
@@ -8793,7 +8793,7 @@ def build_owner_root_programs(
         # DObj tree presents instead of comparing it to canonical seven-root
         # Kirby.  The root is RAW/self-contained, proved by the cache closure
         # below; no previous-root cross palette slot exists.
-        stone_spec = P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+        stone_spec = MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
             KIRBY_STONE_MODELPART_ID - 1
         ]
         if stone_spec != (0, KIRBY_STONE_ROOT_OFFSET):
@@ -9536,7 +9536,7 @@ def generate(repo_root: Path | None = None) -> str:
     # arrays above are not reindexed. They are emitted behind per-owner admission
     # flags and therefore have zero code/data cost in the standing P2-2 build.
     p2_runtime_contexts = {}
-    for owner_name, _flag in P2_RUNTIME_OWNERS:
+    for owner_name, _flag in RUNTIME_OWNERS:
         p2_high_context = build_p2_owner_runtime_context(
             repo_root, owner_name, "high"
         )
@@ -9684,7 +9684,7 @@ def generate(repo_root: Path | None = None) -> str:
     lines += emit_rows(
         "NDSNativePreparedDenseVertex", "sNdsNativeFighterPreparedDense",
         # Designated initializers: R2-03 E29 drops shaded_rgba and packed_color
-        # from this struct under NDS_R2_FIGHTER_HW_LIGHT, and the generator does
+        # from this struct under NDS_FIGHTER_HW_LIGHT, and the generator does
         # not see build flags. Naming the two fields that carry data keeps one
         # generated table correct for both layouts; the rest zero-initialise.
         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
@@ -10148,7 +10148,7 @@ def generate(repo_root: Path | None = None) -> str:
              low_context["fox_variant_specs"])],
     )
     lines += ["#endif", ""]
-    for owner_name, flag in P2_RUNTIME_OWNERS:
+    for owner_name, flag in RUNTIME_OWNERS:
         high_context, low_context = p2_runtime_contexts[owner_name]
         lines += [
             f"#if {flag}",

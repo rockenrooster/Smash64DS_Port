@@ -630,14 +630,14 @@ static sb32 ndsRendererAdapterBuildWorldOriginMtx(
  *
  * 20.12, because that is what NDSRendererMatrix20p12 holds. */
 extern Vec2f dFTDisplayMainShufflePositions[][4];
-static s32 sNdsR2ShuffleWorldX;
-static s32 sNdsR2ShuffleWorldY;
-u32 gNdsR2ShuffleFoldedFrames;
+static s32 sNdsShuffleWorldX;
+static s32 sNdsShuffleWorldY;
+u32 gNdsShuffleFoldedFrames;
 
 static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
 {
-    sNdsR2ShuffleWorldX = 0;
-    sNdsR2ShuffleWorldY = 0;
+    sNdsShuffleWorldX = 0;
+    sNdsShuffleWorldY = 0;
     if ((fp == NULL) || (fp->shuffle_tics == 0u))
     {
         return;
@@ -647,9 +647,9 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
             &dFTDisplayMainShufflePositions[fp->is_shuffle_electric]
                                            [fp->shuffle_frame_index];
 
-        sNdsR2ShuffleWorldX = (s32)(offset->x * 4096.0F);
-        sNdsR2ShuffleWorldY = (s32)(offset->y * 4096.0F);
-        NDS_DIAG(gNdsR2ShuffleFoldedFrames++);
+        sNdsShuffleWorldX = (s32)(offset->x * 4096.0F);
+        sNdsShuffleWorldY = (s32)(offset->y * 4096.0F);
+        NDS_DIAG(gNdsShuffleFoldedFrames++);
     }
 }
 
@@ -704,9 +704,9 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
  * MTX_MULT the backend will issue, `Declines` a fall-back to the CPU compose.
  * A cut with no counter is how cycle 110 read FTR -13,587 off a skip it could
  * not prove fired. */
-u32 gNdsR2GxComposeCaptures;
-u32 gNdsR2GxComposeLocals;
-u32 gNdsR2GxComposeDeclines;
+u32 gNdsGxComposeCaptures;
+u32 gNdsGxComposeLocals;
+u32 gNdsGxComposeDeclines;
 
 /* One palette slot per binding that is some other binding's baked parent, so the
  * backend can RESTORE it instead of the adapter composing into it. A binding that
@@ -726,18 +726,18 @@ u32 gNdsR2GxComposeDeclines;
  * ten parent slots, so the next owner is already allocating underneath the
  * cross-run range; keep an eye on how far down that reaches against the levels
  * a push can occupy. */
-static u8 sNdsR2GxSlotTable[
+static u8 sNdsGxSlotTable[
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT]
     [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-static u8 sNdsR2GxSlotTableValid[
+static u8 sNdsGxSlotTableValid[
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
-static u8 sNdsR2GxSlotTableProgram[
+static u8 sNdsGxSlotTableProgram[
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
 
 static void ndsRendererAdapterResetGxSlotTables(void)
 {
-    memset(sNdsR2GxSlotTableValid, 0, sizeof(sNdsR2GxSlotTableValid));
-    memset(sNdsR2GxSlotTableProgram, 0, sizeof(sNdsR2GxSlotTableProgram));
+    memset(sNdsGxSlotTableValid, 0, sizeof(sNdsGxSlotTableValid));
+    memset(sNdsGxSlotTableProgram, 0, sizeof(sNdsGxSlotTableProgram));
 }
 
 static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
@@ -756,14 +756,14 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
     {
         return FALSE;
     }
-    table = sNdsR2GxSlotTable[slot];
+    table = sNdsGxSlotTable[slot];
     root_program = ndsRendererNativeFighterRootProgram(slot);
-    if ((sNdsR2GxSlotTableValid[slot] != 0u) &&
-        ((u32)sNdsR2GxSlotTableProgram[slot] == root_program))
+    if ((sNdsGxSlotTableValid[slot] != 0u) &&
+        ((u32)sNdsGxSlotTableProgram[slot] == root_program))
     {
         return TRUE;
     }
-    sNdsR2GxSlotTableValid[slot] = 0u;
+    sNdsGxSlotTableValid[slot] = 0u;
     parents = ndsRendererNativeFighterBindingParents(slot, &parent_count);
     if ((parents == NULL) || (parent_count != binding_count))
     {
@@ -846,8 +846,8 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         }
         next_free--;
     }
-    sNdsR2GxSlotTableProgram[slot] = (u8)root_program;
-    sNdsR2GxSlotTableValid[slot] = 1u;
+    sNdsGxSlotTableProgram[slot] = (u8)root_program;
+    sNdsGxSlotTableValid[slot] = 1u;
     return TRUE;
 }
 
@@ -881,7 +881,7 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
     {
         return FALSE;
     }
-    slots = sNdsR2GxSlotTable[slot];
+    slots = sNdsGxSlotTable[slot];
 
     for (binding_index = 0u; binding_index < binding_count; binding_index++)
     {
@@ -949,9 +949,9 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
         workspace->gx_parent_slot[binding_index] = (parent == 0xffu) ?
             (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE : slots[parent];
         workspace->gx_store_slot[binding_index] = slots[binding_index];
-        NDS_DIAG(gNdsR2GxComposeLocals += count);
+        NDS_DIAG(gNdsGxComposeLocals += count);
     }
-    NDS_DIAG(gNdsR2GxComposeCaptures += binding_count);
+    NDS_DIAG(gNdsGxComposeCaptures += binding_count);
     return TRUE;
 }
 
@@ -1782,8 +1782,8 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
             /* R2-03 E32, and this is the whole cut: lbcommon.c:1627's
              * `f[3][0] += x; f[3][1] += y;` on the world matrix, before the
              * camera multiply below. Zero when the fighter is not in hitlag. */
-            world.m[3][0] += sNdsR2ShuffleWorldX;
-            world.m[3][1] += sNdsR2ShuffleWorldY;
+            world.m[3][0] += sNdsShuffleWorldX;
+            world.m[3][1] += sNdsShuffleWorldY;
             if (camera_modelview_valid != FALSE)
             {
                 ndsRendererMtxMulAffine20p12(
@@ -1871,7 +1871,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     }
     else
     {
-        /* The measured case. NDS_R2_FIGHTER_HW_MTX hands the camera to the
+        /* The measured case. NDS_FIGHTER_HW_MTX hands the camera to the
          * hardware, so this path composes world matrices and the seed is the
          * identity -- which is why the compose can skip folding it in at all. */
         ndsRendererAdapterMtxIdentity20p12(&compose_seed);
@@ -1882,13 +1882,13 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * `world * (T * camera)` and T is the same for every binding, so one 4x4 a
      * frame replaces one row-3 add per binding -- and it keeps the shuffle out
      * of the compose entirely. Zero whenever the fighter is not in hitlag. */
-    if ((sNdsR2ShuffleWorldX != 0) || (sNdsR2ShuffleWorldY != 0))
+    if ((sNdsShuffleWorldX != 0) || (sNdsShuffleWorldY != 0))
     {
         NDSRendererMatrix20p12 shuffle;
 
         ndsRendererAdapterMtxIdentity20p12(&shuffle);
-        shuffle.m[3][0] = sNdsR2ShuffleWorldX;
-        shuffle.m[3][1] = sNdsR2ShuffleWorldY;
+        shuffle.m[3][0] = sNdsShuffleWorldX;
+        shuffle.m[3][1] = sNdsShuffleWorldY;
         ndsRendererMtxMulAffine20p12(&shuffle, &compose_seed, &compose_seed);
         seed_is_identity = FALSE;
     }
@@ -2003,7 +2003,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 gx_compose_declined:
     if (flat_worlds == FALSE)
     {
-        NDS_DIAG(gNdsR2GxComposeDeclines++);
+        NDS_DIAG(gNdsGxComposeDeclines++);
     }
     if (flat_worlds == FALSE)
     {

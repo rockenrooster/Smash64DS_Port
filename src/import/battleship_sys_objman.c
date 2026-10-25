@@ -38,13 +38,13 @@
  * `*battleship_sys_objman.o(.text.gcRunAll)`, written before the rename above
  * existed, so it has been matching nothing and the symbol was measured in
  * .main. See docs/P1_EXECUTION_BOARD.md. */
-void ndsBaseGcRunAll(void) NDS_R2_ITCM_PACK2_CODE;
+void ndsBaseGcRunAll(void) NDS_ITCM_PACK2_CODE;
 /* P2-6 (2026-10-02): the process dispatch gcRunAll calls once per process,
  * 160 B ranked first among the census's ITCM admissions (1p-pf14r-st11:
  * 6,945 non-memory stall cycles a byte in .text.hot), into the room the
  * texgen and sweep work freed. */
 #include <sys/objtypes.h>
-GObjProcess *gcRunGObjProcess(GObjProcess *gobjproc) NDS_R2_ITCM_PACK2_CODE;
+GObjProcess *gcRunGObjProcess(GObjProcess *gobjproc) NDS_ITCM_PACK2_CODE;
 #include <battleship_overlay/src/sys/objman.c>
 #undef gcRunAll
 #undef gcSetupObjman
@@ -281,7 +281,7 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
  * same count. Undersizing is safe and degrades exactly to today's behavior --
  * `gcGetAObjSetNextAlloc` still mallocs a single AObj when the list runs dry --
  * so the count below is sized from a real run rather than from this estimate.
- * `ndsR2AObjLiveCount()` returns decomp's own `sGCAnimsActiveNum`, so sampling
+ * `ndsAObjLiveCount()` returns decomp's own `sGCAnimsActiveNum`, so sampling
  * it at ring stops gives the live peak with no hot-path code and no new bytes
  * on the traversal itself -- 512 is the starting guess against ~360 observed,
  * and it should be trimmed to the measured peak plus margin. */
@@ -293,19 +293,19 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
  * material animations, the event32 shield poses, effects, the stage), so 384
  * keeps 87 spare and returns 4,608 B of the engine's 13,696 B to the heap.
  * Undersizing still degrades to the per-AObj fallback, never a failure. */
-#define NDS_R2_AOBJ_POOL_COUNT 384
-#define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT 224
+#define NDS_AOBJ_POOL_COUNT 384
+#define NDS_AOBJ_POOL_TWO_PLAYER_COUNT 224
 /* Two-player DObj pool when the idle ports merge (see gcSetupObjman). The
  * measured Fox-vs-Kirby peak is 93 live DObjs with and without the GObj latch
  * engaged; 144 keeps 51 spare, and any excess takes the source's per-DObj
  * arena fallback. */
-#define NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT 144u
+#define NDS_DOBJ_POOL_TWO_PLAYER_COUNT 144u
 
-u32 gNdsR2AObjPoolCount;
-u32 gNdsR2AObjPoolBytes;
-u32 gNdsR2AObjPoolDeclines;
-u32 gNdsR2AObjPoolBorrowedSlot = 0xffffffffu;
-u32 gNdsR2DObjPoolBorrowedCount;
+u32 gNdsAObjPoolCount;
+u32 gNdsAObjPoolBytes;
+u32 gNdsAObjPoolDeclines;
+u32 gNdsAObjPoolBorrowedSlot = 0xffffffffu;
+u32 gNdsDObjPoolBorrowedCount;
 
 /* What the pools left of an idle region, as a bump allocator for other
  * battle-lifetime blocks (the figatree heaps are the first user). Re-seeded by
@@ -422,7 +422,7 @@ void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment)
 void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
     __attribute__((weak));
 
-u32 ndsR2AObjLiveCount(void)
+u32 ndsAObjLiveCount(void)
 {
     return sGCAnimsActiveNum;
 }
@@ -440,7 +440,7 @@ void gcSetupObjman(GCSetup *setup)
     gNdsBattleDeadSpanLentBytes = 0u;
     gNdsBattleDeadSpanServedBytes = 0u;
     gNdsBattleDeadSpanServedCount = 0u;
-    u32 aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
+    u32 aobj_pool_count = NDS_AOBJ_POOL_COUNT;
 
     memset(sNdsGcNdlSerialSlots, 0, sizeof(sNdsGcNdlSerialSlots));
     sNdsGcNdlNextSerial = 1u;
@@ -462,7 +462,7 @@ void gcSetupObjman(GCSetup *setup)
         {
             /* Two-player pose proofs peak at 199 live AObjs. Keep 25 spare
              * pooled entries; any later excess uses the source fallback. */
-            aobj_pool_count = NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT;
+            aobj_pool_count = NDS_AOBJ_POOL_TWO_PLAYER_COUNT;
         }
     }
 
@@ -485,7 +485,7 @@ void gcSetupObjman(GCSetup *setup)
          * the arena, where Kirby/Mario starts a match under the 25 KiB GObj
          * latch. No idle port, no packets compiled in, or any other scene:
          * the arena path below, unchanged. */
-        gNdsR2AObjPoolBorrowedSlot = 0xffffffffu;
+        gNdsAObjPoolBorrowedSlot = 0xffffffffu;
         if ((ndsRendererFighterPacketIdleRegion != NULL) &&
             (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
             (gSCManagerBattleState != NULL))
@@ -504,11 +504,11 @@ void gcSetupObjman(GCSetup *setup)
             u32 dobj_bytes = 0u;
             u8 *first_region = NULL;
             u32 first_bytes = 0u;
-            /* NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT when two or fewer players,
+            /* NDS_AOBJ_POOL_TWO_PLAYER_COUNT when two or fewer players,
              * per the pose-engine block above; the full count otherwise. */
             u32 sized_aobj_count = aobj_pool_count;
 
-            gNdsR2DObjPoolBorrowedCount = 0u;
+            gNdsDObjPoolBorrowedCount = 0u;
             gNdsBattleIdleRegionsMerged = 0u;
             for (slot = 0u; slot < ARRAY_COUNT(gSCManagerBattleState->players); slot++)
             {
@@ -527,15 +527,15 @@ void gcSetupObjman(GCSetup *setup)
                 if (block == NULL)
                 {
                     size_t pool_bytes =
-                        sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT;
+                        sizeof(AObj) * (size_t)NDS_AOBJ_POOL_COUNT;
 
                     if (bytes < pool_bytes)
                     {
                         continue;
                     }
                     block = (AObj *)(void *)region;
-                    aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
-                    gNdsR2AObjPoolBorrowedSlot = slot;
+                    aobj_pool_count = NDS_AOBJ_POOL_COUNT;
+                    gNdsAObjPoolBorrowedSlot = slot;
                     dobj_block = region + pool_bytes;
                     dobj_bytes = bytes - (u32)pool_bytes;
                     first_region = region;
@@ -559,7 +559,7 @@ void gcSetupObjman(GCSetup *setup)
                      * So when the two regions touch (ports 3 and 4 idle, the
                      * ordinary two-player case), carve them as one: the AObj
                      * pool at its two-player count, the DObj pool at
-                     * NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT, and everything after
+                     * NDS_DOBJ_POOL_TWO_PLAYER_COUNT, and everything after
                      * that as the battle scratch, where owner images and copy
                      * hats now go before they touch the arena. Either pool
                      * running dry still takes the source's own per-object
@@ -567,7 +567,7 @@ void gcSetupObjman(GCSetup *setup)
                      * and three-player matches keep the layout below. */
                     if ((first_region != NULL) &&
                         ((first_region + first_bytes) == region) &&
-                        (sized_aobj_count < NDS_R2_AOBJ_POOL_COUNT) &&
+                        (sized_aobj_count < NDS_AOBJ_POOL_COUNT) &&
                         (ds_setup.dobjs_num == 0) &&
                         (ds_setup.dobj_size >= sizeof(DObj)) &&
                         ((ds_setup.dobj_size & 3u) == 0u))
@@ -576,7 +576,7 @@ void gcSetupObjman(GCSetup *setup)
                         u32 aobj_bytes =
                             (u32)(sizeof(AObj) * (size_t)sized_aobj_count);
                         u32 dobj_pool_bytes =
-                            (u32)NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT *
+                            (u32)NDS_DOBJ_POOL_TWO_PLAYER_COUNT *
                             (u32)ds_setup.dobj_size;
 
                         if ((aobj_bytes + dobj_pool_bytes) < total)
@@ -608,7 +608,7 @@ void gcSetupObjman(GCSetup *setup)
             {
                 ds_setup.dobjs = (DObj *)(void *)dobj_block;
                 ds_setup.dobjs_num = (s32)(dobj_bytes / ds_setup.dobj_size);
-                gNdsR2DObjPoolBorrowedCount = (u32)ds_setup.dobjs_num;
+                gNdsDObjPoolBorrowedCount = (u32)ds_setup.dobjs_num;
             }
         }
         if (block == NULL)
@@ -621,15 +621,15 @@ void gcSetupObjman(GCSetup *setup)
         {
             ds_setup.aobjs = block;
             ds_setup.aobjs_num = aobj_pool_count;
-            gNdsR2AObjPoolCount = aobj_pool_count;
-            gNdsR2AObjPoolBytes =
+            gNdsAObjPoolCount = aobj_pool_count;
+            gNdsAObjPoolBytes =
                 (u32)(sizeof(AObj) * (size_t)aobj_pool_count);
         }
         else
         {
             /* Arena too tight for the block: leave the scene exactly as it was
              * and let the per-AObj fallback run. Never a boot failure. */
-            gNdsR2AObjPoolDeclines++;
+            gNdsAObjPoolDeclines++;
         }
     }
     ndsBaseGcSetupObjman(&ds_setup);

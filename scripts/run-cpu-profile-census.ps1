@@ -39,7 +39,7 @@ param(
     # (gNdsLabFourCpuGkind, gNdsLabFourCpuKinds, gNdsLabP4Content), so one
     # profile ROM serves every stage and roster instead of one build each.
     [string[]]$BootSetGlobals = @(),
-    # Extra `make` variables for the build, e.g. -MakeFlags NDS_R2_BOTH_CPU=1.
+    # Extra `make` variables for the build, e.g. -MakeFlags NDS_BOTH_CPU=1.
     # Without this the harness could only build the Boundary configuration, so a
     # census of THE GATE arm had to be hand-built and then driven with -NoBuild --
     # two failed invocations on 2026-08-11 before that was obvious, because the
@@ -52,7 +52,7 @@ param(
 # string, because -File passes arguments verbatim instead of parsing them as
 # PowerShell. sample-tick-hud-buckets.ps1:153 already documents and splits for
 # exactly this; this harness did not, so the list became one make variable and
-# the generated nds_build_config.h emitted `#define NDS_R2_BOTH_CPU 1,B=0`.
+# the generated nds_build_config.h emitted `#define NDS_BOTH_CPU 1,B=0`.
 # The build then died inside an unrelated `#if` with "token '=' is not valid in
 # preprocessor expressions", naming the config header and never the invocation.
 # Two gate-arm profile builds were lost to it on 2026-08-12.

@@ -23,7 +23,7 @@ The generated data is deliberately simple to consume on ARM9:
 The verifier independently replays the source Event32 commands and the emitted
 quantized representation over the whole migrated corpus and a dense angle
 grid.  The accepted error gate is the project's existing 0.02 absolute joint
-value bound from ``check_r2_cubic_error_bound.py``.
+value bound from ``check_cubic_error_bound.py``.
 """
 
 from __future__ import annotations
@@ -433,9 +433,9 @@ def eval_script(script, angle: float, quantized: bool, seed=None):
 
 
 def _eval_q_kernel(length, inv, vb, vt, rb, rt, kind):
-    """Host mirror of include/nds/nds_anim_fixed.h:ndsR2AnimEvalQ."""
+    """Host mirror of include/nds/nds_anim_fixed.h:ndsAnimEvalQ."""
     bone = 1 << 16
-    if kind == 5:  # NDS_R2_AQ_KIND_STEP
+    if kind == 5:  # NDS_AQ_KIND_STEP
         return vt if inv <= length else vb
     if kind == 6:  # unused by ShieldPose, retained to keep the mirror complete
         return vb + ((length * rb + (1 << 15)) >> 16)

@@ -15,14 +15,14 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_cpu_profile.h>
 
-#if NDS_R2_PATH
-#include <nds/nds_r2_battle.h>
+#if NDS_PATH
+#include <nds/nds_battle.h>
 /* R2-01. The R2 loop is specialized for the Boundary configuration: it folds
  * `is_battle_playable` and `use_realtime_presentation` to 1. Both are only
  * constant under this harness, so any other harness would silently get a loop
  * that does not match it. Fail the build closed rather than ship that. */
 #if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
-#error "NDS_R2_PATH=1 requires the battle_playable harness (mode 163)"
+#error "NDS_PATH=1 requires the battle_playable harness (mode 163)"
 #endif
 #endif
 

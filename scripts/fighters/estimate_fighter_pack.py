@@ -2558,13 +2558,13 @@ REPL_PACK_HEADER = 64        # per-kind pack header + manifest skeleton
 # HW lighting disabled for the existing comparison mode.
 NATIVE_IMAGE_FLAGS_HWTRI = {
     "NDS_RENDERER_PROFILE_LEVEL": 0,
-    "NDS_R2_FIGHTER_HW_LIGHT": 1,
+    "NDS_FIGHTER_HW_LIGHT": 1,
     "NDS_RENDERER_M2_DETAILED_LEDGER": 0,
     "NDS_FIGHTER_PRIMITIVES": 2,
     "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS": 0,
 }
 NATIVE_IMAGE_FLAGS_BASE = dict(NATIVE_IMAGE_FLAGS_HWTRI,
-                               NDS_R2_FIGHTER_HW_LIGHT=0)
+                               NDS_FIGHTER_HW_LIGHT=0)
 NATIVE_IMAGE_FLAGS_BY_NAME = {
     "hwtri": NATIVE_IMAGE_FLAGS_HWTRI,
     "base": NATIVE_IMAGE_FLAGS_BASE,
@@ -2595,9 +2595,9 @@ _IMG_NUMERIC_GUARD_RE = re.compile(r"^(NDS_[A-Z0-9_]+)\s*(==|<)\s*(-?\d+)$")
 
 # Guards the census evaluator understands.  Anything else is a Refusal.
 _KNOWN_GUARDS = {
-    "!NDS_R2_FIGHTER_HW_LIGHT",
-    "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
-    "NDS_R2_FIGHTER_HW_LIGHT",
+    "!NDS_FIGHTER_HW_LIGHT",
+    "!NDS_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
+    "NDS_FIGHTER_HW_LIGHT",
     "NDS_RENDERER_PROFILE_LEVEL < 2",
     "NDS_FIGHTER_PRIMITIVES == 1",
     "NDS_FIGHTER_PRIMITIVES == 2",
@@ -2615,15 +2615,15 @@ def _eval_image_guard(expr, flags):
     expr = expr.strip()
     if expr not in _KNOWN_GUARDS:
         raise Refusal("unhandled image member guard %r" % expr)
-    if expr == "NDS_R2_FIGHTER_HW_LIGHT":
-        return bool(_image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags))
+    if expr == "NDS_FIGHTER_HW_LIGHT":
+        return bool(_image_flag_value("NDS_FIGHTER_HW_LIGHT", flags))
     if expr == "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS":
         return bool(_image_flag_value(
             "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS", flags))
-    if expr == "!NDS_R2_FIGHTER_HW_LIGHT":
-        return not _image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags)
-    if expr == "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER":
-        return (not _image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags)
+    if expr == "!NDS_FIGHTER_HW_LIGHT":
+        return not _image_flag_value("NDS_FIGHTER_HW_LIGHT", flags)
+    if expr == "!NDS_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER":
+        return (not _image_flag_value("NDS_FIGHTER_HW_LIGHT", flags)
                 or bool(_image_flag_value("NDS_RENDERER_M2_DETAILED_LEDGER", flags)))
     m = _IMG_NUMERIC_GUARD_RE.match(expr)
     if not m:
@@ -2641,7 +2641,7 @@ def _native_image_elem_layout(elem, flags):
     if elem == "NDSNativePreparedDenseVertex":
         # generated header: HW-light uses packed/aligned(2)
         # {u32 gx_xy,u16 gx_z,s16 s,s16 t}; base keeps two extra fields.
-        if _eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", flags):
+        if _eval_image_guard("NDS_FIGHTER_HW_LIGHT", flags):
             return (10, 2)
         return (16, 4)
     if elem not in _NATIVE_ELEM_LAYOUT:

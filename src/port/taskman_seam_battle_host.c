@@ -1,17 +1,17 @@
-/* The battle host loop's operations (ndsR2HostBattle*, called by
- * src/nds/r2/nds_r2_battle.c and the menu router): prepare, one logic
+/* The battle host loop's operations (ndsHostBattle*, called by
+ * src/nds/nds_battle.c and the menu router): prepare, one logic
  * iteration, present, and finish, with the logic clock and present pacing,
  * the audio update, the campaign and continue playback drivers the walk
  * audits use, and the per-frame low-water samples. A slice of
  * taskman_seam.c. */
 
 #include <nds/nds_native_wallpaper.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_hwmath_unit.h>
 #include <sys/video.h>
 #include <nds/nds_p5.h>
 
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
- * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
+ * frame for the NDS_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
 extern s32 sEFManagerStructsFreeNum;
 extern volatile u32 gNdsEffectPoolFreeMin;
 
@@ -41,7 +41,7 @@ extern volatile u32 gNdsEffectPoolFreeMin;
 #define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
 
 /* P2-2p8 (2026-10-05): the cpuGetTiming of this presented frame's start (set
- * by ndsR2HostBattleIterationBegin, never 0 once set), for render-side
+ * by ndsHostBattleIterationBegin, never 0 once set), for render-side
  * decisions that weigh the frame's elapsed work (the heavy-frame particle
  * LOD, battleship_lbparticle.c). 0 = no iteration has begun. */
 volatile u32 gNdsBattleIterationStartTick;
@@ -320,11 +320,11 @@ static void ndsBattlePlayablePacingUpdate(void)
     if (ticks != 0u)
     {
         gNdsBattlePlayablePacingPresentFpsX10 =
-            (u32)ndsR2HwMathDivideLead(
+            (u32)ndsHwMathDivideLead(
                 (s64)((u64)gNdsBattlePlayablePacingPresentedFrames *
                       BUS_CLOCK * 10u), (s64)ticks);
         gNdsBattlePlayablePacingLogicFpsX10 =
-            (u32)ndsR2HwMathDivideLead(
+            (u32)ndsHwMathDivideLead(
                 (s64)((u64)gNdsBattlePlayablePacingLogicFrames *
                       BUS_CLOCK * 10u), (s64)ticks);
     }
@@ -561,7 +561,7 @@ static void ndsBattlePlayablePresentFrame(void)
     {
         gNdsGCDrawsActiveMax = (u32)sGCDrawsActiveNum;
     }
-    /* Saturation of the NDS_R2_EFFECT_POOL bound. This is what sizes the pool
+    /* Saturation of the NDS_EFFECT_POOL bound. This is what sizes the pool
      * from measurement instead of a guess: the depth is right when the
      * low-water sits just above the source's 5-free refusal cut during heavy
      * combat, because that is the smallest pool that never refuses a cosmetic
@@ -883,7 +883,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsHardwareRendererPolyRamCount;
         gNdsTickHudBuckets[nNDSTickHudBucketGxVertices] =
             gNdsHardwareRendererVertexRamCount;
-#if NDS_R2_PATH
+#if NDS_PATH
         gNdsTickHudBuckets[nNDSTickHudBucketDigestA] = sNdsReplayDigest[0];
         gNdsTickHudBuckets[nNDSTickHudBucketDigestB] = sNdsReplayDigest[1];
 #endif
@@ -924,12 +924,12 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }
 
-#if NDS_R2_PATH
+#if NDS_PATH
 /* Runtime 2 host surface (R2-01, docs/Smash64DS_Runtime2_SwitchPlan.md).
  *
  * src/nds/r2 owns battle scene flow; Runtime 1 still owns the 60 Hz tick and
  * the draw. These are the operations the R2 loop drives, and nothing more --
- * the whole block compiles out when NDS_R2_PATH is 0, so the published arm is
+ * the whole block compiles out when NDS_PATH is 0, so the published arm is
  * byte-identical to a build without the family. That matters more than it
  * looks: Tasks 87-89/94/95 all regressed because editing this translation unit
  * re-addressed its neighbours, so the 0 arm must not be edited at all, only
@@ -939,7 +939,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
  * become file statics here because the loop that owns them now lives in
  * another translation unit; the arithmetic is unchanged. */
 
-NDS_COLD void ndsR2HostBattlePrepare(void)
+NDS_COLD void ndsHostBattlePrepare(void)
 {
     ndsStageCollisionLoopPrepareRuntime();
     ndsAudioAssetLoadFenced();
@@ -949,7 +949,7 @@ NDS_COLD void ndsR2HostBattlePrepare(void)
     ndsPlatformPresentLeadEnable(TRUE);
 }
 
-void ndsR2HostBattleIterationBegin(void)
+void ndsHostBattleIterationBegin(void)
 {
     gNdsBattleIterationStartTick = cpuGetTiming() | 1u;
 #if NDS_TICK_HUD
@@ -982,7 +982,7 @@ void ndsR2HostBattleIterationBegin(void)
     }
 }
 
-#endif /* NDS_R2_PATH */
+#endif /* NDS_PATH */
 
 #if NDS_1P_GAME && NDS_MENU_WALK
 /* P2-6 transition proof. The campaign probe already enables the controller
@@ -1430,7 +1430,7 @@ static void ndsCampaignDrivePlayback(void)
 }
 #endif
 
-#if NDS_R2_PATH
+#if NDS_PATH
 /* P2-2p8 A6 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md). gGMCameraMatrix has a
  * GAMEPLAY reader: Link's boomerang projects its position through it to decide
  * the off-screen return (wp/wplink/wplinkboomerang.c:104-107). The source
@@ -1462,7 +1462,7 @@ static void ndsBattleCameraMatrixAtUndrawnTick(void)
     NDS_DIAG(gNdsCameraUndrawnTickRebuildCount++);
 }
 
-u32 ndsR2HostBattleUpdateOnce(u32 update_index)
+u32 ndsHostBattleUpdateOnce(u32 update_index)
 {
     u32 battle_status_before = (gSCManagerBattleState != NULL) ?
         (u32)gSCManagerBattleState->game_status : 0xffffffffu;
@@ -1487,7 +1487,7 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * tick of a presented frame -- the pose the present will draw -- and holds
      * them on the others. The Runtime 1 loop publishes the same word. */
     gNdsFtPoseEvalTick =
-        ((update_index + 1u) >= ndsR2HostBattleUpdatesPerPresent()) ? 1u : 0u;
+        ((update_index + 1u) >= ndsHostBattleUpdatesPerPresent()) ? 1u : 0u;
     /* Material animations step once a presented frame, on the drawn tick, by
      * the ticks it stands for (src/import/battleship_sys_objanim.c). */
     {
@@ -1537,7 +1537,7 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
     return (sSYTaskmanStatus == nSYTaskmanStatusLoadScene) ? 1u : 0u;
 }
 
-void ndsR2HostBattlePresent(void)
+void ndsHostBattlePresent(void)
 {
     ndsBattlePlayablePresentRealtimeFrame();
     /* Count only updates committed to a presented frame; the source-faithful
@@ -1547,7 +1547,7 @@ void ndsR2HostBattlePresent(void)
     ndsBattlePlayableFinalizePresentedIteration();
 }
 
-NDS_COLD void ndsR2HostBattleFinish(void)
+NDS_COLD void ndsHostBattleFinish(void)
 {
     /* The last led frame swaps in before the scene moves on. */
     ndsBattlePlayableRetireLed();
@@ -1556,21 +1556,21 @@ NDS_COLD void ndsR2HostBattleFinish(void)
     ndsBattlePlayablePacingFinish();
 }
 
-u32 ndsR2HostBattleNaturalMotionPassed(void)
+u32 ndsHostBattleNaturalMotionPassed(void)
 {
     return (gNdsFighterNaturalMotionResult ==
             NDS_FIGHTER_NATURAL_MOTION_PASS) ? 1u : 0u;
 }
 
-u32 ndsR2HostBattleUpdatesPerPresent(void)
+u32 ndsHostBattleUpdatesPerPresent(void)
 {
     return NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;
 }
 
-u32 ndsR2HostBattleUpdateMax(void)
+u32 ndsHostBattleUpdateMax(void)
 {
     return (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?
         NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX :
         NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX;
 }
-#endif /* NDS_R2_PATH */
+#endif /* NDS_PATH */

@@ -910,7 +910,7 @@ static void ndsStageGxFlush(void)
     glGlobalData.activeTexture = 0;
     glGlobalData.activePalette = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
-    sNdsR2GxLastProjection = NULL;
+    sNdsGxLastProjection = NULL;
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareTriangleBatchOpen = FALSE;
 }

@@ -703,7 +703,7 @@ NDS_SHIELD_POSE_HOT_INLINE s32 ndsShieldPoseReadValue(
 }
 
 /* Q`frac` -> f32 for the blob's s16-range values: the bits
- * ndsR2FixedToF32(value << (NDS_R2_AQ_VF - frac), NDS_R2_AQ_VF) returns,
+ * ndsAnimFixedToF32(value << (NDS_AQ_VF - frac), NDS_AQ_VF) returns,
  * built directly -- |value| < 2^16 fits the significand, so no rounding
  * (checked for every s16 at fracs 6, 11 and 12). */
 NDS_SHIELD_POSE_HOT_INLINE f32 ndsShieldPoseQToF32(s32 value, u32 frac)

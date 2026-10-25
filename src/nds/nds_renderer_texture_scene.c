@@ -67,10 +67,10 @@ NDS_RENDERER_COLD void ndsRendererHardwareResetSceneTextureVram(void)
 #endif
     /* Software state that would otherwise reference names glResetTextures has
      * just invalidated. The prepared-run cache only exists at
-     * NDS_R2_STAGE_DIRECT; this function is scoped to NDS_RENDERER_HW_TRIANGLES,
+     * NDS_STAGE_DIRECT; this function is scoped to NDS_RENDERER_HW_TRIANGLES,
      * which is the weaker condition, and the audio-FGM harness is a config that
      * has the second without the first. */
-    sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
+    sNdsNativeStageOwnerExecution.prepared_valid = 0u;
     gNdsRendererSceneTextureVramResetCount++;
 }
 
@@ -533,7 +533,7 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 
 /* Edge of a fighter tint tile, in texels. Outside the guard below because the
  * native owner's tint batch reads it to aim its single texcoord. */
-#define NDS_R2_FIGHTER_TINT_DIM 8u
+#define NDS_FIGHTER_TINT_DIM 8u
 
 /* A SOLID TEXEL, SO A TINTED BODY CAN MULTIPLY AFTER IT SHADES.
  *
@@ -571,12 +571,12 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
  * frames, each build or eviction moving the set generation that retires
  * every tinted lean list (682 list materializations against 45 for the
  * original cast; Dream Land WORK P95 2.79M, 2026-10-12). */
-#define NDS_R2_FIGHTER_TINT_SLOTS 48u
-#define NDS_R2_FIGHTER_TINT_QUEUE 8u
-#define NDS_R2_FIGHTER_TINT_BYTES \
-    ((NDS_R2_FIGHTER_TINT_DIM * NDS_R2_FIGHTER_TINT_DIM) / 2u)
+#define NDS_FIGHTER_TINT_SLOTS 48u
+#define NDS_FIGHTER_TINT_QUEUE 8u
+#define NDS_FIGHTER_TINT_BYTES \
+    ((NDS_FIGHTER_TINT_DIM * NDS_FIGHTER_TINT_DIM) / 2u)
 
-typedef struct NDSR2FighterTint
+typedef struct NDSFighterTint
 {
     u32 rgb;       /* 24-bit RRGGBB this tile carries */
     u32 name;
@@ -587,36 +587,36 @@ typedef struct NDSR2FighterTint
     u16 pltt;
     u16 last_used; /* low half of sNdsRendererHardwareFrameSerial at the last
                       hit: only differences of a few frames are read */
-} NDSR2FighterTint;
+} NDSFighterTint;
 
-static NDSR2FighterTint sNdsR2FighterTints[NDS_R2_FIGHTER_TINT_SLOTS];
-static u32 sNdsR2FighterTintCount;
-static u32 sNdsR2FighterTintQueue[NDS_R2_FIGHTER_TINT_QUEUE];
-static u32 sNdsR2FighterTintQueueCount;
-static u32 sNdsR2FighterTintFailed[NDS_R2_FIGHTER_TINT_QUEUE];
-static u32 sNdsR2FighterTintFailedCount;
+static NDSFighterTint sNdsFighterTints[NDS_FIGHTER_TINT_SLOTS];
+static u32 sNdsFighterTintCount;
+static u32 sNdsFighterTintQueue[NDS_FIGHTER_TINT_QUEUE];
+static u32 sNdsFighterTintQueueCount;
+static u32 sNdsFighterTintFailed[NDS_FIGHTER_TINT_QUEUE];
+static u32 sNdsFighterTintFailedCount;
 /* Names die with glResetTextures; the set is stamped with the VRAM reset
  * generation it was built in and forgotten (not deleted) when that moves. */
-static u32 sNdsR2FighterTintGeneration;
-volatile u32 gNdsR2FighterTintBuilds;
-volatile u32 gNdsR2FighterTintHits;
-volatile u32 gNdsR2FighterTintMisses;
-volatile u32 gNdsR2FighterTintFails;
-volatile u32 gNdsR2FighterTintQueueFull;
-volatile u32 gNdsR2FighterTintTableFull;
-volatile u32 gNdsR2FighterTintEvictions;
+static u32 sNdsFighterTintGeneration;
+volatile u32 gNdsFighterTintBuilds;
+volatile u32 gNdsFighterTintHits;
+volatile u32 gNdsFighterTintMisses;
+volatile u32 gNdsFighterTintFails;
+volatile u32 gNdsFighterTintQueueFull;
+volatile u32 gNdsFighterTintTableFull;
+volatile u32 gNdsFighterTintEvictions;
 /* Bumped whenever a tile is created or deleted; a lean list remembers the
  * generation its tint binds were resolved under (tint_set_generation). A list
  * made before its colour's tile existed carries fold words, and one made while
  * a tile existed binds it by name; either is wrong the moment the set changes.
  * Measured on r49's first cut: the first battle frame was captured before the
  * tile was built and drew the capped fold for the rest of the match. */
-volatile u32 gNdsR2FighterTintSetGeneration;
+volatile u32 gNdsFighterTintSetGeneration;
 
-static s32 ndsR2FighterTintFill(u8 *pixels, u32 bytes, void *user_data)
+static s32 ndsFighterTintFill(u8 *pixels, u32 bytes, void *user_data)
 {
     (void)user_data;
-    if ((pixels == NULL) || (bytes < NDS_R2_FIGHTER_TINT_BYTES))
+    if ((pixels == NULL) || (bytes < NDS_FIGHTER_TINT_BYTES))
     {
         return FALSE;
     }
@@ -626,17 +626,17 @@ static s32 ndsR2FighterTintFill(u8 *pixels, u32 bytes, void *user_data)
     return TRUE;
 }
 
-static void ndsR2FighterTintSyncGeneration(void)
+static void ndsFighterTintSyncGeneration(void)
 {
     u32 generation = gNdsRendererSceneTextureVramResetCount + 1u;
 
-    if (sNdsR2FighterTintGeneration != generation)
+    if (sNdsFighterTintGeneration != generation)
     {
-        sNdsR2FighterTintCount = 0u;
-        sNdsR2FighterTintQueueCount = 0u;
-        sNdsR2FighterTintFailedCount = 0u;
-        sNdsR2FighterTintGeneration = generation;
-        gNdsR2FighterTintSetGeneration++;
+        sNdsFighterTintCount = 0u;
+        sNdsFighterTintQueueCount = 0u;
+        sNdsFighterTintFailedCount = 0u;
+        sNdsFighterTintGeneration = generation;
+        gNdsFighterTintSetGeneration++;
     }
 }
 
@@ -648,39 +648,39 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
     u32 rgb = (material_color >> 8) & 0x00ffffffu;
     u32 i;
 
-    ndsR2FighterTintSyncGeneration();
-    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    ndsFighterTintSyncGeneration();
+    for (i = 0u; i < sNdsFighterTintCount; i++)
     {
-        if (sNdsR2FighterTints[i].rgb == rgb)
+        if (sNdsFighterTints[i].rgb == rgb)
         {
-            NDS_DIAG(gNdsR2FighterTintHits++);
-            sNdsR2FighterTints[i].last_used =
+            NDS_DIAG(gNdsFighterTintHits++);
+            sNdsFighterTints[i].last_used =
                 (u16)sNdsRendererHardwareFrameSerial;
-            return sNdsR2FighterTints[i].name;
+            return sNdsFighterTints[i].name;
         }
     }
-    NDS_DIAG(gNdsR2FighterTintMisses++);
-    for (i = 0u; i < sNdsR2FighterTintFailedCount; i++)
+    NDS_DIAG(gNdsFighterTintMisses++);
+    for (i = 0u; i < sNdsFighterTintFailedCount; i++)
     {
-        if (sNdsR2FighterTintFailed[i] == rgb)
+        if (sNdsFighterTintFailed[i] == rgb)
         {
             return 0u;
         }
     }
-    for (i = 0u; i < sNdsR2FighterTintQueueCount; i++)
+    for (i = 0u; i < sNdsFighterTintQueueCount; i++)
     {
-        if (sNdsR2FighterTintQueue[i] == rgb)
+        if (sNdsFighterTintQueue[i] == rgb)
         {
             return 0u;
         }
     }
-    if (sNdsR2FighterTintQueueCount < NDS_R2_FIGHTER_TINT_QUEUE)
+    if (sNdsFighterTintQueueCount < NDS_FIGHTER_TINT_QUEUE)
     {
-        sNdsR2FighterTintQueue[sNdsR2FighterTintQueueCount++] = rgb;
+        sNdsFighterTintQueue[sNdsFighterTintQueueCount++] = rgb;
     }
     else
     {
-        NDS_DIAG(gNdsR2FighterTintQueueFull++);
+        NDS_DIAG(gNdsFighterTintQueueFull++);
     }
     return 0u;
 }
@@ -688,7 +688,7 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
 /* Frame boundary only: create the tiles the last frame asked for. */
 static void ndsRendererHardwareServiceFighterTintTiles(void)
 {
-    ndsR2FighterTintSyncGeneration();
+    ndsFighterTintSyncGeneration();
     /* Not under a held frame (nds_platform.c, the transition hold): its
      * uploads could land on texels that frame still draws with. The queue
      * waits for the first frame after the Thaw. */
@@ -696,17 +696,17 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
     {
         return;
     }
-    while (sNdsR2FighterTintQueueCount != 0u)
+    while (sNdsFighterTintQueueCount != 0u)
     {
-        u32 rgb = sNdsR2FighterTintQueue[--sNdsR2FighterTintQueueCount];
+        u32 rgb = sNdsFighterTintQueue[--sNdsFighterTintQueueCount];
         u16 palette[16];
         u32 name = 0u;
         u32 i;
         s32 resident = FALSE;
 
-        for (i = 0u; i < sNdsR2FighterTintCount; i++)
+        for (i = 0u; i < sNdsFighterTintCount; i++)
         {
-            if (sNdsR2FighterTints[i].rgb == rgb)
+            if (sNdsFighterTints[i].rgb == rgb)
             {
                 resident = TRUE;
                 break;
@@ -716,7 +716,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
         {
             continue;
         }
-        if (sNdsR2FighterTintCount >= NDS_R2_FIGHTER_TINT_SLOTS)
+        if (sNdsFighterTintCount >= NDS_FIGHTER_TINT_SLOTS)
         {
             /* Evict the least recently used tile the frame just drawn did not
              * touch: the character select cycles through far more colours than
@@ -724,53 +724,53 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
              * later preview on the fold. Deleting here is safe -- no walk is
              * running -- and the set generation below retires any packet that
              * recorded a bind of it. */
-            u32 victim = NDS_R2_FIGHTER_TINT_SLOTS;
+            u32 victim = NDS_FIGHTER_TINT_SLOTS;
 
             /* Two frames, not one: the previous frame's polygon list may still
              * be rasterising while this one is submitted, and the tile created
              * just below could land in the block a deleted one freed. */
-            for (i = 0u; i < sNdsR2FighterTintCount; i++)
+            for (i = 0u; i < sNdsFighterTintCount; i++)
             {
                 if (((u16)((u16)sNdsRendererHardwareFrameSerial -
-                           sNdsR2FighterTints[i].last_used) >= 2u) &&
-                    ((victim == NDS_R2_FIGHTER_TINT_SLOTS) ||
-                     ((s16)(sNdsR2FighterTints[i].last_used -
-                            sNdsR2FighterTints[victim].last_used) < 0)))
+                           sNdsFighterTints[i].last_used) >= 2u) &&
+                    ((victim == NDS_FIGHTER_TINT_SLOTS) ||
+                     ((s16)(sNdsFighterTints[i].last_used -
+                            sNdsFighterTints[victim].last_used) < 0)))
                 {
                     victim = i;
                 }
             }
-            if (victim == NDS_R2_FIGHTER_TINT_SLOTS)
+            if (victim == NDS_FIGHTER_TINT_SLOTS)
             {
-                NDS_DIAG(gNdsR2FighterTintTableFull++);
+                NDS_DIAG(gNdsFighterTintTableFull++);
                 continue;
             }
             ndsRendererHardwareReleaseIFCommonCloudAtlas(
-                &sNdsR2FighterTints[victim].name);
-            sNdsR2FighterTints[victim] =
-                sNdsR2FighterTints[sNdsR2FighterTintCount - 1u];
-            sNdsR2FighterTintCount--;
-            NDS_DIAG(gNdsR2FighterTintEvictions++);
-            gNdsR2FighterTintSetGeneration++;
+                &sNdsFighterTints[victim].name);
+            sNdsFighterTints[victim] =
+                sNdsFighterTints[sNdsFighterTintCount - 1u];
+            sNdsFighterTintCount--;
+            NDS_DIAG(gNdsFighterTintEvictions++);
+            gNdsFighterTintSetGeneration++;
         }
         memset(palette, 0, sizeof(palette));
         palette[1] = (u16)RGB15(((rgb >> 16) & 0xffu) >> 3,
                                 ((rgb >> 8) & 0xffu) >> 3,
                                 (rgb & 0xffu) >> 3);
         if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
-                NDS_R2_FIGHTER_TINT_DIM, NDS_R2_FIGHTER_TINT_DIM, palette,
-                ndsR2FighterTintFill, NULL, &name) == FALSE)
+                NDS_FIGHTER_TINT_DIM, NDS_FIGHTER_TINT_DIM, palette,
+                ndsFighterTintFill, NULL, &name) == FALSE)
         {
-            NDS_DIAG(gNdsR2FighterTintFails++);
-            if (sNdsR2FighterTintFailedCount < NDS_R2_FIGHTER_TINT_QUEUE)
+            NDS_DIAG(gNdsFighterTintFails++);
+            if (sNdsFighterTintFailedCount < NDS_FIGHTER_TINT_QUEUE)
             {
-                sNdsR2FighterTintFailed[sNdsR2FighterTintFailedCount++] = rgb;
+                sNdsFighterTintFailed[sNdsFighterTintFailedCount++] = rgb;
             }
             continue;
         }
-        sNdsR2FighterTints[sNdsR2FighterTintCount].rgb = rgb;
-        sNdsR2FighterTints[sNdsR2FighterTintCount].name = name;
-        sNdsR2FighterTints[sNdsR2FighterTintCount].last_used =
+        sNdsFighterTints[sNdsFighterTintCount].rgb = rgb;
+        sNdsFighterTints[sNdsFighterTintCount].name = name;
+        sNdsFighterTints[sNdsFighterTintCount].last_used =
             (u16)sNdsRendererHardwareFrameSerial;
         {
             /* P2-2p8 Phase 1 slice 1: capture exactly the words a lean list
@@ -779,17 +779,17 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
              * two getters return them here -- reads only, no GX write. */
             int palette_format = -1;
 
-            sNdsR2FighterTints[sNdsR2FighterTintCount].teximage =
+            sNdsFighterTints[sNdsFighterTintCount].teximage =
                 (u32)glGetTexParameter();
             glGetColorTableParameterEXT(
                 GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
-            sNdsR2FighterTints[sNdsR2FighterTintCount].pltt =
+            sNdsFighterTints[sNdsFighterTintCount].pltt =
                 ((palette_format >= 0) && (palette_format < 0xFFFF)) ?
                     (u16)palette_format : 0xFFFFu;
         }
-        sNdsR2FighterTintCount++;
-        NDS_DIAG(gNdsR2FighterTintBuilds++);
-        gNdsR2FighterTintSetGeneration++;
+        sNdsFighterTintCount++;
+        NDS_DIAG(gNdsFighterTintBuilds++);
+        gNdsFighterTintSetGeneration++;
     }
 }
 
@@ -800,19 +800,19 @@ s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
 {
     u32 i;
 
-    ndsR2FighterTintSyncGeneration();
-    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    ndsFighterTintSyncGeneration();
+    for (i = 0u; i < sNdsFighterTintCount; i++)
     {
-        if (sNdsR2FighterTints[i].rgb == rgb)
+        if (sNdsFighterTints[i].rgb == rgb)
         {
             if (touch != 0u)
             {
-                sNdsR2FighterTints[i].last_used =
+                sNdsFighterTints[i].last_used =
                     (u16)sNdsRendererHardwareFrameSerial;
             }
-            *teximage = sNdsR2FighterTints[i].teximage;
-            *pltt = (sNdsR2FighterTints[i].pltt == 0xFFFFu) ? 0xffffffffu :
-                (u32)sNdsR2FighterTints[i].pltt;
+            *teximage = sNdsFighterTints[i].teximage;
+            *pltt = (sNdsFighterTints[i].pltt == 0xFFFFu) ? 0xffffffffu :
+                (u32)sNdsFighterTints[i].pltt;
             return TRUE;
         }
     }
@@ -836,37 +836,37 @@ s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
  * every packet and lean list that bound one re-derives its words. Battle exit
  * only, so size-optimized like the admission's own cold code. */
 static u32 __attribute__((cold, optimize("Os")))
-ndsR2FighterTintReleaseRange(u32 lcd_lo, u32 lcd_hi)
+ndsFighterTintReleaseRange(u32 lcd_lo, u32 lcd_hi)
 {
     u32 released = 0u;
     u32 i = 0u;
 
-    ndsR2FighterTintSyncGeneration();
-    while (i < sNdsR2FighterTintCount)
+    ndsFighterTintSyncGeneration();
+    while (i < sNdsFighterTintCount)
     {
         u32 lcd = 0x06800000u +
-            ((sNdsR2FighterTints[i].teximage & 0xFFFFu) << 3);
+            ((sNdsFighterTints[i].teximage & 0xFFFFu) << 3);
 
         if ((lcd < lcd_lo) || (lcd >= lcd_hi))
         {
             i++;
             continue;
         }
-        if (sNdsR2FighterTintQueueCount < NDS_R2_FIGHTER_TINT_QUEUE)
+        if (sNdsFighterTintQueueCount < NDS_FIGHTER_TINT_QUEUE)
         {
-            sNdsR2FighterTintQueue[sNdsR2FighterTintQueueCount++] =
-                sNdsR2FighterTints[i].rgb;
+            sNdsFighterTintQueue[sNdsFighterTintQueueCount++] =
+                sNdsFighterTints[i].rgb;
         }
         ndsRendererHardwareReleaseIFCommonCloudAtlas(
-            &sNdsR2FighterTints[i].name);
-        sNdsR2FighterTints[i] =
-            sNdsR2FighterTints[sNdsR2FighterTintCount - 1u];
-        sNdsR2FighterTintCount--;
+            &sNdsFighterTints[i].name);
+        sNdsFighterTints[i] =
+            sNdsFighterTints[sNdsFighterTintCount - 1u];
+        sNdsFighterTintCount--;
         released++;
     }
     if (released != 0u)
     {
-        gNdsR2FighterTintSetGeneration++;
+        gNdsFighterTintSetGeneration++;
     }
     return released;
 }
@@ -1397,9 +1397,9 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
                           (sNdsEntryEffectTextureStartupOnly[i] != 0u) ?
                               nNdsVcEntryStartup : nNdsVcEntryKept);
     }
-    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    for (i = 0u; i < sNdsFighterTintCount; i++)
     {
-        ndsVramCensusMark(sNdsR2FighterTints[i].name, nNdsVcTint);
+        ndsVramCensusMark(sNdsFighterTints[i].name, nNdsVcTint);
     }
     for (i = 0u; i < NDS_REBIRTH_HALO_TEXTURE_COUNT; i++)
     {

@@ -3,7 +3,7 @@
 /* `used` on every counter: `--gc-sections` has removed diagnostic globals here
  * before and Boundary reported "Missing ELF symbol" rather than a flag. */
 __attribute__((used)) volatile u32 gNdsFtAnimTrackDispatch =
-    NDS_R2_FTANIM_TRACK_DISPATCH;
+    NDS_FTANIM_TRACK_DISPATCH;
 __attribute__((used)) volatile u32 gNdsFtAnimTrackBinds;
 __attribute__((used)) volatile u32 gNdsFtAnimTrackBindMiss;
 __attribute__((used)) volatile u32 gNdsFtAnimTrackBindFull;

@@ -1,5 +1,5 @@
 # Lab and runtime knobs: the renderer, collision, simulation and profiling
-# switches (NDS_R2_*, NDS_TASK*_*), most of them off in every shipping and
+# switches (NDS_*, NDS_TASK*_*), most of them off in every shipping and
 # gate configuration; the intro bake stamp.
 # Included in place from the Makefile (P8 G); its text is unchanged.
 
@@ -15,7 +15,7 @@ $(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_
 # on any other. Setting this to 1 also gives the shared taskman_seam helpers
 # external linkage, so the 0 arm stays byte-identical to a build without the
 # family at all.
-NDS_R2_PATH ?= 0
+NDS_PATH ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
 # NDS_STAGE_HW_COMPOSE and NDS_STAGE_STEADY.
@@ -47,8 +47,8 @@ NDS_R2_PATH ?= 0
 # together. See memory cluster-where-the-percentile-lives.
 #   0 = validate everything every frame (shipped before slice 44).
 #   N = each binding is revalidated once every N frames.
-NDS_R2_STAGE_VALIDATE_STRIDE ?= 0
-# R2-03 E16. Requires NDS_R2_FIGHTER_HW_MTX (E17), which is what puts the
+NDS_STAGE_VALIDATE_STRIDE ?= 0
+# R2-03 E16. Requires NDS_FIGHTER_HW_MTX (E17), which is what puts the
 # modelview rather than the composed MVP into the vector matrix. Moves the
 # fighter's per-vertex lighting onto the DS geometry engine: a load-time
 # GFX_NORMAL table, one GFX_DIFFUSE_AMBIENT per epoch carrying the source light
@@ -56,7 +56,7 @@ NDS_R2_STAGE_VALIDATE_STRIDE ?= 0
 # GFX_COLOR in the emit, and POLY_FORMAT_LIGHT0. Rendering-side -- the DS light
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
-NDS_R2_FIGHTER_HW_LIGHT ?= 0
+NDS_FIGHTER_HW_LIGHT ?= 0
 # R2-03 E30. Draws the tick HUD's percentile block on screen. The ring is
 # sampled either way, so a GDB-scripted measurement reads exactly the same data
 # with this off -- and off is the configuration that resembles the published
@@ -120,7 +120,7 @@ NDS_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
 # beam quad so the Fox-native lab arm covers the complete shot presentation;
 # it remains independently switchable for attribution A/Bs. Owner-playtested
 # and accepted 2026-08-09; ON BY DEFAULT through the beam route.
-NDS_R2_FOX_BLASTER_GLOW_AOT ?= 1
+NDS_FOX_BLASTER_GLOW_AOT ?= 1
 # Multiplies the Mario/Luigi fireball's stage (map) collision diamond -- the
 # top/center/bottom/width fields from the weapon attributes reloc data -- by a
 # port-side factor at spawn. The source values load straight from ROM reloc
@@ -128,11 +128,11 @@ NDS_R2_FOX_BLASTER_GLOW_AOT ?= 1
 # scale after wpManagerMakeWeapon sets them, before the first per-frame stage
 # collision pass reads them. 1.0 is source-exact; >1 enlarges the rebound feel.
 # Owner playtest 2026-08-07: the source fireball felt slightly too small.
-NDS_R2_FIREBALL_MAP_COLL_SCALE ?= 1.5
+NDS_FIREBALL_MAP_COLL_SCALE ?= 1.5
 # Bit per generated RebirthHalo group eligible for model-space GX submission.
 # 0x3f is the all-GX experiment; final acceptance may narrow this if the DS
 # transformer's subpixel rounding changes source coverage for a specific group.
-NDS_R2_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
+NDS_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
 # THE P1 DEMO LADDER (owner, 2026-08-17): Fox opens at CPU level 1 and gains a
 # level each time Mario wins and START restarts from Results, wrapping 9 -> 1.
 # The battle text HUD already prints the live level as "CPU L<n> [Fox]" from
@@ -140,18 +140,18 @@ NDS_R2_REBIRTH_HALO_GX_GROUP_MASK ?= 0x3f
 #
 # It changes what the SHIPPED demo plays, so it also changes the first match of
 # a Boundary run from level 3 to level 1. That is the owner's call and it is
-# deliberate; the NDS_R2_BOTH_CPU stress arm re-pins both fighters at level 3
+# deliberate; the NDS_BOTH_CPU stress arm re-pins both fighters at level 3
 # (scene_harness.c) so every banked gate figure stays comparable. Build with 0
 # for a fixed level-3 Fox.
 NDS_DEMO_FOX_CPU_LADDER ?= 1
 # The falsifier arm for the wiring above, and it is separate from the flag for a
-# measurement reason. Setting NDS_R2_COLLISION_FIXED to 0 removes the objects
+# measurement reason. Setting NDS_COLLISION_FIXED to 0 removes the objects
 # from the link, which is a DIFFERENT link input set and therefore a different
 # placement -- exactly the confound a flag falsifier exists to remove. This one
 # keeps every byte and flips one initialised word of .data
 # (gNdsCfxRingEnable, read through a volatile so no fold can reach it), so arm A
 # and arm B are expected to have byte-identical .text.
-NDS_R2_COLLISION_FIXED_DISPATCH ?= 0
+NDS_COLLISION_FIXED_DISPATCH ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.

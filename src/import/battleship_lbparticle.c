@@ -75,8 +75,8 @@
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_fcmp.h>
-#include <nds/nds_r2_collision_mtx.h>
-#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_collision_mtx.h>
+#include <nds/nds_hwmath_unit.h>
 #include <nds/nds_fighter_matrix_index.h>
 #include <nds/nds_fixed_convert.h>
 
@@ -129,7 +129,7 @@ extern volatile u32 gNdsSceneManagerCurrIsBattle;
 #define lbParticleDrawTextures ndsBaseLbParticleDrawTextures
 
 /* Interposed: the source pool sizes are for the whole N64 game, and P1 is two
- * fighters on one stage with items off. See NDS_R2_PARTICLE_POOL_* below.
+ * fighters on one stage with items off. See NDS_PARTICLE_POOL_* below.
  * Safe to rename here because efParticleInitAll has NO caller inside
  * efparticle.c or lbparticle.c -- every call is from another TU, so the
  * `#define` moves the definition without taking a call site with it. */
@@ -197,7 +197,7 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * this build and a hard failure. `ifCommonSetMaxNumGObj` (ifcommon.c:3156)
  * caps the GObj pool at whatever is active when the general heap drops under
  * 25 KiB free, and past that cap `ifCommonCountdownMakeInterface` dereferences
- * a NULL. Measured with NDS_R2_PARTICLE_DRAW=1: free 23,032, COMMONSMAX
+ * a NULL. Measured with NDS_PARTICLE_DRAW=1: free 23,032, COMMONSMAX
  * latched at 45, data abort in ifCommonTrafficMakeSObj at the GO countdown --
  * a healthy allocator (MALLOCOVF=0) and a dead game. The deficit was 2,568
  * bytes against DRAW's +3,008 of .text.
@@ -268,13 +268,13 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * Results still uses the Wanted seam below, which currently resolves back to
  * source sizing before its own func_start. */
 #if NDS_MENU_SHELL || NDS_FOUR_CPU_STRESS
-#define NDS_R2_PARTICLE_POOL_STRUCTS 112
-#define NDS_R2_PARTICLE_POOL_GENERATORS 24
-#define NDS_R2_PARTICLE_POOL_TRANSFORMS 80
+#define NDS_PARTICLE_POOL_STRUCTS 112
+#define NDS_PARTICLE_POOL_GENERATORS 24
+#define NDS_PARTICLE_POOL_TRANSFORMS 80
 #else
-#define NDS_R2_PARTICLE_POOL_STRUCTS 48
-#define NDS_R2_PARTICLE_POOL_GENERATORS 24
-#define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
+#define NDS_PARTICLE_POOL_STRUCTS 48
+#define NDS_PARTICLE_POOL_GENERATORS 24
+#define NDS_PARTICLE_POOL_TRANSFORMS 24
 #endif
 
 /* EFCommon script 0x62, decoded from the pinned bank:
@@ -389,7 +389,7 @@ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
  * On its own this changes nothing and was reverted once for that reason -- at
  * the source's update_rate the confetti emitters never asked for more than 40
  * structs and a 112-struct pool sat unused with 0 rejects. It only matters
- * alongside NDS_R2_CONFETTI_UPDATE_RATE. */
+ * alongside NDS_CONFETTI_UPDATE_RATE. */
 volatile u32 gNdsParticlePoolStructsWanted;
 volatile u32 gNdsParticlePoolGeneratorsWanted;
 volatile u32 gNdsParticlePoolTransformsWanted;
@@ -406,11 +406,11 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj);
 void efParticleInitAll(void)
 {
     u32 structs = (gNdsParticlePoolStructsWanted != 0u) ?
-        gNdsParticlePoolStructsWanted : NDS_R2_PARTICLE_POOL_STRUCTS;
+        gNdsParticlePoolStructsWanted : NDS_PARTICLE_POOL_STRUCTS;
     u32 generators = (gNdsParticlePoolGeneratorsWanted != 0u) ?
-        gNdsParticlePoolGeneratorsWanted : NDS_R2_PARTICLE_POOL_GENERATORS;
+        gNdsParticlePoolGeneratorsWanted : NDS_PARTICLE_POOL_GENERATORS;
     u32 transforms = (gNdsParticlePoolTransformsWanted != 0u) ?
-        gNdsParticlePoolTransformsWanted : NDS_R2_PARTICLE_POOL_TRANSFORMS;
+        gNdsParticlePoolTransformsWanted : NDS_PARTICLE_POOL_TRANSFORMS;
 
     gEFParticleStructsGObj = lbParticleAllocStructs((s32)structs);
     gEFParticleGeneratorsGObj = lbParticleAllocGenerators((s32)generators);
@@ -1524,10 +1524,10 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
  * camera sits further back than the N64's, source-exact confetti covers less of
  * the screen and no amount of pieces fixes the framing. That is the one
  * dimension the contract never had. */
-#define NDS_R2_CONFETTI_FIRST_SCRIPT 108u
-#define NDS_R2_CONFETTI_LAST_SCRIPT 111u
-#define NDS_R2_CONFETTI_UPDATE_RATE 0.0F
-#define NDS_R2_CONFETTI_PIECE_SIZE 0.0F
+#define NDS_CONFETTI_FIRST_SCRIPT 108u
+#define NDS_CONFETTI_LAST_SCRIPT 111u
+#define NDS_CONFETTI_UPDATE_RATE 0.0F
+#define NDS_CONFETTI_PIECE_SIZE 0.0F
 
 /* Counts the emitters this build raised. Four is the whole set; anything else
  * means the bank moved out from under the id range. */
@@ -1536,26 +1536,26 @@ volatile u32 gNdsConfettiSizePatchCount;
 
 static void ndsParticleApplyConfettiDensity(u32 id, LBScript *script)
 {
-    if ((id < NDS_R2_CONFETTI_FIRST_SCRIPT) ||
-        (id > NDS_R2_CONFETTI_LAST_SCRIPT) || (script == NULL))
+    if ((id < NDS_CONFETTI_FIRST_SCRIPT) ||
+        (id > NDS_CONFETTI_LAST_SCRIPT) || (script == NULL))
     {
         return;
     }
     /* Only ever upward, and only from the value the source actually carries.
      * Clamping to a raise means a re-render that changes the script cannot be
      * silently overridden downward by this. */
-    if (script->update_rate < NDS_R2_CONFETTI_UPDATE_RATE)
+    if (script->update_rate < NDS_CONFETTI_UPDATE_RATE)
     {
-        script->update_rate = NDS_R2_CONFETTI_UPDATE_RATE;
+        script->update_rate = NDS_CONFETTI_UPDATE_RATE;
         gNdsConfettiDensityPatchCount++;
     }
     /* Same clamp-upward-only contract as the rate, and counted separately so a
      * bank whose size already exceeds this is distinguishable from one this
      * never reached. probe-results-confetti reports maxsize, so the raise is
      * checkable without a capture. */
-    if (script->size < NDS_R2_CONFETTI_PIECE_SIZE)
+    if (script->size < NDS_CONFETTI_PIECE_SIZE)
     {
-        script->size = NDS_R2_CONFETTI_PIECE_SIZE;
+        script->size = NDS_CONFETTI_PIECE_SIZE;
         gNdsConfettiSizePatchCount++;
     }
 }
@@ -3481,7 +3481,7 @@ ndsParticleXfAxisScale(const s32 *row, f32 diagonal)
                    (u64)((s64)row[1] * row[1]) +
                    (u64)((s64)row[2] * row[2]);
     const f32 scale =
-        ndsFixedToF32((s32)ndsR2HwMathSqrt64Fast(sq), 16u);
+        ndsFixedToF32((s32)ndsHwMathSqrt64Fast(sq), 16u);
 
     return (NDS_FCMP_LT0(diagonal) != 0) ? -scale : scale;
 }
@@ -3500,7 +3500,7 @@ ndsParticleXfMemoFill(NDSParticleXfScale *memo, const LBTransform *xf)
             const s32 v = ndsF32ToFixed(xf->affine[row][col], 16u);
 
             /* |cell| < 2^14 keeps every row's squared length in 64 bits. */
-            if ((v == NDS_R2_COLLISION_F32_OVERFLOW) || (v >= (1 << 30)) ||
+            if ((v == NDS_COLLISION_F32_OVERFLOW) || (v >= (1 << 30)) ||
                 (v <= -(1 << 30)))
             {
                 ok = 0u;
@@ -3509,7 +3509,7 @@ ndsParticleXfMemoFill(NDSParticleXfScale *memo, const LBTransform *xf)
         }
         memo->t_q8[row] = ndsF32ToFixed(
             xf->affine[3][row], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-        if (memo->t_q8[row] == NDS_R2_COLLISION_F32_OVERFLOW)
+        if (memo->t_q8[row] == NDS_COLLISION_F32_OVERFLOW)
         {
             ok = 0u;
         }
@@ -3544,17 +3544,17 @@ ndsParticleCenterQ8(const NDSParticleXfScale *memo, const Vec3f *pos,
                     s32 center_q8[3])
 {
     const s32 *r = memo->r_q16;
-    const s32 px = ndsR2CollisionF32ToFixed(
+    const s32 px = ndsCollisionF32ToFixed(
         pos->x, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-    const s32 py = ndsR2CollisionF32ToFixed(
+    const s32 py = ndsCollisionF32ToFixed(
         pos->y, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
-    const s32 pz = ndsR2CollisionF32ToFixed(
+    const s32 pz = ndsCollisionF32ToFixed(
         pos->z, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
     u32 i;
 
-    if ((px == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (py == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (pz == NDS_R2_COLLISION_F32_OVERFLOW))
+    if ((px == NDS_COLLISION_F32_OVERFLOW) ||
+        (py == NDS_COLLISION_F32_OVERFLOW) ||
+        (pz == NDS_COLLISION_F32_OVERFLOW))
     {
         return FALSE;
     }
@@ -3581,23 +3581,23 @@ ndsParticleBiasTowardEyeQ8(s32 center_q8[3], f32 depth_bias)
     CObj *cobj =
         (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
     const s32 bias_q8 =
-        ndsR2CollisionF32ToFixed(depth_bias, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+        ndsCollisionF32ToFixed(depth_bias, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
     s64 d[3];
     u64 sq = 0u;
     u32 len;
     u32 i;
 
     if ((cobj == NULL) || (bias_q8 == 0) ||
-        (bias_q8 == NDS_R2_COLLISION_F32_OVERFLOW))
+        (bias_q8 == NDS_COLLISION_F32_OVERFLOW))
     {
         return;
     }
     for (i = 0u; i < 3u; i++)
     {
-        const s32 eye = ndsR2CollisionF32ToFixed(
+        const s32 eye = ndsCollisionF32ToFixed(
             (&cobj->vec.eye.x)[i], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
 
-        if (eye == NDS_R2_COLLISION_F32_OVERFLOW)
+        if (eye == NDS_COLLISION_F32_OVERFLOW)
         {
             return;
         }
@@ -3608,14 +3608,14 @@ ndsParticleBiasTowardEyeQ8(s32 center_q8[3], f32 depth_bias)
         }
         sq += (u64)(d[i] * d[i]);
     }
-    len = ndsR2HwMathSqrt64Fast(sq);
+    len = ndsHwMathSqrt64Fast(sq);
     if (len <= (1u << NDS_RENDERER_PARTICLE_CENTER_SHIFT))
     {
         return;
     }
     for (i = 0u; i < 3u; i++)
     {
-        center_q8[i] += (s32)ndsR2HwMathDivideFast(d[i] * bias_q8, (s64)len);
+        center_q8[i] += (s32)ndsHwMathDivideFast(d[i] * bias_q8, (s64)len);
     }
 }
 
@@ -3670,9 +3670,9 @@ ndsParticleTraRotRpyRScaQ(Mtx44f *mf, f32 tx, f32 ty, f32 tz, f32 r, f32 p,
     if ((ndsFighterMatrixAngleToIndexExact(r, &ir) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(p, &ip) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(y, &iy) == 0) ||
-        (sx_q == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (sy_q == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (sz_q == NDS_R2_COLLISION_F32_OVERFLOW))
+        (sx_q == NDS_COLLISION_F32_OVERFLOW) ||
+        (sy_q == NDS_COLLISION_F32_OVERFLOW) ||
+        (sz_q == NDS_COLLISION_F32_OVERFLOW))
     {
         syMatrixTraRotRpyRScaF(mf, tx, ty, tz, r, p, y, sx, sy, sz);
         return;
@@ -3952,7 +3952,7 @@ static void ndsParticleBiasTowardEye(const Vec3f *pos, f32 depth_bias,
     }
 }
 
-/* The shield's floor (NDS_R2_SHIELD_QUAD_DEPTH_BIAS in battleship_efmanager.c)
+/* The shield's floor (NDS_SHIELD_QUAD_DEPTH_BIAS in battleship_efmanager.c)
  * for the same reason: a burst centred on a fighter's joint interleaves with
  * that fighter's body, and the opaque body wins wherever it is nearer. 150
  * clears a torso that is a few tens of units deep either side of the joint. */

@@ -49,7 +49,7 @@
  * Precision: the double route rounded once at the end; these round twice, at
  * ~1e-7 relative each, on an angle in degrees. `PROJECT_GOAL.md` requires
  * mechanical equivalence, not bit exactness, and this is orders of magnitude
- * below the 0.0028 rad bound `check_r2_cubic_error_bound.py` already accepts for
+ * below the 0.0028 rad bound `check_cubic_error_bound.py` already accepts for
  * joint values. */
 #define F_CST_DTOR32(x) ((f32)((x) * DTOR32))
 #define F_CLC_DTOR32(x) ((f32)(((x) * PI32) / 180.0F))

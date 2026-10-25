@@ -1608,7 +1608,7 @@ NDS_COLD static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
          * src/sys/malloc.c:30) -- so the NULL test below it has always been
          * dead code and this call is a freeze, not a failed load. Same defect
          * the anim cache was moved off the heap for on 2026-07-29; that fix
-         * covered ndsR2AnimCacheStore and left the two loaders that reach the
+         * covered ndsAnimCacheStore and left the two loaders that reach the
          * heap on their own. See the arena's own use of this guard at :6078. */
         if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size
                                 + sNdsRelocEnsureKeepFree

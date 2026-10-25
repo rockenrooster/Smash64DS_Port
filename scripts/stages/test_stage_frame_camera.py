@@ -53,7 +53,7 @@ typedef struct { struct { struct { Vec f; } vec; } scale; f32 parent_scale; } DO
 #define TRUE 1
 #define FALSE 0
 #define nGCMatrixKind48 48
-#define NDS_R2_COLLISION_F32_OVERFLOW INT32_MIN
+#define NDS_COLLISION_F32_OVERFLOW INT32_MIN
 static u32 gNdsRendererAdapterCustom47RejectCount, mod1_calls, rows_calls;
 static f32 sNdsRendererAdapterMvpRecalcScaleX;
 /* nds_fixed_convert.h's contract: round half away from zero, INT32_MIN
@@ -63,13 +63,13 @@ static s32 ndsF32ToFixed(f32 value, unsigned bits) {
     if (!(x > -2147483648.0 && x < 2147483648.0)) return INT32_MIN;
     return (s32)(x < 0 ? x - 0.5 : x + 0.5);
 }
-static u64 ndsR2HwMathSqrt64Fast(u64 v) {
+static u64 ndsHwMathSqrt64Fast(u64 v) {
     u64 r = (u64)sqrtl((long double)v);
     while (r * r > v) r--;
     while ((r + 1) * (r + 1) <= v) r++;
     return r;
 }
-static s64 ndsR2HwMathDivideFast(s64 num, s64 den) { return num / den; }
+static s64 ndsHwMathDivideFast(s64 num, s64 den) { return num / den; }
 static u32 ndsFloatBits(f32 value) { u32 u; memcpy(&u, &value, 4); return u; }
 static sb32 ndsRendererAdapterMvpParentScaleX(DObj *d, f32 *out) {
     *out = d->parent_scale; return TRUE;

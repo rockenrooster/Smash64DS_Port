@@ -18,7 +18,7 @@ static void ndsRendererNativeBuildDenseShadeWords(
         s32 nz = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 8));
 
         dense_words[index] =
-            NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+            NDS_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     }
     for (index = 0u; index < run_count; index++)
     {
@@ -75,24 +75,24 @@ static inline u32 ndsRendererR2MaterialChannel(
 }
 
 /* Cleared per owner execute; set once the light vector has been written. */
-static u8 sNdsR2LightVectorWritten;
+static u8 sNdsLightVectorWritten;
 
 
 /* The resident tint tile this epoch's untextured runs modulate by, or 0 for the
  * folded-material path. Written once per epoch by
  * ndsRendererNativeShadeProductionActions (via ndsRendererR2ResolveEpochShade)
  * and read by the run prepare. Deliberately OUTSIDE the
- * NDS_R2_UNLIT_VERTEX_EPOCH guard that sNdsR2EpochUnlitVertexColor above sits
+ * NDS_UNLIT_VERTEX_EPOCH guard that sNdsEpochUnlitVertexColor above sits
  * inside -- that flag is 0 in every shipping config, and both of this
  * variable's users are unconditional. */
-static u32 sNdsR2EpochTintTexture;
+static u32 sNdsEpochTintTexture;
 /* P2-2p8 Phase 1 slice 1: the 24-bit colour that chose the tile above. */
-static u32 sNdsR2EpochTintRgb;
+static u32 sNdsEpochTintRgb;
 /* Engagement proof. The ambient-only bisect showed the material path working
  * end to end while the diffuse term stayed zero, which leaves only the light
  * vector -- and "the write never ran" and "the write ran and did not stick" are
  * different bugs. */
-u32 gNdsR2LightVectorWrites;
+u32 gNdsLightVectorWrites;
 
 /* ---------------------------------------------------------------------------
  * K02/P04/J01. The facing-dependent shade seam, and what actually varies.
@@ -147,7 +147,7 @@ u32 gNdsR2LightVectorWrites;
  * matrix at MATRIX_READ_VECTOR (nine 20.12 words, coherent only while GXSTAT
  * bit 27 reports the geometry engine idle) and that is the exact 3x3 every
  * GFX_NORMAL is multiplied by. */
-#ifndef NDS_R2_LIGHT_VECTOR_MATRIX
+#ifndef NDS_LIGHT_VECTOR_MATRIX
 /* 1 = sample the live vector matrix at the light-vector write and publish the
  *     witness. Costs one bounded FIFO-drain wait plus nine register reads per
  *     owner execute (2/frame; E16a measured one light write per execute).
@@ -167,16 +167,16 @@ u32 gNdsR2LightVectorWrites;
  * `malloc.c:30` is `while (TRUE);`, so overrunning that arena hangs the console
  * rather than declining. Turn this back on in a lab build when the follow-up
  * repair needs re-measuring; do not ship it on. */
-#define NDS_R2_LIGHT_VECTOR_MATRIX 0
+#define NDS_LIGHT_VECTOR_MATRIX 0
 #endif
-#ifndef NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+#ifndef NDS_LIGHT_VECTOR_STRETCH_FIX
 /* THE REPAIR, split from the witness so the measurement can be taken without
  * it. 1 divides the stored light by |M L| instead of |L|, which is the exact
  * software normalisation moved to the only place the hardware path can express
  * it. Algebraically IDENTICAL to 0 whenever the 3x3 is orthonormal, because
  * |M L| is then (1 << FRAC) * |L| -- a rigid chain is unchanged bit for bit,
  * so this cannot regress a fighter whose chain was already rigid. Requires
- * NDS_R2_LIGHT_VECTOR_MATRIX; fails closed to the r25 divisor whenever the
+ * NDS_LIGHT_VECTOR_MATRIX; fails closed to the r25 divisor whenever the
  * sample is unusable.
  *
  * DEFAULT 0 UNTIL THE PACKET TWIN IS RECONCILED, and that is an integration
@@ -198,29 +198,29 @@ u32 gNdsR2LightVectorWrites;
  * the stretch differs with facing, land the repair together with a twin that
  * agrees, not before it. Turning this on alone would ship an unproven repair
  * with a known divergence. */
-#define NDS_R2_LIGHT_VECTOR_STRETCH_FIX 0
+#define NDS_LIGHT_VECTOR_STRETCH_FIX 0
 #endif
 
 /* Published per captured fighter by src/port/renderer_adapter_fighter.c, which
  * defines them unconditionally so these externs resolve in every build. The
  * renderer has no FTStruct, and no shade sample can be read at all without
  * knowing which facing produced it -- that is the whole point of r25. */
-extern volatile s32 gNdsR2FighterFacingLr;
-extern volatile u32 gNdsR2FighterFacingSlot;
+extern volatile s32 gNdsFighterFacingLr;
+extern volatile u32 gNdsFighterFacingSlot;
 
-#if NDS_R2_LIGHT_VECTOR_MATRIX
+#if NDS_LIGHT_VECTOR_MATRIX
 /* GXSTAT bit 27 is the geometry-engine busy flag. The matrix read ports are
  * only coherent while it is clear, and an unbounded spin inside the draw is a
  * hang, so the wait is bounded and a missed sample degrades to the r25
  * arithmetic rather than to a wrong light. */
-#define NDS_R2_LIGHT_MATRIX_BUSY_BIT (1u << 27)
+#define NDS_LIGHT_MATRIX_BUSY_BIT (1u << 27)
 /* ~16k volatile MMIO polls. The FIFO drains in far less than that even full,
  * and the cap is what keeps a pathological never-idle engine to a few
  * milliseconds instead of a multi-frame hang. */
-#define NDS_R2_LIGHT_MATRIX_IDLE_SPINS 0x4000u
-#define NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS 4u
+#define NDS_LIGHT_MATRIX_IDLE_SPINS 0x4000u
+#define NDS_LIGHT_MATRIX_WITNESS_SLOTS 4u
 
-typedef struct NDSR2LightMatrixWitness
+typedef struct NDSLightMatrixWitness
 {
     s32 vector_matrix[9];   /* MATRIX_READ_VECTOR, 20.12, row major m[i][j]   */
     s32 light_dir[3];       /* stats->light_dir_*, source units               */
@@ -232,7 +232,7 @@ typedef struct NDSR2LightMatrixWitness
     s32 facing_lr;          /* fp->lr at capture: -1 left, 0 centre, +1 right */
     u32 facing_slot;        /* fp->nds_slot                                   */
     u32 idle_ok;            /* 0 = engine never idled; the words are stale    */
-} NDSR2LightMatrixWitness;
+} NDSLightMatrixWitness;
 
 /* EVENT-LOCAL, not a latch. One slot per fighter owner slot, every field
  * overwritten on every owner execute that writes a light vector, so a value
@@ -244,20 +244,20 @@ typedef struct NDSR2LightMatrixWitness
  * COVERAGE, because a counter that only counts what it saw is how a green run
  * gets over-read: a REPLAYED fighter submits the recorded packet and never
  * enters ndsRendererR2WriteLightVector, so it contributes no sample at all.
- * Compare gNdsR2LightMatrixWitnessWrites against gNdsR2LightVectorWrites (they
+ * Compare gNdsLightMatrixWitnessWrites against gNdsLightVectorWrites (they
  * should track) and both against the number of fighters actually drawing
  * before concluding anything from a slot that did not move. */
-volatile NDSR2LightMatrixWitness
-    gNdsR2LightMatrixWitness[NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS];
-volatile u32 gNdsR2LightMatrixWitnessWrites;
-volatile u32 gNdsR2LightMatrixIdleTimeouts;
-__attribute__((used)) volatile u32 gNdsR2LightMatrixStretchApplied;
+volatile NDSLightMatrixWitness
+    gNdsLightMatrixWitness[NDS_LIGHT_MATRIX_WITNESS_SLOTS];
+volatile u32 gNdsLightMatrixWitnessWrites;
+volatile u32 gNdsLightMatrixIdleTimeouts;
+__attribute__((used)) volatile u32 gNdsLightMatrixStretchApplied;
 /* |M L| < |L|: the chain SHRINKS the light. The hardware diffuse is then
  * darker than the source's and no unit-bounded light vector can undo it, so
  * the repair declines rather than wrapping the packed components. A non-zero
  * delta here is the evidence that the remaining error needs the diffuse COLOUR
  * scaled instead, which is a different lever and a different task card. */
-__attribute__((used)) volatile u32 gNdsR2LightMatrixStretchDeclined;
+__attribute__((used)) volatile u32 gNdsLightMatrixStretchDeclined;
 
 /* Returns |M L| in 20.12 * source units, or 0 when the sample is unusable --
  * which is the caller's signal to keep the r25 divisor. noinline and outside
@@ -265,7 +265,7 @@ __attribute__((used)) volatile u32 gNdsR2LightMatrixStretchDeclined;
 static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
     s32 lx, s32 ly, s32 lz, s32 light_len_q12)
 {
-    volatile NDSR2LightMatrixWitness *witness;
+    volatile NDSLightMatrixWitness *witness;
     s32 m[9];
     s64 t[3];
     s64 length_squared;
@@ -276,13 +276,13 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
     u32 i;
     s32 stretched = 0;
 
-    while (((u32)GFX_STATUS & NDS_R2_LIGHT_MATRIX_BUSY_BIT) != 0u)
+    while (((u32)GFX_STATUS & NDS_LIGHT_MATRIX_BUSY_BIT) != 0u)
     {
         spins++;
-        if (spins >= NDS_R2_LIGHT_MATRIX_IDLE_SPINS)
+        if (spins >= NDS_LIGHT_MATRIX_IDLE_SPINS)
         {
             idle = 0u;
-            NDS_DIAG(gNdsR2LightMatrixIdleTimeouts++);
+            NDS_DIAG(gNdsLightMatrixIdleTimeouts++);
             break;
         }
     }
@@ -302,15 +302,15 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
     length_squared = (t[0] * t[0]) + (t[1] * t[1]) + (t[2] * t[2]);
     if (length_squared > 0)
     {
-        stretched = (s32)ndsR2HwMathSqrt64((u64)length_squared);
+        stretched = (s32)ndsHwMathSqrt64((u64)length_squared);
     }
 
-    slot = gNdsR2FighterFacingSlot;
-    if (slot >= NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS)
+    slot = gNdsFighterFacingSlot;
+    if (slot >= NDS_LIGHT_MATRIX_WITNESS_SLOTS)
     {
-        slot = NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS - 1u;
+        slot = NDS_LIGHT_MATRIX_WITNESS_SLOTS - 1u;
     }
-    witness = &gNdsR2LightMatrixWitness[slot];
+    witness = &gNdsLightMatrixWitness[slot];
     for (i = 0u; i < 9u; i++)
     {
         witness->vector_matrix[i] = m[i];
@@ -323,7 +323,7 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
             ((s64)m[(i * 3u) + 2u] * m[(i * 3u) + 2u]);
 
         witness->row_norm[i] = (row_squared > 0) ?
-            (s32)ndsR2HwMathSqrt64((u64)row_squared) : 0;
+            (s32)ndsHwMathSqrt64((u64)row_squared) : 0;
     }
     det = ((s64)m[0] * (((s64)m[4] * m[8]) - ((s64)m[5] * m[7]))) -
           ((s64)m[1] * (((s64)m[3] * m[8]) - ((s64)m[5] * m[6]))) +
@@ -340,16 +340,16 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
     /* Both operands are already 20.12, so one more FRAC in the numerator puts
      * the ratio itself in 20.12: 4096 reads as "no correction needed". */
     witness->stretch_20p12 = (light_len_q12 > 0) ?
-        (s32)ndsR2HwMathDiv64((s64)stretched << NDS_RENDERER_DS_MTX_FRAC_BITS,
+        (s32)ndsHwMathDiv64((s64)stretched << NDS_RENDERER_DS_MTX_FRAC_BITS,
                               light_len_q12) : 0;
-    witness->facing_lr = gNdsR2FighterFacingLr;
-    witness->facing_slot = gNdsR2FighterFacingSlot;
+    witness->facing_lr = gNdsFighterFacingLr;
+    witness->facing_slot = gNdsFighterFacingSlot;
     witness->idle_ok = idle;
-    NDS_DIAG(gNdsR2LightMatrixWitnessWrites++);
+    NDS_DIAG(gNdsLightMatrixWitnessWrites++);
 
     return (idle != 0u) ? stretched : 0;
 }
-#endif /* NDS_R2_LIGHT_VECTOR_MATRIX */
+#endif /* NDS_LIGHT_VECTOR_MATRIX */
 
 /* GFX_LIGHT_VECTOR stores the vector transformed by the vector matrix at write
  * time, so it has to be written under an identity vector matrix. The owner
@@ -371,7 +371,7 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
  * where the software clamps a positive L.N.
  *
  * That "if" used to read as settled fact. It is the K02/P04/J01 assumption --
- * see the block above NDS_R2_LIGHT_VECTOR_MATRIX: normalising before the
+ * see the block above NDS_LIGHT_VECTOR_MATRIX: normalising before the
  * transform and after it differ by exactly |M L| / |L|, and this function now
  * measures that factor rather than asserting it is 1.
  *
@@ -388,12 +388,12 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     s32 ny = 0;
     s32 nz = 0;
     s32 light_len = (length_squared > 0) ?
-        (s32)ndsR2HwMathSqrt64((u64)length_squared) : 0;
-#if NDS_R2_LIGHT_VECTOR_MATRIX
+        (s32)ndsHwMathSqrt64((u64)length_squared) : 0;
+#if NDS_LIGHT_VECTOR_MATRIX
     s32 stretched_len;
     /* |L| in 20.12, NOT `light_len << FRAC`.
      *
-     * check-r2-light-stretch.py caught this: ndsR2HwMathSqrt64 truncates, and
+     * check-light-stretch.py caught this: ndsHwMathSqrt64 truncates, and
      * the shipped light is about 100 units long, so `light_len` is up to ~1%
      * short of |L| -- r25 has been storing a light vector ~1% longer than unit
      * ever since, harmlessly. Comparing the 20.12 |M L| against that truncated
@@ -401,7 +401,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
      * fighter in the game by two LSB. sqrt(n << 24) == sqrt(n) << 12, so this
      * costs one more hardware sqrt and removes the whole class. */
     s32 light_len_q12 = (length_squared > 0) ?
-        (s32)ndsR2HwMathSqrt64((u64)length_squared <<
+        (s32)ndsHwMathSqrt64((u64)length_squared <<
                                (2 * NDS_RENDERER_DS_MTX_FRAC_BITS)) : 0;
 #endif
 
@@ -410,7 +410,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
      * batch earlier changes nothing else -- no FIFO word between here and the
      * bracket depends on a batch being open. */
     ndsRendererHardwareEndBatch();
-#if NDS_R2_LIGHT_VECTOR_MATRIX
+#if NDS_LIGHT_VECTOR_MATRIX
     /* Before the identity bracket on purpose: the sample must be the LIVE
      * root/joint vector matrix this execute's normals will be multiplied by,
      * not the identity the light vector is written under. */
@@ -428,14 +428,14 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
         u32 length = (u32)light_len;
         s64 numerator_scale = 511;
 
-#if NDS_R2_LIGHT_VECTOR_MATRIX
+#if NDS_LIGHT_VECTOR_MATRIX
         /* Divide by |M L| instead of |L| -- the software path's normalisation
          * point, expressed where the hardware path can hold it. The extra
          * 1 << FRAC in the numerator cancels the 20.12 the matrix carries, so
          * an orthonormal 3x3 reduces this to `-x * 511 / |L|` exactly.
          *
          * ONLY WHEN THE CHAIN STRETCHES, never when it shrinks. The stored
-         * vector is 10-bit signed and NDS_R2_NORMAL_PACK masks rather than
+         * vector is 10-bit signed and NDS_NORMAL_PACK masks rather than
          * saturates, so a component past 511 does not clip, it WRAPS -- and a
          * wrapped component is a light pointing somewhere else entirely, which
          * is a far louder defect than the one under repair. |M L| >= |L| can
@@ -465,8 +465,8 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
              * unanswerable without shipping the answer -- and left both
              * counters unwritten, which is how --gc-sections collected them
              * out of the r30 ELF entirely. */
-            NDS_DIAG(gNdsR2LightMatrixStretchApplied++);
-#if NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+            NDS_DIAG(gNdsLightMatrixStretchApplied++);
+#if NDS_LIGHT_VECTOR_STRETCH_FIX
             length = (u32)stretched_len;
             numerator_scale =
                 (s64)511 << NDS_RENDERER_DS_MTX_FRAC_BITS;
@@ -476,16 +476,16 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
                  (stretched_len <
                   (light_len_q12 - (light_len_q12 >> 5))))
         {
-            NDS_DIAG(gNdsR2LightMatrixStretchDeclined++);
+            NDS_DIAG(gNdsLightMatrixStretchDeclined++);
         }
 #endif
         if (length != 0u)
         {
-            nx = (s32)ndsR2HwMathDiv64(-(s64)x * numerator_scale,
+            nx = (s32)ndsHwMathDiv64(-(s64)x * numerator_scale,
                                        (s32)length);
-            ny = (s32)ndsR2HwMathDiv64(-(s64)y * numerator_scale,
+            ny = (s32)ndsHwMathDiv64(-(s64)y * numerator_scale,
                                        (s32)length);
-            nz = (s32)ndsR2HwMathDiv64(-(s64)z * numerator_scale,
+            nz = (s32)ndsHwMathDiv64(-(s64)z * numerator_scale,
                                        (s32)length);
         }
     }
@@ -493,10 +493,10 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    GFX_LIGHT_VECTOR = NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+    GFX_LIGHT_VECTOR = NDS_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     glPopMatrix(1);
-    NDS_DIAG(gNdsR2LightVectorWrites++);
-    sNdsR2LightVectorWritten = 1u;
+    NDS_DIAG(gNdsLightVectorWrites++);
+    sNdsLightVectorWritten = 1u;
 }
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
@@ -518,7 +518,7 @@ static u16 __attribute__((noinline)) ndsRendererR2MaterialColor15(
         RGB15(r, g, b), color_modulate);
 }
 
-volatile u32 gNdsR2ShadeClampAppliedCount;
+volatile u32 gNdsShadeClampAppliedCount;
 
 /* Forward: the shade resolver and the two tint-run helpers live outside the
  * fighter ITCM section, so the ITCM callers below carry only a call each; see
@@ -547,8 +547,8 @@ static void ndsRendererR2OpenTintBatch(
  * `shade` is the diffuse|ambient<<16 actually written. Two adjacent runs
  * disagreeing on `lit` or `unlit_vertex` look exactly like two materials and
  * are immune to any diffuse/ambient correction. */
-#define NDS_R2_SHADE_WITNESS_SLOTS 16u
-typedef struct NDSR2ShadeWitness
+#define NDS_SHADE_WITNESS_SLOTS 16u
+typedef struct NDSShadeWitness
 {
     u32 material;
     u32 shade;
@@ -562,22 +562,22 @@ typedef struct NDSR2ShadeWitness
      * struct already wasted on padding, so the ring costs no extra bytes.
      * Overwritten every epoch: event-local, never a latch. */
     s8 facing_lr;
-} NDSR2ShadeWitness;
-volatile NDSR2ShadeWitness gNdsR2ShadeWitness[NDS_R2_SHADE_WITNESS_SLOTS];
-volatile u32 gNdsR2ShadeWitnessWrites;
+} NDSShadeWitness;
+volatile NDSShadeWitness gNdsShadeWitness[NDS_SHADE_WITNESS_SLOTS];
+volatile u32 gNdsShadeWitnessWrites;
 
 static void ndsRendererR2RecordShadeWitness(u32 lit, u32 unlit_vertex,
                                             u32 use_material, u32 material)
 {
-    u32 slot = gNdsR2ShadeWitnessWrites % NDS_R2_SHADE_WITNESS_SLOTS;
+    u32 slot = gNdsShadeWitnessWrites % NDS_SHADE_WITNESS_SLOTS;
 
-    gNdsR2ShadeWitness[slot].material = material;
-    gNdsR2ShadeWitness[slot].shade = 0u;
-    gNdsR2ShadeWitness[slot].lit = (u8)(lit != 0u);
-    gNdsR2ShadeWitness[slot].unlit_vertex = (u8)(unlit_vertex != 0u);
-    gNdsR2ShadeWitness[slot].use_material = (u8)(use_material != 0u);
-    gNdsR2ShadeWitness[slot].facing_lr = (s8)gNdsR2FighterFacingLr;
-    gNdsR2ShadeWitnessWrites++;
+    gNdsShadeWitness[slot].material = material;
+    gNdsShadeWitness[slot].shade = 0u;
+    gNdsShadeWitness[slot].lit = (u8)(lit != 0u);
+    gNdsShadeWitness[slot].unlit_vertex = (u8)(unlit_vertex != 0u);
+    gNdsShadeWitness[slot].use_material = (u8)(use_material != 0u);
+    gNdsShadeWitness[slot].facing_lr = (s8)gNdsFighterFacingLr;
+    gNdsShadeWitnessWrites++;
 }
 
 /* CLAMP ORDER. The N64 clamps the shade sum to eight bits and modulates by the
@@ -666,7 +666,7 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
     capped = (u16)RGB15(r, g, b);
     if (capped != (u16)diffuse)
     {
-        NDS_DIAG(gNdsR2ShadeClampAppliedCount++);
+        NDS_DIAG(gNdsShadeClampAppliedCount++);
     }
     return capped;
 }
@@ -692,7 +692,7 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
  * OUT OF ITCM ON PURPOSE: once per epoch, and the fighter ITCM section has no
  * room for the body (an inlined first version overflowed it by 1,416 bytes).
  *
- * Returns diffuse | (ambient << 16) and publishes sNdsR2EpochTintTexture. */
+ * Returns diffuse | (ambient << 16) and publishes sNdsEpochTintTexture. */
 static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
     u32 light1, u32 light2, u32 material_color, u32 use_material,
     u32 color_modulate, u32 textured)
@@ -706,8 +706,8 @@ static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
     {
         tint = ndsRendererR2FighterTintLookup(material_color);
     }
-    sNdsR2EpochTintTexture = tint;
-    sNdsR2EpochTintRgb = (material_color >> 8) & 0x00ffffffu;
+    sNdsEpochTintTexture = tint;
+    sNdsEpochTintRgb = (material_color >> 8) & 0x00ffffffu;
     if (tint != 0u)
     {
         diffuse = ndsRendererR2MaterialColor15(light1, 0u, 0u, color_modulate);
@@ -723,7 +723,7 @@ static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
             diffuse, ambient, material_color, use_material, color_modulate);
     }
     /* Composed with the same expression the replay twin uses, deliberately:
-     * check-r2-shade-twin.py finds the derivation sites by that shape. */
+     * check-shade-twin.py finds the derivation sites by that shape. */
     return diffuse | (ambient << 16);
 }
 
@@ -746,8 +746,8 @@ static void __attribute__((noinline)) ndsRendererR2BindTintTile(
 static void __attribute__((noinline)) ndsRendererR2OpenTintBatch(
     NDSRendererStats *stats, u32 tint, u32 poly_fmt, u32 matrix_generation)
 {
-    u32 word = (u32)TEXTURE_PACK((NDS_R2_FIGHTER_TINT_DIM / 2u) << 4,
-                                 (NDS_R2_FIGHTER_TINT_DIM / 2u) << 4);
+    u32 word = (u32)TEXTURE_PACK((NDS_FIGHTER_TINT_DIM / 2u) << 4,
+                                 (NDS_FIGHTER_TINT_DIM / 2u) << 4);
 
     ndsRendererNativeBeginDirectBatch(stats, TRUE, tint, poly_fmt,
                                       matrix_generation);
@@ -762,7 +762,7 @@ static void __attribute__((noinline)) ndsRendererR2OpenTintBatch(
  * state->prepared_light_direction after the shade returns, so it keeps the
  * software preparation.
  *
- * NDS_R2_FIGHTER_SHADE_PROOF hashes `prepared_direction`; with the skip active
+ * NDS_FIGHTER_SHADE_PROOF hashes `prepared_direction`; with the skip active
  * that field is NULL, so the proof is only comparable against another skipped
  * build. It is a lab flag and never ships with this one.
  *
@@ -816,7 +816,7 @@ ndsRendererNativeShadeProductionActions(
     /* Cleared for EVERY epoch, not only the lit ones: the run prepare reads it
      * unconditionally, and an epoch that never reaches the shade write below
      * must not inherit the previous epoch's tile. */
-    sNdsR2EpochTintTexture = 0u;
+    sNdsEpochTintTexture = 0u;
     if (epoch->action_count == 0u)
     {
         return TRUE;
@@ -847,20 +847,20 @@ ndsRendererNativeShadeProductionActions(
         u32 diffuse;
         u32 ambient;
 
-        if (sNdsR2LightVectorWritten == 0u)
+        if (sNdsLightVectorWritten == 0u)
         {
             ndsRendererR2WriteLightVector(stats);
         }
         u32 shade = ndsRendererR2ResolveEpochShade(
             stats->light_color_1, stats->light_color_2, material_color,
             use_material, state->color_modulate, policy->textured);
-        u32 tinted = (sNdsR2EpochTintTexture != 0u) ? 1u : 0u;
+        u32 tinted = (sNdsEpochTintTexture != 0u) ? 1u : 0u;
 
         diffuse = shade & 0xffffu;
         ambient = shade >> 16;
 
-        gNdsR2ShadeWitness[(gNdsR2ShadeWitnessWrites - 1u) %
-                           NDS_R2_SHADE_WITNESS_SLOTS].shade =
+        gNdsShadeWitness[(gNdsShadeWitnessWrites - 1u) %
+                           NDS_SHADE_WITNESS_SLOTS].shade =
             diffuse | (ambient << 16);
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
         (void)tinted;
@@ -898,7 +898,7 @@ ndsRendererNativeShadeProductionActions(
 
 /* sNdsNativeFighterRuns[67]. Shared by the E5 proof and the E12 memo, so it
  * lives outside both flags' guards. */
-#define NDS_R2_RUN_MEMO_MAX 67u
+#define NDS_RUN_MEMO_MAX 67u
 
 /* E12 counters live outside the flag so a build with the memo off reads five
  * honest zeros instead of whatever the linker left at those addresses. Two
@@ -910,15 +910,15 @@ ndsRendererNativeShadeProductionActions(
  * the linker from dropping an object nothing references -- and at MEMO=1
  * nothing writes VerifyFail, because only the level-2 verify does. `retain`
  * emits SHF_GNU_RETAIN so --gc-sections keeps it and a zero reads as zero. */
-#define NDS_R2_TEXMEMO_COUNTER __attribute__((used, retain))
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoHitCount;
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoMissCount;
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFillCount;
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoStaleCount;
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
+#define NDS_TEXMEMO_COUNTER __attribute__((used, retain))
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoHitCount;
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoMissCount;
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoFillCount;
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoStaleCount;
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoVerifyFail;
 /* Player-slot memo columns dropped because the fighter's material identity
  * moved (ndsRendererR2RunTextureMemoFence). */
-volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFenceCount;
+volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoFenceCount;
 
 /* E12. E5 proved every field below is invariant in run_index over a whole
  * canonical match, and E11 measured what recomputing them costs: 45.3 of 60.9
@@ -939,7 +939,7 @@ volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFenceCount;
  * generation. The generation is the identity fence: libnds may recycle a
  * deleted GL name for different texels in the same slot. A stale entry falls
  * through to the full path and refills. */
-typedef struct NDSR2RunTextureMemo
+typedef struct NDSRunTextureMemo
 {
     /* Slot index, not a pointer: sNdsRendererHardwareActiveTextureEntry is a
      * const pointer and the memo must refresh last_used_frame, so an index into
@@ -967,8 +967,8 @@ typedef struct NDSR2RunTextureMemo
     u8 format;
     u8 valid;
     u8 run;         /* the run this row holds (rows are run_index mod 67) */
-} NDSR2RunTextureMemo;
-_Static_assert(sizeof(NDSR2RunTextureMemo) == 28u,
+} NDSRunTextureMemo;
+_Static_assert(sizeof(NDSRunTextureMemo) == 28u,
                "run texture memo must retain the compact DS field layout");
 
 /* One live fighter instance per source player slot.  A single row per run was
@@ -981,10 +981,10 @@ _Static_assert(sizeof(NDSR2RunTextureMemo) == 28u,
  * row itself.  Indexing by those two slot bits therefore gives the four live
  * instances independent residency records without weakening any identity
  * check. */
-#define NDS_R2_RUN_TEXMEMO_PLAYER_COUNT 4u
-static NDSR2RunTextureMemo
-    sNdsR2RunTextureMemo[NDS_R2_RUN_MEMO_MAX]
-                          [NDS_R2_RUN_TEXMEMO_PLAYER_COUNT];
+#define NDS_RUN_TEXMEMO_PLAYER_COUNT 4u
+static NDSRunTextureMemo
+    sNdsRunTextureMemo[NDS_RUN_MEMO_MAX]
+                          [NDS_RUN_TEXMEMO_PLAYER_COUNT];
 
 /* Rows by run index modulo 67, tagged with the run. A P4 content's owner
  * image appends its model parts' runs after the canonical ones (Banjo's runs
@@ -992,17 +992,17 @@ static NDSR2RunTextureMemo
  * those took the full resolver at every materialization; a list draws ~60,
  * and runs sharing a residue only take turns. Run indices fit the tag byte
  * (the generator's u8 run counts); a larger one is never memoized. */
-#define NDS_R2_RUN_TEXMEMO_RUN_MAX 0xffu
-static inline NDSR2RunTextureMemo *ndsRendererR2RunTextureMemoFor(
+#define NDS_RUN_TEXMEMO_RUN_MAX 0xffu
+static inline NDSRunTextureMemo *ndsRendererR2RunTextureMemoFor(
     u32 run_index, u32 owner_key)
 {
     u32 row = run_index;
 
-    while (row >= NDS_R2_RUN_MEMO_MAX)
+    while (row >= NDS_RUN_MEMO_MAX)
     {
-        row -= NDS_R2_RUN_MEMO_MAX;
+        row -= NDS_RUN_MEMO_MAX;
     }
-    return &sNdsR2RunTextureMemo[row][(owner_key >> 9) & 3u];
+    return &sNdsRunTextureMemo[row][(owner_key >> 9) & 3u];
 }
 
 /* THE MEMO IS FENCED ON THE FIGHTER'S LIVE MATERIAL STATE.
@@ -1022,23 +1022,23 @@ static inline NDSR2RunTextureMemo *ndsRendererR2RunTextureMemoFor(
  * key. When that word moves for a player slot, the slot's rows are dropped and
  * the next draw refills them from the full resolver: one full resolve per
  * material change, not per frame. */
-static u32 sNdsR2RunTextureMemoIdentity[NDS_R2_RUN_TEXMEMO_PLAYER_COUNT];
+static u32 sNdsRunTextureMemoIdentity[NDS_RUN_TEXMEMO_PLAYER_COUNT];
 
 void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
 {
     u32 slot = (owner_key >> 9) & 3u;
     u32 run_index;
 
-    if (sNdsR2RunTextureMemoIdentity[slot] == material_identity)
+    if (sNdsRunTextureMemoIdentity[slot] == material_identity)
     {
         return;
     }
-    sNdsR2RunTextureMemoIdentity[slot] = material_identity;
-    for (run_index = 0u; run_index < NDS_R2_RUN_MEMO_MAX; run_index++)
+    sNdsRunTextureMemoIdentity[slot] = material_identity;
+    for (run_index = 0u; run_index < NDS_RUN_MEMO_MAX; run_index++)
     {
-        sNdsR2RunTextureMemo[run_index][slot].valid = 0u;
+        sNdsRunTextureMemo[run_index][slot].valid = 0u;
     }
-    gNdsR2TexMemoFenceCount++;
+    gNdsTexMemoFenceCount++;
 }
 
 /* The cheap tail of the resolver's cache-hit path, replayed from the memo. */
@@ -1052,10 +1052,10 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     u32 *origin_t,
     s32 *offset)
 {
-    NDSR2RunTextureMemo *memo;
+    NDSRunTextureMemo *memo;
     NDSRendererHardwareTextureCacheEntry *entry;
 
-    if (run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX)
+    if (run_index > NDS_RUN_TEXMEMO_RUN_MAX)
     {
         return FALSE;
     }
@@ -1063,7 +1063,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     if ((memo->valid == 0u) || (memo->run != (u8)run_index))
     {
-        gNdsR2TexMemoMissCount++;
+        gNdsTexMemoMissCount++;
         return FALSE;
     }
     if (memo->owner_key !=
@@ -1072,7 +1072,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
         /* This is an identity miss, not a stale hardware-cache entry.  Leave
          * the resident texture untouched and let the source-equivalent full
          * resolver below choose the live instance's key, then refill. */
-        gNdsR2TexMemoMissCount++;
+        gNdsTexMemoMissCount++;
         return FALSE;
     }
     entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
@@ -1080,7 +1080,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
         (entry->key_generation != memo->entry_generation))
     {
         memo->valid = 0u;
-        gNdsR2TexMemoStaleCount++;
+        gNdsTexMemoStaleCount++;
         return FALSE;
     }
 
@@ -1109,7 +1109,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     *origin_s = memo->origin_s;
     *origin_t = memo->origin_t;
     *offset = memo->offset;
-    gNdsR2TexMemoHitCount++;
+    gNdsTexMemoHitCount++;
     return TRUE;
 }
 
@@ -1123,7 +1123,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     u32 origin_t,
     s32 offset)
 {
-    NDSR2RunTextureMemo *memo;
+    NDSRunTextureMemo *memo;
     const NDSRendererHardwareTextureCacheEntry *entry =
         sNdsRendererHardwareActiveTextureEntry;
     u32 slot;
@@ -1132,7 +1132,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
      * the stage-site shortcut or the no-texture path leaves no active entry, and
      * baking one from a neighbouring run's state is exactly the class of bug the
      * revalidation above cannot catch. */
-    if ((run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX) || (entry == NULL) ||
+    if ((run_index > NDS_RUN_TEXMEMO_RUN_MAX) || (entry == NULL) ||
         (entry->ready == FALSE) || ((u32)entry->name != texture_name) ||
         (texture_name == 0u))
     {
@@ -1149,7 +1149,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
      * drops it -- and the verifier then reads whatever sits at its address
      * (0xEA80003D, an ARM opcode, on the run that caught this). Nine fills a
      * match, so the load/store is free. */
-    gNdsR2TexMemoVerifyFail = gNdsR2TexMemoVerifyFail;
+    gNdsTexMemoVerifyFail = gNdsTexMemoVerifyFail;
     memo = ndsRendererR2RunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     /* Preserve the full resolver for values outside the compact memo's
@@ -1180,17 +1180,17 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     memo->owner_key = sNdsNativeFighterOwnerExecution.texture_memo_owner_key;
     memo->run = (u8)run_index;
     memo->valid = 1u;
-    gNdsR2TexMemoFillCount++;
+    gNdsTexMemoFillCount++;
 }
 
 
 /* Cycle 110, Requirement 3: the prepared dense UVs are IMMUTABLE fighter state,
  * not per-frame work.
  *
- * Whole-match proof at NDS_R2_FIGHTER_RUN_PROOF=2: the UV loop performed
+ * Whole-match proof at NDS_FIGHTER_RUN_PROOF=2: the UV loop performed
  * **246,736 writes** and produced **106 distinct dense vertices**, with
- * `gNdsR2UvChangeCount == 0` — not one of those writes ever changed a value —
- * and `gNdsR2UvOutOfRange == 0`, so the proof array covered every id. 154 writes
+ * `gNdsUvChangeCount == 0` — not one of those writes ever changed a value —
+ * and `gNdsUvOutOfRange == 0`, so the proof array covered every id. 154 writes
  * a frame to re-derive a constant.
  *
  * `dense->s/t` is baked asset data and these five are the entire remaining
@@ -1202,7 +1202,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
  *
  * What a per-run key cannot see is two runs sharing a dense id with different
  * inputs. That is a property of the BAKED `sNdsNativeFighterRunUniqueDense`
- * table, not of the frame, and `gNdsR2UvChangeCount` is its detector. */
+ * table, not of the frame, and `gNdsUvChangeCount` is its detector. */
 typedef struct NDSNativeFighterRunUvInputs
 {
     u32 scale_s;
@@ -1238,11 +1238,11 @@ typedef struct NDSNativeFighterRunUvInputs
  * and Link boomerang) may evict one row temporarily; that is only a performance
  * miss, because eviction forces a rebuild and can never authorize a stale skip.
  */
-#define NDS_R2_RUN_UVMEMO_WAYS 4u
+#define NDS_RUN_UVMEMO_WAYS 4u
 static NDSNativeFighterRunUvInputs
-    sNdsNativeFighterRunUvInputs[NDS_R2_RUN_MEMO_MAX]
-                                      [NDS_R2_RUN_UVMEMO_WAYS];
-static u8 sNdsNativeFighterRunUvVictim[NDS_R2_RUN_MEMO_MAX];
+    sNdsNativeFighterRunUvInputs[NDS_RUN_MEMO_MAX]
+                                      [NDS_RUN_UVMEMO_WAYS];
+static u8 sNdsNativeFighterRunUvVictim[NDS_RUN_MEMO_MAX];
 /* Rows dropped because the image they described was bound or unbound. A CSS
  * browse that revisits fighters must move this; a match must not, except at a
  * Kirby copy. */
@@ -1279,9 +1279,9 @@ static void ndsRendererNativeForgetFighterRunUvTables(const void *tables)
     {
         return;
     }
-    for (run_index = 0u; run_index < NDS_R2_RUN_MEMO_MAX; run_index++)
+    for (run_index = 0u; run_index < NDS_RUN_MEMO_MAX; run_index++)
     {
-        for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+        for (way = 0u; way < NDS_RUN_UVMEMO_WAYS; way++)
         {
             NDSNativeFighterRunUvInputs *uv =
                 &sNdsNativeFighterRunUvInputs[run_index][way];
@@ -1301,11 +1301,11 @@ NDSNativeFighterRunUvInputs *ndsRendererNativeFighterRunUvLookup(
 {
     u32 way;
 
-    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    if (run_index >= NDS_RUN_MEMO_MAX)
     {
         return NULL;
     }
-    for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+    for (way = 0u; way < NDS_RUN_UVMEMO_WAYS; way++)
     {
         NDSNativeFighterRunUvInputs *uv =
             &sNdsNativeFighterRunUvInputs[run_index][way];
@@ -1325,7 +1325,7 @@ ndsRendererNativeFighterRunUvReserveMiss(
     NDSNativeFighterRunUvInputs *uv;
     u32 way;
 
-    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    if (run_index >= NDS_RUN_MEMO_MAX)
     {
         return NULL;
     }
@@ -1333,7 +1333,7 @@ ndsRendererNativeFighterRunUvReserveMiss(
      * repeat that six-way search here: besides doing duplicate work on a miss,
      * inlining both searches overflowed the 32 KiB native-fighter ITCM by 88 B.
      * Miss allocation is cold setup work, so keep it in main RAM. */
-    for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+    for (way = 0u; way < NDS_RUN_UVMEMO_WAYS; way++)
     {
         uv = &sNdsNativeFighterRunUvInputs[run_index][way];
         if (uv->tables == NULL)
@@ -1342,19 +1342,19 @@ ndsRendererNativeFighterRunUvReserveMiss(
         }
     }
     way = (u32)sNdsNativeFighterRunUvVictim[run_index];
-    if (way >= NDS_R2_RUN_UVMEMO_WAYS)
+    if (way >= NDS_RUN_UVMEMO_WAYS)
     {
         way = 0u;
     }
     sNdsNativeFighterRunUvVictim[run_index] =
-        (u8)(((way + 1u) < NDS_R2_RUN_UVMEMO_WAYS) ? (way + 1u) : 0u);
+        (u8)(((way + 1u) < NDS_RUN_UVMEMO_WAYS) ? (way + 1u) : 0u);
     return &sNdsNativeFighterRunUvInputs[run_index][way];
 }
 #if NDS_TICK_HUD
 /* Engagement proof. Skip should be ~99.96% of calls; a Build rate above the
  * 106 first-fills means the invariant above stopped holding. */
-volatile u32 gNdsR2RunUvSkip;
-volatile u32 gNdsR2RunUvBuild;
+volatile u32 gNdsRunUvSkip;
+volatile u32 gNdsRunUvBuild;
 #endif
 
 #if NDS_LINK
@@ -1428,14 +1428,14 @@ static s32 ndsRendererNativePrepareTexgenDirectionQ15(
         out->z = 0;
         return TRUE;
     }
-    length = ndsR2HwMathSqrt64(length_squared);
+    length = ndsHwMathSqrt64(length_squared);
     if ((length == 0u) || (length > (u32)INT_MAX))
     {
         return FALSE;
     }
-    out->x = ndsR2HwMathDiv64(transformed_x * 32767, (s32)length);
-    out->y = ndsR2HwMathDiv64(transformed_y * 32767, (s32)length);
-    out->z = ndsR2HwMathDiv64(transformed_z * 32767, (s32)length);
+    out->x = ndsHwMathDiv64(transformed_x * 32767, (s32)length);
+    out->y = ndsHwMathDiv64(transformed_y * 32767, (s32)length);
+    out->z = ndsHwMathDiv64(transformed_z * 32767, (s32)length);
     return TRUE;
 }
 
@@ -1659,7 +1659,7 @@ ndsRendererNativeRebuildProductionRunUv(
         uv->heap_generation = gNdsTaskmanHeapGeneration;
     }
 #if NDS_TICK_HUD
-    NDS_DIAG(gNdsR2RunUvBuild++);
+    NDS_DIAG(gNdsRunUvBuild++);
 #endif
     return TRUE;
 }
@@ -1919,7 +1919,7 @@ ndsRendererNativePrepareProductionRunCore(
      * (see ndsRendererR2BindTintTile); the hierarchy preflight (mode 7, not a
      * shipping target) keeps the fold. */
     u32 tint = ((policy->textured == 0u) && (hierarchy_run == NULL) &&
-                (packet_mode == 0u)) ? sNdsR2EpochTintTexture : 0u;
+                (packet_mode == 0u)) ? sNdsEpochTintTexture : 0u;
 
     if (tint != 0u)
     {
@@ -1979,7 +1979,7 @@ ndsRendererNativePrepareProductionRunCore(
             (uv->heap_generation == gNdsTaskmanHeapGeneration))
         {
 #if NDS_TICK_HUD
-            NDS_DIAG(gNdsR2RunUvSkip++);
+            NDS_DIAG(gNdsRunUvSkip++);
 #endif
         }
         else
@@ -2144,14 +2144,14 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     }
 }
 
-/* The one-binary A/B for the strips, same instrument as gNdsR2AnimCutRoute.
+/* The one-binary A/B for the strips, same instrument as gNdsAnimCutRoute.
  * .data and aligned(32) so it owns its cache line and no neighbouring
  * counter's write-back can stamp the poke. Default 1 = strips, so an unpoked
- * ROM is the candidate; `-SetGlobals gNdsR2FighterStripRoute=0` is the raw
+ * ROM is the candidate; `-SetGlobals gNdsFighterStripRoute=0` is the raw
  * control, in the SAME binary at the SAME placement. Compile-time gated
- * because the route is an instrument, not a feature: at NDS_R2_STRIP_ROUTE=0
+ * because the route is an instrument, not a feature: at NDS_STRIP_ROUTE=0
  * the test folds to a constant and the unselected emitter is dead-coded. */
-#define NDS_R2_STRIP_ROUTE_ON() (1)
+#define NDS_STRIP_ROUTE_ON() (1)
 
 
 /* Emit a RAW run's triangles as DS-native primitive groups

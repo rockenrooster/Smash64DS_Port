@@ -560,7 +560,7 @@ static s32 ndsRelocIsDemoAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token);
+static u32 ndsRelocFighterAnimAssetIDForToken(u32 token);
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -631,7 +631,7 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
      * table is the exact per-build reference set: an id the resolver would
      * answer is a fighter animation. Reached only on range miss, so every
      * admitted fighter's own files still return above at zero added cost. */
-    if (ndsRelocP2FighterAnimAssetIDForToken(asset_id) != NDS_RELOC_ASSET_INVALID)
+    if (ndsRelocFighterAnimAssetIDForToken(asset_id) != NDS_RELOC_ASSET_INVALID)
     {
         return TRUE;
     }
@@ -1058,7 +1058,7 @@ typedef struct NDSFighterAnimTokenRow
  * relation instead: O2R file ids are u16, the table is cold load-time data, and
  * numeric external-dependency ids take the O(1) range path below. */
 /* Numeric bounds over the table below, measured once on first use. See the
- * early-out in ndsRelocP2FighterAnimAssetIDForToken. */
+ * early-out in ndsRelocFighterAnimAssetIDForToken. */
 static u16 sNdsFighterAnimTokenIdMin;
 static u16 sNdsFighterAnimTokenIdMax;
 static sb32 sNdsFighterAnimTokenBoundsReady;
@@ -1098,7 +1098,7 @@ static u16 sNdsFighterAnimTokenById[NDS_FIGHTER_ANIM_TOKEN_COUNT];
 static u16 sNdsFighterAnimTokenByAddress[NDS_FIGHTER_ANIM_TOKEN_COUNT];
 static sb32 sNdsFighterAnimTokenIndexReady;
 
-static sb32 ndsRelocP2FighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
+static sb32 ndsRelocFighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
 {
     u32 ka = by_address ?
         ndsRelocFileID(sNdsFighterAnimTokens[a].token) :
@@ -1113,7 +1113,7 @@ static sb32 ndsRelocP2FighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
 /* Once, at the first lookup: a shell sort of two u16 index arrays (no
  * allocation; the keys are unique with the row index, so the order is fixed). */
 NDS_COLD static void __attribute__((noinline, cold))
-ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
+ndsRelocFighterAnimTokenIndexSort(u16 *order, sb32 by_address)
 {
     static const u16 gaps[] = { 701u, 301u, 132u, 57u, 23u, 10u, 4u, 1u };
     u32 g;
@@ -1133,7 +1133,7 @@ ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
             u32 j = i;
 
             while ((j >= gap) &&
-                   ndsRelocP2FighterAnimTokenBefore(value, order[j - gap],
+                   ndsRelocFighterAnimTokenBefore(value, order[j - gap],
                                                     by_address))
             {
                 order[j] = order[j - gap];
@@ -1144,18 +1144,18 @@ ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
     }
 }
 
-static inline void ndsRelocP2FighterAnimTokenIndexBuild(void)
+static inline void ndsRelocFighterAnimTokenIndexBuild(void)
 {
     if (sNdsFighterAnimTokenIndexReady == FALSE)
     {
-        ndsRelocP2FighterAnimTokenIndexSort(sNdsFighterAnimTokenById, FALSE);
-        ndsRelocP2FighterAnimTokenIndexSort(sNdsFighterAnimTokenByAddress,
+        ndsRelocFighterAnimTokenIndexSort(sNdsFighterAnimTokenById, FALSE);
+        ndsRelocFighterAnimTokenIndexSort(sNdsFighterAnimTokenByAddress,
                                             TRUE);
         sNdsFighterAnimTokenIndexReady = TRUE;
     }
 }
 
-static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
+static u32 ndsRelocFighterAnimAssetIDForToken(u32 token)
 {
 #if NDS_LUIGI
     if ((token >= NDS_LUIGI_ANIM_FIRST) &&
@@ -1276,7 +1276,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
      * in table order with this address" for the second. Both are binary
      * searches over the index below: ~10 probes instead of a ~690-row walk,
      * which several lookups per status change paid on a four-kind roster. */
-    ndsRelocP2FighterAnimTokenIndexBuild();
+    ndsRelocFighterAnimTokenIndexBuild();
     if (token <= 0xffffu)
     {
         u32 lo = 0u;
@@ -1345,7 +1345,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
         return (ndsP4RelocAssetPath(token) != NULL) ?
             token : NDS_RELOC_ASSET_INVALID;
     }
-    u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
+    u32 p2_anim_asset_id = ndsRelocFighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
     {

@@ -140,8 +140,8 @@ if ($missing.Count -gt 0) {
 }
 # Engagement columns are arm-specific. Print them when the ELF has them and
 # print literal zeros when it does not, so the row shape never changes.
-$engage = @('gNdsR2CameraFixedLookAtCalls', 'gNdsR2CameraFixedFloatLookAtCalls',
-            'gNdsR2CameraFixedPerspCalls', 'gNdsR2CameraFixedFloatPerspCalls')
+$engage = @('gNdsCameraFixedLookAtCalls', 'gNdsCameraFixedFloatLookAtCalls',
+            'gNdsCameraFixedPerspCalls', 'gNdsCameraFixedFloatPerspCalls')
 $engage_args = ($engage | ForEach-Object {
     if ($symbols -contains $_) { $_ } else { '0' }
 }) -join ', '

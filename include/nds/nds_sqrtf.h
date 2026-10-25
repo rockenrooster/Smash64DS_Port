@@ -1,18 +1,18 @@
-#ifndef NDS_R2_SQRTF_H
-#define NDS_R2_SQRTF_H
+#ifndef NDS_SQRTF_H
+#define NDS_SQRTF_H
 
 /* R2-03 E1 -- the correctly-rounded sqrtf kernel, shared by the ROM and its
  * host falsifier.
  *
  * The arithmetic lives here rather than in the .c so that
- * `scripts/check-r2-fixed-sqrt.ps1` verifies the code that actually ships
+ * `scripts/check-fixed-sqrt.ps1` verifies the code that actually ships
  * instead of a transcription of it. This project has been bitten by
  * reimplemented checkers before; a falsifier that can pass while the ROM
  * differs is not a falsifier.
  *
  * The including translation unit must define, before the include:
  *
- *     static unsigned int ndsR2SqrtfHardware(unsigned long long value);
+ *     static unsigned int ndsSqrtfHardware(unsigned long long value);
  *
  * returning floor(sqrt(value)) -- the DS hardware unit in the ROM, an exact
  * integer root on the host. Passing it as a function pointer instead would
@@ -35,14 +35,14 @@
  * wrong, and the result is round-to-nearest-even for free.
  */
 
-#define NDS_R2_SQRTF_FALLBACK 0
-#define NDS_R2_SQRTF_EXACT    1
+#define NDS_SQRTF_FALLBACK 0
+#define NDS_SQRTF_EXACT    1
 
-/* Returns NDS_R2_SQRTF_EXACT and writes the result bit pattern, or
- * NDS_R2_SQRTF_FALLBACK for the inputs the fast path declines: negative, zero,
+/* Returns NDS_SQRTF_EXACT and writes the result bit pattern, or
+ * NDS_SQRTF_FALLBACK for the inputs the fast path declines: negative, zero,
  * denormal, infinity and NaN. Those are left to newlib so the returned bit
  * pattern stays newlib's own on every path. */
-static inline int ndsR2SqrtfBits(unsigned int bits, unsigned int *out)
+static inline int ndsSqrtfBits(unsigned int bits, unsigned int *out)
 {
     unsigned int exponent = (bits >> 23) & 0xffu;
     unsigned int mantissa;
@@ -55,7 +55,7 @@ static inline int ndsR2SqrtfBits(unsigned int bits, unsigned int *out)
     if (((bits & 0x80000000u) != 0u) || (exponent == 0u) ||
         (exponent == 0xffu))
     {
-        return NDS_R2_SQRTF_FALLBACK;
+        return NDS_SQRTF_FALLBACK;
     }
 
     mantissa = (bits & 0x007fffffu) | 0x00800000u;
@@ -67,7 +67,7 @@ static inline int ndsR2SqrtfBits(unsigned int bits, unsigned int *out)
     odd = (unsigned int)(unbiased & 1);
 
     scaled = (unsigned long long)mantissa << (odd + 23u);
-    root = ndsR2SqrtfHardware(scaled);
+    root = ndsSqrtfHardware(scaled);
 
     /* R*R needs 48 bits, so this is a real 64-bit multiply. */
     if (scaled > (((unsigned long long)root * (unsigned long long)root) +
@@ -84,7 +84,7 @@ static inline int ndsR2SqrtfBits(unsigned int bits, unsigned int *out)
     }
 
     *out = ((unsigned int)(quotient + 127) << 23) | (root & 0x007fffffu);
-    return NDS_R2_SQRTF_EXACT;
+    return NDS_SQRTF_EXACT;
 }
 
-#endif /* NDS_R2_SQRTF_H */
+#endif /* NDS_SQRTF_H */

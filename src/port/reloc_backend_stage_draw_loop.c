@@ -83,7 +83,7 @@ static sb32 ndsStageGCDrawAllLoopIsItemDisplay(GObj *gobj, s32 link_id)
  *
  * That is a pointer comparison against the PROCEDURAL stand-in templates. A
  * source-made effect -- efManagerMakeEffectForce loading a real DObjDesc, which
- * is what NDS_R2_SOURCE_EFFECTS_FULL switches the shield, rebirth halo, Fox
+ * is what NDS_SOURCE_EFFECTS_FULL switches the shield, rebirth halo, Fox
  * reflector and impact wave over to -- carries the ROM asset's display list and
  * can never match. So turning the flag on removed each stand-in and put nothing
  * on screen in its place: not because the geometry was wrong, not because the
@@ -262,7 +262,7 @@ static void ndsStageGCDrawAllLoopRecordItemCapture(GObj *gobj, s32 link_id)
  * battleship_efmanager.c deliberately rather than shared: a two-line packing
  * macro promoted to a header would be a speculative abstraction, and the
  * comment there records that getting this wrong shipped a black shield. */
-#define NDS_R2_FIREBALL_BGR555(r, g, b) \
+#define NDS_FIREBALL_BGR555(r, g, b) \
     ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
      ((((u32)(b) >> 3) & 31u) << 10))
 
@@ -350,7 +350,7 @@ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
     return ndsParticleDrawOwnTextureQuad(
         texture_name, NDS_FIREBALL_TEX_WIDTH, NDS_FIREBALL_TEX_HEIGHT,
         &root->translate.vec.f, NDS_FIREBALL_QUAD_HALF_EXTENT,
-        NDS_R2_FIREBALL_BGR555(0xff, 0xff, 0xff), 0xffu, 0.0F,
+        NDS_FIREBALL_BGR555(0xff, 0xff, 0xff), 0xffu, 0.0F,
         /* THE SOURCE SPIN, not an approximation: the fireball's own update
          * adds 20 deg/frame to rotate.vec.f.x (wpmariofireball.c:98), and the
          * 0x47 orientation is RotRpyR(rotate.x, rotate.y, 0) -- the
@@ -2029,7 +2029,7 @@ static void ndsStageGCDrawAllLoopSubmitForeignSubtrees(GObj *display)
 }
 #endif
 
-s32 NDS_R2_ITCM_PACK2_CODE
+s32 NDS_ITCM_PACK2_CODE
 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                            void *display_gobj,
                                            s32 link_id)

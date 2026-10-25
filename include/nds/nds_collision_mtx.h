@@ -1,5 +1,5 @@
-#ifndef NDS_R2_COLLISION_MTX_H
-#define NDS_R2_COLLISION_MTX_H
+#ifndef NDS_COLLISION_MTX_H
+#define NDS_COLLISION_MTX_H
 
 /* R2-07 L7 -- the collision joint-transform kernel in 20.12 fixed point.
  *
@@ -9,13 +9,13 @@
  * 66.2% of its +510,390-cycle premium is soft-float. Those two functions carry
  * 238,426 cycles/frame of it. This header is the arithmetic that replaces them.
  *
- * The kernel lives in a header, not a .c, for the same reason nds_r2_sqrtf.h
- * does: scripts/check-r2-collision-mtx.ps1 compiles THIS code on the host and
+ * The kernel lives in a header, not a .c, for the same reason nds_sqrtf.h
+ * does: scripts/check-collision-mtx.ps1 compiles THIS code on the host and
  * compares it against the decomp's float original. A falsifier that can pass
  * while the ROM differs is not a falsifier.
  *
  * NOTHING CALLS THIS, AND THAT IS A MEASURED DECISION, not an unfinished one.
- * ndsR2CollisionInvertMatrix44 WAS wired into the eight gmCollisionCheck* entry
+ * ndsCollisionInvertMatrix44 WAS wired into the eight gmCollisionCheck* entry
  * points on 2026-07-31 and reverted the same night: on a deterministic harness
  * (two control runs bit-identical in every bucket) it won 534 cycles/frame in
  * the SRC bucket and lost 6,481 in FTR and STG, which contain no collision code
@@ -28,7 +28,7 @@
  *
  * Kept because the arithmetic is proven and the next attempt starts from it.
  *
- * CURRENT STATE, from scripts/check-r2-collision-mtx.ps1 (bound 0.0200 world
+ * CURRENT STATE, from scripts/check-collision-mtx.ps1 (bound 0.0200 world
  * units, borrowed from E64b/E65; same binary and RNG stream across arms):
  *
  *   domain                       compose    frame    matrix
@@ -36,16 +36,16 @@
  *   moderate  0.50-1.50          0.019064  0.069663  0.000488
  *   conservative 0.25-2.00       0.024414  0.367933  0.000900
  *
- * 'frame' is ndsR2CollisionInvertFrame, which reads the whole matrix at 20.12
+ * 'frame' is ndsCollisionInvertFrame, which reads the whole matrix at 20.12
  * and dodges the translation amplifier by never forming -t.R^-1. 'matrix' is
- * ndsR2CollisionInvertMatrix44, which forms it and beats the frame everywhere
+ * ndsCollisionInvertMatrix44, which forms it and beats the frame everywhere
  * anyway, because it reads the ROTATION BLOCK AT 6.26. That is the whole
  * lesson of this file: the dominant error was never the output rounding, it was
  * quantising the input, and rows 0-2 of a joint matrix span +/-scale so they
  * never needed twenty integer bits.
  *
  * MEASURED ON THE RUNNING GAME 2026-07-31, which is what that clearance was
- * waiting on (NDS_R2_COLLISION_L7_ORACLE, 460 samples over a natural mode-163
+ * waiting on (NDS_COLLISION_L7_ORACLE, 460 samples over a natural mode-163
  * match, every one a joint collision actually inverted that frame):
  *
  *   real joint scale         1.1138 - 1.1199   (ScaleMin/MaxQ12 4562 - 4587)
@@ -104,18 +104,18 @@
  * no dependency on the port's type headers. */
 #include <stdint.h>
 
-#define NDS_R2_COLLISION_MTX_FRAC_BITS 12
-#define NDS_R2_COLLISION_MTX_ONE (1 << NDS_R2_COLLISION_MTX_FRAC_BITS)
+#define NDS_COLLISION_MTX_FRAC_BITS 12
+#define NDS_COLLISION_MTX_ONE (1 << NDS_COLLISION_MTX_FRAC_BITS)
 
-typedef struct NDSR2CollisionMtx
+typedef struct NDSCollisionMtx
 {
     int32_t m[4][3];
-} NDSR2CollisionMtx;
+} NDSCollisionMtx;
 
 /* Round-half-away-from-zero, matching ndsRendererRoundShiftS64 so the two
  * fixed-point families agree on the boundary case rather than differing by one
  * unit depending on which one produced a value. */
-static inline int64_t ndsR2CollisionRoundShift(int64_t value, unsigned int shift)
+static inline int64_t ndsCollisionRoundShift(int64_t value, unsigned int shift)
 {
     int64_t bias = (int64_t)1 << (shift - 1u);
 
@@ -126,7 +126,7 @@ static inline int64_t ndsR2CollisionRoundShift(int64_t value, unsigned int shift
     return (value + bias) >> shift;
 }
 
-static inline int32_t ndsR2CollisionClamp(int64_t value)
+static inline int32_t ndsCollisionClamp(int64_t value)
 {
     if (value > (int64_t)INT32_MAX) { return INT32_MAX; }
     if (value < (int64_t)INT32_MIN) { return INT32_MIN; }
@@ -145,11 +145,11 @@ static inline int32_t ndsR2CollisionClamp(int64_t value)
  * current->mtx_translate as dst while lhs is a DIFFERENT parts' matrix, so dst
  * never aliases lhs there -- but a temp is used anyway, because the one case
  * that would alias is silent corruption rather than a compile error. */
-static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
-                                         const NDSR2CollisionMtx *lhs,
-                                         const NDSR2CollisionMtx *rhs)
+static inline void ndsCollisionCompose(NDSCollisionMtx *dst,
+                                         const NDSCollisionMtx *lhs,
+                                         const NDSCollisionMtx *rhs)
 {
-    NDSR2CollisionMtx temp;
+    NDSCollisionMtx temp;
     unsigned int row;
     unsigned int col;
 
@@ -161,8 +161,8 @@ static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
                           (int64_t)lhs->m[1][col] * rhs->m[row][1] +
                           (int64_t)lhs->m[2][col] * rhs->m[row][2];
 
-            temp.m[row][col] = ndsR2CollisionClamp(
-                ndsR2CollisionRoundShift(sum, NDS_R2_COLLISION_MTX_FRAC_BITS));
+            temp.m[row][col] = ndsCollisionClamp(
+                ndsCollisionRoundShift(sum, NDS_COLLISION_MTX_FRAC_BITS));
         }
     }
     for (col = 0u; col < 3u; col++)
@@ -171,8 +171,8 @@ static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
                       (int64_t)lhs->m[1][col] * rhs->m[3][1] +
                       (int64_t)lhs->m[2][col] * rhs->m[3][2];
 
-        temp.m[3][col] = ndsR2CollisionClamp(
-            ndsR2CollisionRoundShift(sum, NDS_R2_COLLISION_MTX_FRAC_BITS) +
+        temp.m[3][col] = ndsCollisionClamp(
+            ndsCollisionRoundShift(sum, NDS_COLLISION_MTX_FRAC_BITS) +
             (int64_t)lhs->m[3][col]);
     }
     *dst = temp;
@@ -196,7 +196,7 @@ static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
  * translation t verbatim, copied not computed.
  *
  * This is not a matrix and must not be used as one. It is the descriptor
- * ndsR2CollisionWorldToLocal consumes, and the split is the whole point: the
+ * ndsCollisionWorldToLocal consumes, and the split is the whole point: the
  * inverse's translation row is -t.R^-1, and t is a world coordinate in the
  * hundreds while R^-1 has entries around 1/scale, so forming that product in
  * 20.12 commits a large intermediate's rounding error to storage, where nothing
@@ -206,14 +206,14 @@ static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
  * R^-1 that follows is the only rounding in the path.
  *
  * Returns 0 and leaves dst untouched when src is singular. */
-static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
-                                            const NDSR2CollisionMtx *src)
+static inline int ndsCollisionInvertFrame(NDSCollisionMtx *dst,
+                                            const NDSCollisionMtx *src)
 {
-    const unsigned int shift = NDS_R2_COLLISION_MTX_FRAC_BITS;
+    const unsigned int shift = NDS_COLLISION_MTX_FRAC_BITS;
     int64_t c[3][3];
     int64_t det;
     int64_t recip;
-    NDSR2CollisionMtx out;
+    NDSCollisionMtx out;
     unsigned int row;
     unsigned int col;
 
@@ -242,10 +242,10 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
 
     /* det = m00*c00 - m01*c10 + m02*c20, with the cofactors still at 24
      * fractional bits, so shift one factor's worth back out. */
-    det = ndsR2CollisionRoundShift(
-        (int64_t)src->m[0][0] * ndsR2CollisionRoundShift(c[0][0], shift) -
-        (int64_t)src->m[0][1] * ndsR2CollisionRoundShift(c[1][0], shift) +
-        (int64_t)src->m[0][2] * ndsR2CollisionRoundShift(c[2][0], shift),
+    det = ndsCollisionRoundShift(
+        (int64_t)src->m[0][0] * ndsCollisionRoundShift(c[0][0], shift) -
+        (int64_t)src->m[0][1] * ndsCollisionRoundShift(c[1][0], shift) +
+        (int64_t)src->m[0][2] * ndsCollisionRoundShift(c[2][0], shift),
         shift);
     if (det == 0)
     {
@@ -281,8 +281,8 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
             {
                 cell = -cell;
             }
-            out.m[row][col] = ndsR2CollisionClamp(
-                ndsR2CollisionRoundShift(cell * recip, shift * 3u));
+            out.m[row][col] = ndsCollisionClamp(
+                ndsCollisionRoundShift(cell * recip, shift * 3u));
         }
     }
 
@@ -299,7 +299,7 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
  * The wired form: a FULL inverse matrix, in the layout the decomp's consumers
  * already read.
  *
- * ndsR2CollisionInvertFrame above is the better representation and it is what
+ * ndsCollisionInvertFrame above is the better representation and it is what
  * the falsifier graded, but it cannot be wired without rewriting every consumer
  * of unk_dobjtrans_0x9C, because the frame is not a matrix. This one produces
  * the matrix, so gmCollisionGetWorldPosition and gmCollisionTestRectangle keep
@@ -335,8 +335,8 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
  *   stored rows 0-2    Q30 >> 18                                 -> Q12
  *   row 3   = -sum t(Q12) * inv(Q30)                             -> Q42 -> Q12
  */
-#define NDS_R2_COLLISION_MTX_ROT_BITS 26
-#define NDS_R2_COLLISION_MTX_INV_BITS 26
+#define NDS_COLLISION_MTX_ROT_BITS 26
+#define NDS_COLLISION_MTX_INV_BITS 26
 
 /* EVERY INTERMEDIATE FITS IN INT32, AND THAT IS THE PERFORMANCE DESIGN, not a
  * neatness one. The first wired revision carried the inverse at Q30, which does
@@ -358,8 +358,8 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
  * bit-by-bit loop -- and one of those per call is a large fraction of the
  * budget this kernel exists to save. Both truncate toward zero, so the host
  * falsifier grading the C form grades the same arithmetic. */
-#ifndef NDS_R2_COLLISION_DIV64
-#define NDS_R2_COLLISION_DIV64(numerator, denominator) \
+#ifndef NDS_COLLISION_DIV64
+#define NDS_COLLISION_DIV64(numerator, denominator) \
     ((int32_t)((numerator) / (int64_t)(denominator)))
 #endif
 
@@ -374,12 +374,12 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
  * ~15 instructions.
  *
  * Zero, denormals and anything below half a quantum return 0. Values past the
- * 20.12 range saturate, which is the same fail-safe ndsR2CollisionClamp uses;
+ * 20.12 range saturate, which is the same fail-safe ndsCollisionClamp uses;
  * SSB64 joint matrices do not reach it (rows 0-2 are ~scale, row 3 is world
  * coordinates in the hundreds). */
-#define NDS_R2_COLLISION_F32_OVERFLOW INT32_MIN
+#define NDS_COLLISION_F32_OVERFLOW INT32_MIN
 
-static inline int32_t ndsR2CollisionF32ToFixed(float value,
+static inline int32_t ndsCollisionF32ToFixed(float value,
                                                unsigned int frac_bits)
 {
     uint32_t bits;
@@ -396,7 +396,7 @@ static inline int32_t ndsR2CollisionF32ToFixed(float value,
     }
     if (exponent == 0xFF)
     {
-        return NDS_R2_COLLISION_F32_OVERFLOW; /* inf or NaN */
+        return NDS_COLLISION_F32_OVERFLOW; /* inf or NaN */
     }
     mantissa = (bits & 0x7FFFFFu) | 0x800000u;
 
@@ -414,7 +414,7 @@ static inline int32_t ndsR2CollisionF32ToFixed(float value,
          * declines the joint and the decomp's float path takes it. */
         if (shift <= -7)
         {
-            return NDS_R2_COLLISION_F32_OVERFLOW;
+            return NDS_COLLISION_F32_OVERFLOW;
         }
         magnitude = mantissa << (unsigned int)(-shift);
     }
@@ -425,14 +425,14 @@ static inline int32_t ndsR2CollisionF32ToFixed(float value,
     }
     if (magnitude > 0x7FFFFFFFu)
     {
-        return NDS_R2_COLLISION_F32_OVERFLOW;
+        return NDS_COLLISION_F32_OVERFLOW;
     }
     return (bits & 0x80000000u) ? -(int32_t)magnitude : (int32_t)magnitude;
 }
 
-static inline int32_t ndsR2CollisionF32ToQ12(float value)
+static inline int32_t ndsCollisionF32ToQ12(float value)
 {
-    return ndsR2CollisionF32ToFixed(value, NDS_R2_COLLISION_MTX_FRAC_BITS);
+    return ndsCollisionF32ToFixed(value, NDS_COLLISION_MTX_FRAC_BITS);
 }
 
 /* Fixed -> float at any fraction width, round-to-nearest-even. CLZ is a single
@@ -446,7 +446,7 @@ static inline int32_t ndsR2CollisionF32ToQ12(float value)
  * coordinate of ~400, so 2^-13 there costs 0.05 world units -- two and a half
  * times the whole bound, from the STORE alone. Rows 0-2 are therefore converted
  * from the Q30 intermediate and never pass through Q12. */
-static inline float ndsR2CollisionFixedToF32(int64_t value,
+static inline float ndsCollisionFixedToF32(int64_t value,
                                              unsigned int frac_bits)
 {
     uint32_t sign;
@@ -493,9 +493,9 @@ static inline float ndsR2CollisionFixedToF32(int64_t value,
     return out;
 }
 
-static inline float ndsR2CollisionQ12ToF32(int32_t q)
+static inline float ndsCollisionQ12ToF32(int32_t q)
 {
-    return ndsR2CollisionFixedToF32((int64_t)q, NDS_R2_COLLISION_MTX_FRAC_BITS);
+    return ndsCollisionFixedToF32((int64_t)q, NDS_COLLISION_MTX_FRAC_BITS);
 }
 
 /* The fixed-point replacement for gmCollisionSetInvertMatrix, float in and
@@ -506,12 +506,12 @@ static inline float ndsR2CollisionQ12ToF32(int32_t q)
  * declared domain; the caller then lets the decomp's float path have the joint.
  * The decomp spins forever on a singular matrix, and reproducing that would be
  * reproducing a defect. */
-static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
+static inline int ndsCollisionInvertMatrix44(float dst[4][4],
                                                const float src[4][4])
 {
-    const unsigned int rot_bits = NDS_R2_COLLISION_MTX_ROT_BITS;
-    const unsigned int inv_bits = NDS_R2_COLLISION_MTX_INV_BITS;
-    const unsigned int frac_bits = NDS_R2_COLLISION_MTX_FRAC_BITS;
+    const unsigned int rot_bits = NDS_COLLISION_MTX_ROT_BITS;
+    const unsigned int inv_bits = NDS_COLLISION_MTX_INV_BITS;
+    const unsigned int frac_bits = NDS_COLLISION_MTX_FRAC_BITS;
     int32_t r[3][3];
     int32_t t[3];
     int32_t c[3][3];
@@ -526,8 +526,8 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
     {
         for (col = 0u; col < 3u; col++)
         {
-            r[row][col] = ndsR2CollisionF32ToFixed(src[row][col], rot_bits);
-            if (r[row][col] == NDS_R2_COLLISION_F32_OVERFLOW)
+            r[row][col] = ndsCollisionF32ToFixed(src[row][col], rot_bits);
+            if (r[row][col] == NDS_COLLISION_F32_OVERFLOW)
             {
                 return 0; /* rotation cell past +/-32 */
             }
@@ -535,10 +535,10 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
     }
     for (col = 0u; col < 3u; col++)
     {
-        t[col] = ndsR2CollisionF32ToFixed(src[3][col], frac_bits);
+        t[col] = ndsCollisionF32ToFixed(src[3][col], frac_bits);
         /* Row 3 forms t * inv at Q30 and int64 must hold it: |t_raw| < 2^24
          * is |t| < 4096 world units, comfortably past any SSB64 blast zone. */
-        if ((t[col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        if ((t[col] == NDS_COLLISION_F32_OVERFLOW) ||
             (t[col] >= (int32_t)(1 << 24)) || (t[col] <= -(int32_t)(1 << 24)))
         {
             return 0;
@@ -550,22 +550,22 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
      * Q26 is Q52, reduced straight back to Q26 so the next stage is another
      * SMULL rather than a 64-bit multiply. Each product is one SMULL and each
      * reduction one arithmetic shift pair. */
-#define NDS_R2_COFACTOR(ar, ac, br, bc, cr, cc, dr, dc)                      \
+#define NDS_COFACTOR(ar, ac, br, bc, cr, cc, dr, dc)                      \
     (int32_t)((((int64_t)r[ar][ac] * r[br][bc]) -                            \
                ((int64_t)r[cr][cc] * r[dr][dc])) >> rot_bits)
 
-    c[0][0] = NDS_R2_COFACTOR(1, 1, 2, 2, 1, 2, 2, 1);
-    c[1][0] = NDS_R2_COFACTOR(1, 0, 2, 2, 1, 2, 2, 0);
-    c[2][0] = NDS_R2_COFACTOR(1, 0, 2, 1, 1, 1, 2, 0);
+    c[0][0] = NDS_COFACTOR(1, 1, 2, 2, 1, 2, 2, 1);
+    c[1][0] = NDS_COFACTOR(1, 0, 2, 2, 1, 2, 2, 0);
+    c[2][0] = NDS_COFACTOR(1, 0, 2, 1, 1, 1, 2, 0);
 
-    c[0][1] = NDS_R2_COFACTOR(0, 1, 2, 2, 0, 2, 2, 1);
-    c[1][1] = NDS_R2_COFACTOR(0, 0, 2, 2, 0, 2, 2, 0);
-    c[2][1] = NDS_R2_COFACTOR(0, 0, 2, 1, 0, 1, 2, 0);
+    c[0][1] = NDS_COFACTOR(0, 1, 2, 2, 0, 2, 2, 1);
+    c[1][1] = NDS_COFACTOR(0, 0, 2, 2, 0, 2, 2, 0);
+    c[2][1] = NDS_COFACTOR(0, 0, 2, 1, 0, 1, 2, 0);
 
-    c[0][2] = NDS_R2_COFACTOR(0, 1, 1, 2, 0, 2, 1, 1);
-    c[1][2] = NDS_R2_COFACTOR(0, 0, 1, 2, 0, 2, 1, 0);
-    c[2][2] = NDS_R2_COFACTOR(0, 0, 1, 1, 0, 1, 1, 0);
-#undef NDS_R2_COFACTOR
+    c[0][2] = NDS_COFACTOR(0, 1, 1, 2, 0, 2, 1, 1);
+    c[1][2] = NDS_COFACTOR(0, 0, 1, 2, 0, 2, 1, 0);
+    c[2][2] = NDS_COFACTOR(0, 0, 1, 1, 0, 1, 1, 0);
+#undef NDS_COFACTOR
 
     /* det = m00*c00 - m01*c10 + m02*c20, Q26 by Q26 reduced to Q26. */
     det = (int32_t)((((int64_t)r[0][0] * c[0][0]) -
@@ -583,7 +583,7 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
     {
         return 0;
     }
-    recip = NDS_R2_COLLISION_DIV64((int64_t)1 << (rot_bits + inv_bits), det);
+    recip = NDS_COLLISION_DIV64((int64_t)1 << (rot_bits + inv_bits), det);
 
     for (row = 0u; row < 3u; row++)
     {
@@ -630,12 +630,12 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
     {
         for (col = 0u; col < 3u; col++)
         {
-            dst[row][col] = ndsR2CollisionFixedToF32(inv[row][col], inv_bits);
+            dst[row][col] = ndsCollisionFixedToF32(inv[row][col], inv_bits);
         }
     }
     for (col = 0u; col < 3u; col++)
     {
-        dst[3][col] = ndsR2CollisionFixedToF32(row3[col],
+        dst[3][col] = ndsCollisionFixedToF32(row3[col],
                                                frac_bits + inv_bits);
     }
     return 1;
@@ -644,13 +644,13 @@ static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
 /* local = (p - t) . R^-1, the only thing gmcollision.c ever does with the
  * inverse: gmCollisionGetWorldPosition and gmCollisionTestRectangle both just
  * carry a world point into the joint's frame. `frame` comes from
- * ndsR2CollisionInvertFrame.
+ * ndsCollisionInvertFrame.
  *
  * Row/column convention is the source's throughout: forward is
  * world[c] = sum_k local[k]*M[k][c] + M[3][c], so the inverse contracts over
  * the same index. */
-static inline void ndsR2CollisionWorldToLocal(int32_t out[3],
-                                              const NDSR2CollisionMtx *frame,
+static inline void ndsCollisionWorldToLocal(int32_t out[3],
+                                              const NDSCollisionMtx *frame,
                                               const int32_t p[3])
 {
     /* Exact: both operands are 20.12 and the difference of two nearby world
@@ -666,9 +666,9 @@ static inline void ndsR2CollisionWorldToLocal(int32_t out[3],
                       (int64_t)d1 * frame->m[1][col] +
                       (int64_t)d2 * frame->m[2][col];
 
-        out[col] = ndsR2CollisionClamp(
-            ndsR2CollisionRoundShift(sum, NDS_R2_COLLISION_MTX_FRAC_BITS));
+        out[col] = ndsCollisionClamp(
+            ndsCollisionRoundShift(sum, NDS_COLLISION_MTX_FRAC_BITS));
     }
 }
 
-#endif /* NDS_R2_COLLISION_MTX_H */
+#endif /* NDS_COLLISION_MTX_H */

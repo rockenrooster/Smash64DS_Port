@@ -254,7 +254,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                 (inc / "nds_build_config.h").write_text(
                     "#pragma once\n"
                     f"#define NDS_RENDERER_PROFILE_LEVEL 0\n"
-                    f"#define NDS_R2_FIGHTER_HW_LIGHT {hw}\n"
+                    f"#define NDS_FIGHTER_HW_LIGHT {hw}\n"
                     "#define NDS_RENDERER_M2_DETAILED_LEDGER 0\n"
                     "#define NDS_FIGHTER_PRIMITIVES 1\n",
                     encoding="utf-8")
@@ -373,7 +373,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         self.assertIn("}", src[brace:end + 1])
         self.assertNotIn("PreparedDense", src[brace:end + 1])
         # ABI check preserved: the HW-light layout's size, the only layout
-        # since NDS_R2_FIGHTER_HW_LIGHT resolved to 1 (cb344c4671b).
+        # since NDS_FIGHTER_HW_LIGHT resolved to 1 (cb344c4671b).
         self.assertIn(
             "_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 10u", src)
         # Mario/Fox's frozen arrays still initialise their static tables where
@@ -397,13 +397,13 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         self.assertIn("if base in NATIVE_OWNER_SUPPRESSED_ARRAYS:", owners_src)
         # The renderer typedef the storage test extracts keeps its shape:
         # the packed 10-byte HW-light layout, the only one since every
-        # build sets NDS_R2_FIGHTER_HW_LIGHT (its other branch went
+        # build sets NDS_FIGHTER_HW_LIGHT (its other branch went
         # 2026-10-21).
         renderer_src = read_split(LOADER_C)
         a = renderer_src.index("typedef struct NDSNativePreparedDenseVertex")
         b = renderer_src.index("typedef struct NDSNativeRoot", a)
         record = renderer_src[a:b].rsplit("#endif", 1)[0]
-        self.assertNotIn("NDS_R2_FIGHTER_HW_LIGHT", record)
+        self.assertNotIn("NDS_FIGHTER_HW_LIGHT", record)
         for field in ("u32 gx_xy;", "u16 gx_z;", "s16 s;", "s16 t;"):
             self.assertIn(field, record)
         self.assertIn("} __attribute__((packed, aligned(2))) "

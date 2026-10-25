@@ -25,7 +25,7 @@
  * What this is NOT
  * ----------------
  * It does not change the gameplay tick, the renderer, the pacing policy, or the
- * instrumentation. `ndsR2Host*` are the Runtime 1 operations, unchanged, called
+ * instrumentation. `ndsHost*` are the Runtime 1 operations, unchanged, called
  * in the same order with the same arguments. R2-01's gate is tick-identical
  * gameplay and tick-HUD buckets that read the same as Runtime 1; a measurable
  * frame-cost change in EITHER direction is a defect in this file, not a win.
@@ -37,7 +37,7 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_scene_harness.h>
-#include <nds/nds_r2_battle.h>
+#include <nds/nds_battle.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_net_session.h>
 #include <port/coroutine.h>
@@ -45,7 +45,7 @@
 extern volatile u32 gNdsFtPoseEvalTick;
 extern volatile u32 gNdsMObjTickMul;
 
-#if NDS_R2_PATH
+#if NDS_PATH
 
 #if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
 #error "src/nds/r2 is specialized for the battle_playable harness (mode 163)"
@@ -62,18 +62,18 @@ extern volatile u32 gNdsMObjTickMul;
  * a coroutine it switches to runs any hot-stack call of its own in place
  * (gNdsDtcmHotStackBusy). Its deepest reach stays under the draw
  * subtrees' 3,740 B. */
-static unsigned int ndsR2BattleUpdateOnHotStack(void *arg)
+static unsigned int ndsBattleUpdateOnHotStack(void *arg)
 {
-    return ndsR2HostBattleUpdateOnce((u32)(uintptr_t)arg);
+    return ndsHostBattleUpdateOnce((u32)(uintptr_t)arg);
 }
 
-void ndsR2BattleRun(void)
+void ndsBattleRun(void)
 {
-    const u32 updates_per_present = ndsR2HostBattleUpdatesPerPresent();
-    const u32 update_max = ndsR2HostBattleUpdateMax();
+    const u32 updates_per_present = ndsHostBattleUpdatesPerPresent();
+    const u32 update_max = ndsHostBattleUpdateMax();
     u32 i = 0u;
 
-    ndsR2HostBattlePrepare();
+    ndsHostBattlePrepare();
     /* P3: a lockstep match runs a batch only once every human's records for
      * both of its ticks are here, and installs them tick by tick. */
     ndsNetBattleBegin();
@@ -84,7 +84,7 @@ void ndsR2BattleRun(void)
         u32 terminal_update = 0u;
         u32 stop_after_iteration = 0u;
 
-        ndsR2HostBattleIterationBegin();
+        ndsHostBattleIterationBegin();
         ndsNetBattleGate();
 
         /* Smash 64 slows uniformly under load and never repays a missed retrace
@@ -96,7 +96,7 @@ void ndsR2BattleRun(void)
              update_in_iteration++)
         {
             ndsNetBattleInstallTick(update_in_iteration);
-            if (ndsDtcmHotStackRun(ndsR2BattleUpdateOnHotStack,
+            if (ndsDtcmHotStackRun(ndsBattleUpdateOnHotStack,
                                    (void *)(uintptr_t)update_in_iteration) !=
                 0u)
             {
@@ -106,7 +106,7 @@ void ndsR2BattleRun(void)
                 break;
             }
             i++;
-            if (ndsR2HostBattleNaturalMotionPassed() != 0u)
+            if (ndsHostBattleNaturalMotionPassed() != 0u)
             {
                 if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
                 {
@@ -126,7 +126,7 @@ void ndsR2BattleRun(void)
             break;
         }
         ndsNetBattleBatchDone();
-        ndsR2HostBattlePresent();
+        ndsHostBattlePresent();
         if (stop_after_iteration != 0u)
         {
             break;
@@ -137,7 +137,7 @@ void ndsR2BattleRun(void)
     /* The freeze watchdog watches battle frames only (Results and the menus
      * load between frames for seconds). */
     NDS_FREEZE_DIAGNOSTICS_DISARM();
-    ndsR2HostBattleFinish();
+    ndsHostBattleFinish();
     /* P2-2p6: outside this loop every source tick is a presented one for the
      * fighter pose engine (menu previews, Results), so leave its eval word set. */
     gNdsFtPoseEvalTick = 1u;
@@ -145,4 +145,4 @@ void ndsR2BattleRun(void)
     gNdsMObjTickMul = 1u;
 }
 
-#endif /* NDS_R2_PATH */
+#endif /* NDS_PATH */

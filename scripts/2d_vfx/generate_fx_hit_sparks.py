@@ -152,7 +152,7 @@ def write_inc(data: bytes, digest: str) -> None:
     of the boot-time taskman arena one-for-one (src/port/diagnostics.c searches
     down from 0x150000 in 0x1000 steps and floors at 0x130000), and at 22,528
     bytes this single array was worth five whole steps of that search -- which
-    is what made NDS_R2_PARTICLE_RUNTIME=1 unbootable: it pushed the search to
+    is what made NDS_PARTICLE_RUNTIME=1 unbootable: it pushed the search to
     its floor and the first battle allocation died 864 bytes short.
 
     The bytes ship as the NitroFS payload written below instead, which the

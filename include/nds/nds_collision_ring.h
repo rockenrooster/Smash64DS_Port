@@ -1,5 +1,5 @@
-#ifndef NDS_R2_COLLISION_RING_H
-#define NDS_R2_COLLISION_RING_H
+#ifndef NDS_COLLISION_RING_H
+#define NDS_COLLISION_RING_H
 
 /* R2-07 slice 52 -- the wiring of the fixed-point collision cluster.
  *
@@ -18,12 +18,12 @@
  * ::vec_scale all keep their type, their layout and every one of their readers.
  * The only difference from the shipped ROM is the last bits of those f32
  * values, and that difference is bounded by the falsifier
- * (scripts/check-r2-collision-fixed.ps1) at 0.0024 world units against the
+ * (scripts/check-collision-fixed.ps1) at 0.0024 world units against the
  * 0.0200 bound the campaign carries, over the LIVE joint-scale domain
  * 0.9937-2.0479.
  *
  * The alternative -- reinterpreting the 64 bytes of unk_dobjtrans_0x9C as a
- * fixed NDSR2CfxFrame -- buys gmCollisionTestRectangle and part of
+ * fixed NDSCfxFrame -- buys gmCollisionTestRectangle and part of
  * gmCollisionGetWorldPosition as well, and the board has already proven the
  * slot reinterpretable (`sNdsFighterPartsPool`, `ndsFighterPartsSyncDObj` and
  * `ndsFighterPartsSetIdentity` are absent from both linked ELFs). It is not
@@ -56,9 +56,9 @@ typedef struct DObj DObj;
  * point, setting the source's own latches. Safe to call on any DObj: it is a
  * no-op when the latches are already set and declines to the float path
  * whenever it cannot represent the joint. */
-void ndsR2CfxPrepareFighterJoint(DObj *main_dobj);
+void ndsCfxPrepareFighterJoint(DObj *main_dobj);
 
-/* The falsifier arm's switch, initialised from NDS_R2_COLLISION_FIXED_DISPATCH.
+/* The falsifier arm's switch, initialised from NDS_COLLISION_FIXED_DISPATCH.
  * Volatile so both arms link byte-identical text; see the definition. */
 extern volatile u32 gNdsCfxRingEnable;
 
@@ -72,12 +72,12 @@ extern volatile u32 gNdsCfxRingEnable;
 extern volatile u32 gNdsCfxRingPrepareCalls;    /* wrapper entries */
 extern volatile u32 gNdsCfxRingChainFixed;      /* chain walks completed fixed */
 extern volatile u32 gNdsCfxRingChainDeclined;   /* animlocks / domain / depth */
-extern volatile u32 gNdsCfxRingLocalsBuilt;     /* ndsR2CfxBuildLocal calls */
-extern volatile u32 gNdsCfxRingComposes;        /* ndsR2CfxCompose calls */
+extern volatile u32 gNdsCfxRingLocalsBuilt;     /* ndsCfxBuildLocal calls */
+extern volatile u32 gNdsCfxRingComposes;        /* ndsCfxCompose calls */
 extern volatile u32 gNdsCfxRingInvertFixed;     /* unk_dobjtrans_0x9C fills */
 extern volatile u32 gNdsCfxRingInvertDeclined;
 extern volatile u32 gNdsCfxRingScaleFixed;      /* vec_scale fills */
 extern volatile u32 gNdsCfxRingScaleDeclined;
 #endif
 
-#endif /* NDS_R2_COLLISION_RING_H */
+#endif /* NDS_COLLISION_RING_H */

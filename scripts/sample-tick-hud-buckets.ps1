@@ -759,7 +759,7 @@ try {
                 "break $faultSymbol", 'commands', 'silent',
                 ('printf "TICKFAULT ' + $faultSymbol + ' pc=%08x lr=%08x\n", $pc, $lr'),
                 $(if ($faultSymbol -eq 'ndsSyMallocOverflowHalt') {
-                    'printf "TICKFAULT_HEAP request=%u free=%u arena=%u animcache=%u\n", gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsTaskmanArenaChosenSize, gNdsR2AnimCacheArenaReservedBytes'
+                    'printf "TICKFAULT_HEAP request=%u free=%u arena=%u animcache=%u\n", gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsTaskmanArenaChosenSize, gNdsAnimCacheArenaReservedBytes'
                 }),
                 $(if ($faultSymbol -eq 'ndsKirbyHatResidencyHalt') {
                     'printf "TICKFAULT_HAT reason=%u\n", $r0'

@@ -295,7 +295,7 @@ int main(void) {{
             (tmp_path / "nds_build_config.h").write_text(
                 "#pragma once\n"
                 "#define NDS_RENDERER_PROFILE_LEVEL 0\n"
-                "#define NDS_R2_FIGHTER_HW_LIGHT 1\n"
+                "#define NDS_FIGHTER_HW_LIGHT 1\n"
                 "#define NDS_RENDERER_M2_DETAILED_LEDGER 0\n"
                 "#define NDS_FIGHTER_PRIMITIVES 2\n",
                 encoding="utf-8")

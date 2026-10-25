@@ -7,23 +7,23 @@ full-allocation ledger showed that plus the 8,704 B optional world cache
 behind the 10,632 B visit-1 variance.  Main now derives the exact distinct
 initial-clip bytes from the admitted roster's source row-0 motion table via
 the same DS stream/raw provider the warm loader uses
-(`ndsR2AnimWarmLoadOne` calls `ndsR2AnimCachePayloadBytes`), aligns between
+(`ndsAnimWarmLoadOne` calls `ndsAnimCachePayloadBytes`), aligns between
 clips, and rejects invalid/overflow fail-closed.
 
 These tests EXTRACT the production bodies verbatim (source_test_helpers)
 and run them on a host harness with real `ndsSyMallocWouldFit`:
 
-  * extracted, unmodified: ndsR2AnimCachePayloadBytes,
-    ndsR2AnimCacheSetupBytes, ndsR2AnimCacheArenaEnsureSetup,
-    ndsR2AnimCacheValidateGeneration, ndsR2AnimCacheArenaStillOwned,
-    ndsR2AnimCacheArenaDropForReset (all from
+  * extracted, unmodified: ndsAnimCachePayloadBytes,
+    ndsAnimCacheSetupBytes, ndsAnimCacheArenaEnsureSetup,
+    ndsAnimCacheValidateGeneration, ndsAnimCacheArenaStillOwned,
+    ndsAnimCacheArenaDropForReset (all from
     src/port/reloc_backend_assets.c), ndsSyMallocWouldFit (from
     src/import/battleship_sys_malloc.c).
   * stubbed (explicit fixture seams, exactly like test_anim_cache_budget.py
     stubs lbRelocGetFileSize): ndsRelocAssetIDForToken (identity, one BAD
     token maps INVALID), ndsRelocIsFighterAnimID (one NONFIGHTER id refused),
     the three PayloadBytes providers (ndsRelocAssetLoadFighterStreamClip,
-    ndsRelocP2GeneratedAllocSize, ndsRelocAssetAllocSize -- per-id tables so
+    ndsRelocGeneratedAllocSize, ndsRelocAssetAllocSize -- per-id tables so
     stream-vs-raw fallback parity is measurable), ndsBattlePackResidencyDrop,
     and syTaskmanMalloc (a bump carve with the decomp syMallocSet cursor
     semantics).  No sizing/allocation decision under test is re-implemented;
@@ -42,7 +42,7 @@ overflowing clip vetoes the whole setup (returns 0u) rather than skipping
 that kind -- that is the production rejection rule, asserted here so any
 future skip-instead behaviour fails loudly.  The host fixture types only the
 `anim_file_id` member the extracted setup sizer reads from the current
-`sNdsR2CssInitialMotionDescs` table.
+`sNdsCssInitialMotionDescs` table.
 """
 import re
 import shutil
@@ -76,18 +76,18 @@ if not re.search(
         ASSETS):
     raise AssertionError("NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES drifted from 128 KiB")
 if not re.search(
-        r"#define\s+NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE\s+"
+        r"#define\s+NDS_ANIM_CACHE_ARENA_KEEP_FREE\s+"
         r"NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES",
         ASSETS):
-    raise AssertionError("NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE lost ledger-reserve alias")
+    raise AssertionError("NDS_ANIM_CACHE_ARENA_KEEP_FREE lost ledger-reserve alias")
 if not re.search(r"#define\s+NDS_RELOC_ALIGN_BYTES\s+0x10u", ASSETS):
     raise AssertionError("NDS_RELOC_ALIGN_BYTES drifted from 0x10u")
-if "static size_t ndsR2AnimCachePayloadBytes" not in ASSETS:
-    raise AssertionError("ndsR2AnimCachePayloadBytes missing from source")
-if "static u32 ndsR2AnimCacheSetupBytes" not in ASSETS:
-    raise AssertionError("ndsR2AnimCacheSetupBytes missing from source")
-if "static sb32 ndsR2AnimCacheArenaEnsureSetup" not in ASSETS:
-    raise AssertionError("ndsR2AnimCacheArenaEnsureSetup missing from source")
+if "static size_t ndsAnimCachePayloadBytes" not in ASSETS:
+    raise AssertionError("ndsAnimCachePayloadBytes missing from source")
+if "static u32 ndsAnimCacheSetupBytes" not in ASSETS:
+    raise AssertionError("ndsAnimCacheSetupBytes missing from source")
+if "static sb32 ndsAnimCacheArenaEnsureSetup" not in ASSETS:
+    raise AssertionError("ndsAnimCacheArenaEnsureSetup missing from source")
 
 # Fixture clip sizes.  The eight sum to the measured 32,624 B (all 16-aligned
 # so alignment is a no-op here and the figure is exact); the ninth (Pikachu)
@@ -114,28 +114,28 @@ ALIGN_EXPECT = 65  # 17 + align_up(17)=32 + 33
 def extract_real():
     """Pull the verbatim production bodies this test executes."""
     out = {
-        "payload": function(ASSETS, "ndsR2AnimCachePayloadBytes"),
-        "setup": function(ASSETS, "ndsR2AnimCacheSetupBytes"),
+        "payload": function(ASSETS, "ndsAnimCachePayloadBytes"),
+        "setup": function(ASSETS, "ndsAnimCacheSetupBytes"),
         # EnsureSetup is EnsureSetupWith at the ledger's keep-free (the CSS
         # working set passes its own); both run, in source order.
-        "ensure_setup": function(ASSETS, "ndsR2AnimCacheArenaEnsureSetupWith") +
-        "\n\n" + function(ASSETS, "ndsR2AnimCacheArenaEnsureSetup"),
-        "validate": function(ASSETS, "ndsR2AnimCacheValidateGeneration"),
-        "still_owned": function(ASSETS, "ndsR2AnimCacheArenaStillOwned"),
-        "drop_for_reset": function(ASSETS, "ndsR2AnimCacheArenaDropForReset"),
+        "ensure_setup": function(ASSETS, "ndsAnimCacheArenaEnsureSetupWith") +
+        "\n\n" + function(ASSETS, "ndsAnimCacheArenaEnsureSetup"),
+        "validate": function(ASSETS, "ndsAnimCacheValidateGeneration"),
+        "still_owned": function(ASSETS, "ndsAnimCacheArenaStillOwned"),
+        "drop_for_reset": function(ASSETS, "ndsAnimCacheArenaDropForReset"),
         "would_fit": function(MALLOC, "ndsSyMallocWouldFit"),
     }
     for needle in ("ndsRelocAssetLoadFighterStreamClip",
-                   "ndsRelocP2GeneratedAllocSize", "ndsRelocAssetAllocSize"):
+                   "ndsRelocGeneratedAllocSize", "ndsRelocAssetAllocSize"):
         if needle not in out["payload"]:
             raise AssertionError(f"extracted PayloadBytes lost '{needle}'")
-    for needle in ("motion_desc[0]", "ndsR2AnimCachePayloadBytes",
+    for needle in ("motion_desc[0]", "ndsAnimCachePayloadBytes",
                    "UINT32_MAX", "ndsRelocIsFighterAnimID"):
         if needle not in out["setup"]:
             raise AssertionError(f"extracted SetupBytes lost '{needle}'")
-    for needle in ("ndsR2AnimCacheSetupBytes", "ndsSyMallocWouldFit",
-                   "NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE",
-                   "ndsR2AnimCacheArenaStillOwned"):
+    for needle in ("ndsAnimCacheSetupBytes", "ndsSyMallocWouldFit",
+                   "NDS_ANIM_CACHE_ARENA_KEEP_FREE",
+                   "ndsAnimCacheArenaStillOwned"):
         if needle not in out["ensure_setup"]:
             raise AssertionError(f"extracted EnsureSetup lost '{needle}'")
     return out
@@ -156,8 +156,8 @@ enum { FALSE = 0, TRUE = 1 };
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
 #define NDS_RELOC_ALIGN_BYTES 0x10u
-#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 131072u
-#define NDS_R2_FTANIM_STREAM 1
+#define NDS_ANIM_CACHE_ARENA_KEEP_FREE 131072u
+#define NDS_FTANIM_STREAM 1
 #define NDS_IMPORT_BATTLESHIP_FTMANAGER 1
 
 /* Nine-kind admitted roster fixture (production has twelve playable kinds;
@@ -176,33 +176,33 @@ static u32 gNdsTaskmanHeapGeneration;
 static SYMallocRegion gSYTaskmanGeneralHeap;
 static u8 sHeapBuf[1 << 20];
 
-static u8 *sNdsR2AnimCacheArena;
-static u32 sNdsR2AnimCacheArenaBytes;
-static u32 sNdsR2AnimCacheArenaUsed;
-static sb32 sNdsR2AnimCacheArenaRawOnly;
-static u32 sNdsR2AnimCacheArenaGeneration;
-static u32 sNdsR2AnimCacheCount;
+static u8 *sNdsAnimCacheArena;
+static u32 sNdsAnimCacheArenaBytes;
+static u32 sNdsAnimCacheArenaUsed;
+static sb32 sNdsAnimCacheArenaRawOnly;
+static u32 sNdsAnimCacheArenaGeneration;
+static u32 sNdsAnimCacheCount;
 /* The motion cache's later seams the extracted bodies touch: the elastic
  * arena flag (never set by the setup carve), the entry index the reset
  * clears, the ring extent origin the carve records, and the pins and the
  * prefetch the reset drains (nothing pinned or in flight here). */
-static sb32 sNdsR2AnimCacheArenaElastic;
-static u16 sNdsR2AnimCacheIndex[64];
-static uintptr_t sNdsR2AnimCacheExtentOrigin;
-static void ndsR2AnimPrefetchDrain(void) { }
-static void ndsR2AnimPinsRescueRange(const u8 *start, const u8 *end)
+static sb32 sNdsAnimCacheArenaElastic;
+static u16 sNdsAnimCacheIndex[64];
+static uintptr_t sNdsAnimCacheExtentOrigin;
+static void ndsAnimPrefetchDrain(void) { }
+static void ndsAnimPinsRescueRange(const u8 *start, const u8 *end)
 {
     (void)start;
     (void)end;
 }
-static volatile u32 gNdsR2AnimCacheBytes;
-static volatile u32 gNdsR2AnimCacheArenaReservedBytes;
-static volatile u32 gNdsR2AnimCacheArenaUsedBytes;
-static volatile u32 gNdsR2AnimCacheArenaReserveCount;
-static volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
-static volatile u32 gNdsR2AnimCacheArenaInvalidations;
-static volatile u32 gNdsR2AnimCacheArenaGenerationMismatches;
-static volatile u32 gNdsR2AnimCacheArenaRangeFaults;
+static volatile u32 gNdsAnimCacheBytes;
+static volatile u32 gNdsAnimCacheArenaReservedBytes;
+static volatile u32 gNdsAnimCacheArenaUsedBytes;
+static volatile u32 gNdsAnimCacheArenaReserveCount;
+static volatile u32 gNdsAnimCacheArenaReserveFailCount;
+static volatile u32 gNdsAnimCacheArenaInvalidations;
+static volatile u32 gNdsAnimCacheArenaGenerationMismatches;
+static volatile u32 gNdsAnimCacheArenaRangeFaults;
 
 /* ---- stubs: the three PayloadBytes providers + token seams ---- */
 
@@ -263,7 +263,7 @@ static s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
     return FALSE;
 }
 
-static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
+static size_t ndsRelocGeneratedAllocSize(u32 asset_id)
 {
     u32 i;
     for (i = 0u; i < sGenCount; i++)
@@ -318,7 +318,7 @@ static void *syTaskmanMalloc(size_t size, u32 align)
 /* ---- fixture roster ---- */
 
 static FixtureMotionDesc sMot[nFTKindEnumCount];
-static const FTMotionDesc *sNdsR2CssInitialMotionDescs[nFTKindEnumCount];
+static const FTMotionDesc *sNdsCssInitialMotionDescs[nFTKindEnumCount];
 
 static void reset_state(void)
 {
@@ -326,26 +326,26 @@ static void reset_state(void)
     memset(sMot, 0, sizeof(sMot));
     for (i = 0u; i < (u32)nFTKindEnumCount; i++)
     {
-        sNdsR2CssInitialMotionDescs[i] = NULL;
+        sNdsCssInitialMotionDescs[i] = NULL;
     }
     memset(&gSYTaskmanGeneralHeap, 0, sizeof(gSYTaskmanGeneralHeap));
     gSYTaskmanGeneralHeap.start = sHeapBuf + 64;
     gSYTaskmanGeneralHeap.ptr = sHeapBuf + 64;
     gNdsTaskmanHeapGeneration = 7u;
-    sNdsR2AnimCacheArena = NULL;
-    sNdsR2AnimCacheArenaBytes = 0u;
-    sNdsR2AnimCacheArenaUsed = 0u;
-    sNdsR2AnimCacheArenaRawOnly = FALSE;
-    sNdsR2AnimCacheArenaGeneration = 0u;
-    sNdsR2AnimCacheCount = 0u;
-    gNdsR2AnimCacheBytes = 0u;
-    gNdsR2AnimCacheArenaReservedBytes = 0u;
-    gNdsR2AnimCacheArenaUsedBytes = 0u;
-    gNdsR2AnimCacheArenaReserveCount = 0u;
-    gNdsR2AnimCacheArenaReserveFailCount = 0u;
-    gNdsR2AnimCacheArenaInvalidations = 0u;
-    gNdsR2AnimCacheArenaGenerationMismatches = 0u;
-    gNdsR2AnimCacheArenaRangeFaults = 0u;
+    sNdsAnimCacheArena = NULL;
+    sNdsAnimCacheArenaBytes = 0u;
+    sNdsAnimCacheArenaUsed = 0u;
+    sNdsAnimCacheArenaRawOnly = FALSE;
+    sNdsAnimCacheArenaGeneration = 0u;
+    sNdsAnimCacheCount = 0u;
+    gNdsAnimCacheBytes = 0u;
+    gNdsAnimCacheArenaReservedBytes = 0u;
+    gNdsAnimCacheArenaUsedBytes = 0u;
+    gNdsAnimCacheArenaReserveCount = 0u;
+    gNdsAnimCacheArenaReserveFailCount = 0u;
+    gNdsAnimCacheArenaInvalidations = 0u;
+    gNdsAnimCacheArenaGenerationMismatches = 0u;
+    gNdsAnimCacheArenaRangeFaults = 0u;
     memset(sStream, 0, sizeof(sStream));
     sStreamCount = 0u;
     memset(sGen, 0, sizeof(sGen));
@@ -373,7 +373,7 @@ static void set_heap(u32 avail, uintptr_t ptr_offset)
 static void kind_load(s32 kind, u32 token)
 {
     sMot[kind].anim_file_id = token;
-    sNdsR2CssInitialMotionDescs[kind] = &sMot[kind];
+    sNdsCssInitialMotionDescs[kind] = &sMot[kind];
 }
 
 static void stream_add(u32 id, u32 size, int ready)
@@ -458,7 +458,7 @@ static void scenario_nine_exceeds_fixed(void)
      * that shipped before Main covered only eight ({TOTAL8}u). */
     reset_state();
     roster_nine();
-    need = ndsR2AnimCacheSetupBytes();
+    need = ndsAnimCacheSetupBytes();
     CHECK(need == {TOTAL9}u);
     CHECK(need > {FIXED}u);
     CHECK({TOTAL8}u <= {FIXED}u);
@@ -466,22 +466,22 @@ static void scenario_nine_exceeds_fixed(void)
     /* Eight (Pikachu omitted) reproduce the measured {TOTAL8}u figure. */
     reset_state();
     roster_eight();
-    CHECK(ndsR2AnimCacheSetupBytes() == {TOTAL8}u);
+    CHECK(ndsAnimCacheSetupBytes() == {TOTAL8}u);
 
     /* The full nine fit exactly when the heap carries clips + floor. */
     reset_state();
     roster_nine();
     set_heap({TOTAL9 + KEEP_FREE}u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
-    CHECK(sNdsR2AnimCacheArenaBytes == {TOTAL9}u);
-    CHECK(sNdsR2AnimCacheArenaRawOnly == TRUE);
-    CHECK(sNdsR2AnimCacheArenaUsed == 0u);
-    CHECK(sNdsR2AnimCacheArenaGeneration == gNdsTaskmanHeapGeneration);
-    CHECK(gNdsR2AnimCacheArenaReservedBytes == {TOTAL9}u);
-    CHECK(gNdsR2AnimCacheArenaUsedBytes == 0u);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(sNdsAnimCacheArenaBytes == {TOTAL9}u);
+    CHECK(sNdsAnimCacheArenaRawOnly == TRUE);
+    CHECK(sNdsAnimCacheArenaUsed == 0u);
+    CHECK(sNdsAnimCacheArenaGeneration == gNdsTaskmanHeapGeneration);
+    CHECK(gNdsAnimCacheArenaReservedBytes == {TOTAL9}u);
+    CHECK(gNdsAnimCacheArenaUsedBytes == 0u);
     CHECK(sMallocCalls == 1u && sMallocLastSize == {TOTAL9}u);
-    CHECK(((uintptr_t)sNdsR2AnimCacheArena & 15u) == 0u);
-    CHECK(((uintptr_t)sNdsR2AnimCacheArena + {TOTAL9}u) <=
+    CHECK(((uintptr_t)sNdsAnimCacheArena & 15u) == 0u);
+    CHECK(((uintptr_t)sNdsAnimCacheArena + {TOTAL9}u) <=
           (uintptr_t)gSYTaskmanGeneralHeap.end);
 }}
 
@@ -495,18 +495,18 @@ static void scenario_duplicates_and_unloaded(void)
     kind_load(2, {A[1]}u);
     /* kind 3: no admitted row-0 motion. */
     kind_load(4, {A[2]}u);
-    sNdsR2CssInitialMotionDescs[4] = NULL;
+    sNdsCssInitialMotionDescs[4] = NULL;
     kind_load(5, {A[3]}u);
-    sNdsR2CssInitialMotionDescs[5] = NULL;
+    sNdsCssInitialMotionDescs[5] = NULL;
     kind_load(6, {A[4]}u);
-    sNdsR2CssInitialMotionDescs[6] = NULL;
+    sNdsCssInitialMotionDescs[6] = NULL;
     /* kinds 7..8: absent. */
     raw_add({A[0]}u, 4000u);
     raw_add({A[1]}u, 4000u);
     raw_add({A[2]}u, 4000u);
     raw_add({A[3]}u, 4000u);
     raw_add({A[4]}u, 4000u);
-    need = ndsR2AnimCacheSetupBytes();
+    need = ndsAnimCacheSetupBytes();
     CHECK(need == {DUP_EXPECT}u);
     CHECK(sRaw[0].calls == 1u); /* duplicate paid one provider sizing */
 }}
@@ -520,29 +520,29 @@ static void scenario_stream_raw_fallback(void)
     /* Stream tier wins and matches the raw size the fallback would give. */
     stream_add({Q1}u, 4000u, 1);
     raw_add({Q1}u, 4000u);
-    CHECK(ndsR2AnimCachePayloadBytes({Q1}u, &ready, &sz) == 4000u);
+    CHECK(ndsAnimCachePayloadBytes({Q1}u, &ready, &sz) == 4000u);
     CHECK(ready == TRUE && sz == 4000u);
     stream_set_ready({Q1}u, 0);
-    CHECK(ndsR2AnimCachePayloadBytes({Q1}u, &ready, &sz) == 4000u);
+    CHECK(ndsAnimCachePayloadBytes({Q1}u, &ready, &sz) == 4000u);
     CHECK(ready == FALSE); /* raw fallback: same bytes warm loader gets */
     /* Generated tier answers when the stream misses. */
     stream_add({Q2}u, 0u, 0);
     gen_add({Q2}u, 2500u);
     raw_add({Q2}u, 9999u);
-    CHECK(ndsR2AnimCachePayloadBytes({Q2}u, &ready, &sz) == 2500u);
+    CHECK(ndsAnimCachePayloadBytes({Q2}u, &ready, &sz) == 2500u);
     /* Stream outranks both lower tiers. */
     stream_add({Q3}u, 100u, 1);
     gen_add({Q3}u, 200u);
     raw_add({Q3}u, 300u);
-    CHECK(ndsR2AnimCachePayloadBytes({Q3}u, &ready, &sz) == 100u);
+    CHECK(ndsAnimCachePayloadBytes({Q3}u, &ready, &sz) == 100u);
     /* Nothing anywhere: zero, which SetupBytes rejects. */
-    CHECK(ndsR2AnimCachePayloadBytes({Q0}u, &ready, &sz) == 0u);
+    CHECK(ndsAnimCachePayloadBytes({Q0}u, &ready, &sz) == 0u);
     reset_state();
     kind_load(0, {Q1}u);
     stream_add({Q1}u, 4000u, 1);
     raw_add({Q1}u, 4000u);
     kind_load(1, {Q1}u); /* same clip on two kinds: distinct bytes once */
-    CHECK(ndsR2AnimCacheSetupBytes() == 4000u);
+    CHECK(ndsAnimCacheSetupBytes() == 4000u);
 }}
 
 static void scenario_alignment(void)
@@ -553,11 +553,11 @@ static void scenario_alignment(void)
     raw_add({AL1}u, 17u);
     raw_add({AL2}u, 33u);
     /* 17, then align_up(17) = 32 before the second clip. */
-    CHECK(ndsR2AnimCacheSetupBytes() == {ALIGN_EXPECT}u);
+    CHECK(ndsAnimCacheSetupBytes() == {ALIGN_EXPECT}u);
     reset_state();
     kind_load(0, {AL1}u);
     raw_add({AL1}u, 17u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 17u);
+    CHECK(ndsAnimCacheSetupBytes() == 17u);
 }}
 
 static void scenario_invalid_zero_overflow(void)
@@ -566,36 +566,36 @@ static void scenario_invalid_zero_overflow(void)
     reset_state();
     kind_load(0, {BAD}u);
     raw_add({BAD}u, 4000u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
-    CHECK(gNdsR2AnimCacheArenaReserveFailCount == 1u);
+    CHECK(gNdsAnimCacheArenaReserveFailCount == 1u);
 
     /* Non-fighter anim id: same refusal. */
     reset_state();
     kind_load(0, {NONFIGHTER}u);
     raw_add({NONFIGHTER}u, 4000u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
 
     /* Zero-size clip: rejected, never a zero-byte arena. */
     reset_state();
     kind_load(0, {ZERO_ID}u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
 
     /* One absurd provider size: overflow guard refuses. */
     reset_state();
     kind_load(0, {BIG_ID}u);
     raw_add({BIG_ID}u, (size_t)0x00000001FFFFFFFFull);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
 
     /* Accumulation overflow across two clips: second add would wrap. */
@@ -604,18 +604,18 @@ static void scenario_invalid_zero_overflow(void)
     kind_load(1, {O2}u);
     raw_add({O1}u, (size_t)0xFFFFFFF0u);
     raw_add({O2}u, 32u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
 
     /* O1 alone is representable but unfundable: budget refuses, no alloc. */
     reset_state();
     kind_load(0, {O1}u);
     raw_add({O1}u, (size_t)0xFFFFFFF0u);
-    CHECK(ndsR2AnimCacheSetupBytes() == 0xFFFFFFF0u);
+    CHECK(ndsAnimCacheSetupBytes() == 0xFFFFFFF0u);
     set_heap(600000u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
 }}
 
@@ -624,36 +624,36 @@ static void scenario_lease_no_fit_stale(void)
     reset_state();
     roster_eight();
     set_heap({TOTAL8 + KEEP_FREE}u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
-    CHECK(gNdsR2AnimCacheArenaReserveCount == 1u);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(gNdsAnimCacheArenaReserveCount == 1u);
 
     /* Already-owned lease: second Ensure reuses the block, no malloc. */
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
     CHECK(sMallocCalls == 1u);
-    CHECK(gNdsR2AnimCacheArenaReserveCount == 1u);
+    CHECK(gNdsAnimCacheArenaReserveCount == 1u);
 
     /* Sixteen bytes short of clips + floor: refuse before any allocation. */
     reset_state();
     roster_eight();
     set_heap({TOTAL8 + KEEP_FREE - 16}u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == FALSE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == FALSE);
     CHECK(sMallocCalls == 0u);
-    CHECK(gNdsR2AnimCacheArenaReserveFailCount == 1u);
+    CHECK(gNdsAnimCacheArenaReserveFailCount == 1u);
 
     /* Heap rewound under us (generation bump): stale cache is dropped whole
      * then re-reserved fresh at the same derived size. */
     reset_state();
     roster_eight();
     set_heap({TOTAL8 + KEEP_FREE}u, 0u);
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
     gNdsTaskmanHeapGeneration++;
     gSYTaskmanGeneralHeap.ptr = gSYTaskmanGeneralHeap.start;
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
-    CHECK(gNdsR2AnimCacheArenaInvalidations == 1u);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(gNdsAnimCacheArenaInvalidations == 1u);
     CHECK(sResidencyDropCalls == 1u);
-    CHECK(sNdsR2AnimCacheArenaBytes == {TOTAL8}u);
+    CHECK(sNdsAnimCacheArenaBytes == {TOTAL8}u);
     CHECK(sMallocCalls == 2u);
-    CHECK(gNdsR2AnimCacheArenaReserveCount == 2u);
+    CHECK(gNdsAnimCacheArenaReserveCount == 2u);
 }}
 
 int main(void)
@@ -703,21 +703,21 @@ int main(void)
     {{
         sb32 ctl_ready;
         u32 ctl_sz;
-        CHECK(ndsR2AnimCachePayloadBytes({A[0]}u, &ctl_ready, &ctl_sz) == 4000u);
+        CHECK(ndsAnimCachePayloadBytes({A[0]}u, &ctl_ready, &ctl_sz) == 4000u);
         CHECK(ctl_ready == TRUE);
         stream_set_ready({A[0]}u, 0);
-        CHECK(ndsR2AnimCachePayloadBytes({A[0]}u, &ctl_ready, &ctl_sz) == 4000u);
+        CHECK(ndsAnimCachePayloadBytes({A[0]}u, &ctl_ready, &ctl_sz) == 4000u);
         CHECK(ctl_ready == FALSE);
-        CHECK(ndsR2AnimCachePayloadBytes({Q2}u, &ctl_ready, &ctl_sz) == 2500u);
+        CHECK(ndsAnimCachePayloadBytes({Q2}u, &ctl_ready, &ctl_sz) == 2500u);
     }}
     set_heap({TOTAL9 + KEEP_FREE}u, 0u);
     /* The REAL sizer still reports the roster need ... */
-    need = ndsR2AnimCacheSetupBytes();
+    need = ndsAnimCacheSetupBytes();
     CHECK(need == {TOTAL9}u);
     CHECK({FIXED}u < need); /* ... which the fixed carve cannot cover. */
     /* ... while the patched EnsureSetup reserves only the fixed carve. */
-    CHECK(ndsR2AnimCacheArenaEnsureSetup() == TRUE);
-    CHECK(sNdsR2AnimCacheArenaBytes == {FIXED}u);
+    CHECK(ndsAnimCacheArenaEnsureSetup() == TRUE);
+    CHECK(sNdsAnimCacheArenaBytes == {FIXED}u);
     /* Replaying the nine clips into the fixed arena overflows: this is the
      * shipped bug (Pikachu's clip had nowhere to live). */
     for (k = 0u; k < 9u; k++)
@@ -743,7 +743,7 @@ def build_source(control=False):
     real = extract_real()
     ensure = real["ensure_setup"]
     if control:
-        anchor = "    bytes = ndsR2AnimCacheSetupBytes();"
+        anchor = "    bytes = ndsAnimCacheSetupBytes();"
         if ensure.count(anchor) != 1:
             raise AssertionError("negative-control anchor not unique")
         ensure = ensure.replace(

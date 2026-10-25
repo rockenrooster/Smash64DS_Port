@@ -1,5 +1,5 @@
-#ifndef NDS_R2_COLLISION_FIXED_H
-#define NDS_R2_COLLISION_FIXED_H
+#ifndef NDS_COLLISION_FIXED_H
+#define NDS_COLLISION_FIXED_H
 
 /* The fighter hurtbox narrow phase, end to end, in fixed point.
  *
@@ -22,7 +22,7 @@
  * same night: it won 534 cycles/frame in SRC and lost 6,481 in FTR+STG, because
  * 2,332 bytes of ADDED ARM text cost 1.85 cycles/frame per byte and the float
  * body it duplicated stayed in the map. The lesson is in
- * include/nds/nds_r2_collision_mtx.h and it is a FOOTPRINT lesson, not an
+ * include/nds/nds_collision_mtx.h and it is a FOOTPRINT lesson, not an
  * arithmetic one: a fixed-point collision path pays only if it converts the
  * whole cluster and DELETES the float versions rather than sitting beside them.
  * So this header carries every stage of the chain, and the representation
@@ -34,8 +34,8 @@
  *
  * NOTHING CALLS THIS YET. It is compiled and unit-proven; wiring, the map
  * check that the float bodies left, and the gate A/B are a separate cycle.
- * src/port/nds_r2_collision_fixed.c instantiates the out-of-line ARM entry
- * points; scripts/check-r2-collision-fixed.c compiles THIS file on the host and
+ * src/port/nds_collision_fixed.c instantiates the out-of-line ARM entry
+ * points; scripts/check-collision-fixed.c compiles THIS file on the host and
  * grades it against a transcription of the decomp float originals, so the
  * falsifier cannot pass while the ROM differs.
  *
@@ -95,7 +95,7 @@
  *   radius/scale  Q12 x Q26 -> Q38 (int64)                            >> 26
  *
  * ---------------------------------------------------------------------------
- * MEASURED, 2026-08-13, scripts/check-r2-collision-fixed.ps1. Every figure is
+ * MEASURED, 2026-08-13, scripts/check-collision-fixed.ps1. Every figure is
  * max world-unit error against the decomp float original over the live domain.
  *
  *   sine table, all 4,096 indices                        EXACT, 0
@@ -156,29 +156,29 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* ndsR2CollisionF32ToFixed / ndsR2CollisionFixedToF32 are the proven edge
+/* ndsCollisionF32ToFixed / ndsCollisionFixedToF32 are the proven edge
  * conversions from R2-07 L7 -- exponent arithmetic on the IEEE bits rather than
  * a multiply and a float-to-int, because at ~64 cycles per soft-float multiply
  * the naive conversion hands the whole win back. Reused rather than restated;
- * scripts/check-r2-collision-mtx.ps1 already grades them. Everything from that
+ * scripts/check-collision-mtx.ps1 already grades them. Everything from that
  * header is static inline, so the unused half costs nothing. */
-#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_collision_mtx.h>
 
-#define NDS_R2_CFX_ROT_BITS  26
-#define NDS_R2_CFX_POS_BITS  12
-#define NDS_R2_CFX_TRIG_BITS 15
+#define NDS_CFX_ROT_BITS  26
+#define NDS_CFX_POS_BITS  12
+#define NDS_CFX_TRIG_BITS 15
 
-#define NDS_R2_CFX_ROT_ONE (INT32_C(1) << NDS_R2_CFX_ROT_BITS)
-#define NDS_R2_CFX_POS_ONE (INT32_C(1) << NDS_R2_CFX_POS_BITS)
+#define NDS_CFX_ROT_ONE (INT32_C(1) << NDS_CFX_ROT_BITS)
+#define NDS_CFX_POS_ONE (INT32_C(1) << NDS_CFX_POS_BITS)
 
 /* Domain guards. Each one is a range the arithmetic above is proven inside;
  * outside it the kernel writes nothing and returns 0, and the caller lets the
  * decomp float path have the joint. Declining is not a failure mode to be
  * avoided -- it is the reason a fixed-point path may narrow its domain at all. */
-#define NDS_R2_CFX_ROT_MAX (INT32_C(4) * NDS_R2_CFX_ROT_ONE)
-#define NDS_R2_CFX_POS_MAX (INT32_C(1) << 29)
-#define NDS_R2_CFX_S2_MIN  (NDS_R2_CFX_ROT_ONE >> 4)
-#define NDS_R2_CFX_S2_MAX  (INT32_C(16) * NDS_R2_CFX_ROT_ONE)
+#define NDS_CFX_ROT_MAX (INT32_C(4) * NDS_CFX_ROT_ONE)
+#define NDS_CFX_POS_MAX (INT32_C(1) << 29)
+#define NDS_CFX_S2_MIN  (NDS_CFX_ROT_ONE >> 4)
+#define NDS_CFX_S2_MAX  (INT32_C(16) * NDS_CFX_ROT_ONE)
 
 /* Orthogonality tolerance for the row-scaled inverse, as |row_i . row_j| in
  * Q26 against s_i * s_j in Q26 -- i.e. a relative skew of 2^-10. Set from the
@@ -193,7 +193,7 @@
  * That is the refutation, and the constant is kept at the value that produced
  * it so the number can be reproduced. Read it as "how much slack the guard
  * gives", never as "how much error the result carries". */
-#define NDS_R2_CFX_SKEW_SHIFT 10
+#define NDS_CFX_SKEW_SHIFT 10
 
 /* Signed 64/32 division. Split out for the same reason L7 split its own: the
  * port may override it with the DS hardware divider (64/32 -> 32, ~36 cycles)
@@ -202,8 +202,8 @@
  * The hardware unit is SHARED STATE and the default deliberately is not: these
  * kernels are pure functions, which is what makes charter 3.11/3.12 satisfied
  * by construction rather than by a guard. */
-#ifndef NDS_R2_CFX_DIV64
-#define NDS_R2_CFX_DIV64(numerator, denominator) \
+#ifndef NDS_CFX_DIV64
+#define NDS_CFX_DIV64(numerator, denominator) \
     ((int32_t)((numerator) / (int64_t)(denominator)))
 #endif
 
@@ -212,15 +212,15 @@
  * default. The default is the restoring digit-by-digit root: no division, no
  * table, exactly 32 iterations, and correct by the loop invariant
  * root^2 <= value at every step. */
-#ifndef NDS_R2_CFX_ISQRT64
-#define NDS_R2_CFX_ISQRT64(value) ndsR2CfxIsqrt64Portable(value)
+#ifndef NDS_CFX_ISQRT64
+#define NDS_CFX_ISQRT64(value) ndsCfxIsqrt64Portable(value)
 #endif
 
-typedef struct NDSR2CfxMtx
+typedef struct NDSCfxMtx
 {
     int32_t r[3][3]; /* Q26, rows 0-2 of the source matrix */
     int32_t t[3];    /* Q12, row 3 of the source matrix */
-} NDSR2CfxMtx;
+} NDSCfxMtx;
 
 /* The joint's world->local descriptor. This is NOT a matrix and must not be
  * used as one: row 3 carries the FORWARD translation t, copied rather than
@@ -233,13 +233,13 @@ typedef struct NDSR2CfxMtx
  * Subtracting t from the query point FIRST keeps every quantity small: (p - t)
  * is a few units by construction, exact to the quantum, and the single multiply
  * that follows is the only rounding in the path. */
-typedef struct NDSR2CfxFrame
+typedef struct NDSCfxFrame
 {
     int32_t inv[3][3];    /* Q26. local[c] = sum_k (p - t)[k] * inv[k][c] */
     int32_t t[3];         /* Q12, copied from the forward matrix */
     int32_t scale[3];     /* Q12, |row_c| -- the value FTParts::vec_scale holds */
     int32_t inv_scale[3]; /* Q26, 1/|row_c| -- radius/scale with no divide */
-} NDSR2CfxFrame;
+} NDSCfxFrame;
 
 /* ------------------------------------------------------------------------
  * Scalar helpers
@@ -250,15 +250,15 @@ typedef struct NDSR2CfxFrame
  * Not round-half-away-from-zero. That form needs a compare, a branch and a
  * 64-bit negate, and there are two dozen reductions in this file; the bias it
  * saves is half a quantum of 2^-27, which is four orders under the bound.
- * ndsR2CollisionRoundShift in the L7 header is the away-from-zero form and is
+ * ndsCollisionRoundShift in the L7 header is the away-from-zero form and is
  * still used at the float edges, where the two representations have to agree on
  * the boundary case. */
-static inline int64_t ndsR2CfxShr(int64_t value, unsigned int shift)
+static inline int64_t ndsCfxShr(int64_t value, unsigned int shift)
 {
     return (value + ((int64_t)1 << (shift - 1u))) >> shift;
 }
 
-static inline int32_t ndsR2CfxAbs32(int32_t value)
+static inline int32_t ndsCfxAbs32(int32_t value)
 {
     return (value < 0) ? -value : value;
 }
@@ -267,7 +267,7 @@ static inline int32_t ndsR2CfxAbs32(int32_t value)
  * `root` holds the bits decided so far and `bit` the power of four under test,
  * and the invariant is that root is the largest value whose square is <= the
  * part of `value` consumed. No division and no table. */
-static inline uint32_t ndsR2CfxIsqrt64Portable(uint64_t value)
+static inline uint32_t ndsCfxIsqrt64Portable(uint64_t value)
 {
     uint64_t remainder = value;
     uint64_t root = 0;
@@ -312,17 +312,17 @@ static inline uint32_t ndsR2CfxIsqrt64Portable(uint64_t value)
  * `table` is gSYSinTable. Passing it keeps this header host-compilable with no
  * dependency on the port's symbols, which is what lets the falsifier grade the
  * shipping code instead of a transcription of it. */
-#define NDS_R2_CFX_RAD_TO_ID 651.8986206f
-#define NDS_R2_CFX_DEG90_RAD 1.5707963268f
+#define NDS_CFX_RAD_TO_ID 651.8986206f
+#define NDS_CFX_DEG90_RAD 1.5707963268f
 
-static inline int32_t ndsR2CfxTableQ15(const uint16_t *table, int32_t index)
+static inline int32_t ndsCfxTableQ15(const uint16_t *table, int32_t index)
 {
     int32_t value = (int32_t)table[index & 0x7FF];
 
     return (index & 0x800) ? -value : value;
 }
 
-/* (int32_t)(angle * NDS_R2_CFX_RAD_TO_ID) -- the binary32 multiply rounded to
+/* (int32_t)(angle * NDS_CFX_RAD_TO_ID) -- the binary32 multiply rounded to
  * nearest even, then truncated -- in integer operations (P2-2p8, 2026-09-29).
  * On the ARM9 the float form was a soft-float multiply and a float->int call
  * per lookup, six of each per local matrix. Proven equal to the float
@@ -331,7 +331,7 @@ static inline int32_t ndsR2CfxTableQ15(const uint16_t *table, int32_t index)
  * angle_index_test.c); for the rest -- infinities, NaNs, |product| >= 2^31 --
  * this returns 0 and the caller evaluates the float expression itself.
  * K = 651.8986206f is 0xa2f983 * 2^(136 - 150). */
-static inline int ndsR2CfxAngleIndexBits(uint32_t bits, int32_t *out)
+static inline int ndsCfxAngleIndexBits(uint32_t bits, int32_t *out)
 {
     const uint32_t exponent = (bits >> 23) & 0xffu;
     uint64_t product;
@@ -395,67 +395,67 @@ static inline int ndsR2CfxAngleIndexBits(uint32_t bits, int32_t *out)
     return 1;
 }
 
-static inline int32_t ndsR2CfxAngleIndex(float angle)
+static inline int32_t ndsCfxAngleIndex(float angle)
 {
     uint32_t bits;
     int32_t index;
 
     __builtin_memcpy(&bits, &angle, sizeof(bits));
-    if (ndsR2CfxAngleIndexBits(bits, &index) != 0)
+    if (ndsCfxAngleIndexBits(bits, &index) != 0)
     {
         return index;
     }
-    return (int32_t)(angle * NDS_R2_CFX_RAD_TO_ID);
+    return (int32_t)(angle * NDS_CFX_RAD_TO_ID);
 }
 
-static inline int32_t ndsR2CfxSinQ15(const uint16_t *table, float angle)
+static inline int32_t ndsCfxSinQ15(const uint16_t *table, float angle)
 {
-    return ndsR2CfxTableQ15(table, ndsR2CfxAngleIndex(angle) & 0xFFF);
+    return ndsCfxTableQ15(table, ndsCfxAngleIndex(angle) & 0xFFF);
 }
 
-static inline int32_t ndsR2CfxCosQ15(const uint16_t *table, float angle)
+static inline int32_t ndsCfxCosQ15(const uint16_t *table, float angle)
 {
-    return ndsR2CfxTableQ15(
-        table, ndsR2CfxAngleIndex(angle + NDS_R2_CFX_DEG90_RAD) & 0xFFF);
+    return ndsCfxTableQ15(
+        table, ndsCfxAngleIndex(angle + NDS_CFX_DEG90_RAD) & 0xFFF);
 }
 
 /* Both lookups for one angle. A zero or subnormal angle -- a joint axis the
  * animation leaves at rest -- indexes 0 for the sine, and angle + 90 degrees
- * is exactly NDS_R2_CFX_DEG90_RAD in binary32 (the addend is below half an
+ * is exactly NDS_CFX_DEG90_RAD in binary32 (the addend is below half an
  * ulp of it), so the cosine's index is a compile-time constant and the soft
  * float add is skipped (P2-2p8, 2026-09-29). Every other angle takes the two
  * functions above unchanged. */
-/* always_inline: scripts/check-r2-collision-fixed.ps1 allows soft float only
+/* always_inline: scripts/check-collision-fixed.ps1 allows soft float only
  * inside the BuildLocal body. */
 /* A caller may route both fast paths through a same-ROM A/B word. */
-#ifndef NDS_R2_CFX_FAST_PATHS
-#define NDS_R2_CFX_FAST_PATHS() 1
+#ifndef NDS_CFX_FAST_PATHS
+#define NDS_CFX_FAST_PATHS() 1
 #endif
 static inline __attribute__((always_inline)) void
-ndsR2CfxSinCosQ15(const uint16_t *table, float angle, int64_t *sin_out,
+ndsCfxSinCosQ15(const uint16_t *table, float angle, int64_t *sin_out,
                   int64_t *cos_out)
 {
     uint32_t bits;
 
     __builtin_memcpy(&bits, &angle, sizeof(bits));
-    if (NDS_R2_CFX_FAST_PATHS() && ((bits & 0x7f800000u) == 0u))
+    if (NDS_CFX_FAST_PATHS() && ((bits & 0x7f800000u) == 0u))
     {
-        *sin_out = ndsR2CfxTableQ15(table, 0);
-        *cos_out = ndsR2CfxTableQ15(
-            table, ndsR2CfxAngleIndex(NDS_R2_CFX_DEG90_RAD) & 0xFFF);
+        *sin_out = ndsCfxTableQ15(table, 0);
+        *cos_out = ndsCfxTableQ15(
+            table, ndsCfxAngleIndex(NDS_CFX_DEG90_RAD) & 0xFFF);
         return;
     }
-    *sin_out = ndsR2CfxSinQ15(table, angle);
-    *cos_out = ndsR2CfxCosQ15(table, angle);
+    *sin_out = ndsCfxSinQ15(table, angle);
+    *cos_out = ndsCfxCosQ15(table, angle);
 }
 
 /* An empty asm that claims to rewrite `x`: GCC then keeps it a plain 32-bit
  * register instead of reasoning its products up to 64 x 64 multiplies. The
  * value is unchanged; the host build gets a no-op. */
 #if defined(__arm__)
-#define NDS_R2_CFX_OPAQUE(x) __asm__("" : "+r"(x))
+#define NDS_CFX_OPAQUE(x) __asm__("" : "+r"(x))
 #else
-#define NDS_R2_CFX_OPAQUE(x) ((void)0)
+#define NDS_CFX_OPAQUE(x) ((void)0)
 #endif
 
 /* ------------------------------------------------------------------------
@@ -475,12 +475,12 @@ ndsR2CfxSinCosQ15(const uint16_t *table, float angle, int64_t *sin_out,
  * per-row scale multiply, so the scale never rounds twice.
  *
  * Returns 0 without writing when a scale or a translation leaves its guard. */
-static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
+static inline int ndsCfxBuildLocal(NDSCfxMtx *dst, const uint16_t *table,
                                      const float rotate[3],
                                      const float scale[3],
                                      const float translate[3])
 {
-    const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
+    const unsigned int rot_bits = NDS_CFX_ROT_BITS;
     int64_t sinx;
     int64_t cosx;
     int64_t siny;
@@ -491,20 +491,20 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
     int32_t row_scale[3];
     uint32_t scale_bits[3];
     int unit_scale;
-    NDSR2CfxMtx out;
+    NDSCfxMtx out;
     unsigned int row;
     unsigned int col;
 
-    ndsR2CfxSinCosQ15(table, rotate[0], &sinx, &cosx);
-    ndsR2CfxSinCosQ15(table, rotate[1], &siny, &cosy);
-    ndsR2CfxSinCosQ15(table, rotate[2], &sinz, &cosz);
+    ndsCfxSinCosQ15(table, rotate[0], &sinx, &cosx);
+    ndsCfxSinCosQ15(table, rotate[1], &siny, &cosy);
+    ndsCfxSinCosQ15(table, rotate[2], &sinz, &cosz);
     __builtin_memcpy(scale_bits, scale, sizeof(scale_bits));
     /* All three scales exactly 1.0f -- most joints. Their fixed form is
-     * NDS_R2_CFX_ROT_ONE, which passes the guard below, and
+     * NDS_CFX_ROT_ONE, which passes the guard below, and
      * Shr(rot * 2^26, 30) is exactly (rot + 8) >> 4, inside ROT_MAX for any
      * |rot| <= 2^30; so the per-row conversions and the nine 64-bit
      * products are skipped with the same result (P2-2p8, 2026-09-29). */
-    unit_scale = (NDS_R2_CFX_FAST_PATHS() &&
+    unit_scale = (NDS_CFX_FAST_PATHS() &&
                   (scale_bits[0] == 0x3f800000u) &&
                   (scale_bits[1] == 0x3f800000u) &&
                   (scale_bits[2] == 0x3f800000u)) ? 1 : 0;
@@ -530,48 +530,48 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
         int32_t sxsy;
         int32_t cxsy;
 
-        NDS_R2_CFX_OPAQUE(sx);
-        NDS_R2_CFX_OPAQUE(cx);
-        NDS_R2_CFX_OPAQUE(sy);
-        NDS_R2_CFX_OPAQUE(cy);
-        NDS_R2_CFX_OPAQUE(sz);
-        NDS_R2_CFX_OPAQUE(cz);
+        NDS_CFX_OPAQUE(sx);
+        NDS_CFX_OPAQUE(cx);
+        NDS_CFX_OPAQUE(sy);
+        NDS_CFX_OPAQUE(cy);
+        NDS_CFX_OPAQUE(sz);
+        NDS_CFX_OPAQUE(cz);
         sxsy = sx * sy;
         cxsy = cx * sy;
-        NDS_R2_CFX_OPAQUE(sxsy);
-        NDS_R2_CFX_OPAQUE(cxsy);
+        NDS_CFX_OPAQUE(sxsy);
+        NDS_CFX_OPAQUE(cxsy);
         rot[0][0] = (int64_t)(cy * cz);
         rot[0][1] = (int64_t)(cy * sz);
-        rot[0][2] = (int64_t)(-sy) * (INT64_C(1) << NDS_R2_CFX_TRIG_BITS);
+        rot[0][2] = (int64_t)(-sy) * (INT64_C(1) << NDS_CFX_TRIG_BITS);
 
-        rot[1][0] = ndsR2CfxShr((int64_t)sxsy * cz, NDS_R2_CFX_TRIG_BITS) -
+        rot[1][0] = ndsCfxShr((int64_t)sxsy * cz, NDS_CFX_TRIG_BITS) -
                     (int64_t)(cx * sz);
-        rot[1][1] = ndsR2CfxShr((int64_t)sxsy * sz, NDS_R2_CFX_TRIG_BITS) +
+        rot[1][1] = ndsCfxShr((int64_t)sxsy * sz, NDS_CFX_TRIG_BITS) +
                     (int64_t)(cx * cz);
         rot[1][2] = (int64_t)(sx * cy);
 
-        rot[2][0] = ndsR2CfxShr((int64_t)cxsy * cz, NDS_R2_CFX_TRIG_BITS) +
+        rot[2][0] = ndsCfxShr((int64_t)cxsy * cz, NDS_CFX_TRIG_BITS) +
                     (int64_t)(sx * sz);
-        rot[2][1] = ndsR2CfxShr((int64_t)cxsy * sz, NDS_R2_CFX_TRIG_BITS) -
+        rot[2][1] = ndsCfxShr((int64_t)cxsy * sz, NDS_CFX_TRIG_BITS) -
                     (int64_t)(sx * cz);
         rot[2][2] = (int64_t)(cx * cy);
     }
 
     for (row = 0u; (unit_scale == 0) && (row < 3u); row++)
     {
-        row_scale[row] = ndsR2CollisionF32ToFixed(scale[row], rot_bits);
-        if ((row_scale[row] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(row_scale[row]) > NDS_R2_CFX_ROT_MAX))
+        row_scale[row] = ndsCollisionF32ToFixed(scale[row], rot_bits);
+        if ((row_scale[row] == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(row_scale[row]) > NDS_CFX_ROT_MAX))
         {
             return 0;
         }
     }
     for (col = 0u; col < 3u; col++)
     {
-        out.t[col] = ndsR2CollisionF32ToFixed(translate[col],
-                                              NDS_R2_CFX_POS_BITS);
-        if ((out.t[col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(out.t[col]) >= NDS_R2_CFX_POS_MAX))
+        out.t[col] = ndsCollisionF32ToFixed(translate[col],
+                                              NDS_CFX_POS_BITS);
+        if ((out.t[col] == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(out.t[col]) >= NDS_CFX_POS_MAX))
         {
             return 0;
         }
@@ -595,11 +595,11 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
         {
             /* Q30 x Q26 -> Q56, reduced to Q26. |rot| <= 2^30 and
              * |row_scale| <= 2^28, so the product peaks at 2^58. */
-            int64_t cell = ndsR2CfxShr(rot[row][col] * (int64_t)row_scale[row],
+            int64_t cell = ndsCfxShr(rot[row][col] * (int64_t)row_scale[row],
                                        30u);
 
-            if ((cell > (int64_t)NDS_R2_CFX_ROT_MAX) ||
-                (cell < -(int64_t)NDS_R2_CFX_ROT_MAX))
+            if ((cell > (int64_t)NDS_CFX_ROT_MAX) ||
+                (cell < -(int64_t)NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -620,11 +620,11 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
  * A temp is used even though the two live call sites in func_ovl2_800EDBA4 pass
  * a dst that never aliases lhs, because the case that would alias is silent
  * corruption rather than a compile error. */
-static inline int ndsR2CfxCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
-                                  const NDSR2CfxMtx *rhs)
+static inline int ndsCfxCompose(NDSCfxMtx *dst, const NDSCfxMtx *lhs,
+                                  const NDSCfxMtx *rhs)
 {
-    const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
-    NDSR2CfxMtx out;
+    const unsigned int rot_bits = NDS_CFX_ROT_BITS;
+    NDSCfxMtx out;
     unsigned int row;
     unsigned int col;
 
@@ -632,14 +632,14 @@ static inline int ndsR2CfxCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
     {
         for (col = 0u; col < 3u; col++)
         {
-            int64_t cell = ndsR2CfxShr(
+            int64_t cell = ndsCfxShr(
                 (int64_t)lhs->r[0][col] * rhs->r[row][0] +
                     (int64_t)lhs->r[1][col] * rhs->r[row][1] +
                     (int64_t)lhs->r[2][col] * rhs->r[row][2],
                 rot_bits);
 
-            if ((cell > (int64_t)NDS_R2_CFX_ROT_MAX) ||
-                (cell < -(int64_t)NDS_R2_CFX_ROT_MAX))
+            if ((cell > (int64_t)NDS_CFX_ROT_MAX) ||
+                (cell < -(int64_t)NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -649,14 +649,14 @@ static inline int ndsR2CfxCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
     for (col = 0u; col < 3u; col++)
     {
         /* Q26 x Q12 -> Q38, reduced to Q12, then the parent offset. */
-        int64_t cell = ndsR2CfxShr((int64_t)lhs->r[0][col] * rhs->t[0] +
+        int64_t cell = ndsCfxShr((int64_t)lhs->r[0][col] * rhs->t[0] +
                                        (int64_t)lhs->r[1][col] * rhs->t[1] +
                                        (int64_t)lhs->r[2][col] * rhs->t[2],
                                    rot_bits) +
                        (int64_t)lhs->t[col];
 
-        if ((cell >= (int64_t)NDS_R2_CFX_POS_MAX) ||
-            (cell <= -(int64_t)NDS_R2_CFX_POS_MAX))
+        if ((cell >= (int64_t)NDS_CFX_POS_MAX) ||
+            (cell <= -(int64_t)NDS_CFX_POS_MAX))
         {
             return 0;
         }
@@ -681,17 +681,17 @@ static inline int ndsR2CfxCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
  *
  * Every output is optional, and that is a cost decision, not a convenience.
  * func_ovl2_800EDE5C wants `s` ALONE -- it writes FTParts::vec_scale and
- * nothing else -- and the reciprocals cost one NDS_R2_CFX_DIV64 per row, which
+ * nothing else -- and the reciprocals cost one NDS_CFX_DIV64 per row, which
  * on the default portable divide is libgcc's bit-by-bit __aeabi_ldivmod. Three
  * of those per joint per frame is a large fraction of what the scale stage is
  * meant to save. Passing NULL skips the arithmetic, not just the store; the
  * arithmetic every non-NULL output receives is unchanged, so the falsifier's
  * existing rows still grade the same code. */
-static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
+static inline int ndsCfxRowScales(const NDSCfxMtx *src, int32_t s2_q26[3],
                                     int32_t inv_s2_q26[3], int32_t s_q12[3],
                                     int32_t inv_s_q26[3])
 {
-    const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
+    const unsigned int rot_bits = NDS_CFX_ROT_BITS;
     unsigned int row;
 
     for (row = 0u; row < 3u; row++)
@@ -699,12 +699,12 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
         int64_t sum = (int64_t)src->r[row][0] * src->r[row][0] +
                       (int64_t)src->r[row][1] * src->r[row][1] +
                       (int64_t)src->r[row][2] * src->r[row][2];
-        int64_t s2 = ndsR2CfxShr(sum, rot_bits);
+        int64_t s2 = ndsCfxShr(sum, rot_bits);
         int32_t inv_s2 = 0;
         uint32_t root;
 
-        if ((s2 < (int64_t)NDS_R2_CFX_S2_MIN) ||
-            (s2 > (int64_t)NDS_R2_CFX_S2_MAX))
+        if ((s2 < (int64_t)NDS_CFX_S2_MIN) ||
+            (s2 > (int64_t)NDS_CFX_S2_MAX))
         {
             return 0;
         }
@@ -719,7 +719,7 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
          * silently did not fit. */
         if ((inv_s2_q26 != NULL) || (inv_s_q26 != NULL))
         {
-            inv_s2 = NDS_R2_CFX_DIV64((int64_t)1 << (rot_bits * 2u), s2);
+            inv_s2 = NDS_CFX_DIV64((int64_t)1 << (rot_bits * 2u), s2);
             if (inv_s2_q26 != NULL)
             {
                 inv_s2_q26[row] = inv_s2;
@@ -727,7 +727,7 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
         }
 
         /* Only the two outputs below read the root. With the hardware unit
-         * bound (NDS_R2_CFX_ISQRT64 -> ndsR2HwMathCfxIsqrt64) the root is
+         * bound (NDS_CFX_ISQRT64 -> ndsHwMathCfxIsqrt64) the root is
          * volatile register traffic the compiler cannot drop, so a caller that
          * asks for s2 alone (the hurtbox reject's ndsHbInvSMin) paid three
          * square roots it never read. */
@@ -737,17 +737,17 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
         }
 
         /* s = sqrt(s^2). isqrt(s2_raw << 22) = sqrt(s^2 * 2^48) = s * 2^24. */
-        root = NDS_R2_CFX_ISQRT64((uint64_t)s2 << 22);
+        root = NDS_CFX_ISQRT64((uint64_t)s2 << 22);
         if (s_q12 != NULL)
         {
-            s_q12[row] = (int32_t)ndsR2CfxShr((int64_t)root, 12u);
+            s_q12[row] = (int32_t)ndsCfxShr((int64_t)root, 12u);
         }
 
         /* 1/s = s * (1/s^2): Q24 x Q26 -> Q50, reduced to Q26. Cheaper than a
          * second divide and no less accurate at this magnitude. */
         if (inv_s_q26 != NULL)
         {
-            inv_s_q26[row] = (int32_t)ndsR2CfxShr((int64_t)root * inv_s2, 24u);
+            inv_s_q26[row] = (int32_t)ndsCfxShr((int64_t)root * inv_s2, 24u);
         }
     }
     return 1;
@@ -764,31 +764,31 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
  *
  * THE GUARD. The identity is exact only for exactly orthonormal Q, and the
  * game's Q comes out of a quantised sine table, so the three row dot products
- * are checked against NDS_R2_CFX_SKEW_SHIFT before the result is accepted. A
+ * are checked against NDS_CFX_SKEW_SHIFT before the result is accepted. A
  * declined joint takes the float path. Cheap: nine multiplies, and it reuses
  * s2 which is already in hand. */
-static inline int ndsR2CfxMakeFrameRowScaled(NDSR2CfxFrame *dst,
-                                             const NDSR2CfxMtx *src)
+static inline int ndsCfxMakeFrameRowScaled(NDSCfxFrame *dst,
+                                             const NDSCfxMtx *src)
 {
-    const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
+    const unsigned int rot_bits = NDS_CFX_ROT_BITS;
     int32_t s2[3];
     int32_t inv_s2[3];
-    NDSR2CfxFrame out;
+    NDSCfxFrame out;
     unsigned int i;
     unsigned int j;
     unsigned int c;
 
     for (c = 0u; c < 3u; c++)
     {
-        if (ndsR2CfxAbs32(src->r[c][0]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->r[c][1]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->r[c][2]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->t[c]) >= NDS_R2_CFX_POS_MAX)
+        if (ndsCfxAbs32(src->r[c][0]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->r[c][1]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->r[c][2]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->t[c]) >= NDS_CFX_POS_MAX)
         {
             return 0;
         }
     }
-    if (ndsR2CfxRowScales(src, s2, inv_s2, out.scale, out.inv_scale) == 0)
+    if (ndsCfxRowScales(src, s2, inv_s2, out.scale, out.inv_scale) == 0)
     {
         return 0;
     }
@@ -799,7 +799,7 @@ static inline int ndsR2CfxMakeFrameRowScaled(NDSR2CfxFrame *dst,
     {
         for (j = i + 1u; j < 3u; j++)
         {
-            int64_t dot = ndsR2CfxShr((int64_t)src->r[i][0] * src->r[j][0] +
+            int64_t dot = ndsCfxShr((int64_t)src->r[i][0] * src->r[j][0] +
                                           (int64_t)src->r[i][1] * src->r[j][1] +
                                           (int64_t)src->r[i][2] * src->r[j][2],
                                       rot_bits);
@@ -807,7 +807,7 @@ static inline int ndsR2CfxMakeFrameRowScaled(NDSR2CfxFrame *dst,
              * shift of two. Both sides of the compare are then Q26. */
             int64_t tolerance =
                 (((int64_t)out.scale[i] * out.scale[j]) << 2) >>
-                NDS_R2_CFX_SKEW_SHIFT;
+                NDS_CFX_SKEW_SHIFT;
 
             if (dot < 0) { dot = -dot; }
             if (dot > tolerance)
@@ -825,7 +825,7 @@ static inline int ndsR2CfxMakeFrameRowScaled(NDSR2CfxFrame *dst,
         {
             /* Q26 x Q26 -> Q52, reduced to Q26. |M[c][k]| <= s_c and
              * |1/s_c^2| <= 16, so |inv| <= 1/s_c <= 4. */
-            out.inv[k][c] = (int32_t)ndsR2CfxShr(
+            out.inv[k][c] = (int32_t)ndsCfxShr(
                 (int64_t)src->r[c][k] * inv_s2[c], rot_bits);
         }
         out.t[c] = src->t[c];
@@ -846,14 +846,14 @@ static inline int ndsR2CfxMakeFrameRowScaled(NDSR2CfxFrame *dst,
  * form's skew turns out to matter. The decomp spins forever on a singular
  * matrix (`while (TRUE) syDebugPrintf`), which is a give-up-by-hanging defect;
  * reproducing it would be reproducing the defect, so this returns 0 instead. */
-static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
-                                            const NDSR2CfxMtx *src)
+static inline int ndsCfxMakeFrameCofactor(NDSCfxFrame *dst,
+                                            const NDSCfxMtx *src)
 {
-    const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
+    const unsigned int rot_bits = NDS_CFX_ROT_BITS;
     int32_t s2[3];
     int32_t inv_s2[3];
     int32_t cof[3][3];
-    NDSR2CfxFrame out;
+    NDSCfxFrame out;
     int64_t det;
     int32_t recip;
     unsigned int row;
@@ -862,15 +862,15 @@ static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
 
     for (c = 0u; c < 3u; c++)
     {
-        if (ndsR2CfxAbs32(src->r[c][0]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->r[c][1]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->r[c][2]) > NDS_R2_CFX_ROT_MAX ||
-            ndsR2CfxAbs32(src->t[c]) >= NDS_R2_CFX_POS_MAX)
+        if (ndsCfxAbs32(src->r[c][0]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->r[c][1]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->r[c][2]) > NDS_CFX_ROT_MAX ||
+            ndsCfxAbs32(src->t[c]) >= NDS_CFX_POS_MAX)
         {
             return 0;
         }
     }
-    if (ndsR2CfxRowScales(src, s2, inv_s2, out.scale, out.inv_scale) == 0)
+    if (ndsCfxRowScales(src, s2, inv_s2, out.scale, out.inv_scale) == 0)
     {
         return 0;
     }
@@ -880,25 +880,25 @@ static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
  * carrying the inverse at Q30 made every product a 64x64 multiply, the function
  * came out at 583 ARM instructions, and it measured DEARER than the 295-
  * instruction soft-float original it replaced. */
-#define NDS_R2_CFX_COFACTOR(ar, ac, br, bc, cr, cc, dr, dc)                   \
-    (int32_t)ndsR2CfxShr(((int64_t)src->r[ar][ac] * src->r[br][bc]) -         \
+#define NDS_CFX_COFACTOR(ar, ac, br, bc, cr, cc, dr, dc)                   \
+    (int32_t)ndsCfxShr(((int64_t)src->r[ar][ac] * src->r[br][bc]) -         \
                              ((int64_t)src->r[cr][cc] * src->r[dr][dc]),      \
                          rot_bits)
 
-    cof[0][0] = NDS_R2_CFX_COFACTOR(1, 1, 2, 2, 1, 2, 2, 1);
-    cof[1][0] = NDS_R2_CFX_COFACTOR(1, 0, 2, 2, 1, 2, 2, 0);
-    cof[2][0] = NDS_R2_CFX_COFACTOR(1, 0, 2, 1, 1, 1, 2, 0);
+    cof[0][0] = NDS_CFX_COFACTOR(1, 1, 2, 2, 1, 2, 2, 1);
+    cof[1][0] = NDS_CFX_COFACTOR(1, 0, 2, 2, 1, 2, 2, 0);
+    cof[2][0] = NDS_CFX_COFACTOR(1, 0, 2, 1, 1, 1, 2, 0);
 
-    cof[0][1] = NDS_R2_CFX_COFACTOR(0, 1, 2, 2, 0, 2, 2, 1);
-    cof[1][1] = NDS_R2_CFX_COFACTOR(0, 0, 2, 2, 0, 2, 2, 0);
-    cof[2][1] = NDS_R2_CFX_COFACTOR(0, 0, 2, 1, 0, 1, 2, 0);
+    cof[0][1] = NDS_CFX_COFACTOR(0, 1, 2, 2, 0, 2, 2, 1);
+    cof[1][1] = NDS_CFX_COFACTOR(0, 0, 2, 2, 0, 2, 2, 0);
+    cof[2][1] = NDS_CFX_COFACTOR(0, 0, 2, 1, 0, 1, 2, 0);
 
-    cof[0][2] = NDS_R2_CFX_COFACTOR(0, 1, 1, 2, 0, 2, 1, 1);
-    cof[1][2] = NDS_R2_CFX_COFACTOR(0, 0, 1, 2, 0, 2, 1, 0);
-    cof[2][2] = NDS_R2_CFX_COFACTOR(0, 0, 1, 1, 0, 1, 1, 0);
-#undef NDS_R2_CFX_COFACTOR
+    cof[0][2] = NDS_CFX_COFACTOR(0, 1, 1, 2, 0, 2, 1, 1);
+    cof[1][2] = NDS_CFX_COFACTOR(0, 0, 1, 2, 0, 2, 1, 0);
+    cof[2][2] = NDS_CFX_COFACTOR(0, 0, 1, 1, 0, 1, 1, 0);
+#undef NDS_CFX_COFACTOR
 
-    det = ndsR2CfxShr(((int64_t)src->r[0][0] * cof[0][0]) -
+    det = ndsCfxShr(((int64_t)src->r[0][0] * cof[0][0]) -
                           ((int64_t)src->r[0][1] * cof[1][0]) +
                           ((int64_t)src->r[0][2] * cof[2][0]),
                       rot_bits);
@@ -912,7 +912,7 @@ static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
     {
         return 0;
     }
-    recip = NDS_R2_CFX_DIV64((int64_t)1 << (rot_bits * 2u), det);
+    recip = NDS_CFX_DIV64((int64_t)1 << (rot_bits * 2u), det);
 
     /* The source builds every cofactor positive and negates six entries
      * afterwards, which is the same matrix. Those six are (1,0) (0,1) (2,1)
@@ -931,9 +931,9 @@ static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
             {
                 cell = -cell;
             }
-            scaled = ndsR2CfxShr((int64_t)cell * recip, rot_bits);
-            if ((scaled > (int64_t)NDS_R2_CFX_ROT_MAX) ||
-                (scaled < -(int64_t)NDS_R2_CFX_ROT_MAX))
+            scaled = ndsCfxShr((int64_t)cell * recip, rot_bits);
+            if ((scaled > (int64_t)NDS_CFX_ROT_MAX) ||
+                (scaled < -(int64_t)NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -951,15 +951,15 @@ static inline int ndsR2CfxMakeFrameCofactor(NDSR2CfxFrame *dst,
 /* ------------------------------------------------------------------------
  * Stage 5 -- the two point transforms
  *
- * ndsR2CfxWorldToLocal is what gmCollisionGetWorldPosition does when it is
+ * ndsCfxWorldToLocal is what gmCollisionGetWorldPosition does when it is
  * handed unk_dobjtrans_0x9C, which is every call the hurtbox test makes.
- * ndsR2CfxTransformPoint is the same function handed a FORWARD matrix, which is
+ * ndsCfxTransformPoint is the same function handed a FORWARD matrix, which is
  * what gmCollisionGetFighterPartsWorldPosition does.
  *
  * (p - t) is exact: both are Q12 and the difference of two points inside the
  * position guard cannot leave int32. */
-static inline void ndsR2CfxWorldToLocal(int32_t out[3],
-                                        const NDSR2CfxFrame *frame,
+static inline void ndsCfxWorldToLocal(int32_t out[3],
+                                        const NDSCfxFrame *frame,
                                         const int32_t p[3])
 {
     const int32_t d0 = p[0] - frame->t[0];
@@ -971,25 +971,25 @@ static inline void ndsR2CfxWorldToLocal(int32_t out[3],
     {
         /* Q12 x Q26 -> Q38, reduced to Q12. |d| < 2^30 and |inv| <= 2^28, so
          * the three-term sum peaks near 2^60, inside int64. */
-        out[col] = (int32_t)ndsR2CfxShr((int64_t)d0 * frame->inv[0][col] +
+        out[col] = (int32_t)ndsCfxShr((int64_t)d0 * frame->inv[0][col] +
                                             (int64_t)d1 * frame->inv[1][col] +
                                             (int64_t)d2 * frame->inv[2][col],
-                                        NDS_R2_CFX_ROT_BITS);
+                                        NDS_CFX_ROT_BITS);
     }
 }
 
-static inline void ndsR2CfxTransformPoint(int32_t out[3],
-                                          const NDSR2CfxMtx *mtx,
+static inline void ndsCfxTransformPoint(int32_t out[3],
+                                          const NDSCfxMtx *mtx,
                                           const int32_t p[3])
 {
     unsigned int col;
 
     for (col = 0u; col < 3u; col++)
     {
-        out[col] = (int32_t)(ndsR2CfxShr((int64_t)p[0] * mtx->r[0][col] +
+        out[col] = (int32_t)(ndsCfxShr((int64_t)p[0] * mtx->r[0][col] +
                                              (int64_t)p[1] * mtx->r[1][col] +
                                              (int64_t)p[2] * mtx->r[2][col],
-                                         NDS_R2_CFX_ROT_BITS) +
+                                         NDS_CFX_ROT_BITS) +
                              (int64_t)mtx->t[col]);
     }
 }
@@ -1002,22 +1002,22 @@ static inline void ndsR2CfxTransformPoint(int32_t out[3],
  * joint's frame, subtract the hurtbox offset, then Cohen-Sutherland clip in X
  * and Y and finish with a Z overlap test.
  *
- * `inv_scale` is Q26 1/s from ndsR2CfxRowScales, so `radius / scale` -- the
+ * `inv_scale` is Q26 1/s from ndsCfxRowScales, so `radius / scale` -- the
  * three fdiv the source pays per call, and 79% of the band's whole __aeabi_fdiv
  * premium -- becomes three multiplies of values already in hand.
  *
  * `frame` may be NULL, matching the source's `if (mtx != NULL)`: the item path
  * (gmCollisionCheckFighterAttackItemDamageCollide) passes no matrix.
  *
- * Returns 1 (hit), 0 (miss), or NDS_R2_CFX_DECLINE. The clip's interpolation
+ * Returns 1 (hit), 0 (miss), or NDS_CFX_DECLINE. The clip's interpolation
  * divides by the segment's extent along the axis being clipped, and that
  * extent cannot be zero when the branch is reachable -- two endpoints with the
  * same X share an X outcode bit, so `flags_a & flags_b` returns FALSE first --
  * but the check is here anyway, because a division by zero is a hang and the
  * cost of proving it unreachable at runtime is one compare. */
-#define NDS_R2_CFX_DECLINE (-1)
+#define NDS_CFX_DECLINE (-1)
 
-static inline uint32_t ndsR2CfxOutcodeXY(const int32_t p[3],
+static inline uint32_t ndsCfxOutcodeXY(const int32_t p[3],
                                          const int32_t center[3])
 {
     uint32_t flags = 0u;
@@ -1029,7 +1029,7 @@ static inline uint32_t ndsR2CfxOutcodeXY(const int32_t p[3],
     return flags;
 }
 
-static inline uint32_t ndsR2CfxOutcodeZ(const int32_t p[3],
+static inline uint32_t ndsCfxOutcodeZ(const int32_t p[3],
                                         const int32_t center[3])
 {
     uint32_t flags = 0u;
@@ -1039,11 +1039,11 @@ static inline uint32_t ndsR2CfxOutcodeZ(const int32_t p[3],
     return flags;
 }
 
-static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
+static inline int ndsCfxTestRectangle(const int32_t pos_curr[3],
                                         const int32_t pos_prev[3],
                                         int32_t radius,
                                         int is_transfer,
-                                        const NDSR2CfxFrame *frame,
+                                        const NDSCfxFrame *frame,
                                         const int32_t offset[3],
                                         const int32_t size[3],
                                         const int32_t inv_scale[3])
@@ -1062,15 +1062,15 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
     {
         /* Q12 + (Q12 x Q26 >> 26). */
         center[axis] = size[axis] +
-                       (int32_t)ndsR2CfxShr((int64_t)radius * inv_scale[axis],
-                                            NDS_R2_CFX_ROT_BITS);
+                       (int32_t)ndsCfxShr((int64_t)radius * inv_scale[axis],
+                                            NDS_CFX_ROT_BITS);
     }
 
     if (is_transfer)
     {
         if (frame != NULL)
         {
-            ndsR2CfxWorldToLocal(a, frame, pos_curr);
+            ndsCfxWorldToLocal(a, frame, pos_curr);
         }
         else
         {
@@ -1089,8 +1089,8 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
 
     if (frame != NULL)
     {
-        ndsR2CfxWorldToLocal(a, frame, pos_curr);
-        ndsR2CfxWorldToLocal(b, frame, pos_prev);
+        ndsCfxWorldToLocal(a, frame, pos_curr);
+        ndsCfxWorldToLocal(b, frame, pos_prev);
     }
     else
     {
@@ -1107,8 +1107,8 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
         dist[axis] = b[axis] - a[axis];
     }
 
-    flags_a = ndsR2CfxOutcodeXY(a, center);
-    flags_b = ndsR2CfxOutcodeXY(b, center);
+    flags_a = ndsCfxOutcodeXY(a, center);
+    flags_b = ndsCfxOutcodeXY(b, center);
 
     /* Cohen-Sutherland terminates in at most four clips; the cap turns a
      * hypothetical non-terminating case into a decline rather than a hang. */
@@ -1130,7 +1130,7 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
         }
         if (guard == 8u)
         {
-            return NDS_R2_CFX_DECLINE;
+            return NDS_CFX_DECLINE;
         }
         flags_main = (flags_a != 0u) ? flags_a : flags_b;
 
@@ -1146,34 +1146,34 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
         }
         if (dist[fixed_axis] == 0)
         {
-            return NDS_R2_CFX_DECLINE;
+            return NDS_CFX_DECLINE;
         }
         /* (target - a) / dist, applied to the other two components. Forming
          * the numerator at Q24 before the divide keeps the quotient's twelve
          * fractional bits; dividing first would discard them. */
         ratio_num = (int64_t)(clipped[fixed_axis] - a[fixed_axis]);
         clipped[other0] =
-            (int32_t)(NDS_R2_CFX_DIV64(ratio_num * dist[other0],
+            (int32_t)(NDS_CFX_DIV64(ratio_num * dist[other0],
                                        dist[fixed_axis]) +
                       a[other0]);
         clipped[other1] =
-            (int32_t)(NDS_R2_CFX_DIV64(ratio_num * dist[other1],
+            (int32_t)(NDS_CFX_DIV64(ratio_num * dist[other1],
                                        dist[fixed_axis]) +
                       a[other1]);
 
         if (flags_main == flags_a)
         {
             a[0] = clipped[0]; a[1] = clipped[1]; a[2] = clipped[2];
-            flags_a = ndsR2CfxOutcodeXY(a, center);
+            flags_a = ndsCfxOutcodeXY(a, center);
         }
         else
         {
             b[0] = clipped[0]; b[1] = clipped[1]; b[2] = clipped[2];
-            flags_b = ndsR2CfxOutcodeXY(b, center);
+            flags_b = ndsCfxOutcodeXY(b, center);
         }
     }
 
-    return ((ndsR2CfxOutcodeZ(a, center) & ndsR2CfxOutcodeZ(b, center)) != 0u)
+    return ((ndsCfxOutcodeZ(a, center) & ndsCfxOutcodeZ(b, center)) != 0u)
                ? 0
                : 1;
 }
@@ -1196,12 +1196,12 @@ static inline int ndsR2CfxTestRectangle(const int32_t pos_curr[3],
  * row covers.
  */
 
-/* Mtx44f -> NDSR2CfxMtx. Rows 0-2 at Q26, row 3 at Q12, declining on the same
+/* Mtx44f -> NDSCfxMtx. Rows 0-2 at Q26, row 3 at Q12, declining on the same
  * guards the builders use so a joint the kernel cannot represent takes the
  * decomp float path instead of being clamped into a wrong answer. */
-static inline int ndsR2CfxLoadF32(NDSR2CfxMtx *dst, float src[4][4])
+static inline int ndsCfxLoadF32(NDSCfxMtx *dst, float src[4][4])
 {
-    NDSR2CfxMtx out;
+    NDSCfxMtx out;
     unsigned int row;
     unsigned int col;
 
@@ -1210,9 +1210,9 @@ static inline int ndsR2CfxLoadF32(NDSR2CfxMtx *dst, float src[4][4])
         for (col = 0u; col < 3u; col++)
         {
             out.r[row][col] =
-                ndsR2CollisionF32ToFixed(src[row][col], NDS_R2_CFX_ROT_BITS);
-            if ((out.r[row][col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-                (ndsR2CfxAbs32(out.r[row][col]) > NDS_R2_CFX_ROT_MAX))
+                ndsCollisionF32ToFixed(src[row][col], NDS_CFX_ROT_BITS);
+            if ((out.r[row][col] == NDS_COLLISION_F32_OVERFLOW) ||
+                (ndsCfxAbs32(out.r[row][col]) > NDS_CFX_ROT_MAX))
             {
                 return 0;
             }
@@ -1220,9 +1220,9 @@ static inline int ndsR2CfxLoadF32(NDSR2CfxMtx *dst, float src[4][4])
     }
     for (col = 0u; col < 3u; col++)
     {
-        out.t[col] = ndsR2CollisionF32ToFixed(src[3][col], NDS_R2_CFX_POS_BITS);
-        if ((out.t[col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
-            (ndsR2CfxAbs32(out.t[col]) >= NDS_R2_CFX_POS_MAX))
+        out.t[col] = ndsCollisionF32ToFixed(src[3][col], NDS_CFX_POS_BITS);
+        if ((out.t[col] == NDS_COLLISION_F32_OVERFLOW) ||
+            (ndsCfxAbs32(out.t[col]) >= NDS_CFX_POS_MAX))
         {
             return 0;
         }
@@ -1231,12 +1231,12 @@ static inline int ndsR2CfxLoadF32(NDSR2CfxMtx *dst, float src[4][4])
     return 1;
 }
 
-/* NDSR2CfxMtx -> Mtx44f. Rows 0-2 are converted FROM Q26 and never pass through
+/* NDSCfxMtx -> Mtx44f. Rows 0-2 are converted FROM Q26 and never pass through
  * Q12: the destination is an f32 whose mantissa resolves a rotation cell to
  * 2^-24, and the consumer multiplies each cell by a world coordinate in the
  * hundreds, so rounding to 1/4096 on the way out would cost 0.05 world units
  * from the STORE alone -- two and a half times the whole bound. */
-static inline void ndsR2CfxStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
+static inline void ndsCfxStoreF32(float dst[4][4], const NDSCfxMtx *src)
 {
     unsigned int row;
     unsigned int col;
@@ -1245,14 +1245,14 @@ static inline void ndsR2CfxStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
     {
         for (col = 0u; col < 3u; col++)
         {
-            dst[row][col] = ndsR2CollisionFixedToF32((int64_t)src->r[row][col],
-                                                     NDS_R2_CFX_ROT_BITS);
+            dst[row][col] = ndsCollisionFixedToF32((int64_t)src->r[row][col],
+                                                     NDS_CFX_ROT_BITS);
         }
     }
     for (col = 0u; col < 3u; col++)
     {
-        dst[3][col] = ndsR2CollisionFixedToF32((int64_t)src->t[col],
-                                               NDS_R2_CFX_POS_BITS);
+        dst[3][col] = ndsCollisionFixedToF32((int64_t)src->t[col],
+                                               NDS_CFX_POS_BITS);
     }
 }
 
@@ -1260,66 +1260,66 @@ static inline void ndsR2CfxStoreF32(float dst[4][4], const NDSR2CfxMtx *src)
  * row magnitudes FTParts::vec_scale holds. Replaces three sqrtf with three
  * integer square roots and nine soft-float multiplies with nine SMULL.
  *
- * The reciprocals ndsR2CfxRowScales can also produce are NOT requested. Nothing
+ * The reciprocals ndsCfxRowScales can also produce are NOT requested. Nothing
  * at this seam consumes them -- gmCollisionTestRectangle stays in decomp float
  * and takes its `radius / scale` from vec_scale itself -- and each one is a
  * 64/32 divide. */
-static inline int ndsR2CfxAxisScalesF32(float out[3], float src[4][4])
+static inline int ndsCfxAxisScalesF32(float out[3], float src[4][4])
 {
-    NDSR2CfxMtx fixed;
+    NDSCfxMtx fixed;
     int32_t s_q12[3];
     unsigned int row;
 
-    if (ndsR2CfxLoadF32(&fixed, src) == 0)
+    if (ndsCfxLoadF32(&fixed, src) == 0)
     {
         return 0;
     }
-    if (ndsR2CfxRowScales(&fixed, NULL, NULL, s_q12, NULL) == 0)
+    if (ndsCfxRowScales(&fixed, NULL, NULL, s_q12, NULL) == 0)
     {
         return 0;
     }
     for (row = 0u; row < 3u; row++)
     {
-        out[row] = ndsR2CollisionFixedToF32((int64_t)s_q12[row],
-                                            NDS_R2_CFX_POS_BITS);
+        out[row] = ndsCollisionFixedToF32((int64_t)s_q12[row],
+                                            NDS_CFX_POS_BITS);
     }
     return 1;
 }
 
 /* ------------------------------------------------------------------------
- * The out-of-line ARM entry points, defined in src/port/nds_r2_collision_fixed.c
+ * The out-of-line ARM entry points, defined in src/port/nds_collision_fixed.c
  * and built -marm. Callers may be Thumb; the interworking branch is free next
  * to what these replace, and the alternative -- inlining 64-bit products into a
  * Thumb translation unit -- turns every one of them into __aeabi_lmul.
  *
- * ndsR2CfxMakeFrameRowScaled is deliberately absent: it is refuted, and an
+ * ndsCfxMakeFrameRowScaled is deliberately absent: it is refuted, and an
  * entry point is how a refuted kernel gets wired by accident. */
-int ndsR2CollisionFixedBuildLocal(NDSR2CfxMtx *dst, const uint16_t *sin_table,
+int ndsCollisionFixedBuildLocal(NDSCfxMtx *dst, const uint16_t *sin_table,
                                   const float rotate[3], const float scale[3],
                                   const float translate[3]);
-int ndsR2CollisionFixedCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
-                               const NDSR2CfxMtx *rhs);
-int ndsR2CollisionFixedMakeFrame(NDSR2CfxFrame *dst, const NDSR2CfxMtx *src);
-void ndsR2CollisionFixedWorldToLocal(int32_t out[3],
-                                     const NDSR2CfxFrame *frame,
+int ndsCollisionFixedCompose(NDSCfxMtx *dst, const NDSCfxMtx *lhs,
+                               const NDSCfxMtx *rhs);
+int ndsCollisionFixedMakeFrame(NDSCfxFrame *dst, const NDSCfxMtx *src);
+void ndsCollisionFixedWorldToLocal(int32_t out[3],
+                                     const NDSCfxFrame *frame,
                                      const int32_t point[3]);
-void ndsR2CollisionFixedTransformPoint(int32_t out[3], const NDSR2CfxMtx *mtx,
+void ndsCollisionFixedTransformPoint(int32_t out[3], const NDSCfxMtx *mtx,
                                        const int32_t point[3]);
-int ndsR2CollisionFixedTestRectangle(const int32_t pos_curr[3],
+int ndsCollisionFixedTestRectangle(const int32_t pos_curr[3],
                                      const int32_t pos_prev[3], int32_t radius,
                                      int is_transfer,
-                                     const NDSR2CfxFrame *frame,
+                                     const NDSCfxFrame *frame,
                                      const int32_t offset[3],
                                      const int32_t size[3],
                                      const int32_t inv_scale[3]);
 
 /* The f32 boundary, out of line for the same reason as the rest: the caller is
- * src/port/nds_r2_collision_ring.c, which is Thumb glue with no 64-bit product
+ * src/port/nds_collision_ring.c, which is Thumb glue with no 64-bit product
  * of its own, so every SMULL in the cluster stays in this one -marm object and
  * the check script's codegen gate covers all of it. */
-int ndsR2CollisionFixedLoadF32(NDSR2CfxMtx *dst, float src[4][4]);
-void ndsR2CollisionFixedStoreF32(float dst[4][4], const NDSR2CfxMtx *src);
-int ndsR2CollisionFixedAxisScalesF32(float out[3], float src[4][4]);
-int ndsR2CollisionFixedInvertF32(float dst[4][4], float src[4][4]);
+int ndsCollisionFixedLoadF32(NDSCfxMtx *dst, float src[4][4]);
+void ndsCollisionFixedStoreF32(float dst[4][4], const NDSCfxMtx *src);
+int ndsCollisionFixedAxisScalesF32(float out[3], float src[4][4]);
+int ndsCollisionFixedInvertF32(float dst[4][4], float src[4][4]);
 
-#endif /* NDS_R2_COLLISION_FIXED_H */
+#endif /* NDS_COLLISION_FIXED_H */

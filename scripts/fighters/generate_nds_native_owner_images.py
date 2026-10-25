@@ -270,7 +270,7 @@ def _member_values(
     # (p4_native_owner.py).
     lean_trim = bool(context.get("lean_trim"))
 
-    color_guard = ("!NDS_R2_FIGHTER_HW_LIGHT || "
+    color_guard = ("!NDS_FIGHTER_HW_LIGHT || "
                    "NDS_RENDERER_M2_DETAILED_LEDGER")
 
     members: list[tuple[str, str, list[str], str]] = [
@@ -546,7 +546,7 @@ def render_header(
         "/* Source-order packed corners are redundant in the production primitive",
         " * stream. Keep them only when a build can execute the raw fallback or",
         " * when the screen-space census explicitly walks source triangles. */",
-        "#if (NDS_FIGHTER_PRIMITIVES == 0) || NDS_R2_STRIP_ROUTE || \\",
+        "#if (NDS_FIGHTER_PRIMITIVES == 0) || NDS_STRIP_ROUTE || \\",
         "    NDS_RENDERER_SCREEN_SPACE_CENSUS",
         "#define NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS 1",
         "#else",
@@ -557,7 +557,7 @@ def render_header(
         "/* Scene-resident PreparedDense element type. Byte-identical copy of",
         " * the renderer's own NDSNativePreparedDenseVertex",
         " * (src/nds/nds_renderer_assets.c): build-gated draw scratch whose",
-        " * shape depends on NDS_R2_FIGHTER_HW_LIGHT, now also an image member",
+        " * shape depends on NDS_FIGHTER_HW_LIGHT, now also an image member",
         " * so the exact generated initial bytes ship in the payload the",
         " * runtime binds. The renderer defines",
         " * NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER before including this",
@@ -569,16 +569,16 @@ def render_header(
         "typedef struct NDSNativePreparedDenseVertex",
         "{",
         "    u32 gx_xy;",
-        "#if !NDS_R2_FIGHTER_HW_LIGHT",
+        "#if !NDS_FIGHTER_HW_LIGHT",
         "    u32 shaded_rgba;",
         "#endif",
         "    u16 gx_z;",
-        "#if !NDS_R2_FIGHTER_HW_LIGHT",
+        "#if !NDS_FIGHTER_HW_LIGHT",
         "    u16 packed_color;",
         "#endif",
         "    s16 s;",
         "    s16 t;",
-        "#if NDS_R2_FIGHTER_HW_LIGHT",
+        "#if NDS_FIGHTER_HW_LIGHT",
         "} __attribute__((packed, aligned(2))) NDSNativePreparedDenseVertex;",
         "#else",
         "} NDSNativePreparedDenseVertex;",

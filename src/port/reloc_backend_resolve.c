@@ -684,7 +684,7 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
         /* A pinned cache clip is a stream clip: its slots are offsets, as the
          * registered heap copy's are (ndsRelocMarkLoadedFileRelativeOffsets),
          * and they resolve the same way against the clip's own base. */
-        const NDSR2AnimPin *pin = ndsR2AnimPinForPayload(file_base);
+        const NDSAnimPin *pin = ndsAnimPinForPayload(file_base);
 
         if (pin != NULL)
         {
@@ -1369,7 +1369,7 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
     return TRUE;
 }
 
-static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
+static s32 ndsRelocIsGeneratedFighterAObj32Asset(u32 asset_id)
 {
 #define NDS_FIGHTER_AOBJ32_TEST(symbol_, id_) \
     if (asset_id == (id_)) return TRUE;
@@ -1409,7 +1409,7 @@ static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_APPEAR) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_ARWING) ||
             (ndsP4IsFighterAnimEvent32(asset_id) != FALSE) ||
-            (ndsRelocIsGeneratedP2FighterAObj32Asset(asset_id) != FALSE)) ?
+            (ndsRelocIsGeneratedFighterAObj32Asset(asset_id) != FALSE)) ?
                TRUE : FALSE;
 }
 
@@ -1468,8 +1468,8 @@ s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
  * never fires is indistinguishable from one that fired and saved nothing.
  * `Resolves` counts the calls to ndsRelocAssetIDForToken this scan actually
  * makes; `Visits` counts the nodes it walks. The ratio IS the cut. */
-volatile u32 gNdsR2RelocAliasVisits;
-volatile u32 gNdsR2RelocAliasResolves;
+volatile u32 gNdsRelocAliasVisits;
+volatile u32 gNdsRelocAliasResolves;
 
 static void ndsRelocRemoveStatusNodeAt(LBFileNode *nodes, s32 *count, s32 index)
 {
@@ -1527,12 +1527,12 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
          * put three lookup arrays in .main.bss and lost to a chain of
          * branch-predictable link-time immediates that was already resident.
          * Nothing is added here -- the call count goes down. */
-        NDS_DIAG(gNdsR2RelocAliasVisits++);
+        NDS_DIAG(gNdsRelocAliasVisits++);
         if (nodes[i].addr == data)
         {
             u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
 
-            NDS_DIAG(gNdsR2RelocAliasResolves++);
+            NDS_DIAG(gNdsRelocAliasResolves++);
             if ((node_asset_id != asset_id) &&
                 (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
             {

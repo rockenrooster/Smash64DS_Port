@@ -717,7 +717,7 @@ extern OSMesgQueue sSYTaskmanResetMesgQueue;
 extern OSMesgQueue sSYTaskmanGameTicMesgQueue;
 extern void func_80005BFC(void);
 
-/* See the NDS_R2_BATTLEPACK_KEEP_CACHE block in the Makefile.
+/* See the NDS_BATTLEPACK_KEEP_CACHE block in the Makefile.
  *
  * 0x17a000 (1,548,288) = 0x150000 + 172,032, and the size is MEASURED, not
  * derived from the boot ladder. The first attempt asked for 0x18f000 (+258,048,

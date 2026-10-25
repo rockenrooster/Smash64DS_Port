@@ -1,6 +1,6 @@
 /* Falsifier for the whole-cluster fixed-point fighter hurtbox narrow phase.
  *
- * Compiles include/nds/nds_r2_collision_fixed.h -- the code that will ship --
+ * Compiles include/nds/nds_collision_fixed.h -- the code that will ship --
  * and grades every kernel in it against a transcription of the decomp float
  * originals in gm/gmcollision.c, over the domain the game actually visits.
  *
@@ -23,12 +23,12 @@
  *                can be read against the error bound rather than asserted
  *
  * The live scale domain is not assumed, and it is not the one this file used to
- * grade. NDS_R2_COLLISION_L7_ORACLE read 1.1138-1.1199 off 460 samples on
+ * grade. NDS_COLLISION_L7_ORACLE read 1.1138-1.1199 off 460 samples on
  * 2026-07-31; walking the LIVE fighter trees over a whole both-CPU match on
  * 2026-08-13 read 0.9937-2.0479 over 152 joint matrices, 1.83x that maximum,
  * with the source's own unk_dobjtrans_0x6 latch live on the widest one. The
  * gated rows below grade the second domain (widened 2026-08-15 for the wiring
- * cycle); include/nds/nds_r2_collision_mtx.h carries both records.
+ * cycle); include/nds/nds_collision_mtx.h carries both records.
  */
 
 #include <math.h>
@@ -36,7 +36,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../include/nds/nds_r2_collision_fixed.h"
+#include "../include/nds/nds_collision_fixed.h"
 
 /* gSYSinTable, the game's own sine table, read from the decomp rather than
  * transcribed. A falsifier that grades a copy of the table proves the copy.
@@ -438,7 +438,7 @@ static int FloatTestRectangle(const float pos_curr[3], const float pos_prev[3],
 
         if ((flags_a == 0u) && (flags_b == 0u)) { break; }
         if ((flags_a & flags_b) != 0u) { return 0; }
-        if (guard == 8) { return NDS_R2_CFX_DECLINE; }
+        if (guard == 8) { return NDS_CFX_DECLINE; }
         flags_main = (flags_a != 0u) ? flags_a : flags_b;
 
         if (flags_main & 1u)
@@ -483,13 +483,13 @@ static int FloatTestRectangle(const float pos_curr[3], const float pos_prev[3],
 
 static int32_t Q12(double v)
 {
-    double s = v * (double)NDS_R2_CFX_POS_ONE;
+    double s = v * (double)NDS_CFX_POS_ONE;
 
     return (int32_t)(s < 0.0 ? s - 0.5 : s + 0.5);
 }
 
 /* World-unit error of a fixed FRAME against the float inverse, on a point. */
-static double FrameError(Mtx44f finv, const NDSR2CfxFrame *frame,
+static double FrameError(Mtx44f finv, const NDSCfxFrame *frame,
                          const double p[3])
 {
     double worst = 0.0;
@@ -498,12 +498,12 @@ static double FrameError(Mtx44f finv, const NDSR2CfxFrame *frame,
     int c;
 
     for (c = 0; c < 3; c++) { px[c] = Q12(p[c]); }
-    ndsR2CfxWorldToLocal(out, frame, px);
+    ndsCfxWorldToLocal(out, frame, px);
     for (c = 0; c < 3; c++)
     {
         double fv = (double)finv[0][c] * p[0] + (double)finv[1][c] * p[1] +
                     (double)finv[2][c] * p[2] + (double)finv[3][c];
-        double xv = (double)out[c] / (double)NDS_R2_CFX_POS_ONE;
+        double xv = (double)out[c] / (double)NDS_CFX_POS_ONE;
         double d = fabs(fv - xv);
 
         if (d > worst) { worst = d; }
@@ -535,7 +535,7 @@ static void TestSinTable(void)
      * the two must agree EXACTLY, not merely within a bound. */
     for (index = 0; index < 0x1000; index++)
     {
-        int32_t q15 = ndsR2CfxTableQ15(gSYSinTable, index);
+        int32_t q15 = ndsCfxTableQ15(gSYSinTable, index);
         double as_float = (double)q15 / 32768.0;
         int32_t raw = (int32_t)gSYSinTable[index & (SINTABLE_COUNT - 1)];
         double reference = (double)((index & 0x800) ? -raw : raw) / 32768.0;
@@ -559,8 +559,8 @@ static void TestSinTable(void)
             float angle = (float)i * 0.0001f;
             double fs = (double)FloatSin(angle);
             double fc = (double)FloatCos(angle);
-            double xs = (double)ndsR2CfxSinQ15(gSYSinTable, angle) / 32768.0;
-            double xc = (double)ndsR2CfxCosQ15(gSYSinTable, angle) / 32768.0;
+            double xs = (double)ndsCfxSinQ15(gSYSinTable, angle) / 32768.0;
+            double xc = (double)ndsCfxCosQ15(gSYSinTable, angle) / 32768.0;
 
             if ((fs != xs) || (fc != xc)) { mismatches++; }
             cases++;
@@ -585,7 +585,7 @@ static void TestIsqrt(void)
     /* Exhaustive over 0 .. 2^20. */
     for (v = 0; v <= (1u << 20); v++)
     {
-        uint64_t r = ndsR2CfxIsqrt64Portable(v);
+        uint64_t r = ndsCfxIsqrt64Portable(v);
 
         if ((r * r > v) || ((r + 1) * (r + 1) <= v)) { bad++; }
         cases++;
@@ -596,16 +596,16 @@ static void TestIsqrt(void)
     /* Exhaustive over every raw s^2 the LIVE scale domain can produce. This is
      * the domain the kernel actually indexes, and it is small enough to
      * enumerate rather than sample. */
-    lo = (int32_t)(LIVE_SCALE_LO * LIVE_SCALE_LO * (double)NDS_R2_CFX_ROT_ONE);
-    hi = (int32_t)(LIVE_SCALE_HI * LIVE_SCALE_HI * (double)NDS_R2_CFX_ROT_ONE) +
+    lo = (int32_t)(LIVE_SCALE_LO * LIVE_SCALE_LO * (double)NDS_CFX_ROT_ONE);
+    hi = (int32_t)(LIVE_SCALE_HI * LIVE_SCALE_HI * (double)NDS_CFX_ROT_ONE) +
          1;
     bad = 0;
     cases = 0;
     for (raw = lo; raw <= hi; raw++)
     {
         uint64_t arg = (uint64_t)raw << 22;
-        uint64_t r = ndsR2CfxIsqrt64Portable(arg);
-        double exact = sqrt((double)raw / (double)NDS_R2_CFX_ROT_ONE);
+        uint64_t r = ndsCfxIsqrt64Portable(arg);
+        double exact = sqrt((double)raw / (double)NDS_CFX_ROT_ONE);
         double got = (double)r / 16777216.0;
 
         if ((r * r > arg) || ((r + 1) * (r + 1) <= arg)) { bad++; }
@@ -621,8 +621,8 @@ static void TestIsqrt(void)
     {
         static const uint64_t corners[] = {
             0u, 1u, 2u, 3u, 4u,
-            (uint64_t)NDS_R2_CFX_S2_MIN << 22,
-            (uint64_t)NDS_R2_CFX_S2_MAX << 22,
+            (uint64_t)NDS_CFX_S2_MIN << 22,
+            (uint64_t)NDS_CFX_S2_MAX << 22,
             ((uint64_t)1 << 52) - 1u, (uint64_t)1 << 52,
             ((uint64_t)1 << 61) - 1u,
         };
@@ -630,7 +630,7 @@ static void TestIsqrt(void)
 
         for (i = 0; i < sizeof(corners) / sizeof(corners[0]); i++)
         {
-            uint64_t r = ndsR2CfxIsqrt64Portable(corners[i]);
+            uint64_t r = ndsCfxIsqrt64Portable(corners[i]);
 
             if ((r * r > corners[i]) ||
                 ((r + 1) * (r + 1) <= corners[i])) { bad++; }
@@ -652,7 +652,7 @@ typedef struct ChainCase
 {
     Mtx44f fworld;
     Mtx43d eworld;
-    NDSR2CfxMtx xworld;
+    NDSCfxMtx xworld;
     int declined;
 } ChainCase;
 
@@ -661,7 +661,7 @@ static void BuildChain(ChainCase *out, double scale_lo, double scale_hi,
 {
     Mtx44f facc;
     Mtx43d eacc;
-    NDSR2CfxMtx xacc;
+    NDSCfxMtx xacc;
     float rot[3];
     float scale[3];
     float trans[3];
@@ -681,7 +681,7 @@ static void BuildChain(ChainCase *out, double scale_lo, double scale_hi,
 
     FloatBuildLocal(facc, rot, scale, trans);
     ExactBuildLocal(eacc, rot, scale, trans);
-    if (ndsR2CfxBuildLocal(&xacc, gSYSinTable, rot, scale, trans) == 0)
+    if (ndsCfxBuildLocal(&xacc, gSYSinTable, rot, scale, trans) == 0)
     {
         out->declined = 1;
         return;
@@ -692,8 +692,8 @@ static void BuildChain(ChainCase *out, double scale_lo, double scale_hi,
         Mtx44f flocal;
         Mtx44f fnext;
         Mtx43d elocal;
-        NDSR2CfxMtx xlocal;
-        NDSR2CfxMtx xnext;
+        NDSCfxMtx xlocal;
+        NDSCfxMtx xnext;
 
         rot[0] = (float)Rand(-3.15, 3.15);
         rot[1] = (float)Rand(-3.15, 3.15);
@@ -705,14 +705,14 @@ static void BuildChain(ChainCase *out, double scale_lo, double scale_hi,
 
         FloatBuildLocal(flocal, rot, scale, trans);
         ExactBuildLocal(elocal, rot, scale, trans);
-        if (ndsR2CfxBuildLocal(&xlocal, gSYSinTable, rot, scale, trans) == 0)
+        if (ndsCfxBuildLocal(&xlocal, gSYSinTable, rot, scale, trans) == 0)
         {
             out->declined = 1;
             return;
         }
         FloatCompose(fnext, facc, flocal);
         ExactCompose(eacc, eacc, elocal);
-        if (ndsR2CfxCompose(&xnext, &xacc, &xlocal) == 0)
+        if (ndsCfxCompose(&xnext, &xacc, &xlocal) == 0)
         {
             out->declined = 1;
             return;
@@ -727,7 +727,7 @@ static void BuildChain(ChainCase *out, double scale_lo, double scale_hi,
 
 /* Apply the fixed forward matrix / frame and return the result in world units,
  * quantising the query point on the way in exactly as the runtime would. */
-static void FixedApplyMtx(const NDSR2CfxMtx *m, const double p[3],
+static void FixedApplyMtx(const NDSCfxMtx *m, const double p[3],
                           double out[3])
 {
     int32_t px[3];
@@ -735,14 +735,14 @@ static void FixedApplyMtx(const NDSR2CfxMtx *m, const double p[3],
     int c;
 
     for (c = 0; c < 3; c++) { px[c] = Q12(p[c]); }
-    ndsR2CfxTransformPoint(xo, m, px);
+    ndsCfxTransformPoint(xo, m, px);
     for (c = 0; c < 3; c++)
     {
-        out[c] = (double)xo[c] / (double)NDS_R2_CFX_POS_ONE;
+        out[c] = (double)xo[c] / (double)NDS_CFX_POS_ONE;
     }
 }
 
-static void FixedApplyFrame(const NDSR2CfxFrame *f, const double p[3],
+static void FixedApplyFrame(const NDSCfxFrame *f, const double p[3],
                             double out[3])
 {
     int32_t px[3];
@@ -750,10 +750,10 @@ static void FixedApplyFrame(const NDSR2CfxFrame *f, const double p[3],
     int c;
 
     for (c = 0; c < 3; c++) { px[c] = Q12(p[c]); }
-    ndsR2CfxWorldToLocal(xo, f, px);
+    ndsCfxWorldToLocal(xo, f, px);
     for (c = 0; c < 3; c++)
     {
-        out[c] = (double)xo[c] / (double)NDS_R2_CFX_POS_ONE;
+        out[c] = (double)xo[c] / (double)NDS_CFX_POS_ONE;
     }
 }
 
@@ -885,8 +885,8 @@ static void TestFrames(const char *label, double scale_lo, double scale_hi,
     {
         ChainCase cc;
         Mtx44f finv;
-        NDSR2CfxFrame frow;
-        NDSR2CfxFrame fcof;
+        NDSCfxFrame frow;
+        NDSCfxFrame fcof;
         float fscale[3];
         double p[3];
         int rok;
@@ -898,8 +898,8 @@ static void TestFrames(const char *label, double scale_lo, double scale_hi,
         if (FloatInvert(finv, cc.fworld) == 0) { continue; }
         FloatAxisScales(cc.fworld, fscale);
 
-        rok = ndsR2CfxMakeFrameRowScaled(&frow, &cc.xworld);
-        cok = ndsR2CfxMakeFrameCofactor(&fcof, &cc.xworld);
+        rok = ndsCfxMakeFrameRowScaled(&frow, &cc.xworld);
+        cok = ndsCfxMakeFrameCofactor(&fcof, &cc.xworld);
         if (!rok) { row_declined++; }
         if (!cok) { cof_declined++; }
         if (!cok) { continue; }
@@ -942,7 +942,7 @@ static void TestFrames(const char *label, double scale_lo, double scale_hi,
         {
             double e = fabs((double)fscale[c] -
                             (double)fcof.scale[c] /
-                                (double)NDS_R2_CFX_POS_ONE);
+                                (double)NDS_CFX_POS_ONE);
 
             if (e > worst_scale) { worst_scale = e; }
         }
@@ -1028,7 +1028,7 @@ static void TestRectangleDifferential(const char *label, double scale_lo,
     {
         ChainCase cc;
         Mtx44f finv;
-        NDSR2CfxFrame frame;
+        NDSCfxFrame frame;
         float fscale[3];
         float pc[3];
         float pp[3];
@@ -1049,7 +1049,7 @@ static void TestRectangleDifferential(const char *label, double scale_lo,
         if (cc.declined) { declines++; continue; }
         if (FloatInvert(finv, cc.fworld) == 0) { continue; }
         FloatAxisScales(cc.fworld, fscale);
-        if (ndsR2CfxMakeFrameCofactor(&frame, &cc.xworld) == 0)
+        if (ndsCfxMakeFrameCofactor(&frame, &cc.xworld) == 0)
         {
             declines++;
             continue;
@@ -1085,9 +1085,9 @@ static void TestRectangleDifferential(const char *label, double scale_lo,
 
         fdec = FloatTestRectangle(pc, pp, radius, 0, finv, off, size, fscale,
                                   0.0f);
-        xdec = ndsR2CfxTestRectangle(xpc, xpp, xradius, 0, &frame, xoff, xsize,
+        xdec = ndsCfxTestRectangle(xpc, xpp, xradius, 0, &frame, xoff, xsize,
                                      frame.inv_scale);
-        if ((fdec == NDS_R2_CFX_DECLINE) || (xdec == NDS_R2_CFX_DECLINE))
+        if ((fdec == NDS_CFX_DECLINE) || (xdec == NDS_CFX_DECLINE))
         {
             declines++;
             continue;
@@ -1149,7 +1149,7 @@ static void TestRectangleDifferential(const char *label, double scale_lo,
  * T8 -- THE WIRED RING, end to end, exactly as the ROM runs it.
  *
  * T3-T6 grade the kernels. This grades the WIRING, and it is a different
- * question, because src/port/nds_r2_collision_ring.c crosses the f32 boundary
+ * question, because src/port/nds_collision_ring.c crosses the f32 boundary
  * at points the kernel rows never model:
  *
  *   func_ovl2_800EDBA4  local -> unk_dobjtrans_0x10 (f32) -> reloaded on a
@@ -1189,7 +1189,7 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
         Mtx44f racc;      /* the ring's mtx_translate, f32 as the ROM stores it */
         Mtx44f finv;
         Mtx44f rinv;
-        NDSR2CfxMtx xacc;
+        NDSCfxMtx xacc;
         float rot[3];
         float scale[3];
         float trans[3];
@@ -1212,23 +1212,23 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
         trans[2] = (float)Rand(-world_extent, world_extent);
 
         FloatBuildLocal(facc, rot, scale, trans);
-        if (ndsR2CfxBuildLocal(&xacc, gSYSinTable, rot, scale, trans) == 0)
+        if (ndsCfxBuildLocal(&xacc, gSYSinTable, rot, scale, trans) == 0)
         {
             declined++;
             continue;
         }
         /* The root writes unk_dobjtrans_0x10 and then copies it into
          * mtx_translate; both are f32 stores of the same fixed matrix. */
-        ndsR2CfxStoreF32(racc, &xacc);
+        ndsCfxStoreF32(racc, &xacc);
 
         for (level = 0; level < depth; level++)
         {
             Mtx44f flocal;
             Mtx44f fnext;
             Mtx44f rlocal;
-            NDSR2CfxMtx xlocal;
-            NDSR2CfxMtx xreload;
-            NDSR2CfxMtx xnext;
+            NDSCfxMtx xlocal;
+            NDSCfxMtx xreload;
+            NDSCfxMtx xnext;
 
             rot[0] = (float)Rand(-3.15, 3.15);
             rot[1] = (float)Rand(-3.15, 3.15);
@@ -1242,7 +1242,7 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
             FloatCompose(fnext, facc, flocal);
             memcpy(facc, fnext, sizeof(Mtx44f));
 
-            if (ndsR2CfxBuildLocal(&xlocal, gSYSinTable, rot, scale,
+            if (ndsCfxBuildLocal(&xlocal, gSYSinTable, rot, scale,
                                    trans) == 0)
             {
                 bad = 1;
@@ -1251,19 +1251,19 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
             /* unk_dobjtrans_0x10 out, then straight back in: the ring reloads
              * it whenever transform_update_mode was already 1, which is the
              * common case for every joint after the first call of the frame. */
-            ndsR2CfxStoreF32(rlocal, &xlocal);
-            if (ndsR2CfxLoadF32(&xreload, rlocal) == 0)
+            ndsCfxStoreF32(rlocal, &xlocal);
+            if (ndsCfxLoadF32(&xreload, rlocal) == 0)
             {
                 bad = 1;
                 break;
             }
-            if (ndsR2CfxCompose(&xnext, &xacc, &xreload) == 0)
+            if (ndsCfxCompose(&xnext, &xacc, &xreload) == 0)
             {
                 bad = 1;
                 break;
             }
             xacc = xnext;
-            ndsR2CfxStoreF32(racc, &xacc);
+            ndsCfxStoreF32(racc, &xacc);
         }
         if (bad)
         {
@@ -1294,7 +1294,7 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
             declined++;
             continue;
         }
-        if (ndsR2CollisionInvertMatrix44(rinv, (const float (*)[4])racc) == 0)
+        if (ndsCollisionInvertMatrix44(rinv, (const float (*)[4])racc) == 0)
         {
             declined++;
             continue;
@@ -1315,7 +1315,7 @@ static void TestWiredRing(const char *label, double scale_lo, double scale_hi,
 
         /* func_ovl2_800EDE5C: vec_scale. */
         FloatAxisScales(facc, fscale);
-        if (ndsR2CfxAxisScalesF32(rscale, racc) == 0)
+        if (ndsCfxAxisScalesF32(rscale, racc) == 0)
         {
             declined++;
             continue;
@@ -1360,11 +1360,11 @@ static void TestCorners(void)
     for (i = 0; i < 20000; i++)
     {
         ChainCase cc;
-        NDSR2CfxFrame frame;
+        NDSCfxFrame frame;
 
         BuildChain(&cc, LIVE_SCALE_LO, LIVE_SCALE_HI, 6, 32767.0);
         if (cc.declined) { bad++; cases++; continue; }
-        if (ndsR2CfxMakeFrameCofactor(&frame, &cc.xworld) == 0) { bad++; }
+        if (ndsCfxMakeFrameCofactor(&frame, &cc.xworld) == 0) { bad++; }
         cases++;
     }
     Verdict("T7a blast-zone extremes +/-32767 (declines)", (double)bad, 0.0,
@@ -1377,12 +1377,12 @@ static void TestCorners(void)
     for (i = 0; i < 20000; i++)
     {
         ChainCase cc;
-        NDSR2CfxFrame frame;
+        NDSCfxFrame frame;
         double s = (i & 1) ? Rand(0.0005, 0.02) : Rand(8.0, 400.0);
 
         BuildChain(&cc, s, s, 2, 400.0);
         if (cc.declined) { cases++; continue; }
-        if (ndsR2CfxMakeFrameCofactor(&frame, &cc.xworld) != 0)
+        if (ndsCfxMakeFrameCofactor(&frame, &cc.xworld) != 0)
         {
             /* Accepting is only a fault if the result is then out of bound.
              * Grade it that way rather than by the guard's own opinion. */
@@ -1406,23 +1406,23 @@ static void TestCorners(void)
     bad = 0;
     cases = 0;
     {
-        NDSR2CfxMtx m;
-        NDSR2CfxFrame frame;
+        NDSCfxMtx m;
+        NDSCfxFrame frame;
 
         memset(&m, 0, sizeof(m));
-        if (ndsR2CfxMakeFrameCofactor(&frame, &m) != 0) { bad++; }
-        if (ndsR2CfxMakeFrameRowScaled(&frame, &m) != 0) { bad++; }
+        if (ndsCfxMakeFrameCofactor(&frame, &m) != 0) { bad++; }
+        if (ndsCfxMakeFrameRowScaled(&frame, &m) != 0) { bad++; }
         cases += 2;
 
         memset(&m, 0, sizeof(m));
-        m.r[0][0] = m.r[1][1] = m.r[2][2] = NDS_R2_CFX_ROT_ONE;
-        if (ndsR2CfxMakeFrameCofactor(&frame, &m) == 0) { bad++; }
-        if (ndsR2CfxMakeFrameRowScaled(&frame, &m) == 0) { bad++; }
+        m.r[0][0] = m.r[1][1] = m.r[2][2] = NDS_CFX_ROT_ONE;
+        if (ndsCfxMakeFrameCofactor(&frame, &m) == 0) { bad++; }
+        if (ndsCfxMakeFrameRowScaled(&frame, &m) == 0) { bad++; }
         cases += 2;
 
         memset(&m, 0, sizeof(m));
-        m.r[0][0] = m.r[1][0] = m.r[2][2] = NDS_R2_CFX_ROT_ONE;
-        if (ndsR2CfxMakeFrameCofactor(&frame, &m) != 0) { bad++; }
+        m.r[0][0] = m.r[1][0] = m.r[2][2] = NDS_CFX_ROT_ONE;
+        if (ndsCfxMakeFrameCofactor(&frame, &m) != 0) { bad++; }
         cases++;
     }
     Verdict("T7c zero / identity / singular corners (failures)", (double)bad,
@@ -1496,7 +1496,7 @@ int main(void)
     TestRectangleDifferential("T6 live, depth 12", LIVE_SCALE_LO,
                               LIVE_SCALE_HI, 12, 400.0, 100000, BOUND, 1);
 
-    printf("\nWIRED RING -- what src/port/nds_r2_collision_ring.c actually runs\n");
+    printf("\nWIRED RING -- what src/port/nds_collision_ring.c actually runs\n");
     printf("  Both arms end in the SAME unconverted float consumer\n"
            "  (gmCollisionGetWorldPosition / gmCollisionTestRectangle); what is\n"
            "  graded is the f32 fields the ring writes against the f32 fields\n"

@@ -419,7 +419,7 @@ static inline sb32 ndsMPGroupSpansMiss(const NDSMPKindGroup *g, s32 lo,
     return TRUE;
 }
 /* ITCM (P2-6, 2026-10-02: census admission, 312 B). */
-static sb32 __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
+static sb32 __attribute__((noinline)) NDS_ITCM_PACK2_CODE
 ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
                       const Vec3f *position, const Vec3f *translate,
                       NDSMPKindGroup *g, u32 yakumono_id, sb32 is_dynamic,

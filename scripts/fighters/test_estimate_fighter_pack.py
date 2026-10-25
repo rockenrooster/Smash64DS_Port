@@ -196,15 +196,15 @@ class TestEvidenceAndEstimates(unittest.TestCase):
             "NDS_FIGHTER_PRIMITIVES == 2", hwtri))
         self.assertFalse(e._eval_image_guard(
             "NDS_FIGHTER_PRIMITIVES == 1", hwtri))
-        self.assertTrue(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", hwtri))
-        self.assertFalse(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", base))
-        self.assertFalse(e._eval_image_guard("!NDS_R2_FIGHTER_HW_LIGHT", hwtri))
-        self.assertTrue(e._eval_image_guard("!NDS_R2_FIGHTER_HW_LIGHT", base))
+        self.assertTrue(e._eval_image_guard("NDS_FIGHTER_HW_LIGHT", hwtri))
+        self.assertFalse(e._eval_image_guard("NDS_FIGHTER_HW_LIGHT", base))
+        self.assertFalse(e._eval_image_guard("!NDS_FIGHTER_HW_LIGHT", hwtri))
+        self.assertTrue(e._eval_image_guard("!NDS_FIGHTER_HW_LIGHT", base))
         self.assertTrue(e._eval_image_guard(
-            "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
+            "!NDS_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
             base))
         self.assertFalse(e._eval_image_guard(
-            "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
+            "!NDS_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
             hwtri))
         with self.assertRaises(e.Refusal):
             e._eval_image_guard("NDS_RENDERER_PROFILE_LEVEL <= 2", hwtri)

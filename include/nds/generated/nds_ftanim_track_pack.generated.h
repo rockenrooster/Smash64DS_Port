@@ -531,9 +531,9 @@ static const u16 sNdsFtAnimTrackRows[NDS_FTANIM_TRACK_PACK_ROWS_U16] = {
     0x0000u, 0x0040u, 0xfe3eu, 0x4001u, 0x0004u, 0x0000u,
 };
 
-/* `ndsR2AnimRecipSlot(n, 1)` precomputed: the Q30 reciprocal the
+/* `ndsAnimRecipSlot(n, 1)` precomputed: the Q30 reciprocal the
  * Cubic arms store in `length_invert`, produced by this file's
- * bit-for-bit model of `ndsR2F32ToFixed`. The dense stepper reads
+ * bit-for-bit model of `ndsAnimF32ToFixed`. The dense stepper reads
  * it instead of running the conversion per row. */
 static const s32 sNdsFtAnimTrackRecipQ[256] = {
     0, 1073741824, 536870912, 357913952, 268435456, 214748368,

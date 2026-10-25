@@ -327,7 +327,7 @@ volatile u32 gNdsTickHudSourceTicks;
  * excursion (board, cycle 80) and a residual cannot be optimised, so these name
  * what is inside it: SHDT is live-hitbox hit detection
  * (ftMainProcSearchHitAll), SWRM is the anim-cache warm step
- * (ndsR2AnimCachePreloadStep, the one asset load inside SRC). Both spans are
+ * (ndsAnimCachePreloadStep, the one asset load inside SRC). Both spans are
  * nested inside the SRC bracket in ndsRunMarioFoxProofUpdate, so they are
  * published as their own ring buckets but NOT added to `named`. */
 volatile u32 gNdsTickHudSrcHitDetectTicks;

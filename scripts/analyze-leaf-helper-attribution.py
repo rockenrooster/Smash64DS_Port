@@ -67,7 +67,7 @@ GROUPS = [
     ("gameplay (other decomp)", ("ft", "gm", "lb", "sy", "wp", "it", "ef")),
 ]
 ANIM_MARKS = ("AnimJoint", "Figatree", "MatAnim")
-ANIM_PREFIX = ("gcPlay", "gcParse", "gcAdd", "ndsBaseGc", "ndsR2Cubic", "ftAnim")
+ANIM_PREFIX = ("gcPlay", "gcParse", "gcAdd", "ndsBaseGc", "ndsCubic", "ftAnim")
 
 
 def group_of(name):

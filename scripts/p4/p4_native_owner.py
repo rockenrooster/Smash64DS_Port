@@ -235,7 +235,7 @@ def _display_vertices(payload: bytes, offset: int) -> int:
 def donor_variants(name: str, o2r_dir: Path, main_id: int, model_id: int,
                    attr_offset: int, dropped: dict | None = None) -> dict:
     """Every alternate model part a donor's joints carry, per detail, as
-    (logical binding, display offset) rows for P2_MODEL_PART_ROOT_VARIANTS.
+    (logical binding, display offset) rows for MODEL_PART_ROOT_VARIANTS.
 
     ftParamSetModelPartID writes modelparts[joint - 4][part][detail].dl into
     the live DObj, and a P4 fighter's parts are set by its own scripts and by
@@ -587,7 +587,7 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     # canonical one and every program's -- again with it inserted.
     O.OWNER_ACCESSORY_PARTS.pop(name, None)
     O.OWNER_ACCESSORY_SOURCES.pop(name, None)
-    O.P2_ROOT_PROGRAM_APPENDIX.pop(name, None)
+    O.ROOT_PROGRAM_APPENDIX.pop(name, None)
     accessory = donor_accessory(name, o2r_dir, spec["main"], spec["model"], attr_offset)
     if accessory is not None:
         joint, dl, before, row = accessory
@@ -605,7 +605,7 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
         O.OWNER_ACCESSORY_PARTS[name] = (joint, dl, before)
         O.OWNER_ACCESSORY_SOURCES[name] = (
             _o2r_rel(REPO, o2r_dir / f"{spec['main']:04x}"), spec["main"], row)
-        O.P2_ROOT_PROGRAM_APPENDIX[name] = {d: ((bindings[0], dl),) for d in ("high", "low")}
+        O.ROOT_PROGRAM_APPENDIX[name] = {d: ((bindings[0], dl),) for d in ("high", "low")}
         rows = [("Accessory", "accesspart")] + [
             (f"{row[0]}Acc", ("accesspart", row[0])) for row in PROGRAM_INFO.get(name, ())]
         O.OWNER_ROOT_PROGRAMS[name] = O.OWNER_ROOT_PROGRAMS.get(name, ()) + tuple(rows)
@@ -618,13 +618,13 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     O.OWNER_GX_PLAN_COUNTS[name] = tuple(pins.get("gx", (1, 0, 0, 0, 0)))
     for detail in ("high", "low"):
         O.DETAIL_GX_PLAN_COUNTS[detail][name] = tuple(pins.get(f"gx_{detail}", (1, 0, 0, 0, 0)))
-    O.P2_OWNER_MODEL_CENSUS[name] = {d: tuple(pins.get(f"census_{d}", ())) for d in ("high", "low")}
+    O.OWNER_MODEL_CENSUS[name] = {d: tuple(pins.get(f"census_{d}", ())) for d in ("high", "low")}
     variants = donor_variants(name, o2r_dir, spec["main"], spec["model"], attr_offset,
                               pins.get("variants_dropped"))
     if variants:
-        O.P2_MODEL_PART_ROOT_VARIANTS[name] = variants
+        O.MODEL_PART_ROOT_VARIANTS[name] = variants
     else:
-        O.P2_MODEL_PART_ROOT_VARIANTS.pop(name, None)
+        O.MODEL_PART_ROOT_VARIANTS.pop(name, None)
     return tables
 
 

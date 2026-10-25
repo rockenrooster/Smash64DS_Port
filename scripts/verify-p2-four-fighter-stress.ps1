@@ -6,7 +6,7 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     # Lab A/B only: point at a sizing build of the SAME target (for example one
-    # compiled with NDS_R2_DRAW_SUPPRESS_MASK). The registry gate never passes
+    # compiled with NDS_DRAW_SUPPRESS_MASK). The registry gate never passes
     # this, so the default remains the configuration-exact gate build.
     [string]$Build = 'build-p2-fourcpu-tickhud',
     # Lab A/B only, forwarded to the sampler: `name=value` pokes applied before
@@ -191,9 +191,9 @@ $memoryGlobals = @(
     'gNdsBattlePackCarveDeclineCount',
     'gNdsBattlePackCarveMatchKinds',
     'gNdsBattlePackResidentBytes',
-    'gNdsR2AnimCacheArenaReservedBytes',
-    'gNdsR2AnimCacheArenaReserveFailCount',
-    'gNdsR2AnimCacheArenaReserveFailSkips',
+    'gNdsAnimCacheArenaReservedBytes',
+    'gNdsAnimCacheArenaReserveFailCount',
+    'gNdsAnimCacheArenaReserveFailSkips',
     # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
     # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
     # four fighters, so a fifth bind has no spare slot. A BindFull is not a
@@ -213,18 +213,18 @@ $memoryGlobals = @(
     # measured compact route; otherwise its timing no longer prices that route.
     'gNdsFtPoseRunMaskFallbacks',
     # The acceptance instrument for whatever animation-arena budget this arm is
-    # built with. `NDS_R2_ANIM_CACHE_ARENA_BYTES` is smaller on the four-distinct
+    # built with. `NDS_ANIM_CACHE_ARENA_BYTES` is smaller on the four-distinct
     # -kind roster because the fighter kinds took the difference (P2-3r11), and a
     # cache that no longer fits its working set shows up HERE rather than in a
     # tick figure nobody can attribute. Rejects/Misses are DATA, not a failure:
     # every miss degrades to the on-demand load.
-    'gNdsR2AnimCacheMisses',
-    'gNdsR2AnimCacheRejects',
-    'gNdsR2AnimCacheHits',
-    'gNdsR2AnimCacheFills',
-    'gNdsR2AnimCacheBytes',
-    'gNdsR2AnimCacheArenaUsedBytes',
-    'gNdsR2AnimCacheRawRecycles',
+    'gNdsAnimCacheMisses',
+    'gNdsAnimCacheRejects',
+    'gNdsAnimCacheHits',
+    'gNdsAnimCacheFills',
+    'gNdsAnimCacheBytes',
+    'gNdsAnimCacheArenaUsedBytes',
+    'gNdsAnimCacheRawRecycles',
     'gNdsRelocAssetDirectDispatch',
     'gNdsRelocAssetDirectReadCount',
     'gNdsRelocAssetDirectFallbackCount',
@@ -387,7 +387,7 @@ $memoryGlobals = @(
     # counter is here so the choice is visible in every run and cannot flip in
     # either direction unnoticed again. Evidence:
     # artifacts/performance/2026-09-16_p2-2p8-gx-compose-decline/.
-    'gNdsR2GxComposeDeclines',
+    'gNdsGxComposeDeclines',
     # P2-2p8 joint-cap lab arm (NDS_LAB_JOINT_CAP). Both sides, deliberately:
     # `Kept` links on a cap=0 control too, so a control run proves the setup
     # walk ran at all, and `Pruned` is the engagement. A cap arm that reads
@@ -831,7 +831,7 @@ $previewPackBytesWant = $coreWant.bytes
 # `docs/VERIFYING.md` step 3: the build directory's nds_build_config.h is the
 # truth about what was measured. Two of its flags change what a tick figure from
 # this arm MEANS -- the roster decides whether the four fighters are four
-# distinct kinds or Mario/Fox mirrors, and NDS_R2_BATTLEPACK decides whether
+# distinct kinds or Mario/Fox mirrors, and NDS_BATTLEPACK decides whether
 # Fox's clip pack was resident. A pack-off figure is not comparable to a pack-on
 # one, and this project has already banked nine artifacts whose flags differed
 # from the ROM they were attributed to (2026-08-17). Stamp them rather than
@@ -852,7 +852,7 @@ $rosterFlag = Get-StressBuildFlag 'NDS_FOUR_CPU_ROSTER'
 # Samus/Fox/Captain/Donkey arm.
 $rosterKindFlags = @(0..3 | ForEach-Object {
     Get-StressBuildFlag ("NDS_FOUR_CPU_KIND{0}" -f $_) })
-$battlePackFlag = Get-StressBuildFlag 'NDS_R2_BATTLEPACK'
+$battlePackFlag = Get-StressBuildFlag 'NDS_BATTLEPACK'
 
 # P2-3r15. WHAT THE FOUR FIGHTERS ACTUALLY WERE, decoded from the guest rather
 # than inferred from a build flag. `fkind + 1` per byte, slot 0 in the low byte;
@@ -919,20 +919,20 @@ $memory = [PSCustomObject]@{
     battlePackResidentBytes = $extra['gNdsBattlePackResidentBytes']
     battlePackCarveDeclineCount = $extra['gNdsBattlePackCarveDeclineCount']
     battlePackCarveMatchKinds = $extra['gNdsBattlePackCarveMatchKinds']
-    animCacheArenaReservedBytes = $extra['gNdsR2AnimCacheArenaReservedBytes']
-    animCacheArenaReserveFailCount = $extra['gNdsR2AnimCacheArenaReserveFailCount']
-    animCacheArenaReserveFailSkips = $extra['gNdsR2AnimCacheArenaReserveFailSkips']
+    animCacheArenaReservedBytes = $extra['gNdsAnimCacheArenaReservedBytes']
+    animCacheArenaReserveFailCount = $extra['gNdsAnimCacheArenaReserveFailCount']
+    animCacheArenaReserveFailSkips = $extra['gNdsAnimCacheArenaReserveFailSkips']
     ftPoseBinds = $extra['gNdsFtPoseBinds']
     ftPoseBindFull = $extra['gNdsFtPoseBindFull']
     ftPoseTrackOverflow = $extra['gNdsFtPoseTrackOverflow']
     ftPoseRunMaskFallbacks = $extra['gNdsFtPoseRunMaskFallbacks']
-    animCacheMisses = $extra['gNdsR2AnimCacheMisses']
-    animCacheRejects = $extra['gNdsR2AnimCacheRejects']
-    animCacheHits = $extra['gNdsR2AnimCacheHits']
-    animCacheFills = $extra['gNdsR2AnimCacheFills']
-    animCacheLiveBytes = $extra['gNdsR2AnimCacheBytes']
-    animCacheArenaUsedBytes = $extra['gNdsR2AnimCacheArenaUsedBytes']
-    animCacheRawRecycles = $extra['gNdsR2AnimCacheRawRecycles']
+    animCacheMisses = $extra['gNdsAnimCacheMisses']
+    animCacheRejects = $extra['gNdsAnimCacheRejects']
+    animCacheHits = $extra['gNdsAnimCacheHits']
+    animCacheFills = $extra['gNdsAnimCacheFills']
+    animCacheLiveBytes = $extra['gNdsAnimCacheBytes']
+    animCacheArenaUsedBytes = $extra['gNdsAnimCacheArenaUsedBytes']
+    animCacheRawRecycles = $extra['gNdsAnimCacheRawRecycles']
     animDirectDispatch = $extra['gNdsRelocAssetDirectDispatch']
     animDirectReads = $extra['gNdsRelocAssetDirectReadCount']
     animDirectFallbacks = $extra['gNdsRelocAssetDirectFallbackCount']
@@ -1261,7 +1261,7 @@ if ([uint64]$memory.graphicsHeapOverflowCount -ne 0) {
         "$($memory.graphicsHeapOverflowCount) time(s): peak " +
         "$($memory.graphicsHeapPeakBytes) B of " +
         "$($memory.graphicsHeapCapacityBytes) B. Raise " +
-        "NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES; a silent overrun scribbles past " +
+        "NDS_VSBATTLE_GRAPHICS_ARENA_BYTES; a silent overrun scribbles past " +
         "the arena.")
 }
 # P2-3f9: the other half of the same question. This writer refuses instead of
@@ -1273,7 +1273,7 @@ if ([uint64]$memory.graphicsHeapNoRoomCount -ne 0) {
         "material branch table(s) for want of graphics-heap room: peak " +
         "$($memory.graphicsHeapPeakBytes) B of " +
         "$($memory.graphicsHeapCapacityBytes) B. Those DObjs drew without " +
-        "their material branch. Raise NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES.")
+        "their material branch. Raise NDS_VSBATTLE_GRAPHICS_ARENA_BYTES.")
 }
 # P2-3r13: a VSBattle that allocates the scene file store has taken back the
 # 185,696 B the four-distinct-kind roster is standing on.
@@ -1308,9 +1308,9 @@ Write-Output ("libc heap: runtimeHighWater=$($memory.libcRuntimeHighWaterBytes) 
     "topChunkMin=$($memory.libcTopChunkMinBytes) reserve=$libcReserveBytes margin=$libcMarginBytes")
 $weaponPoolHeader = Get-Content -LiteralPath (Join-Path $root 'include\nds\nds_startup.h') -Raw
 $weaponPoolDefaultMatch = [regex]::Match(
-    $weaponPoolHeader, '#define\s+NDS_R2_WEAPON_POOL\s+(\d+)')
+    $weaponPoolHeader, '#define\s+NDS_WEAPON_POOL\s+(\d+)')
 if (-not $weaponPoolDefaultMatch.Success) {
-    throw 'NDS_R2_WEAPON_POOL default is missing from include/nds/nds_startup.h.'
+    throw 'NDS_WEAPON_POOL default is missing from include/nds/nds_startup.h.'
 }
 $weaponPoolExpectedEntries = [uint64]$weaponPoolDefaultMatch.Groups[1].Value
 if ([uint64]$memory.weaponPoolEntries -ne $weaponPoolExpectedEntries) {
