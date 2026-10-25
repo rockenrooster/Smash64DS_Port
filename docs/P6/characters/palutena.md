@@ -492,11 +492,14 @@ Defaults for the specials:
   knockback, growth and base (owner: "inherit the BKB and KBG as the
   attacker's hit"; first floored at the script's 65 and 33, then mirrored
   when a countered jab launched: "a little jab can send them launching").
-  A stage's hit leaves the script's, and the angle stays 361. It shows
-  her light wings and orb as the smashes do (owner 2026-10-25: "its the
-  exact same wing/orb vfx in the smash attacks, just reuse that"): Ultimate's
-  backlight at the counterattack's start at rate 2.75, grown by frame 2,
-  gone by 15 (`sNdsP4PalutenaLightWindows`, motions 226 and 227).
+  A stage's hit leaves the script's, and the angle stays 361. The stance and
+  the counterattack show her light wings and orb as the smashes do (owner
+  2026-10-25: "its the exact same wing/orb vfx in the smash attacks, just
+  reuse that", then "not to the initial down b press like it should be
+  also"): Ultimate's backlight at the stance's frame 1 at rate 0.7 (grown by
+  4, gone by 46; motions 224 and 225) and at the counterattack's start at
+  rate 2.75 (grown by 2, gone by 15; motions 226 and 227),
+  `sNdsP4PalutenaLightWindows`.
   Her voice as she raises the shield is random, as on the 3DS (owner
   2026-10-25: "counter", another effort line or nothing on down B; it said
   "counter" every time): Ultimate's `seq_palutena_rnd_special_l01`
