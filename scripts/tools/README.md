@@ -69,6 +69,7 @@ table, and where runs write. Conventions:
 |---|---|
 | `worst_case_sweep.ps1` | WORK P50/P95 and the two-VBlank share per stage and roster on a gate ROM; the CSV rows are the replay digest (`scripts/compare-replay-digest.py a.csv b.csv`) |
 | `heap_census.ps1` | one match's heap allocations, ensured files, stage program load, heap low-water, motion cache and lent spans |
+| `load_ledger.ps1 -Build [-Seconds] [-Frames]` | S4's load ledger on a walk ROM: per scene change, the VBlanks from the old scene's exit hold to the new scene's first present; `-Frames` adds the VBlanks between frames per scene (menu spikes: frames past two VBlanks; a gdb stop a frame, slow) |
 | `profile_set.ps1 -Build -Tag [-Set cast|heavy|mixes|all] [-NoSplit]` | P0's profile census on a profiling gate ROM (`-Extra NDS_CPU_PROFILE=1,NDS_CPU_PROFILE_START=200,NDS_CPU_PROFILE_FRAMES=384`): per-function cycles for the cast, the heavy roster and the mixes, one runner slot a run; `-NoSplit` when the per-frame regions do not fit DTCM |
 | `vram_census.ps1 -Build [-Gkinds] [-Kinds] [-Content]` | texture VRAM over a four-CPU match on a gate ROM built with `-Extra NDS_DIAG_COUNTERS=1`: free bytes and the largest free run at GO, live and at their minimum, peak texel and palette bytes (loop V) |
 | `ram_ledger.py MAP [--diff OLD_MAP] [--section NAME]` | a build's RAM from its link map: the image, VS battle, 1P battle and menu totals, the TCMs, the image by object and by family; `--diff` the change from an older build, largest first (R0) |
