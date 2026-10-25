@@ -487,7 +487,13 @@ Defaults for the specials:
   script's frame-1 `SetFlag0` never survived and nothing was countered
   (owner BUGS.md 2026-10-24); `ndsP4PalutenaCounterStart` opens the window
   itself -- flag0, the armour and the reflector -- and the script's frame-41
-  clear closes it.
+  clear closes it. The counterattack deals 1.3x the counted hit's damage
+  (11-50%) and, since 2026-10-24 (owner: "inherit the BKB and KBG as the
+  attacker's hit"), takes that hit's knockback growth and base, at least the
+  script's 65 and 33; a hit of set knockback, or a stage's, leaves 65 and
+  33, and the angle stays 361. The hit is the one the hit search picked
+  (its largest knockback), kept per fighter by `ndsP4UpdateHitDamageStats`
+  (`ndsP4PickedHitKnockback`).
 
 ## Animations from Ultimate's motions (owner p6p, 2026-10-15)
 
