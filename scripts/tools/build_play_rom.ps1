@@ -13,6 +13,10 @@ $out = (Join-Path $S64Repo "builds\$Build") -replace '\\', '/'
 Invoke-S64Serialized {
     make TARGET=smash64ds "BUILD=builds/$Build" "NDS_OUTPUT_ROOT=$out" @S64PlayFlags @Extra *> "builds\$Build.log"
     "make exit $LASTEXITCODE"
+    # A failed make throws, as build_sweep_rom.ps1's does: a caller that only
+    # reads the output (or pipes it away) must not take a failed build for a
+    # finished one.
+    if ($LASTEXITCODE -ne 0) { Get-Content "builds\$Build.log" -Tail 30; throw "make failed ($Build)" }
 }
 $after = (Get-Item smash64ds.nds -ErrorAction SilentlyContinue).LastWriteTimeUtc
 if ($after -ne $rootStamp) { 'WARNING: root smash64ds.nds changed' }
