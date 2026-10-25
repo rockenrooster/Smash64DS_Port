@@ -1520,11 +1520,11 @@ typedef struct NDSNativeStageOwnerExecution
     const NDSRendererMatrix20p12 *camera_modelview;
     const NDSRendererMatrix20p12 *binding_world;
     u64 rigid_binding_mask;
-    u64 task36_seen_binding_mask;
-    u32 task36_binding;
-    u32 task36_coordinate_shift;
-    u32 task36_local_pushed;
-    u32 task36_segment_active;
+    u64 hw_seen_binding_mask;
+    u32 hw_binding;
+    u32 hw_coordinate_shift;
+    u32 hw_local_pushed;
+    u32 hw_segment_active;
     NDSRendererStats *stats;
     /* Bit i: segment i committed this frame. Segments commit in the order the
      * runtime presents their display GObjs, which is the source's draw order;

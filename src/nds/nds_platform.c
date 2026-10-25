@@ -3034,7 +3034,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
                 23u, "GIT %s A%lx S%u C%u L%u", NDS_GIT_SHORT,
                 (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
                 (unsigned int)NDS_STAGE_STEADY,
-                (unsigned int)NDS_TASK36_HW_COMPOSE,
+                (unsigned int)NDS_STAGE_HW_COMPOSE,
                 (unsigned int)NDS_ITCM_LIB_LEAVES);
         }
     }

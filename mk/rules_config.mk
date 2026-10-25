@@ -16,8 +16,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_COMPACT_GROUND_MAPS $(NDS_P2_COMPACT_GROUND_MAPS)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
-		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
-		$(if $(NDS_TASK36_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK $(NDS_TASK36_RIGID_BINDING_MASK)'; ,) \
+		echo '#define NDS_STAGE_HW_COMPOSE $(NDS_STAGE_HW_COMPOSE)'; \
+		$(if $(NDS_STAGE_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_STAGE_RIGID_BINDING_MASK $(NDS_STAGE_RIGID_BINDING_MASK)'; ,) \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
 		echo '#define NDS_FIGHTER_PRIMITIVES $(NDS_FIGHTER_PRIMITIVES)'; \
@@ -201,7 +201,7 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 		echo '*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)'; \
 		echo '*nds_renderer.o(.text.ndsRendererMtxLoadN64ToDS20p12)'; \
 		echo '*nds_renderer.o(.text.ndsRendererLoadHardwareMatrixPair.isra.0)'; \
-		if test "$(NDS_TASK36_HW_COMPOSE)" != 2; then \
+		if test "$(NDS_STAGE_HW_COMPOSE)" != 2; then \
 			echo '*nds_renderer.o(.text.ndsRendererCommitNativeStageSegment)'; \
 		fi; \
 		echo '*nds_renderer.o(.text.ndsRendererNativeStageLoadNoZMatrix)'; \

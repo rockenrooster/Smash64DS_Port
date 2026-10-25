@@ -12,7 +12,7 @@ $out = & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.
     -RendererProfileLevel 0 `
     -RendererFastRunMode 9 `
     -NativeStageGeneratedSegment0Enable 1 `
-    -Task36HwComposeMode 2 `
+    -StageHwComposeMode 2 `
     -StaticTextureAotMode 1 `
     -IFCommonHybridOamMode 0 `
     -FoxCpuMode 0 `

@@ -227,8 +227,8 @@ NDS_RENDERER_COLD static sb32 ndsStageGxValidate(const NDSStageGxHeader *h,
                     shift = native->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX ? 0u :
                         native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX ?
                         sNdsNativeStageWs.runs[i].coordinate_shift :
-                        ndsRendererNativeStageTask36TriangleShift(native, vertices / 3u);
-                    if (!ndsRendererNativeStageTask36BuildWorld(native->binding_index, shift, &expected)) { return FALSE; }
+                        ndsRendererNativeStageHwTriangleShift(native, vertices / 3u);
+                    if (!ndsRendererNativeStageHwBuildWorld(native->binding_index, shift, &expected)) { return FALSE; }
                     if (op == 0x18)
                     {
                         if (memcmp(&words[cursor], &expected, sizeof(expected)) != 0) { return FALSE; }
@@ -957,11 +957,11 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
          * hidden run or state edge. Only an open Task 36 segment writes the
          * FIFO here (its matrix mode and pop), and only that has to follow
          * the previous span's DMA. */
-        if (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE)
+        if (sNdsNativeStageOwnerExecution.hw_segment_active != FALSE)
         {
             NDS_FIGHTER_PACKET_DMA_WAIT();
         }
-        ndsRendererNativeStageTask36EndSegment();
+        ndsRendererNativeStageHwEndSegment();
         ndsRendererHardwareEndBatch();
         if (state_written == FALSE)
         {
@@ -1944,11 +1944,11 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
 
     /* The first span's start (ndsStageGxAppend with nothing pending): an
      * open Task 36 segment's FIFO pop follows any DMA still running. */
-    if (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE)
+    if (sNdsNativeStageOwnerExecution.hw_segment_active != FALSE)
     {
         NDS_FIGHTER_PACKET_DMA_WAIT();
     }
-    ndsRendererNativeStageTask36EndSegment();
+    ndsRendererNativeStageHwEndSegment();
     ndsRendererHardwareEndBatch();
     /* The per-run texture accounting summed once after the walk: the
      * stats keep the last textured run's format, as the per-run writes

@@ -1879,9 +1879,9 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 binding_composed[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
-    NDSRendererAdapterStageWorldSourceKey task36_rigid_source_keys[
+    NDSRendererAdapterStageWorldSourceKey hw_rigid_source_keys[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
-    u64 task36_runtime_rigid_mask;
+    u64 hw_runtime_rigid_mask;
     /* Static bindings need only the source-key guard; frame matrix preparation
      * consumes the current mask directly. */
     u8 steady_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];

@@ -1627,7 +1627,7 @@ static s32 ndsRendererNativeStagePrepareRun(
                 dense->t, texture_scale_t, render_tile->ult,
                 texture_offset);
         }
-        /* Skip rigid bindings. Under NDS_TASK36_HW_COMPOSE the GX composes
+        /* Skip rigid bindings. Under NDS_STAGE_HW_COMPOSE the GX composes
          * their world matrix, so binding_composed is not the transform the
          * hardware uses and the CPU-side clip w is meaningless -- it reads
          * 0 for every vertex. Without this the census reported all 155 of
@@ -1944,14 +1944,14 @@ static inline void ndsRendererNativeStageWriteVertex16(u32 xy, u32 z)
 }
 
 
-static s32 ndsRendererNativeStageTask36BindingIsRigid(u32 binding_index)
+static s32 ndsRendererNativeStageHwBindingIsRigid(u32 binding_index)
 {
     return ((binding_index < NDS_NATIVE_STAGE_BINDING_COUNT) &&
             ((sNdsNativeStageOwnerExecution.rigid_binding_mask &
               ((u64)1u << binding_index)) != 0u)) ? TRUE : FALSE;
 }
 
-static s32 ndsRendererNativeStageTask36BuildWorld(
+static s32 ndsRendererNativeStageHwBuildWorld(
     u32 binding_index, u32 coordinate_shift, m4x4 *hardware)
 {
     NDSRendererMatrix20p12 scaled;
@@ -1987,7 +1987,7 @@ static s32 ndsRendererNativeStageTask36BuildWorld(
     return TRUE;
 }
 
-static u32 ndsRendererNativeStageTask36TriangleShift(
+static u32 ndsRendererNativeStageHwTriangleShift(
     const NDSNativeStageRun *run, u32 triangle_offset)
 {
     u32 first_corner = (u32)run->first_corner + triangle_offset * 3u;
@@ -2019,7 +2019,7 @@ static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run)
     for (triangle_offset = 0u; triangle_offset < run->triangle_count;
          triangle_offset++)
     {
-        u32 shift = ndsRendererNativeStageTask36TriangleShift(
+        u32 shift = ndsRendererNativeStageHwTriangleShift(
             run, triangle_offset);
 
         if (shift > coordinate_shift)
@@ -2030,7 +2030,7 @@ static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run)
     return coordinate_shift;
 }
 
-static s32 ndsRendererNativeStageTask36BeginSegment(void)
+static s32 ndsRendererNativeStageHwBeginSegment(void)
 {
     m4x4 projection_hardware;
     m4x4 camera_hardware;
@@ -2075,21 +2075,21 @@ static s32 ndsRendererNativeStageTask36BeginSegment(void)
         NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
     sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
     sNdsRendererHardwareMatrixLoaded = TRUE;
-    sNdsNativeStageOwnerExecution.task36_binding = UINT_MAX;
-    sNdsNativeStageOwnerExecution.task36_coordinate_shift = UINT_MAX;
-    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
-    sNdsNativeStageOwnerExecution.task36_segment_active = TRUE;
+    sNdsNativeStageOwnerExecution.hw_binding = UINT_MAX;
+    sNdsNativeStageOwnerExecution.hw_coordinate_shift = UINT_MAX;
+    sNdsNativeStageOwnerExecution.hw_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.hw_segment_active = TRUE;
     return TRUE;
 }
 
-static s32 ndsRendererNativeStageTask36EnsureWorld(
+static s32 ndsRendererNativeStageHwEnsureWorld(
     u32 binding_index, u32 coordinate_shift)
 {
     m4x4 world_hardware;
 
-    if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) ||
+    if ((sNdsNativeStageOwnerExecution.hw_segment_active == FALSE) ||
         (sNdsNativeStageOwnerExecution.binding_world == NULL) ||
-        (ndsRendererNativeStageTask36BindingIsRigid(binding_index) == FALSE))
+        (ndsRendererNativeStageHwBindingIsRigid(binding_index) == FALSE))
     {
         return FALSE;
     }
@@ -2099,28 +2099,28 @@ static s32 ndsRendererNativeStageTask36EnsureWorld(
      * before checking this key, then discarded it on a hit.  Check the key
      * first so consecutive runs/triangles on the same rigid binding pay no CPU
      * matrix work at all. */
-    if ((sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE) &&
-        (sNdsNativeStageOwnerExecution.task36_binding == binding_index) &&
-        (sNdsNativeStageOwnerExecution.task36_coordinate_shift ==
+    if ((sNdsNativeStageOwnerExecution.hw_local_pushed != FALSE) &&
+        (sNdsNativeStageOwnerExecution.hw_binding == binding_index) &&
+        (sNdsNativeStageOwnerExecution.hw_coordinate_shift ==
          coordinate_shift))
     {
         return TRUE;
     }
-    if (ndsRendererNativeStageTask36BuildWorld(
+    if (ndsRendererNativeStageHwBuildWorld(
             binding_index, coordinate_shift, &world_hardware) == FALSE)
     {
         return FALSE;
     }
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
+    if (sNdsNativeStageOwnerExecution.hw_local_pushed != FALSE)
     {
         glPopMatrix(1);
     }
     glPushMatrix();
     glMultMatrix4x4(&world_hardware);
-    sNdsNativeStageOwnerExecution.task36_binding = binding_index;
-    sNdsNativeStageOwnerExecution.task36_coordinate_shift = coordinate_shift;
-    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
+    sNdsNativeStageOwnerExecution.hw_binding = binding_index;
+    sNdsNativeStageOwnerExecution.hw_coordinate_shift = coordinate_shift;
+    sNdsNativeStageOwnerExecution.hw_local_pushed = TRUE;
     sNdsRendererHardwareMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
     sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
@@ -2129,7 +2129,7 @@ static s32 ndsRendererNativeStageTask36EnsureWorld(
 }
 
 
-static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
+static void ndsRendererNativeStageHwLoadNoZProjection(s16 projected_z)
 {
     NDSRendererMatrix20p12 projection =
         *sNdsNativeStageOwnerExecution.projection;
@@ -2148,20 +2148,20 @@ static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
     ndsRendererProfileRecordMatrixLoad();
 }
 
-static void ndsRendererNativeStageTask36EndSegment(void)
+static void ndsRendererNativeStageHwEndSegment(void)
 {
-    if (sNdsNativeStageOwnerExecution.task36_segment_active == FALSE)
+    if (sNdsNativeStageOwnerExecution.hw_segment_active == FALSE)
     {
         return;
     }
     ndsRendererHardwareEndBatch();
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
+    if (sNdsNativeStageOwnerExecution.hw_local_pushed != FALSE)
     {
         glPopMatrix(1);
     }
-    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
-    sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+    sNdsNativeStageOwnerExecution.hw_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.hw_segment_active = FALSE;
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
 
@@ -2204,21 +2204,21 @@ ndsRendererNativeStageBeginRun(
         poly_fmt |= POLY_CULL_BACK;
     }
     ndsRendererHardwareEndBatch();
-    if (ndsRendererNativeStageTask36BindingIsRigid(
+    if (ndsRendererNativeStageHwBindingIsRigid(
             native_run->binding_index) != FALSE)
     {
         u32 coordinate_shift =
             (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
                 (u32)run->coordinate_shift :
             (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ?
-                ndsRendererNativeStageTask36TriangleShift(native_run, 0u) : 0u;
+                ndsRendererNativeStageHwTriangleShift(native_run, 0u) : 0u;
 
-        if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) &&
-            (ndsRendererNativeStageTask36BeginSegment() == FALSE))
+        if ((sNdsNativeStageOwnerExecution.hw_segment_active == FALSE) &&
+            (ndsRendererNativeStageHwBeginSegment() == FALSE))
         {
             return FALSE;
         }
-        if (ndsRendererNativeStageTask36EnsureWorld(
+        if (ndsRendererNativeStageHwEnsureWorld(
                 native_run->binding_index, coordinate_shift) == FALSE)
         {
             return FALSE;
@@ -2243,7 +2243,7 @@ ndsRendererNativeStageBeginRun(
          * 1). A literal 1 here left the matrix compensating one bit while
          * Hyrule's shift-2/3 runs shed two or three, so that geometry drew at
          * a half or a quarter of its size (owner, 2026-09-07). The rigid
-         * Task36 arm above already passes the run's shift. */
+         * hardware-compose arm above already passes the run's shift. */
         u32 coordinate_shift = (run->coordinate_shift != 0u) ?
             (u32)run->coordinate_shift : 1u;
 
@@ -2311,7 +2311,7 @@ ndsRendererNativeStageBeginRun(
     sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
-        (ndsRendererNativeStageTask36BindingIsRigid(
+        (ndsRendererNativeStageHwBindingIsRigid(
              native_run->binding_index) != FALSE) ?
             NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
         ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
@@ -2320,7 +2320,7 @@ ndsRendererNativeStageBeginRun(
             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
             NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
-        (ndsRendererNativeStageTask36BindingIsRigid(
+        (ndsRendererNativeStageHwBindingIsRigid(
              native_run->binding_index) != FALSE) ?
             sNdsRendererHardwareMatrixGeneration :
         (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
@@ -2827,9 +2827,9 @@ ndsRendererNativeStageEmitNoZTriangle(
     u32 coordinate_shift = 0u;
     s32 one_binding = TRUE;
 
-    if (ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) != FALSE)
+    if (ndsRendererNativeStageHwBindingIsRigid(run->binding_index) != FALSE)
     {
-        coordinate_shift = ndsRendererNativeStageTask36TriangleShift(
+        coordinate_shift = ndsRendererNativeStageHwTriangleShift(
             run, triangle_offset);
         for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
         {
@@ -2843,13 +2843,13 @@ ndsRendererNativeStageEmitNoZTriangle(
                 return 0u;
             }
         }
-        if (ndsRendererNativeStageTask36EnsureWorld(
+        if (ndsRendererNativeStageHwEnsureWorld(
                 run->binding_index, coordinate_shift) == FALSE)
         {
             gNdsNativeStageNoZEnsureWorldCount++;
             return 0u;
         }
-        ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
+        ndsRendererNativeStageHwLoadNoZProjection(projected_z);
         if (gNdsNativeStageCastleRoofClipArm != 0u)
         {
             ndsRendererNativeStageCaptureCastleRoofClip(
@@ -3048,9 +3048,9 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.camera_modelview = NULL;
     sNdsNativeStageOwnerExecution.binding_world = NULL;
     sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
-    sNdsNativeStageOwnerExecution.task36_seen_binding_mask = 0u;
-    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
-    sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+    sNdsNativeStageOwnerExecution.hw_seen_binding_mask = 0u;
+    sNdsNativeStageOwnerExecution.hw_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.hw_segment_active = FALSE;
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -3546,7 +3546,7 @@ stage_gx_fast_done:
     ndsLabStageGxHashWord(stats->hardware_zbuffer_triangle_count);
     ndsLabStageGxHashWord(stats->hardware_texture_ready_count);
 #endif
-    ndsRendererNativeStageTask36EndSegment();
+    ndsRendererNativeStageHwEndSegment();
     sNdsRendererFastRunCount += segment->run_count;
     sNdsRendererFastTriangleCount += segment_triangles;
     sNdsRendererFastOwnerTriangleCount[
@@ -3561,7 +3561,7 @@ void ndsRendererFinishNativeStageOwner(void)
 {
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
-        ndsRendererNativeStageTask36EndSegment();
+        ndsRendererNativeStageHwEndSegment();
         ndsRendererHardwareEndBatch();
         if ((sNdsNativeStageOwnerExecution.committed_segments !=
              (((u32)1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u)) ||

@@ -539,7 +539,7 @@ try {
         'printf "DIAG_SECTOR_ARWING_MTX=%u\n", gNdsRendererAdapterSectorArwingMtxCount',
         'printf "DIAG_SECTOR_ARWING_BASIS=%u,%u,%u\n", gNdsSectorArwingBasisDecline, gNdsStageGCDrawAllLoopGroundActorSubmitCount, gNdsStageGCDrawAllLoopGroundActorRejectCount',
         'printf "DIAG_SECTOR_LASER=%u,%u,%u\n", gNdsSectorLaserCandidateStep, gNdsSectorLaserDrawCount, gNdsSectorLaserSubmitFailCount',
-        'printf "DIAG_STAGE_RIGID=%#llx\n", sNdsRendererAdapterNativeStageWorkspace.task36_runtime_rigid_mask',
+        'printf "DIAG_STAGE_RIGID=%#llx\n", sNdsRendererAdapterNativeStageWorkspace.hw_runtime_rigid_mask',
         # Run 9 is Castle binding 3's nine-triangle upper roof packet. The DS
         # treats polygon alpha 0 as wireframe, so expose the exact prepared
         # format that reaches BeginRun rather than inferring alpha from source

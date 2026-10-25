@@ -26,7 +26,7 @@ override NDS_SHIP_TELEMETRY := 0
 override NDS_TICK_HUD := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
+override NDS_STAGE_HW_COMPOSE := 2
 # R2-08: THE SWITCH (SwitchPlan §6), the measurement/proof half. This block must
 # carry every published flag or the instrument measures a path the user is not
 # running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_R2_PATH,
@@ -216,7 +216,7 @@ override NDS_TICK_HUD := 0
 override NDS_SHIP_TELEMETRY := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
+override NDS_STAGE_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
@@ -295,7 +295,7 @@ override NDS_TICK_HUD := 0
 override NDS_SHIP_TELEMETRY := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
+override NDS_STAGE_HW_COMPOSE := 2
 # Runtime 2 is the accepted published battle path. Keep the free-play/root
 # shell on the same path as the published battle and realtime proof targets;
 # otherwise menu-launched matches silently fall back to the retired R1 loop.
@@ -381,7 +381,7 @@ override NDS_SHIP_TELEMETRY := 1
 override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
+override NDS_STAGE_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
@@ -442,15 +442,15 @@ NDS_R2_EFFECT_POOL ?= 12
 # that turns both on is accepted while a bare command-line NDS_STAGE_STEADY=1
 # without the Task 36 stage owner still fails loudly.
 ifeq ($(NDS_STAGE_STEADY),1)
-ifeq ($(NDS_TASK36_HW_COMPOSE),0)
-$(error NDS_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
+ifeq ($(NDS_STAGE_HW_COMPOSE),0)
+$(error NDS_STAGE_STEADY=1 requires NDS_STAGE_HW_COMPOSE)
 endif
 endif
 # The stage replay arena needs the Task 36 compose every target forces
-# (NDS_TASK36_HW_COMPOSE := 2 in its block). Checked after the overrides, as
+# (NDS_STAGE_HW_COMPOSE := 2 in its block). Checked after the overrides, as
 # the Task 44 check above is, or the ?= 0 default at the top would be read.
-ifneq ($(NDS_TASK36_HW_COMPOSE),2)
-$(error the stage replay arena needs NDS_TASK36_HW_COMPOSE=2)
+ifneq ($(NDS_STAGE_HW_COMPOSE),2)
+$(error the stage replay arena needs NDS_STAGE_HW_COMPOSE=2)
 endif
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= 0
 NITROFS_DIR := $(PROJECT_ROOT)/$(BUILD)/nitrofs

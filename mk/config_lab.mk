@@ -18,7 +18,7 @@ $(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_
 NDS_R2_PATH ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
-# NDS_TASK36_HW_COMPOSE and NDS_STAGE_STEADY.
+# NDS_STAGE_HW_COMPOSE and NDS_STAGE_STEADY.
 #
 # What it deletes, measured on the c120 profile (1600-frame both-CPU gate):
 # ndsRendererAdapterStageWorldSourceKeyMatches runs 54.0x a frame for 7,719
@@ -37,7 +37,7 @@ NDS_R2_PATH ?= 0
 # proving that a frozen matrix is a real fidelity bug. A stride keeps every
 # binding checked -- just not all of them on the same frame -- so a binding
 # that does move is still caught, within N frames, and the mask still drops.
-# On Dream Land it never fires: gNdsRendererTask36RigidConstancyMismatchCount
+# On Dream Land it never fires: gNdsRendererStageHwRigidConstancyMismatchCount
 # is 0 over 1600 frames and R2-02 arm C found all 16 dynamic source keys
 # matching for the whole match.
 #

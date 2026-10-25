@@ -1879,7 +1879,7 @@ volatile u32 gNdsRendererBattleStaticTextureBankMask;
  * owner reported.
  *
  * The only existing records of it were gNdsRendererM3PostArmFailureCount and
- * gNdsRendererTask36AdapterRejectReason, both inside
+ * gNdsRendererStageHwAdapterRejectReason, both inside
  * `#if NDS_RENDERER_PROFILE_LEVEL == 1` and both nm-confirmed absent from the
  * shipping ELF -- so a shipping build could destroy its own texture cache and
  * leave no counter behind. These are unconditional.

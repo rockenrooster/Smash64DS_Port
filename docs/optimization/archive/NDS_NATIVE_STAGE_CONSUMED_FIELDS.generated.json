@@ -2995,12 +2995,12 @@
           "classification": "live_camera_dependent"
         },
         {
-          "access": "workspace.projection",
-          "classification": "live_camera_dependent"
+          "access": "workspace.hw_runtime_rigid_mask",
+          "classification": "live_camera_independent"
         },
         {
-          "access": "workspace.task36_runtime_rigid_mask",
-          "classification": "live_camera_independent"
+          "access": "workspace.projection",
+          "classification": "live_camera_dependent"
         }
       ],
       "path": "src/port/reloc_backend_renderer_dl.c"
@@ -3213,6 +3213,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.hw_runtime_rigid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "workspace.live_dobjs",
           "classification": "immutable_generation"
         },
@@ -3250,10 +3254,6 @@
         },
         {
           "access": "workspace.steady_admission_generation",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "workspace.task36_runtime_rigid_mask",
           "classification": "live_camera_independent"
         },
         {

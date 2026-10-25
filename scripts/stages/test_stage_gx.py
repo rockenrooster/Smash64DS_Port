@@ -331,7 +331,7 @@ typedef struct { u32 texFormat; int palIndex; } gl_texture_data;
 typedef struct { uint16_t addr; } gl_palette_data;
 static struct { DynamicArray texturePtrs, palettePtrs; int activeTexture, activePalette; } glGlobalData;
 typedef struct { u32 poly_fmt, textured, texture_name, texture_params, alpha_test, alpha_ref; } NDSNativeStagePreparedRun;
-static struct { sb32 task36_segment_active; } sNdsNativeStageOwnerExecution;
+static struct { sb32 hw_segment_active; } sNdsNativeStageOwnerExecution;
 static u32 storage[100], *sNdsStageGxWords = storage;
 static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
 static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
@@ -357,10 +357,10 @@ static void DC_FlushRange(const u32 *p, u32 bytes) {
 static void ndsRendererHardwareInvalidateGXState(u32 mask) { assert(mask==7); }
 /* Ending an open Task 36 segment writes the FIFO, so it must follow the
  * previous span's DMA; with no segment (or batch) open these write nothing. */
-static void ndsRendererNativeStageTask36EndSegment(void) {
-    if (sNdsNativeStageOwnerExecution.task36_segment_active) {
+static void ndsRendererNativeStageHwEndSegment(void) {
+    if (sNdsNativeStageOwnerExecution.hw_segment_active) {
         assert(!sNdsFighterPacketDmaPending);
-        sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+        sNdsNativeStageOwnerExecution.hw_segment_active = FALSE;
     }
     mark('E');
 }
@@ -408,9 +408,9 @@ int main(void) {
     assert(sNdsFighterPacketDmaPending && !sNdsStageGxWordCount && alphas==3);
     ndsStageGxFlush(); assert(gNdsP2StageProgDmas==3); /* Nothing queued, nothing sent. */
     /* An open Task 36 segment ends only after the previous span's DMA. */
-    sNdsNativeStageOwnerExecution.task36_segment_active = TRUE;
+    sNdsNativeStageOwnerExecution.hw_segment_active = TRUE;
     a.first_word=60; ndsStageGxAppend(&a,&p);
-    assert(waits==3 && !sNdsNativeStageOwnerExecution.task36_segment_active && alphas==4);
+    assert(waits==3 && !sNdsNativeStageOwnerExecution.hw_segment_active && alphas==4);
     assert(!strcmp(order,"EBSSDEBSWDEBWDWEBS"));
 }
 '''

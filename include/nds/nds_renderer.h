@@ -57,7 +57,7 @@
  *
  * R2-02 E4 tried to widen this to the two flower segments (25-28, 33-38) on the
  * strength of their world matrices being constant. The worlds were fine -- the
- * runtime rigid-constancy check accepted them and task36_runtime_rigid_mask held
+ * runtime rigid-constancy check accepted them and hw_runtime_rigid_mask held
  * the widened value all run -- and STG fell to 173,120, under R2-02's 180,000
  * gate. The flower beds were gone.
  *
@@ -77,8 +77,8 @@
  *
  * The compiled stage verifies baked worlds against this mask at load.
  * A binding demoted by the live source-key check cannot use baked data. */
-#ifndef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
-#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
+#ifndef NDS_RENDERER_STAGE_RIGID_BINDING_MASK
+#define NDS_RENDERER_STAGE_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
 
 
@@ -1773,7 +1773,7 @@ extern volatile u32 gNdsRendererFastFallbackCount[3];
  * static-texture corpus, which discards the whole hardware texture cache and
  * leaves it unable to re-arm for the rest of the scene. The existing records of
  * that event (gNdsRendererM3PostArmFailureCount,
- * gNdsRendererTask36AdapterRejectReason) sit inside
+ * gNdsRendererStageHwAdapterRejectReason) sit inside
  * `#if NDS_RENDERER_PROFILE_LEVEL == 1` and are nm-confirmed absent from the
  * shipping ELF, so the shipping build could destroy its own texture cache
  * silently. Putting these under the same guard would reproduce that bug

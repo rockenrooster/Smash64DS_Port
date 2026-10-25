@@ -742,7 +742,7 @@ try {
         'printf "SD-F-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
         'printf "SD-F-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
         'printf "SD-F-ROUTE=replay=%#x,live=%#x,generic=%#x,mixed=%#x,frames=%u\n", gNdsRendererTask36RouteLastReplayMask, gNdsRendererTask36RouteLastLiveMask, gNdsRendererTask36RouteLastGenericMask, gNdsRendererTask36RouteLastMixedMask, gNdsRendererTask36RouteFrameCount',
-        # WHY the rebuild rejected. task36_reject_reason is already encoded for
+        # WHY the rebuild rejected. hw_reject_reason is already encoded for
         # exactly this: 1/2 are the early bails, 100 the generated segment 0,
         # 200+run an ApplyStateSpan failure, 300+run a PrepareRun failure. With
         # the memo correctly refusing a stale table the second entry now REBUILDS

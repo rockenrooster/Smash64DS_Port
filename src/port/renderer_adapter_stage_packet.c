@@ -400,7 +400,7 @@ static u32 ndsRendererAdapterNativeStageStampValue(u32 stamp, uintptr_t value)
 
 /* Which decline site of the three reason-4 builders ran last (1-based,
  * textual order across BuildNativeStageTopologyStamp, Collect and
- * CaptureTask36StageWorld; 0 = never declined) and the loop index there.
+ * CaptureHwStageWorld; 0 = never declined) and the loop index there.
  * The adapter latches only reason 4 for all of them (2026-09-07). */
 volatile u32 gNdsRendererAdapterStageTopologyFailStep;
 volatile u32 gNdsRendererAdapterStageTopologyFailIndex;
@@ -989,7 +989,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     if ((ndsRendererAdapterStageCameraFromFrameCache(
              cobj, &workspace->projection,
              &workspace->camera_modelview) == FALSE) &&
-        (ndsRendererAdapterBuildTask36StageCameraMatrices(
+        (ndsRendererAdapterBuildHwStageCameraMatrices(
              cobj, &workspace->projection,
              &workspace->camera_modelview) == FALSE) &&
         (ndsRendererAdapterBuildStagePreviewCameraMatrices(
@@ -1007,7 +1007,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
          binding_index < workspace->binding_count;
          binding_index++)
     {
-        if ((workspace->task36_runtime_rigid_mask &
+        if ((workspace->hw_runtime_rigid_mask &
              ((u64)1u << binding_index)) != 0u)
         {
             continue;
@@ -1037,7 +1037,7 @@ static u64 ndsRendererAdapterStageRigidBindingMask(void)
         ndsRendererNativeStageRigidBindingMask();
 }
 
-static sb32 ndsRendererAdapterCaptureTask36StageWorld(
+static sb32 ndsRendererAdapterCaptureHwStageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
@@ -1059,7 +1059,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
               ((u64)1u << binding_index)) != 0u) &&
             (ndsRendererAdapterCaptureStageWorldSourceKey(
                  workspace->binding_dobjs[binding_index],
-                 &workspace->task36_rigid_source_keys[binding_index]) ==
+                 &workspace->hw_rigid_source_keys[binding_index]) ==
              FALSE))
         {
             gNdsRendererAdapterStageTopologyFailStep = 13u;
@@ -1067,7 +1067,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
             return FALSE;
         }
     }
-    workspace->task36_runtime_rigid_mask =
+    workspace->hw_runtime_rigid_mask =
         rigid_mask;
     workspace->dyn_pinned_mask =
         ndsRendererAdapterStageYakumonoBindings(workspace);
@@ -1090,7 +1090,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     return TRUE;
 }
 
-static void ndsRendererAdapterValidateTask36StageWorld(
+static void ndsRendererAdapterValidateHwStageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
@@ -1099,16 +1099,16 @@ static void ndsRendererAdapterValidateTask36StageWorld(
 
     /* Slice 44. Demotion is one-way within a topology: a binding that stopped
      * being rigid does not become rigid again until capture re-arms the mask at
-     * ndsRendererAdapterCaptureTask36StageWorld. Before the stride the mask was
+     * ndsRendererAdapterCaptureHwStageWorld. Before the stride the mask was
      * rebuilt from the constant here every frame and cleared again by the sweep,
      * which was equivalent only because the sweep was complete. With a partial
      * sweep, re-arming would resurrect a binding this frame's slice did not
      * look at. */
-    if (workspace->task36_runtime_rigid_mask == 0u)
+    if (workspace->hw_runtime_rigid_mask == 0u)
     {
         return;
     }
-    workspace->task36_runtime_rigid_mask =
+    workspace->hw_runtime_rigid_mask =
         rigid_mask;
     /* Task 44 item 4: walk the 26 rigid bindings directly. The list is only
      * consulted when capture built it for this topology; otherwise fall back
@@ -1129,10 +1129,10 @@ static void ndsRendererAdapterValidateTask36StageWorld(
             binding_index = workspace->steady_rigid_bindings[rigid_slot];
             if (ndsRendererAdapterStageWorldSourceKeyMatches(
                     workspace->binding_dobjs[binding_index],
-                    &workspace->task36_rigid_source_keys[binding_index]) ==
+                    &workspace->hw_rigid_source_keys[binding_index]) ==
                 FALSE)
             {
-                workspace->task36_runtime_rigid_mask = 0u;
+                workspace->hw_runtime_rigid_mask = 0u;
                 return;
             }
         }
@@ -1149,10 +1149,10 @@ static void ndsRendererAdapterValidateTask36StageWorld(
         }
         if (ndsRendererAdapterStageWorldSourceKeyMatches(
                 workspace->binding_dobjs[binding_index],
-                &workspace->task36_rigid_source_keys[binding_index]) ==
+                &workspace->hw_rigid_source_keys[binding_index]) ==
             FALSE)
         {
-            workspace->task36_runtime_rigid_mask = 0u;
+            workspace->hw_runtime_rigid_mask = 0u;
             return;
         }
     }
@@ -1307,7 +1307,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * scene. Which branch got there therefore cannot be a profile-only fact --
      * it is the difference between a next cycle that reads one counter and a
      * next cycle that re-derives six branches. See nds_renderer.c's row 6 note. */
-    u32 task36_reject_reason = 1u;
+    u32 hw_reject_reason = 1u;
 
     workspace->active = FALSE;
     /* P2-4: stage wallpapers are source SObjs on their own display link, so
@@ -1336,7 +1336,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     }
     if (cobj == NULL)
     {
-        task36_reject_reason = 2u;
+        hw_reject_reason = 2u;
         goto reject;
     }
     /* Task 44 item 3: steady-state admission. One generation compare plus the
@@ -1369,7 +1369,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
             ((i != 0u) &&
              (loaded[i]->owner_generation != topology_generation)))
         {
-            task36_reject_reason = 3u;
+            hw_reject_reason = 3u;
             goto reject;
         }
         topology_generation = loaded[i]->owner_generation;
@@ -1413,11 +1413,11 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
         if ((ndsRendererAdapterCollectNativeStageTopology(workspace) == FALSE) ||
-            (ndsRendererAdapterCaptureTask36StageWorld(workspace) == FALSE) ||
+            (ndsRendererAdapterCaptureHwStageWorld(workspace) == FALSE) ||
             (ndsRendererAdapterBuildNativeStageTopologyStamp(
                  workspace, topology_generation, &topology_stamp) == FALSE))
         {
-            task36_reject_reason = 4u;
+            hw_reject_reason = 4u;
             goto reject;
         }
         workspace->topology_generation = topology_generation;
@@ -1439,7 +1439,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * file I/O, conversion, allocation, or VRAM upload. */
     if (ndsRendererHardwareRefreshBattleStaticTexturePointers() == FALSE)
     {
-        task36_reject_reason = 3u;
+        hw_reject_reason = 3u;
         goto reject;
     }
     /* Only a completed full validation may arm the fast path. */
@@ -1453,15 +1453,15 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     workspace->slice44_validate_cursor =
         (u8)((workspace->slice44_validate_cursor + 1u) %
              NDS_R2_STAGE_VALIDATE_STRIDE);
-    ndsRendererAdapterValidateTask36StageWorld(workspace);
+    ndsRendererAdapterValidateHwStageWorld(workspace);
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
-        task36_reject_reason = 5u;
+        hw_reject_reason = 5u;
         goto reject;
     }
     if (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE)
     {
-        task36_reject_reason = 7u;
+        hw_reject_reason = 7u;
         goto reject;
     }
 
@@ -1486,7 +1486,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     workspace->frame.camera_modelview = &workspace->camera_modelview;
     workspace->frame.binding_world = workspace->binding_world;
     workspace->frame.rigid_binding_mask =
-        workspace->task36_runtime_rigid_mask;
+        workspace->hw_runtime_rigid_mask;
     workspace->frame.binding_composed = workspace->binding_composed;
     workspace->frame.materials = workspace->materials;
     workspace->frame.config = &workspace->config;
@@ -1519,7 +1519,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
             &workspace->frame, &workspace->stats) == FALSE)
     {
         workspace->topology_valid = FALSE;
-        task36_reject_reason = 6u;
+        hw_reject_reason = 6u;
         goto reject;
     }
     workspace->next_segment = 0u;
@@ -1532,10 +1532,10 @@ reject:
      * so the branch that caused it is the one worth keeping. A later reject is
      * a consequence of the first one, not independent evidence. */
     NDS_DIAG(gNdsRendererStageOwnerRejectCount++);
-    gNdsRendererStageOwnerLastRejectReason = task36_reject_reason;
+    gNdsRendererStageOwnerLastRejectReason = hw_reject_reason;
     if (gNdsRendererStageOwnerFirstRejectReason == 0u)
     {
-        gNdsRendererStageOwnerFirstRejectReason = task36_reject_reason;
+        gNdsRendererStageOwnerFirstRejectReason = hw_reject_reason;
     }
     workspace->active = FALSE;
     /* A FAILED DISPLAY-GRAPH PREPARE SAYS NOTHING ABOUT TEXTURE RESIDENCY, AND

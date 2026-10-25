@@ -1136,7 +1136,7 @@ SOURCE_CLOSURE_POLICIES = (
             # allow_stale through the cursor here, which froze an animated
             # stage world matrix for up to eight presented frames; the stride
             # now applies only to the rigid guard in
-            # ndsRendererAdapterValidateTask36StageWorld, which is not a
+            # ndsRendererAdapterValidateHwStageWorld, which is not a
             # tracked closure. The field is still classified under
             # ndsRendererAdapterPrepareNativeStageOwner, which advances it, so
             # dropping it here narrows the certificate to what the code does
@@ -1144,7 +1144,7 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                workspace.task36_runtime_rigid_mask
+                workspace.hw_runtime_rigid_mask
                 """,
             ),
         },
@@ -1227,7 +1227,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.frame.materials
                 workspace.materials workspace.resolver
                 workspace.resolver.primary_file workspace.stats
-                workspace.task36_runtime_rigid_mask
+                workspace.hw_runtime_rigid_mask
                 workspace.steady_admission_generation
                 workspace.slice44_validate_cursor
                 """,

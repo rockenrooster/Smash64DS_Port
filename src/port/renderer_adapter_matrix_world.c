@@ -1854,7 +1854,7 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
  * camera cache. The 0x4C producer in ndsRendererAdapterBuildCameraMatrices
  * keeps look-at and perspective apart for the particle pass, and they are the
  * same two calls on the same CObj that
- * ndsRendererAdapterBuildTask36StageCameraMatrices makes -- so the stage
+ * ndsRendererAdapterBuildHwStageCameraMatrices makes -- so the stage
  * built the battle camera twice a frame (gate STG P50 -1.3K without the
  * second build). Valid only for the frame that filled the entry. */
 
@@ -1885,7 +1885,7 @@ static sb32 ndsRendererAdapterStageCameraFromFrameCache(
     return FALSE;
 }
 
-static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
+static sb32 ndsRendererAdapterBuildHwStageCameraMatrices(
     CObj *cobj,
     NDSRendererMatrix20p12 *projection,
     NDSRendererMatrix20p12 *modelview)

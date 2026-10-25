@@ -101,7 +101,7 @@ NDS_P2_COMPACT_GROUND_MAPS ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
-NDS_TASK36_HW_COMPOSE ?= 0
+NDS_STAGE_HW_COMPOSE ?= 0
 
 # The fighter DS-native primitive streams. Compiles the immutable Mario/Fox
 # topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one

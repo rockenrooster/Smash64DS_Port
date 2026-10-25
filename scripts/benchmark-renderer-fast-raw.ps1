@@ -12,7 +12,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
     [switch]$Task34StageStreamCensus,
-    [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
+    [ValidateRange(0,2)][int]$StageHwComposeMode = 0,
     [ValidateRange(0,1)][int]$StageSteadyMode = 0,
     [switch]$Task20StackProfile,
     [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
@@ -91,12 +91,12 @@ if ($Task34StageStreamCensus -and
     (($RendererProfileLevel -ne 1) -or ($FastRunMode -ne 9))) {
     throw 'Task34StageStreamCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
-if (($Task36HwComposeMode -gt 0) -and
+if (($StageHwComposeMode -gt 0) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
-    throw 'Task36HwComposeMode requires fast-run mode 9 and renderer profile 1.'
+    throw 'StageHwComposeMode requires fast-run mode 9 and renderer profile 1.'
 }
-if (($StageSteadyMode -eq 1) -and ($Task36HwComposeMode -eq 0)) {
-    throw 'StageSteadyMode requires Task36HwComposeMode.'
+if (($StageSteadyMode -eq 1) -and ($StageHwComposeMode -eq 0)) {
+    throw 'StageSteadyMode requires StageHwComposeMode.'
 }
 if (($RendererScreenSpaceCensusMode -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
@@ -131,8 +131,8 @@ $target = if ($FastRunMode -eq 9) {
 }
 $build = if ($PSBoundParameters.ContainsKey('StageSteadyMode')) {
     "builds/build-stage-steady-e${StageSteadyMode}-lab"
-} elseif ($PSBoundParameters.ContainsKey('Task36HwComposeMode')) {
-    "builds/build-task36-hw-compose-e${Task36HwComposeMode}-lab"
+} elseif ($PSBoundParameters.ContainsKey('StageHwComposeMode')) {
+    "builds/build-stage-hw-compose-e${StageHwComposeMode}-lab"
 } elseif ($PSBoundParameters.ContainsKey('Task32DrawHotTextMode')) {
     "builds/build-task32-draw-hot-e${Task32DrawHotTextMode}-lab"
 } elseif ($Task20StackProfile) {
@@ -189,7 +189,7 @@ $build = if ($PSBoundParameters.ContainsKey('StageSteadyMode')) {
     -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
     -Task29GXCensus:$Task29GXCensus `
     -Task34StageStreamCensus:$Task34StageStreamCensus `
-    -Task36HwComposeMode $Task36HwComposeMode `
+    -StageHwComposeMode $StageHwComposeMode `
     -StageSteadyMode $StageSteadyMode `
     -Task20StackProfileMode ([int]$Task20StackProfile.IsPresent) `
     -Task32DrawHotTextMode $Task32DrawHotTextMode `
@@ -224,7 +224,7 @@ $build = if ($PSBoundParameters.ContainsKey('StageSteadyMode')) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable task29 GX census $([int]$Task29GXCensus.IsPresent) task34 stage stream $([int]$Task34StageStreamCensus.IsPresent) task36 HW compose $Task36HwComposeMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task32 draw hot text $Task32DrawHotTextMode task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
+    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable task29 GX census $([int]$Task29GXCensus.IsPresent) task34 stage stream $([int]$Task34StageStreamCensus.IsPresent) task36 HW compose $StageHwComposeMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task32 draw hot text $Task32DrawHotTextMode task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

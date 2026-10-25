@@ -903,12 +903,12 @@ _Static_assert(NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT >=
 /* Source transform flags 2/4 are MVP recalc kinds 48/46. */
 #define NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS 0x7ec38ULL
 /* Dream Land's rigid-binding mask, the value nds_renderer.h has carried as
- * NDS_RENDERER_TASK36_RIGID_BINDING_MASK: bindings 0-19, 22-23 and 31-33 are
+ * NDS_RENDERER_STAGE_RIGID_BINDING_MASK: bindings 0-19, 22-23 and 31-33 are
  * the four static layer segments, everything else is an animated map GObj.
  * Honour a -D override of that macro exactly as the renderer always has. */
-#ifdef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
+#ifdef NDS_RENDERER_STAGE_RIGID_BINDING_MASK
 #define NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK \
-    NDS_RENDERER_TASK36_RIGID_BINDING_MASK
+    NDS_RENDERER_STAGE_RIGID_BINDING_MASK
 #else
 #define NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
