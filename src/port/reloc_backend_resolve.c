@@ -84,7 +84,7 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     return ndsRelocRangeInLoadedFile(loaded, addr - base, size);
 }
 
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
 /* P2-2p8 T1: compact ground maps. scripts/stages/generate_compact_ground_maps.py
  * rewrites each of the nine VS maps so the stage wallpaper's Sprite and
  * Bitmap[44] table (776 B, 784 padded) ride at the map's tail and
@@ -128,7 +128,7 @@ static const struct {
     { NDS_RELOC_ASSET_GR_PUPUPU_MAP, NDS_RELOC_ASSET_STAGE_DREAM_LAND, 0x14u },
     { NDS_RELOC_ASSET_GR_YAMABUKI_MAP, NDS_RELOC_ASSET_STAGE_POKEMON, 0x14u },
     { NDS_RELOC_ASSET_GR_INISHIE_MAP, NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER, 0x14u }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     ,
     { NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP, NDS_RELOC_ASSET_STAGE_YOSHI, 0x14u },
     { NDS_RELOC_ASSET_GR_METAL_MAP, NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER, 0x14u },
@@ -881,7 +881,7 @@ static void ndsRelocForgetNormalizedWeaponAttrs(u32 asset_id)
  * offsets: data = storage + S - X and data_size = the source size, so the
  * joint tree's slots and other files' extern targets resolve unchanged, and
  * only [compact_lo, compact_hi) is backed (ndsRelocPointerRangeInLoadedFile).
- * A plain file (NDS_P2_COMPACT_POLYGON_MODELS=0) has no header and loads as
+ * A plain file (NDS_COMPACT_POLYGON_MODELS=0) has no header and loads as
  * before. */
 #define NDS_RELOC_COMPACT_MODEL_MAGIC 0x4e43504du
 #define NDS_RELOC_COMPACT_MODEL_HEADER 16u
@@ -1077,7 +1077,7 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     {
         loaded = &sNdsRelocLoadedFiles[sNdsRelocLoadedFileCount++];
     }
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
     /* A re-registered map is compact again only once its stub is normalized. */
     if (sNdsRelocCompactGroundMapActive.map_asset_id == asset_id)
     {
@@ -1371,34 +1371,34 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
 static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 {
-#define NDS_P2_FIGHTER_AOBJ32_TEST(symbol_, id_) \
+#define NDS_FIGHTER_AOBJ32_TEST(symbol_, id_) \
     if (asset_id == (id_)) return TRUE;
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#if NDS_LUIGI
+    NDS_LUIGI_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#if NDS_DONKEY
+    NDS_DONKEY_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
 #endif
-    NDS_P2_SAMUS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-#if NDS_P2_LINK
-    NDS_P2_LINK_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+    NDS_SAMUS_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+#if NDS_LINK
+    NDS_LINK_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
 #endif
-    NDS_P2_PIKACHU_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-    NDS_P2_YOSHI_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-    NDS_P2_NESS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-    NDS_P2_PURIN_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-    NDS_P2_KIRBY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
-#if NDS_P2_1P_GAME
+    NDS_PIKACHU_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+    NDS_YOSHI_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+    NDS_NESS_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+    NDS_PURIN_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+    NDS_KIRBY_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
+#if NDS_1P_GAME
     /* Master Hand's AnimJoint motions (his Appear among them), routed by the
      * 1P rows: treated as AObj16 they skipped the script normalizer, every
      * joint parsed one raw word and stopped, and his Appear never ended --
      * he stayed a ghost nothing could damage (owner 10-01). */
-    NDS_1P_BOSS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+    NDS_1P_BOSS_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)
 #endif
-#undef NDS_P2_FIGHTER_AOBJ32_TEST
+#undef NDS_FIGHTER_AOBJ32_TEST
     return FALSE;
 }
 

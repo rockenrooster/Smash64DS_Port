@@ -216,7 +216,7 @@ extern volatile u32 gNdsFighterSpecialsFoxHiEndFrames;
 extern volatile u32 gNdsFighterSpecialsFoxHiBoundFrames;
 extern volatile u32 gNdsFighterSpecialsFoxHiWaitFrames;
 extern volatile s32 gNdsFighterSpecialsFoxHiRootYMilli;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 extern volatile u32 gNdsFighterDonkeySpecialsSlot;
 extern volatile u32 gNdsFighterDonkeySpecialsNChargePressFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsNStartFrames;

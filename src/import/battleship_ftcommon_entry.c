@@ -4,7 +4,7 @@
 #include <sc/scene.h>
 #include <nds/nds_startup.h>
 #include <sys/taskman.h>
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #include <ft/ftchar/ftboss/ftboss.h>
 #endif
 #include <nds/nds_p4.h>
@@ -77,12 +77,12 @@ extern EFDesc dEFManagerMarioEntryDokanEffectDesc;
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
 GObj *efManagerSamusEntryPointMakeEffect(Vec3f *pos);
-#if NDS_P2_LINK
+#if NDS_LINK
 GObj *efManagerLinkEntryWaveMakeEffect(Vec3f *pos);
 GObj *efManagerLinkEntryBeamMakeEffect(Vec3f *pos);
 #endif
 /* Both halves of the source's one fkind test (ftcommonentry.c:97) need this,
- * and the update below already calls it under `#if NDS_P2_PURIN`. The
+ * and the update below already calls it under `#if NDS_PURIN`. The
  * declaration was Pikachu-only, so a Purin-without-Pikachu roster -- a legal
  * combination, the two flags default independently -- reached the call with no
  * prototype (2026-09-21, P03 sibling audit). The rays are EFCommonEffects3,
@@ -101,20 +101,20 @@ GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
  * symbols it has to resolve are file-static to that translation unit.
  *
  * THE DEPENDENCY IS DECLARED, NOT SILENTLY DROPPED. The ball's geometry,
- * constructor and native owner all live behind NDS_P2_ITEM_CORE: the DObjDesc
+ * constructor and native owner all live behind NDS_ITEM_CORE: the DObjDesc
  * is ITCommonObject+0x9430 (the ITEM Poke Ball's own descriptor -- see the
  * renderer note beside NDS_NATIVE_ITEM_MBALL_LIVE_ROOT), the file is loaded by
  * battleship_item_link_core.c, and ndsRendererSubmitNativeItemMBall is compiled
  * under the same flag. The Makefile already makes that dependency explicit --
- * `NDS_P2_ITEM_CORE = $(if $(filter 1,... $(NDS_P2_PIKACHU) $(NDS_P2_PURIN)
+ * `NDS_ITEM_CORE = $(if $(filter 1,... $(NDS_PIKACHU) $(NDS_PURIN)
  * ...),1,0)` (Makefile:888) -- so a Pikachu/Purin build cannot legally have the
  * core off. Assert it here instead of wrapping the call in `#if
- * NDS_P2_ITEM_CORE`: that guard silently produced an entry with no ball, which
+ * NDS_ITEM_CORE`: that guard silently produced an entry with no ball, which
  * is the defect this row exists to fix. If a future configuration really wants
  * Pikachu without item gameplay it must add ITCommonData/ITCommonObject and
  * this one constructor to that configuration, not delete the effect.
  *
- * `#if !NDS_P2_ITEM_CORE` rather than `_Static_assert`, because an UNDEFINED
+ * `#if !NDS_ITEM_CORE` rather than `_Static_assert`, because an UNDEFINED
  * macro must fail too: in `#if` it evaluates to 0 and trips this; in a
  * `_Static_assert` it would be an unknown identifier and a confusing error. */
 GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr);
@@ -142,7 +142,7 @@ static void ndsFTCommonEntryMakeMBallThrown(FTStruct *fp)
 }
 GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
 GObj *efManagerKirbyEntryStarMakeEffect(Vec3f *pos, s32 lr);
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
 GObj *efManagerCaptainEntryCarMakeEffect(Vec3f *pos, s32 lr);
@@ -161,14 +161,14 @@ void ndsEFManagerRetryDeferredDescs(void);
  * Name the entering fighter's slot first, then retry. */
 static void ndsFTCommonEntryDokanPrepare(s32 fkind)
 {
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fkind == nFTKindLuigi)
     {
         dEFManagerMarioEntryDokanEffectDesc.file_head = &gFTDataLuigiSpecial2;
     }
     else
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (fkind == nFTKindMMario)
     {
         dEFManagerMarioEntryDokanEffectDesc.file_head = &gFTDataMMarioSpecial2;
@@ -229,7 +229,7 @@ void ftCommonEntryNullProcUpdate(GObj *fighter_gobj)
 
         if (fp->status_vars.common.entry.entry_wait == 0)
         {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
             /* BattleShip ftcommonentry.c:72-75: Master Hand leaves the entry
              * for his own Wait, whose AI picks every attack. Taking the common
              * Wait below left him standing in a status he has no motion for,
@@ -356,7 +356,7 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj)
         fp->lr = fp->status_vars.common.entry.lr;
         DObjGetStruct(fighter_gobj)->translate.vec.f = fp->entry_pos;
         fp->coll_data.floor_line_id = fp->status_vars.common.entry.floor_line_id;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         /* BattleShip ftcommonentry.c:125-129. */
         if (fp->fkind == nFTKindBoss)
         {
@@ -445,12 +445,12 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     }
     else
     if ((fp->fkind == nFTKindMario)
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
         /* BattleShip ftcommonentry.c:20 and :192-196. Luigi's row of
          * `dFTCommonEntryAppearStatusIDs` IS `{ nFTMarioStatusAppearR,
          * nFTMarioStatusAppearL }` -- those are status INDICES into the
          * fighter's own special table, and Luigi's real nine-entry table
-         * (`dFTLuigiSpecialStatusDescs`, live under NDS_P2_LUIGI) carries
+         * (`dFTLuigiSpecialStatusDescs`, live under NDS_LUIGI) carries
          * AppearR/AppearL at exactly those two indices with his own
          * `nFTLuigiMotionAppearR/L` scripts. The source's Dokan switch arm is
          * `case nFTKindMario: case nFTKindLuigi: case nFTKindMMario:` and the
@@ -488,7 +488,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerFoxEntryArwingMakeEffect(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     else if (fp->fkind == nFTKindDonkey)
     {
         /* BattleShip ftcommonentry.c:15,204-207. DK owns distinct Appear
@@ -509,7 +509,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
                                       nFTSamusStatusAppearL;
         efManagerSamusEntryPointMakeEffect(&fp->entry_pos);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (fp->fkind == nFTKindLink)
     {
         /* BattleShip ftcommonentry.c:213-215. Link owns his Appear pair and
@@ -575,7 +575,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTKirbyStatusAppearR : nFTKirbyStatusAppearL;
         efManagerKirbyEntryStarMakeEffect(&fp->entry_pos, fp->status_vars.common.entry.lr);
     }
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     else if (fp->fkind == nFTKindGDonkey)
     {
         /* BattleShip ftcommonentry.c:15,204-207. GDonkey reuses the Donkey AppearR/AppearL pair and the Special2 barrel entry. */
@@ -583,7 +583,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
     }
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     else if (fp->fkind == nFTKindMMario)
     {
         /* BattleShip ftcommonentry.c:26,194-197. MMario reuses the Mario AppearR/AppearL pair and the Dokan pipe entry. */
@@ -594,7 +594,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerMarioEntryDokanMakeEffect(&fp->entry_pos, fp->fkind);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     else if (fp->fkind == nFTKindCaptain)
     {
         /* BattleShip ftcommonentry.c:20,231-238,264-267. FALCON IS THE ONLY
@@ -619,7 +619,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
             &fp->entry_pos, fp->status_vars.common.entry.lr);
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     else if (fp->fkind == nFTKindBoss)
     {
         /* BattleShip ftcommonentry.c:28,240-252. Master Hand's row is
@@ -660,7 +660,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->motion_vars.flags.flag1 = 0;
     fp->motion_vars.flags.flag2 = 0;
     fp->motion_vars.flags.flag0 = 0;
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if ((fp->fkind == nFTKindCaptain) &&
         (fp->status_vars.common.entry.lr == -1)
         /* Remix tests the character id here: never a content's. */
@@ -672,7 +672,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
 #endif
 }
 
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* BattleShip ftcommonentry.c:321-343. The Appear-Start half of Falcon's ladder
  * and the hand-off to his Appear-End statuses. The source puts both here rather
  * than in ft/ftchar/ftcaptain, so they land with the entry ladder they belong
@@ -707,7 +707,7 @@ void ftCaptainAppearEndSetStatus(GObj *fighter_gobj)
 }
 #endif
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Two entry helpers only the campaign reaches (2026-09-05): sc1pgame.c drops
  * every fighter from the top of the arena through ftCommonAppearSetPosition
  * (decomp ft/ftcommon/ftcommonentry.c:271-281), and Master Hand's fly and
@@ -741,4 +741,4 @@ void ftPhysicsSetAirVelTransN(GObj *fighter_gobj)
     fp->physics.vel_air.y = (transn_joint->translate.vec.f.y - fp->anim_vel.y) * topn_joint->scale.vec.f.y;
     fp->physics.vel_air.z = (transn_joint->translate.vec.f.z - fp->anim_vel.z) * topn_joint->scale.vec.f.z;
 }
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

@@ -3,7 +3,7 @@
  * 0x0E000000 and word 23 targets 0x0E000008. Both source MObjs are
  * PALETTE_IMAGE-only, so each hook is translated through a separate typed
  * material snapshot and the executor refuses any broader effect word. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemStar(
     const void *file_base_ptr, u32 file_bytes,

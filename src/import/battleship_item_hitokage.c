@@ -11,7 +11,7 @@
  * generated file). The WPDesc carries them with the same &token shape as
  * battleship_item_dogas.c:135-157.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITHITOKAGE_* rides on <it/item.h>). The monster-weapon select macros are
  * decomp gr/grvars.h:28-31, transcribed verbatim under guard because the port

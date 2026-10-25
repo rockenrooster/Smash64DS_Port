@@ -92,11 +92,11 @@ $memoryGlobals = @(
     'gNdsTaskmanArenaRefineBytes',
     'gNdsTaskmanLibcRuntimeHighWater',
     'gNdsTaskmanLibcTopChunkMin',
-    'gNdsP2StageProgLoads',
-    'gNdsP2StageProgBytes',
-    'gNdsP2StageProgDraws',
-    'gNdsP2StageProgDmas',
-    'gNdsP2StageProgDeclines',
+    'gNdsStageProgLoads',
+    'gNdsStageProgBytes',
+    'gNdsStageProgDraws',
+    'gNdsStageProgDmas',
+    'gNdsStageProgDeclines',
     'gNdsRendererTextureScratchFillBytesHighWater',
     'gNdsRendererTextureScratchStaticPayloadBytesHighWater',
     'gNdsRendererTextureScratchWhispyBytesHighWater',
@@ -377,7 +377,7 @@ $memoryGlobals = @(
     # N05.01. GX hierarchy matrix compose (E17 + Slice 43, owner-accepted) is
     # compiled ON but declines for every owner on every frame of a sparse
     # roster: BuildGxSlotTable unions every owner's cross-run palette slots and
-    # fails on the first NULL, and NDS_P2_KIRBY puts the owner count past
+    # fails on the first NULL, and NDS_KIRBY puts the owner count past
     # Pikachu/Yoshi/Ness/Purin, which are compiled out. That went unnoticed from
     # the Mario+Fox era to now because nothing ever read this counter.
     #
@@ -762,7 +762,7 @@ if ($shieldPoseBytesByOrdinal.Count -eq 0) {
 }
 $shieldPoseCfgPath = Join-Path $root ("builds/{0}/nds_build_config.h" -f $build)
 $shieldPoseRosterKinds = @(0..3 | ForEach-Object {
-    $want = "NDS_P2_FOUR_CPU_KIND{0}" -f $_
+    $want = "NDS_FOUR_CPU_KIND{0}" -f $_
     $found = $null
     foreach ($cfgLine in (Get-Content -LiteralPath $shieldPoseCfgPath)) {
         if ($cfgLine -match ('^\s*#define\s+' + [regex]::Escape($want) + '\s+(\d+)')) {
@@ -846,12 +846,12 @@ function Get-StressBuildFlag([string]$Name) {
     }
     return $null
 }
-$rosterFlag = Get-StressBuildFlag 'NDS_P2_FOUR_CPU_ROSTER'
+$rosterFlag = Get-StressBuildFlag 'NDS_FOUR_CPU_ROSTER'
 # The roster arm's kinds are build knobs since the Yoshi row (Makefile
-# NDS_P2_FOUR_CPU_KIND0..3); a build config without them is the older fixed
+# NDS_FOUR_CPU_KIND0..3); a build config without them is the older fixed
 # Samus/Fox/Captain/Donkey arm.
 $rosterKindFlags = @(0..3 | ForEach-Object {
-    Get-StressBuildFlag ("NDS_P2_FOUR_CPU_KIND{0}" -f $_) })
+    Get-StressBuildFlag ("NDS_FOUR_CPU_KIND{0}" -f $_) })
 $battlePackFlag = Get-StressBuildFlag 'NDS_R2_BATTLEPACK'
 
 # P2-3r15. WHAT THE FOUR FIGHTERS ACTUALLY WERE, decoded from the guest rather
@@ -968,11 +968,11 @@ $memory = [PSCustomObject]@{
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
     libcRuntimeHighWaterBytes = $extra['gNdsTaskmanLibcRuntimeHighWater']
     libcTopChunkMinBytes = $extra['gNdsTaskmanLibcTopChunkMin']
-    stageProgramLoads = $extra['gNdsP2StageProgLoads']
-    stageProgramBytes = $extra['gNdsP2StageProgBytes']
-    stageProgramDraws = $extra['gNdsP2StageProgDraws']
-    stageProgramDmas = $extra['gNdsP2StageProgDmas']
-    stageProgramDeclines = $extra['gNdsP2StageProgDeclines']
+    stageProgramLoads = $extra['gNdsStageProgLoads']
+    stageProgramBytes = $extra['gNdsStageProgBytes']
+    stageProgramDraws = $extra['gNdsStageProgDraws']
+    stageProgramDmas = $extra['gNdsStageProgDmas']
+    stageProgramDeclines = $extra['gNdsStageProgDeclines']
     textureScratchFillBytesHighWater = $extra['gNdsRendererTextureScratchFillBytesHighWater']
     textureScratchStaticPayloadBytesHighWater = $extra['gNdsRendererTextureScratchStaticPayloadBytesHighWater']
     textureScratchWhispyBytesHighWater = $extra['gNdsRendererTextureScratchWhispyBytesHighWater']
@@ -1227,11 +1227,11 @@ if ([uint64]$memory.nativeFailureCount -ne 0) {
 
 # P2-3r15. THE ROSTER THE GATE ACTUALLY MEASURED, asserted rather than reported.
 # Boundary's stress arm defaults to the four landed kinds since this row; the
-# mirror roster stays reachable as `NDS_P2_FOUR_CPU_ROSTER=0` and is the A/B
+# mirror roster stays reachable as `NDS_FOUR_CPU_ROSTER=0` and is the A/B
 # control. Either way the arm must run the roster its own build config declares.
 if (@(Compare-Object $observedRoster $expectedRoster -SyncWindow 0).Count -ne 0) {
     throw ("Four-CPU stress ran the wrong roster: slots were " +
-        "$($memory.fighterRosterObserved) but NDS_P2_FOUR_CPU_ROSTER=" +
+        "$($memory.fighterRosterObserved) but NDS_FOUR_CPU_ROSTER=" +
         "$rosterFlag asks for $($memory.fighterRosterExpected) (kind word " +
         "$($memory.fighterKindWord)). A gate that measures a roster nobody " +
         'declared is not a regression guard.')

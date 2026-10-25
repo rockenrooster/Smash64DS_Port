@@ -239,7 +239,7 @@ SECTIONS {
 		*(.text.ndsRendererSetParticleNoDepth)
 		*(.text.syDebugPrintf)
 		*(.text.mpCollisionGetEdgeUnderRLineID)
-		*(.text.ndsP2HurtboxRejectPoints)
+		*(.text.ndsHurtboxRejectPoints)
 		*(.text.ndsRendererParticleFloatToFixed)
 		*(.text.ndsBaseMPProcessCheckTestFloorCollision)
 		*(.text.gmCameraCheckTargetInBounds)
@@ -247,12 +247,12 @@ SECTIONS {
 		*(.text.ndsRendererInitVertexCache)
 		/* Fifth pack (2026-10-04): the 3,576 B ndsStageGxDraw left (every stage
 		 * program is head-ordered and takes the one-pass commit) go to the
-		 * fighter joint walk (src/port/nds_p2_hurtbox_reject.c) and the wall
+		 * fighter joint walk (src/port/nds_hurtbox_reject.c) and the wall
 		 * sweep fast path's dynamic edge memo. */
-		*(.text.ndsP2HbLocalFromDObj)
-		*(.text.ndsP2HbWorldOf)
-		*(.text.ndsP2HbCompose)
-		*(.text.ndsP2HbToFixed)
+		*(.text.ndsHbLocalFromDObj)
+		*(.text.ndsHbWorldOf)
+		*(.text.ndsHbCompose)
+		*(.text.ndsHbToFixed)
 		*(.text.ndsMPWallSweepEdgeTrunc)
 		/* Sixth pack (2026-10-05 gate census gp5-collision, section D), sized for
 		 * the shipping ROM's 384 free bytes: entries the same size in the
@@ -426,7 +426,7 @@ SECTIONS {
 		*(.bss.sNdsStageGCDrawAllLoopCurrentDisplayGObj)
 		*(.bss.gNdsFtPoseBindFull)
 		*(.bss.gNdsFtPoseSlotLive)
-		*(.bss.gNdsP2StageProgLoads)
+		*(.bss.gNdsStageProgLoads)
 		*(.bss.sNdsNativeStageAlphaRampVramReset)
 		*(.bss.gNdsRendererBattleStaticTexturePreparedCount)
 		*(.bss.gNdsFtPoseOracleFirstWant)

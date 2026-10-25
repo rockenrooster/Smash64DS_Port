@@ -1,7 +1,7 @@
 /* Home-Run Bat executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x1BF0 branches at word 9 to relocated 0x1C48; the generator
  * resolves and bakes that callee. Root 0x1D48 is the second bake-only DObj. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemBat(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,

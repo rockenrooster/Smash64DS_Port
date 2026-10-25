@@ -1,7 +1,7 @@
 /* Egg executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x103B0 contains no 0xDE; the fixed material/geometry program
  * is baked while the source DObj animation arrives in initial_modelview. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemEgg(
     const void *file_base_ptr, u32 file_bytes,

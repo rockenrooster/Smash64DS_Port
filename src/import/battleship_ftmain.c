@@ -75,7 +75,7 @@ static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
         gNdsFoxLaserColAnimSuppressCount++;
         return FALSE;
     }
-    /* Deliberately not fenced behind NDS_P2_KIRBY. Both status constants and
+    /* Deliberately not fenced behind NDS_KIRBY. Both status constants and
      * both fighter kinds come from the unconditional enums in ft/fighter.h, so
      * the guard would buy nothing and could only silently delete the clause in
      * a configuration where the macro is undefined -- exactly the failure this
@@ -332,7 +332,7 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
 /* A content's damage scale (NDSP4Fighter damage_scale; Ike's 1.5x): this TU's
  * two staled-damage calls, MakeAttackColl's and SetAttackCollDamage's, both
  * with the maker in fp (ft/fighter.h declared it above). */
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 /* VS Metal Mario's smash armour ends with the first hit made
  * (battleship_ftmanager.c ndsP7MMarioVsAttackMade). */
 void ndsP7MMarioVsAttackMade(FTStruct *fp);
@@ -696,7 +696,7 @@ __attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
 /* The renderer half of the same test (2026-10-02). */
 __attribute__((used)) volatile u32 gNdsFtStatusRenderKept;
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 sb32 ndsP7MMarioVsFighter(const FTStruct *fp);
 f32 ndsP7MMarioVsAnimSpeed(s32 status_id, f32 anim_speed);
 void ndsP7MMarioVsAfterSetStatus(FTStruct *fp);
@@ -756,7 +756,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
              * motion script's clock with it. */
             anim_speed = ndsP4ScaleAnimSpeed(fighter_gobj, nds_p4_status, anim_speed);
         }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
         /* VS Metal Mario's heavy landings and slow jabs and tornado
          * (battleship_ftmanager.c). */
         if (ndsP7MMarioVsFighter(nds_topology_fp) != FALSE)
@@ -767,7 +767,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, nds_p4_status, frame_begin,
                                anim_speed, flags);
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (ndsP7MMarioVsFighter(nds_topology_fp) != FALSE)
     {
         ndsP7MMarioVsAfterSetStatus(nds_topology_fp);
@@ -846,11 +846,11 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
         NDS_DIAG(gNdsFtStatusRenderKept++);
     }
     /* The same topology change retires the hurtbox reject's cached worlds
-     * (src/port/nds_p2_hurtbox_reject.c keys them on the DObj pointer). */
+     * (src/port/nds_hurtbox_reject.c keys them on the DObj pointer). */
     {
-        extern volatile u32 gNdsP2HurtboxLatchEpoch;
+        extern volatile u32 gNdsHurtboxLatchEpoch;
 
-        gNdsP2HurtboxLatchEpoch++;
+        gNdsHurtboxLatchEpoch++;
     }
     {
         FTStruct *fp = ftGetStruct(fighter_gobj);

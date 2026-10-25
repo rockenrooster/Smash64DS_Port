@@ -4,7 +4,7 @@
 Every ``src/import/battleship_*.c`` that textually includes a decomp source
 inherits that source's calls, and the code-first mode links nothing until the
 final pass -- so a call nobody defines is a link error with no other signal.
-On 2026-09-05 a hand census of the ``NDS_P2_1P_GAME`` TUs found five such
+On 2026-09-05 a hand census of the ``NDS_1P_GAME`` TUs found five such
 functions (commit 43383ef3a37: ``mpCollisionSetBGM``,
 ``mpCollisionGetLineCountType``, ``mpCollisionGetLineIDsTypeCount``,
 ``ftCommonAppearSetPosition``, ``ftPhysicsSetAirVelTransN``).
@@ -35,7 +35,7 @@ Usage:
     python scripts/menus/check_function_census.py            # report
     python scripts/menus/check_function_census.py --strict   # exit 1 if any
     python scripts/menus/check_function_census.py --tu battleship_sc1pgame_runtime.c
-    python scripts/menus/check_function_census.py --flag NDS_P2_1P_GAME
+    python scripts/menus/check_function_census.py --flag NDS_1P_GAME
 """
 from __future__ import annotations
 
@@ -446,7 +446,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--repo-root", default=os.path.join(os.path.dirname(__file__), "..", ".."))
     ap.add_argument("--tu", help="one src/import basename to report")
-    ap.add_argument("--flag", help="only TUs mentioning this build flag (e.g. NDS_P2_1P_GAME)")
+    ap.add_argument("--flag", help="only TUs mentioning this build flag (e.g. NDS_1P_GAME)")
     ap.add_argument("--strict", action="store_true", help="exit 1 when any function is undefined")
     ap.add_argument("--all", action="store_true", help="list every name, not the first eight")
     args = ap.parse_args()

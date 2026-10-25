@@ -9,7 +9,7 @@
 #include <nds/nds_net_ui.h>
 #include <nds/nds_p7.h>
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 #include "nds_menu_shell_core.c"
 #include "nds_menu_shell_onepmode.c"
 #include "nds_menu_shell_onep.c"
@@ -24,4 +24,4 @@
 #include "nds_menu_shell_option.c"
 #include "nds_menu_shell_backupclear.c"
 #include "nds_menu_shell_router.c"
-#endif /* NDS_P2_MENU_SHELL */
+#endif /* NDS_MENU_SHELL */

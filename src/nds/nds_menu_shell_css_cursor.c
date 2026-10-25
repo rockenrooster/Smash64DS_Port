@@ -119,13 +119,13 @@ static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
     {
         return NDS_CSS_FLASH_KIND_FOX;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fkind == (u32)nFTKindLuigi)
     {
         return NDS_CSS_FLASH_KIND_LUIGI;
     }
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
     if (fkind == (u32)nFTKindLink)
     {
         return NDS_CSS_FLASH_KIND_LINK;

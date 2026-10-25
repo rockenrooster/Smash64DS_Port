@@ -995,12 +995,12 @@
     {
       "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
       "target_symbol": "ndsCampaignWalkBreakOneTarget",
-      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
+      "reason": "Campaign-walk lab only (NDS_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
     },
     {
       "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
       "target_symbol": "ndsCampaignWalkBoardOnePlatform",
-      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
+      "reason": "Campaign-walk lab only (NDS_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
     },
     {
       "source_symbol": "ftCommonAppearProcUpdate",
@@ -1282,12 +1282,12 @@
     {
       "source_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
       "target_symbol": "ndsMNPlayers1PGameWalkCursor",
-      "reason": "Walk builds only (NDS_P2_MENU_WALK): the campaign walk drives the 1P select through this helper while ndsSeamRunSourceMenuScene runs the 1P mode or 1P select scene; the VS select never calls it, and the overlay is reloaded at the dispatch into those scenes."
+      "reason": "Walk builds only (NDS_MENU_WALK): the campaign walk drives the 1P select through this helper while ndsSeamRunSourceMenuScene runs the 1P mode or 1P select scene; the VS select never calls it, and the overlay is reloaded at the dispatch into those scenes."
     },
     {
       "source_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
       "target_symbol": "ndsMNPlayers1PGameWalkUnlockAll",
-      "reason": "Walk builds only (NDS_P2_MENU_WALK): the campaign walk drives the 1P select through this helper while ndsSeamRunSourceMenuScene runs the 1P mode or 1P select scene; the VS select never calls it, and the overlay is reloaded at the dispatch into those scenes."
+      "reason": "Walk builds only (NDS_MENU_WALK): the campaign walk drives the 1P select through this helper while ndsSeamRunSourceMenuScene runs the 1P mode or 1P select scene; the VS select never calls it, and the overlay is reloaded at the dispatch into those scenes."
     },
     {
       "source_symbol": "ndsMenuShellRunStageSelect",

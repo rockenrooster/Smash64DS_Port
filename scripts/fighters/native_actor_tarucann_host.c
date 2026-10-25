@@ -15,7 +15,7 @@ typedef int sb32;
 typedef s16 v16;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_STAGE_JUNGLE 1
+#define NDS_STAGE_JUNGLE 1
 #define NDS_RENDERER_HW_TRIANGLES 1
 /* Setup-only code is Thumb -Os on the DS (P8 R1); plain code on the host. */
 #define NDS_RENDERER_COLD

@@ -4,9 +4,9 @@
  * transforms, material animation and source trail_id colour selection. This
  * replaces only NessModel roots 0x7BD0 (head) and 0x8A98 (trail): two source
  * triangles each, with the live CURRENT_IMAGE MObj preserved. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_RENDERER_HW_TRIANGLES && NDS_NESS
 
-#if NDS_P2_NESS_VFX_PROOF
+#if NDS_NESS_VFX_PROOF
 volatile u32 gNdsNessPKThunderNativeProofDraw[3];
 #endif
 
@@ -59,7 +59,7 @@ sb32 ndsRendererSubmitNativeNessPKThunder(
     drawn = ndsRendererNativeTexturedQuadIa8(vertices, sNdsNativeNessPKThunderTriangles,
         (const u8 *)(uintptr_t)material->current_image, config, stats, &state);
     if (drawn < 0) return FALSE;
-#if NDS_P2_NESS_VFX_PROOF
+#if NDS_NESS_VFX_PROOF
     if (drawn > 0) gNdsNessPKThunderNativeProofDraw[root_index]++;
 #endif
     ndsNativeNessPKThunderFinish(stats);

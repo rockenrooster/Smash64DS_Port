@@ -4719,7 +4719,7 @@ void ftCommonTwisterProcPhysics(GObj *fighter_gobj);
 void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj);
 void ftCommonTaruCannProcPhysics(GObj *fighter_gobj);
 /* P2-4s3 Congo Jungle: the rest of the barrel cannon status, defined in
- * src/port/reloc_backend_compat_shims.c behind NDS_P2_STAGE_JUNGLE. */
+ * src/port/reloc_backend_compat_shims.c behind NDS_STAGE_JUNGLE. */
 void ftCommonTaruCannProcUpdate(GObj *fighter_gobj);
 void ftCommonTaruCannProcInterrupt(GObj *fighter_gobj);
 void ftCommonTaruCannShootFighter(GObj *fighter_gobj);

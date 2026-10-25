@@ -25,11 +25,11 @@ _Static_assert(sizeof(NDSStageGxSegment) == 16, "stage GX segment ABI");
 #define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 8192u)
 #define NDS_STAGE_GX_NOZ_LOCAL 16u
 
-volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
-volatile u32 gNdsP2StageProgLoads, gNdsP2StageProgBytes;
-volatile u32 gNdsP2StageProgDeclines, gNdsP2StageProgReason;
-volatile u32 gNdsP2StageProgNearRuns;
-volatile u32 gNdsP2StageProgDmas;
+volatile u32 gNdsStageProgDraws, gNdsStageProgWords;
+volatile u32 gNdsStageProgLoads, gNdsStageProgBytes;
+volatile u32 gNdsStageProgDeclines, gNdsStageProgReason;
+volatile u32 gNdsStageProgNearRuns;
+volatile u32 gNdsStageProgDmas;
 static u32 sNdsStageGxGeneration, sNdsStageGxAttempted;
 static u64 sNdsStageGxStaticWorld;
 static NDSStageGxRun *sNdsStageGxRuns;
@@ -89,7 +89,7 @@ static NDSStageGxRunWorld *sNdsStageGxRunWorld;
  * short of the whole program takes the best consecutive range of them
  * (ndsStageGxLoad), and the rest draw uncompiled. */
 static u32 sNdsStageGxSegmentMask;
-volatile u32 gNdsP2StageProgSegments;
+volatile u32 gNdsStageProgSegments;
 static NDSRendererMatrix20p12 sNdsStageGxProjCopy;
 static u32 sNdsStageGxProjSerial, sNdsStageGxProjGen;
 /* Bumped by every successful program load (the segment fast path's tables
@@ -101,7 +101,7 @@ static u32 sNdsStageGxBodyBytes;
 /* Set from ndsStageGxEligible's yes to the segment commit's last flush: a
  * program never yields under its own draw. */
 static u32 sNdsStageGxInSegment;
-volatile u32 gNdsP2StageProgYields;
+volatile u32 gNdsStageProgYields;
 
 NDS_RENDERER_COLD static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
@@ -558,14 +558,14 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     sNdsStageGxProjSerial++;
     sNdsStageGxProjGen = 0u;
     sNdsStageGxLoadSerial++;
-    gNdsP2StageProgLoads++;
-    gNdsP2StageProgBytes = (run_hi - run_lo) * (sizeof(NDSStageGxRun) + memo_unit) +
+    gNdsStageProgLoads++;
+    gNdsStageProgBytes = (run_hi - run_lo) * (sizeof(NDSStageGxRun) + memo_unit) +
         (patch_hi - patch_lo) * sizeof(NDSStageGxPatch) + (word_hi - word_lo) * 4u;
-    gNdsP2StageProgSegments = mask;
+    gNdsStageProgSegments = mask;
     return TRUE;
 failed:
     ndsRelocAssetStreamClose(&stream);
-    gNdsP2StageProgReason = reason;
+    gNdsStageProgReason = reason;
     return FALSE;
 }
 
@@ -582,11 +582,11 @@ static sb32 ndsStageGxEligible(u32 segment)
      * battle-lifetime heap, and the select shows one stage after another
      * within one heap generation. */
     if (gNdsRendererAdapterStagePreviewArmed != 0u) { return FALSE; }
-    if (!ndsStageGxLoad()) { NDS_DIAG(gNdsP2StageProgDeclines++); return FALSE; }
+    if (!ndsStageGxLoad()) { NDS_DIAG(gNdsStageProgDeclines++); return FALSE; }
     /* A partial load's other segments draw uncompiled. */
     if ((sNdsStageGxSegmentMask & (1u << segment)) == 0u) { return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
-    { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
+    { gNdsStageProgDeclines++; gNdsStageProgReason = 7u; return FALSE; }
     sNdsStageGxInSegment = 1u;
     return TRUE;
 }
@@ -635,7 +635,7 @@ NDS_RENDERER_COLD s32 __attribute__((noinline, cold)) ndsStageGxYield(size_t siz
     sNdsStageGxDmaEnd = 0u;
     sNdsStageGxLoadSerial++;
     sNdsStageGxBody = NULL;
-    gNdsP2StageProgYields++;
+    gNdsStageProgYields++;
     return TRUE;
 }
 
@@ -901,7 +901,7 @@ static void ndsStageGxFlush(void)
     sNdsStageGxDmaFirst = sNdsStageGxFirstWord;
     sNdsStageGxDmaEnd = sNdsStageGxFirstWord + sNdsStageGxWordCount;
     sNdsStageGxWordCount = 0u;
-    NDS_DIAG(gNdsP2StageProgDmas++);
+    NDS_DIAG(gNdsStageProgDmas++);
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
     /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
@@ -1097,7 +1097,7 @@ static void __attribute__((noinline, cold)) ndsStageGxRefreshNear(
             sNdsNativeStageVertices[dense].matrix_binding], &input, &clip);
         sNdsNativeStagePreparedDense[dense].near_inside = ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w);
     }
-    gNdsP2StageProgNearRuns++;
+    gNdsStageProgNearRuns++;
 }
 
 static void __attribute__((noinline, cold)) ndsStageGxCornerSource(
@@ -1288,7 +1288,7 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             if (composed_shift != (s32)shift || composed_binding != binding)
             {
                 if (!ndsStageGxComposedFor(binding, shift, &composed))
-                { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 8u; return FALSE; }
+                { gNdsStageProgDeclines++; gNdsStageProgReason = 8u; return FALSE; }
                 composed_shift = (s32)shift;
                 composed_binding = binding;
             }
@@ -1316,13 +1316,13 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         }
         else if (q->kind == NDS_STAGE_GX_MATERIAL && material_kept == FALSE &&
                  !ndsStageGxMaterial(dst, prepared, native->submit_class, owner))
-        { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 6u; return FALSE; }
+        { gNdsStageProgDeclines++; gNdsStageProgReason = 6u; return FALSE; }
         else if (q->kind >= NDS_STAGE_GX_NOZ_VIEW_RUN)
         {
             /* A translated painter run: its depth is written by the
              * read-back pass, which steps the run's other triangles. */
             if (!ndsStageGxNoZRunMatrix(dst, q))
-            { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 8u; return FALSE; }
+            { gNdsStageProgDeclines++; gNdsStageProgReason = 8u; return FALSE; }
             noz_local = FALSE;
         }
     }
@@ -1376,7 +1376,7 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         ndsRendererProfileRecordTextureBind();
     }
     ndsStageGxAppend(r, prepared);
-    gNdsP2StageProgDraws++; gNdsP2StageProgWords += r->word_count;
+    gNdsStageProgDraws++; gNdsStageProgWords += r->word_count;
     return TRUE;
 }
 
@@ -2055,8 +2055,8 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     sNdsRendererHardwareSubmitted = TRUE;
     stats->triangle_count += s->triangles;
     *segment_triangles = s->triangles;
-    NDS_DIAG(gNdsP2StageProgDraws += segment->run_count);
-    NDS_DIAG(gNdsP2StageProgWords += (u32)s->word_end - s->first_word);
+    NDS_DIAG(gNdsStageProgDraws += segment->run_count);
+    NDS_DIAG(gNdsStageProgWords += (u32)s->word_end - s->first_word);
     NDS_DIAG(gNdsStageGxFastCommits++);
     return TRUE;
 

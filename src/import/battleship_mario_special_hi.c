@@ -17,11 +17,11 @@
 #define FTMARIO_SUPERJUMP_STICK_Y_UNK -44
 #endif
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 #define ftMarioSpecialHiProcPhysics ndsBaseFTMarioSpecialHiProcPhysics
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftmario/ftmariospecialhi.c"
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 #undef ftMarioSpecialHiProcPhysics
 
 sb32 ndsP7MMarioVsFighter(const FTStruct *fp);

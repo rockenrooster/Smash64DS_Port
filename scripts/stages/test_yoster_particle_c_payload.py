@@ -24,7 +24,7 @@ class YosterParticlePayloadTests(unittest.TestCase):
         banks.YOSTER_BAKE_ENABLED = True
         pack = banks.build_pack(ROOT)
         emitted = banks.render_inc(pack)
-        section = re.search(r'#if NDS_P2_STAGE_YOSTER\n(.*?)\n#endif',
+        section = re.search(r'#if NDS_STAGE_YOSTER\n(.*?)\n#endif',
                             emitted, re.DOTALL).group(1)
         source = ('#include <stdint.h>\n#include <stdio.h>\n'
                   'typedef uint8_t u8; typedef uint32_t u32;\n' + section +

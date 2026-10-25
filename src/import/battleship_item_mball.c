@@ -10,7 +10,7 @@
  * battleship_item_gbumper.c:28 owns GBumper's (local tokens, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
  * The monster roll calls the ported itMainMakeMonster bus
  * (battleship_item_map_core.c, declared in it/item.h) rather than
@@ -58,7 +58,7 @@ extern void gcPlayAnimAll(GObj *gobj);
  * THAT NOTE OUTLIVED ITS FACT, and kept the ball's opening flash switched off
  * after the reason for switching it off had gone. The desc now has its own
  * shared row, NDS_EF_ROSTER_DESCS_MBALL_RAYS (battleship_efmanager.c:1448),
- * gated on NDS_P2_PIKACHU || NDS_P2_PURIN and deliberately kept single so the
+ * gated on NDS_PIKACHU || NDS_PURIN and deliberately kept single so the
  * two never double-count the resolver capacity. Both flags are 1 in the
  * shipping configuration and both symbols are already in smash64ds.elf.
  *
@@ -528,7 +528,7 @@ void itMBallOpenInitVars(GObj *item_gobj)
      * NDS_EF_ROSTER_DESCS_PIKACHU -- so with Pikachu off the desc does not
      * exist and the maker cannot be linked". It has since been moved into its
      * own shared row, NDS_EF_ROSTER_DESCS_MBALL_RAYS
-     * (battleship_efmanager.c:1448), gated on NDS_P2_PIKACHU || NDS_P2_PURIN
+     * (battleship_efmanager.c:1448), gated on NDS_PIKACHU || NDS_PURIN
      * precisely so a Purin-only build resolves it too. Both are 1 in the
      * shipping configuration, and `nm smash64ds.elf` finds both
      * dEFManagerMBallRaysEffectDesc and efManagerMBallRaysMakeEffect already

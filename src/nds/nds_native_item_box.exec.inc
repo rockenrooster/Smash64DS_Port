@@ -1,7 +1,7 @@
 /* Crate / Box executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x6630 contains no 0xDE; both fixed material/geometry phases
  * are baked into the generated packet. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemBox(
     const void *file_base_ptr, u32 file_bytes,

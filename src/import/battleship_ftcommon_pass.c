@@ -90,7 +90,7 @@ sb32 ndsBaseFTCommonSquatRvCheckInterruptSquatWait(GObj *fighter_gobj);
 #undef ftCommonSquatRvSetStatus
 #undef ftCommonSquatRvCheckInterruptSquatWait
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 /* DK cargo's source fall/pass ladder calls the canonical common-pass helpers.
  * This wrapper had historically hidden them behind proof-only ndsBase names;
  * expose the exact same imported bodies when the production DK row needs them. */

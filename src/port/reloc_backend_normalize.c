@@ -675,7 +675,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->itemthrow_damage_scale == 0x64u) &&
             (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (asset_id == NDS_RELOC_ASSET_LUIGI_MAIN)
     {
         /* 221_LuigiMain.c:331-338, ordinals from gmsound.h's REGION_US arm
@@ -700,7 +700,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 426u);
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
     {
         /* BattleShip US gmsound.h: Donkey dead-slam is 0x11f and the voice
@@ -721,7 +721,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 334u);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (asset_id == NDS_RELOC_ASSET_CAPTAIN_MAIN)
     {
         /* 236_CaptainMain.c:330-337 names these; the ordinals are gmsound.h's
@@ -763,7 +763,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->itemthrow_damage_scale == 0x64u) &&
             (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (asset_id == NDS_RELOC_ASSET_LINK_MAIN)
     {
         /* 225_LinkMain.c:522-529. Link's US voice run starts at Smash1=401;
@@ -871,7 +871,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->itemthrow_damage_scale == 0x64u) &&
             (attr->heavyget_sfx == 393u);
     }
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     if (asset_id == NDS_RELOC_ASSET_GDONKEY_MAIN)
     {
         /* GDonkeyMain.c dGDonkeyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -889,7 +889,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 334u);
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (asset_id == NDS_RELOC_ASSET_BOSS_MAIN)
     {
         /* 250_BossMain.c:107-114: no voice anywhere, item scales 100. */
@@ -906,7 +906,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
     }
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (asset_id == NDS_RELOC_ASSET_MMARIO_MAIN)
     {
         /* MMarioMain.c dMMarioMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -924,7 +924,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (asset_id == NDS_RELOC_ASSET_NMARIO_MAIN)
     {
         /* NMarioMain.c dNMarioMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -942,7 +942,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (asset_id == NDS_RELOC_ASSET_NFOX_MAIN)
     {
         /* NFoxMain.c dNFoxMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -960,7 +960,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (asset_id == NDS_RELOC_ASSET_NDONKEY_MAIN)
     {
         /* NDonkeyMain.c dNDonkeyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -978,7 +978,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (asset_id == NDS_RELOC_ASSET_NSAMUS_MAIN)
     {
         /* NSamusMain.c dNSamusMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -996,7 +996,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NLUIGI
+#if NDS_NLUIGI
     if (asset_id == NDS_RELOC_ASSET_NLUIGI_MAIN)
     {
         /* NLuigiMain.c dNLuigiMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1014,7 +1014,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (asset_id == NDS_RELOC_ASSET_NLINK_MAIN)
     {
         /* NLinkMain.c dNLinkMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1032,7 +1032,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (asset_id == NDS_RELOC_ASSET_NYOSHI_MAIN)
     {
         /* NYoshiMain.c dNYoshiMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1050,7 +1050,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (asset_id == NDS_RELOC_ASSET_NCAPTAIN_MAIN)
     {
         /* NCaptainMain.c dNCaptainMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1068,7 +1068,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (asset_id == NDS_RELOC_ASSET_NKIRBY_MAIN)
     {
         /* NKirbyMain.c dNKirbyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1086,7 +1086,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (asset_id == NDS_RELOC_ASSET_NPIKACHU_MAIN)
     {
         /* NPikachuMain.c dNPikachuMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1104,7 +1104,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (asset_id == NDS_RELOC_ASSET_NPURIN_MAIN)
     {
         /* NPurinMain.c dNPurinMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1122,7 +1122,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (asset_id == NDS_RELOC_ASSET_NNESS_MAIN)
     {
         /* NNessMain.c dNNessMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
@@ -1188,7 +1188,7 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     u8 *attr_bytes;
     FTAttributes *attr;
     WPAttributes *samus_bomb_attr;
-#if NDS_P2_LINK
+#if NDS_LINK
     WPAttributes *link_spin_attack_attr;
 #endif
 
@@ -1204,19 +1204,19 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     else if (loaded->asset_id == NDS_RELOC_ASSET_LUIGI_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_LUIGI_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     else if (loaded->asset_id == NDS_RELOC_ASSET_DONKEY_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     else if (loaded->asset_id == NDS_RELOC_ASSET_CAPTAIN_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES;
@@ -1226,7 +1226,7 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_SAMUS_MAIN_ATTRIBUTES;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (loaded->asset_id == NDS_RELOC_ASSET_LINK_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_LINK_MAIN_ATTRIBUTES;
@@ -1252,19 +1252,19 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     {
         attr_offset = NDS_RELOC_SYMBOL_KIRBY_MAIN_ATTRIBUTES;
     }
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     else if (loaded->asset_id == NDS_RELOC_ASSET_GDONKEY_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_GDONKEY_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     else if (loaded->asset_id == NDS_RELOC_ASSET_MMARIO_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* Master Hand. Without this the commonparts flags kept the u32 swap's
      * lane: 0 instead of 250_BossMain.c's 0x01, so the pre/post display-list
      * pairs (dBossModel_JointTree's 23 pair bases) were drawn as plain lists
@@ -1275,73 +1275,73 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
         attr_offset = NDS_RELOC_SYMBOL_BOSS_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     else if (loaded->asset_id == NDS_RELOC_ASSET_NMARIO_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NMARIO_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     else if (loaded->asset_id == NDS_RELOC_ASSET_NFOX_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NFOX_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     else if (loaded->asset_id == NDS_RELOC_ASSET_NDONKEY_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NDONKEY_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     else if (loaded->asset_id == NDS_RELOC_ASSET_NSAMUS_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NSAMUS_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NLUIGI
+#if NDS_NLUIGI
     else if (loaded->asset_id == NDS_RELOC_ASSET_NLUIGI_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NLUIGI_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     else if (loaded->asset_id == NDS_RELOC_ASSET_NLINK_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NLINK_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     else if (loaded->asset_id == NDS_RELOC_ASSET_NYOSHI_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NYOSHI_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     else if (loaded->asset_id == NDS_RELOC_ASSET_NCAPTAIN_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NCAPTAIN_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     else if (loaded->asset_id == NDS_RELOC_ASSET_NKIRBY_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NKIRBY_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     else if (loaded->asset_id == NDS_RELOC_ASSET_NPIKACHU_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NPIKACHU_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     else if (loaded->asset_id == NDS_RELOC_ASSET_NPURIN_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NPURIN_MAIN_ATTRIBUTES;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     else if (loaded->asset_id == NDS_RELOC_ASSET_NNESS_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES;
@@ -1395,7 +1395,7 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
                 loaded,
                 NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
         }
-#if NDS_P2_LINK
+#if NDS_LINK
         /* LinkMain shares SamusMain's mixed-struct layout: the file-global
          * format flag covers Link's FTAttributes at 0x708 and grounded Spin
          * Attack's WPAttributes at 0x0c. Normalize both before setting it. */
@@ -1898,7 +1898,7 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
             ndsPupupuStageAssetBit(loaded->asset_id);
         gNdsStagePupupuRelocDependencyMask |=
             ndsPupupuStageAssetBit(loaded->asset_id);
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
         /* The compact Pupupu map carries the wallpaper stub itself, so
          * StageDreamLand (bit 1) is no longer a file of its tree. */
         if (ndsRelocCompactGroundMapSprite(loaded) != NULL)
@@ -2075,7 +2075,7 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
                (attr->map_coll_bottom == 0) &&
                (attr->map_coll_width == 0);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if ((asset_id == NDS_RELOC_ASSET_LINK_MAIN) ||
         (asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1))
     {
@@ -2179,7 +2179,7 @@ void ndsRelocEnsureWeaponAttributesNormalized(void *attr_ptr)
     if ((((loaded->asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1) ||
           (loaded->asset_id == NDS_RELOC_ASSET_FOX_SPECIAL1))
          || (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_SPECIAL1)
-#if NDS_P2_LINK
+#if NDS_LINK
          || (loaded->asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1)
 #endif
         ) &&
@@ -2530,7 +2530,7 @@ static s32 ndsRelocNormalizeSpriteDesc(
     {
         return TRUE;
     }
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     if ((loaded->reserved[0] != 0u) &&
         (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
                               &sprite_offset) == FALSE))
@@ -2699,7 +2699,7 @@ static u32 ndsRelocIsStageWallpaperAsset(u32 asset_id)
     case NDS_RELOC_ASSET_STAGE_POKEMON:
     case NDS_RELOC_ASSET_STAGE_SECTOR:
     case NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER:
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     case NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER:
     case NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER:
     case NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER:
@@ -2711,7 +2711,7 @@ static u32 ndsRelocIsStageWallpaperAsset(u32 asset_id)
     }
 }
 
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
 /* A compact ground map's appended Sprite and Bitmap table took the same word
  * swap the container's did, so they need the same lane fix and get the same
  * "already normalized" test. TRUE when `loaded` is a compact map at all. */
@@ -2757,7 +2757,7 @@ static void ndsRelocNormalizeStageDreamLandSprite(
 {
     Sprite *sprite;
 
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
     if (ndsRelocNormalizeCompactGroundMapSprite(loaded) != FALSE)
     {
         return;

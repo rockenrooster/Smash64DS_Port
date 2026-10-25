@@ -20,7 +20,7 @@
             NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
         }
     }
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     if (inishie_pakkun_native_candidate != FALSE)
     {
         /* Same split-camera contract the entry-effect owner documents at
@@ -184,7 +184,7 @@
     {
         NDSRendererConfig tail_config = config;
         NDSRendererMatrix20p12 identity;
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
         const void *tail_image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_NESS_PKTAIL_IMAGE);
 #else
         const void *tail_image = (loaded->data_size >= NDS_NATIVE_NESS_PKTAIL_IMAGE_END) ?
@@ -206,7 +206,7 @@
         NDSRendererNativeMaterial bomb_material;
         NDSRendererConfig bomb_config = config;
         NDSRendererMatrix20p12 identity;
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
         const void *bomb_image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_SAMUS_BOMB_IMAGE);
 #else
         const void *bomb_image = (loaded->data_size >= NDS_NATIVE_SAMUS_BOMB_IMAGE_END) ?
@@ -485,7 +485,7 @@
          * guard below so one event cannot record two contradictory reasons. */
         damage_slash_native_settled = TRUE;
     }
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: fill
@@ -525,7 +525,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     if (sector_laser_native_candidate != FALSE)
     {
         /* Same split-camera contract the Pakkun owner documents above: the
@@ -567,7 +567,7 @@
         }
     }
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
     if (link_bomb_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: the
@@ -609,7 +609,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     if (marumine_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: fill the
@@ -648,7 +648,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     if (glucky_native_candidate != FALSE)
     {
         NDSRendererConfig glucky_config = config;
@@ -1485,7 +1485,7 @@
      * segment-E materials are the DObj's MObjs in order. */
     if ((loaded != NULL) && (dobj != NULL) && (dobj->parent_gobj != NULL) &&
         (NDS_NATIVE_BAKED_ASSET_MATCH(loaded->asset_id)
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
          /* The ending's room (the table it loads into its own heap). */
          || NDS_NATIVE_BAKED_ROOM_ASSET_MATCH(loaded->asset_id)
 #endif
@@ -1567,7 +1567,7 @@
                                           NDS_SDL_ROUTE_BAKED_WEAPON);
                     ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
                 }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
                 else if ((sNdsRendererAdapterItemSubmitActive == FALSE) &&
                          (sNdsRendererAdapterEffectSubmitActive == FALSE) &&
                          (sNdsRendererAdapterStagePersistentActive != FALSE) &&
@@ -1655,7 +1655,7 @@
         visual_effect_native_settled = TRUE;
     }
     if (
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
         (inishie_pakkun_native_handled == FALSE) &&
         (inishie_powblock_native_handled == FALSE) &&
 #endif
@@ -1676,19 +1676,19 @@
         (pikachu_thunder_native_handled == FALSE) &&
         (samus_bomb_native_handled == FALSE) &&
         (ness_pktail_native_handled == FALSE) &&
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
         (sector_laser_native_handled == FALSE) &&
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
         (link_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
         (marumine_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
         (glucky_native_handled == FALSE) &&
         (porygon_native_handled == FALSE) &&
         (hitokage_native_handled == FALSE) &&
@@ -1734,7 +1734,7 @@
     }
     if (
         (rebirth_halo_native_handled == FALSE) &&
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
         /* The Pakkun owner is checked here as well as in the impact-wave
          * OFF arm below. Without this term the item drew natively 600
          * times in a 300-present run and the stage still recorded 600
@@ -1744,7 +1744,7 @@
         /* The POW block owner is checked here for the identical reason. */
         (inishie_powblock_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
         /* The laser owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (sector_laser_native_handled == FALSE) &&
@@ -1765,20 +1765,20 @@
         (pikachu_thunder_native_handled == FALSE) &&
         (samus_bomb_native_handled == FALSE) &&
         (ness_pktail_native_handled == FALSE) &&
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
         /* The bomb owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (link_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
         /* The Marumine owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (marumine_native_handled == FALSE) &&
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
         (glucky_native_handled == FALSE) &&
         (porygon_native_handled == FALSE) &&
         (hitokage_native_handled == FALSE) &&

@@ -221,11 +221,11 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
      LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
      LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
      LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
-     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
-     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
-     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
-     (NDS_P2_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
-     (NDS_P2_PURIN ? LBBACKUP_MASK_FIGHTER(nFTKindPurin) : 0u) | \
+     (NDS_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
+     (NDS_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
+     (NDS_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
+     (NDS_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
+     (NDS_PURIN ? LBBACKUP_MASK_FIGHTER(nFTKindPurin) : 0u) | \
      LBBACKUP_MASK_FIGHTER(nFTKindKirby))
 
 static u8 sCssPkind[NDS_CSS_SLOTS];
@@ -1278,19 +1278,19 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     {
         fighter = 1u;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     else if (fkind == (u32)nFTKindLuigi)
     {
         fighter = 2u;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     else if (fkind == (u32)nFTKindDonkey)
     {
         fighter = 3u;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     else if (fkind == (u32)nFTKindCaptain)
     {
         fighter = 4u;
@@ -1300,7 +1300,7 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     {
         fighter = 5u;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (fkind == (u32)nFTKindLink)
     {
         fighter = 6u;

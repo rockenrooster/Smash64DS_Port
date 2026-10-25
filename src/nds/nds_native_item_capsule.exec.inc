@@ -1,7 +1,7 @@
 /* Capsule executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x03E0 branches at word 10 to relocated 0x0440; the generator
  * resolves and bakes that callee. Roots 0x0540/0x05E0 are sibling DObjs. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemCapsule(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,

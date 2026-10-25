@@ -313,8 +313,8 @@ NDS_FLOAT_ITCM_MEMBERS := \
 # int->float conversions and __floatsisf (host-checked exact), so the extracted
 # _arm_addsubsf3.o -- otherwise dead Task 16 goldens in ITCM -- has its copies
 # renamed below and lives in main RAM. Needs the Task 16 __aeabi_i2f.
-NDS_P2_FLOAT_CONV ?= 1
-ifeq ($(NDS_P2_FLOAT_CONV),1)
+NDS_FLOAT_CONV ?= 1
+ifeq ($(NDS_FLOAT_CONV),1)
 NDS_FLOAT_MAIN_MEMBERS += _arm_addsubsf3.o
 endif
 # The suffix is load-bearing, not cosmetic. `linker/nds_hot_text.ld:113` reads
@@ -360,33 +360,33 @@ LIBDIRS := $(LIBNDS)
 # Apply after shell roster selection and override partial command lines so
 # campaign builds cannot silently omit a required opponent or donor.
 # Run in both make passes: recursive make writes nds_build_config.h.
-ifeq ($(NDS_P2_1P_GAME),1)
-override NDS_P2_NMARIO := 1
-override NDS_P2_NFOX := 1
-override NDS_P2_NDONKEY := 1
-override NDS_P2_NSAMUS := 1
-override NDS_P2_NLUIGI := 1
-override NDS_P2_NLINK := 1
-override NDS_P2_NYOSHI := 1
-override NDS_P2_NCAPTAIN := 1
-override NDS_P2_NKIRBY := 1
-override NDS_P2_NPIKACHU := 1
-override NDS_P2_NPURIN := 1
-override NDS_P2_NNESS := 1
-override NDS_P2_LUIGI := 1
-override NDS_P2_DONKEY := 1
-override NDS_P2_CAPTAIN := 1
-override NDS_P2_SAMUS := 1
-override NDS_P2_LINK := 1
-override NDS_P2_PIKACHU := 1
-override NDS_P2_YOSHI := 1
-override NDS_P2_NESS := 1
-override NDS_P2_PURIN := 1
-override NDS_P2_KIRBY := 1
+ifeq ($(NDS_1P_GAME),1)
+override NDS_NMARIO := 1
+override NDS_NFOX := 1
+override NDS_NDONKEY := 1
+override NDS_NSAMUS := 1
+override NDS_NLUIGI := 1
+override NDS_NLINK := 1
+override NDS_NYOSHI := 1
+override NDS_NCAPTAIN := 1
+override NDS_NKIRBY := 1
+override NDS_NPIKACHU := 1
+override NDS_NPURIN := 1
+override NDS_NNESS := 1
+override NDS_LUIGI := 1
+override NDS_DONKEY := 1
+override NDS_CAPTAIN := 1
+override NDS_SAMUS := 1
+override NDS_LINK := 1
+override NDS_PIKACHU := 1
+override NDS_YOSHI := 1
+override NDS_NESS := 1
+override NDS_PURIN := 1
+override NDS_KIRBY := 1
 # The campaign's own variants: Giant Donkey Kong (stage 7, sc1pgame.c:394)
 # and Metal Mario (stage 11). Without them the stage's fighter has no
 # attributes and ftManagerMakeFighter faults on its parts container.
-override NDS_P2_GDONKEY := 1
-override NDS_P2_MMARIO := 1
+override NDS_GDONKEY := 1
+override NDS_MMARIO := 1
 endif
 

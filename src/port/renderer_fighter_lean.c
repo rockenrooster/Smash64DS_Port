@@ -2446,7 +2446,7 @@ static void ndsFtrLeanMatchReset(void)
  * binds it. TRUE when the lean draw submitted. */
 volatile u32 gNdsFtrLeanTransientDraws;
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 {
     NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp };

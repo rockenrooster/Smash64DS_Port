@@ -79,30 +79,30 @@ static sb32 sNdsIntroTransientActive;
  * first positive mismatch in RAM so the debugger does not have to recover
  * optimized locals at the success assignment.  This block is removed once
  * the admission failure is assigned. */
-volatile u32 gNdsP2NessOddDrawCount;
-volatile u32 gNdsP2NessOddFrame;
-volatile u32 gNdsP2NessOddTriangles;
-volatile u32 gNdsP2NessOddSelected;
-volatile u32 gNdsP2NessOddStatus;
-volatile u32 gNdsP2NessOddMotion;
-volatile u32 gNdsP2NessOddCamera;
-volatile u32 gNdsP2NessOddDetail;
-volatile u32 gNdsP2NessOddPacketPredicted;
-volatile u32 gNdsP2NessOddProductionAttempted;
-volatile u32 gNdsP2NessPositiveDrawCount;
-volatile u32 gNdsP2NessProductionPositiveDrawCount;
-volatile u32 gNdsP2NessNonProductionPositiveDrawCount;
-volatile u32 gNdsP2NessNonProductionTriangles;
-volatile u32 gNdsP2NessZeroProductionDrawCount;
-volatile u32 gNdsP2NessLastNativeOwnerEnabled;
-volatile u32 gNdsP2NessLastProductionMode;
-volatile u32 gNdsP2NessLastHierarchyMode;
-volatile u32 gNdsP2NessLastNoOracle;
-volatile u32 gNdsP2NessLastDetailedOutput;
-volatile u32 gNdsP2NessLastPlanHit;
-volatile u32 gNdsP2NessFirstFallbackReason;
-volatile u32 gNdsP2NessLastFallbackReason;
-volatile u32 gNdsP2NessLastPlanResult;
+volatile u32 gNdsNessOddDrawCount;
+volatile u32 gNdsNessOddFrame;
+volatile u32 gNdsNessOddTriangles;
+volatile u32 gNdsNessOddSelected;
+volatile u32 gNdsNessOddStatus;
+volatile u32 gNdsNessOddMotion;
+volatile u32 gNdsNessOddCamera;
+volatile u32 gNdsNessOddDetail;
+volatile u32 gNdsNessOddPacketPredicted;
+volatile u32 gNdsNessOddProductionAttempted;
+volatile u32 gNdsNessPositiveDrawCount;
+volatile u32 gNdsNessProductionPositiveDrawCount;
+volatile u32 gNdsNessNonProductionPositiveDrawCount;
+volatile u32 gNdsNessNonProductionTriangles;
+volatile u32 gNdsNessZeroProductionDrawCount;
+volatile u32 gNdsNessLastNativeOwnerEnabled;
+volatile u32 gNdsNessLastProductionMode;
+volatile u32 gNdsNessLastHierarchyMode;
+volatile u32 gNdsNessLastNoOracle;
+volatile u32 gNdsNessLastDetailedOutput;
+volatile u32 gNdsNessLastPlanHit;
+volatile u32 gNdsNessFirstFallbackReason;
+volatile u32 gNdsNessLastFallbackReason;
+volatile u32 gNdsNessLastPlanResult;
 
 
 static u32 ndsFighterDisplayContractPackColor(u8 r, u8 g, u8 b, u8 a)
@@ -2468,7 +2468,7 @@ static sb32 ndsFighterNativeLoadedFileAllowed(
     {
         return TRUE;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     /* Link's Missing/Catching Boomerang motions temporarily select joint 11
      * modelpart 1. LinkMain resolves that model part through extern-data to
      * LinkBoomerangModel asset 0x146 / root 0xF8 while the rest of the fighter
@@ -2725,21 +2725,21 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         *owner_slot = 1u;
         return TRUE;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fp->fkind == nFTKindLuigi)
     {
         *owner_slot = 2u;
         return TRUE;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (fp->fkind == nFTKindDonkey)
     {
         *owner_slot = 3u;
         return TRUE;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (fp->fkind == nFTKindCaptain)
     {
         *owner_slot = 4u;
@@ -2751,7 +2751,7 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         *owner_slot = 5u;
         return TRUE;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (fp->fkind == nFTKindLink)
     {
         *owner_slot = 6u;
@@ -2783,7 +2783,7 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         *owner_slot = 11u;
         return TRUE;
     }
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     if (fp->fkind == nFTKindGDonkey)
     {
         /* P2-6 variant: GDonkey reuses the Donkey owner packet verbatim
@@ -2792,42 +2792,42 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (fp->fkind == nFTKindMMario)
     {
         *owner_slot = 12u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (fp->fkind == nFTKindNMario)
     {
         *owner_slot = 13u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (fp->fkind == nFTKindNFox)
     {
         *owner_slot = 14u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (fp->fkind == nFTKindNDonkey)
     {
         *owner_slot = 15u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (fp->fkind == nFTKindNSamus)
     {
         *owner_slot = 16u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NLUIGI
+#if NDS_NLUIGI
     if (fp->fkind == nFTKindNLuigi)
     {
         /* P2-6 variant: NLuigi reuses the NMario owner packet verbatim
@@ -2836,56 +2836,56 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (fp->fkind == nFTKindNLink)
     {
         *owner_slot = 17u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (fp->fkind == nFTKindNYoshi)
     {
         *owner_slot = 18u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (fp->fkind == nFTKindNCaptain)
     {
         *owner_slot = 19u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (fp->fkind == nFTKindNKirby)
     {
         *owner_slot = 20u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (fp->fkind == nFTKindNPikachu)
     {
         *owner_slot = 21u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (fp->fkind == nFTKindNPurin)
     {
         *owner_slot = 22u;
         return TRUE;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (fp->fkind == nFTKindNNess)
     {
         *owner_slot = 23u;
         return TRUE;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (fp->fkind == nFTKindBoss)
     {
         *owner_slot = 24u;
@@ -2905,19 +2905,19 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
     {
         return 0x139u; /* llFoxModelFileID */
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (owner_slot == 2u)
     {
         return 0x143u; /* llLuigiModelFileID, BattleShip dFTLuigiData */
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (owner_slot == 3u)
     {
         return 0x13du; /* llDonkeyModelFileID, BattleShip dFTDonkeyData */
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (owner_slot == 4u)
     {
         return 0x14cu; /* llCaptainModelFileID, BattleShip dFTCaptainData */
@@ -2927,7 +2927,7 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
     {
         return 0x140u; /* llSamusModelFileID, BattleShip dFTSamusData */
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (owner_slot == 6u)
     {
         return 0x144u; /* llLinkModelFileID, BattleShip dFTLinkData */
@@ -2953,19 +2953,19 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
     {
         return 0x148u; /* llKirbyModelFileID, BattleShip dFTKirbyData */
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (owner_slot == 12u)
     {
         return 0x12cu; /* llMMarioModelFileID, BattleShip dFTMMarioData */
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (owner_slot == 13u)
     {
         return 0x12du; /* llNMarioModelFileID, BattleShip dFTNMarioData */
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (owner_slot == 14u)
     {
         return 0x12fu; /* llNFoxModelFileID, BattleShip dFTNFoxData */
@@ -2979,61 +2979,61 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_MODEL_FILE)
 #undef NDS_P4_OWNER_MODEL_FILE
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (owner_slot == 15u)
     {
         return 0x134u; /* llNDonkeyModelFileID, BattleShip dFTNDonkeyData */
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (owner_slot == 16u)
     {
         return 0x135u; /* llNSamusModelFileID, BattleShip dFTNSamusData */
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (owner_slot == 17u)
     {
         return 0x136u; /* llNLinkModelFileID, BattleShip dFTNLinkData */
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (owner_slot == 18u)
     {
         return 0x130u; /* llNYoshiModelFileID, BattleShip dFTNYoshiData */
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (owner_slot == 19u)
     {
         return 0x137u; /* llNCaptainModelFileID, BattleShip dFTNCaptainData */
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (owner_slot == 20u)
     {
         return 0x131u; /* llNKirbyModelFileID, BattleShip dFTNKirbyData */
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (owner_slot == 21u)
     {
         return 0x133u; /* llNPikachuModelFileID, BattleShip dFTNPikachuData */
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (owner_slot == 22u)
     {
         return 0x132u; /* llNPurinModelFileID, BattleShip dFTNPurinData */
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (owner_slot == 23u)
     {
         return 0x138u; /* llNNessModelFileID, BattleShip dFTNNessData */
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (owner_slot == 24u)
     {
         return 0x158u; /* llBossModelFileID, BattleShip BossModel 0x158 */
@@ -3052,19 +3052,19 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     {
         return NDS_RENDERER_PROFILE_OWNER_FOX;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (owner_slot == 2u)
     {
         return NDS_RENDERER_PROFILE_OWNER_LUIGI;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (owner_slot == 3u)
     {
         return NDS_RENDERER_PROFILE_OWNER_DONKEY;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (owner_slot == 4u)
     {
         return NDS_RENDERER_PROFILE_OWNER_CAPTAIN;
@@ -3074,7 +3074,7 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     {
         return NDS_RENDERER_PROFILE_OWNER_SAMUS;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (owner_slot == 6u)
     {
         return NDS_RENDERER_PROFILE_OWNER_LINK;
@@ -3100,19 +3100,19 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     {
         return NDS_RENDERER_PROFILE_OWNER_KIRBY;
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (owner_slot == 12u)
     {
         return NDS_RENDERER_PROFILE_OWNER_MMARIO;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (owner_slot == 13u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NMARIO;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (owner_slot == 14u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NFOX;
@@ -3125,61 +3125,61 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PROFILE)
 #undef NDS_P4_OWNER_PROFILE
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (owner_slot == 15u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NDONKEY;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (owner_slot == 16u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NSAMUS;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (owner_slot == 17u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NLINK;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (owner_slot == 18u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NYOSHI;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (owner_slot == 19u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NCAPTAIN;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (owner_slot == 20u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NKIRBY;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (owner_slot == 21u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NPIKACHU;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (owner_slot == 22u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NPURIN;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (owner_slot == 23u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NNESS;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (owner_slot == 24u)
     {
         return NDS_RENDERER_PROFILE_OWNER_BOSS;
@@ -3230,7 +3230,7 @@ static void ndsFighterRejectNativeRender(FTStruct *fp, DObj *dobj,
  * declined -- skipped, since no other renderer is behind it. */
 volatile u32 gNdsFtrLeanSkippedDraws;
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* 1P Intro transient native context.
  *
  * The source Intro holds up to 21 simultaneous Demo actors
@@ -3657,7 +3657,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         ((u32)fp->nds_slot >= GMCOMMON_PLAYERS_MAX) ||
         (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
     {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         /* 1P Intro Demo fighters (up to 21 concurrent actors) and the
          * ending's figure are never registered in the four-entry live
          * registry. Bind each one transiently at this display boundary

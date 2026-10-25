@@ -25,7 +25,7 @@ Usage:
     python scripts/menus/check_reloc_symbol_census.py            # report
     python scripts/menus/check_reloc_symbol_census.py --strict   # exit 1 if any
     python scripts/menus/check_reloc_symbol_census.py --tu battleship_grbonus3.c
-    python scripts/menus/check_reloc_symbol_census.py --flag NDS_P2_1P_GAME
+    python scripts/menus/check_reloc_symbol_census.py --flag NDS_1P_GAME
 
 The report is the staging worklist for ``scripts/menus/stage_reloc_file.py``;
 the map-file pattern is described in that script's docstring.
@@ -187,7 +187,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--repo-root", default=os.path.join(os.path.dirname(__file__), "..", ".."))
     ap.add_argument("--tu", help="one src/import basename to report")
-    ap.add_argument("--flag", help="only TUs mentioning this build flag (e.g. NDS_P2_1P_GAME)")
+    ap.add_argument("--flag", help="only TUs mentioning this build flag (e.g. NDS_1P_GAME)")
     ap.add_argument("--strict", action="store_true", help="exit 1 when any symbol is unrowed")
     ap.add_argument("--all", action="store_true", help="list every symbol, not the first eight")
     args = ap.parse_args()

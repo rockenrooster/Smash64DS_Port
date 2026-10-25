@@ -1904,7 +1904,7 @@ static void ndsVramCensusNoteCacheKey(
 }
 #endif
 
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 typedef struct NDSHyruleTextureFill
 {
     FILE *file;
@@ -2715,7 +2715,7 @@ static const void *ndsRendererHardwareBattleStaticPointer(
     const void *pointer;
     uintptr_t address;
 
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     pointer = ndsRelocNativeAssetAddress(base, source_offset);
 #else
     if ((source_offset >= bytes) ||

@@ -19,23 +19,23 @@
 #include <nds/generated/nds_native_vs_emblem.generated.h>
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 /* YOSTER-CLOUDS: route beside IsTaruCann. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #include <nds/nds_native_actor_yoster_cloud.h>
 #endif
 /* GROUND-ACTORS: Ground-kind stage actors with source display callbacks the
  * classify branch rejects (it admits only layer + Pupupu map GObjs). Each
  * imported stage TU owns a pure GObj-pointer accessor; the recognizers below
  * pair it with ground-kind/gkind/link checks after the IsTaruCann pattern. */
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 extern void *ndsGRZebesAcidGObj(void);
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 extern void *ndsGRSectorArwingGObj(void);
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 extern void *ndsGRYamabukiGateGObj(void);
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 extern void *ndsGRInishieScaleStringGObj(u32 index);
 extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #endif
@@ -220,7 +220,7 @@ typedef struct NDSFighterProcessLoopSnapshot
 #define NDS_FIGHTER_SPECIALS_MARIO_LW_MASK 0x0070u
 #define NDS_FIGHTER_SPECIALS_FOX_HI_MASK 0x0f80u
 #define NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED 60u
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 #define NDS_FIGHTER_DONKEY_GIANTPUNCH_STORE_CHARGE_REQUIRED 2u
 #define NDS_FIGHTER_DONKEY_GIANTPUNCH_FULL_CHARGE_REQUIRED 10u
 /* nEFKindChargeSparkle == 73, recorded in effect-kind mask lane 2 (64..95). */
@@ -300,7 +300,7 @@ enum {
     nNDSNaturalSpecialsPhaseFoxHi,
     nNDSNaturalSpecialsPhaseSettleFoxHi,
     nNDSNaturalSpecialsPhaseDone,
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     /* Preserve the established 0..7 phase values consumed by the legacy
      * verifier; DK extends the same natural-input sequence after Done. */
     nNDSNaturalSpecialsPhaseDonkeyNCharge,
@@ -651,7 +651,7 @@ static sb32 ndsFighterNaturalIsMarioSpecialFamily(const FTStruct *fp)
     {
         return TRUE;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fp->fkind == nFTKindLuigi)
     {
         return TRUE;
@@ -660,7 +660,7 @@ static sb32 ndsFighterNaturalIsMarioSpecialFamily(const FTStruct *fp)
     return FALSE;
 }
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 static sb32 ndsFighterNaturalIsDonkey(const FTStruct *fp)
 {
     return ((fp != NULL) && (fp->fkind == nFTKindDonkey)) ? TRUE : FALSE;
@@ -745,7 +745,7 @@ static sb32 ndsFighterNaturalProjectileStatusIsSpecialN(FTStruct *fp)
         return ((fp->status_id == nFTMarioStatusSpecialN) ||
                 (fp->status_id == nFTMarioStatusSpecialAirN)) ? TRUE : FALSE;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fp->fkind == nFTKindLuigi)
     {
         return ((fp->status_id == nFTLuigiStatusSpecialN) ||
@@ -766,7 +766,7 @@ static sb32 ndsFighterNaturalMarioFamilyStatusIsSpecialHi(FTStruct *fp)
         return ((fp->status_id == nFTMarioStatusSpecialHi) ||
                 (fp->status_id == nFTMarioStatusSpecialAirHi)) ? TRUE : FALSE;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fp->fkind == nFTKindLuigi)
     {
         return ((fp->status_id == nFTLuigiStatusSpecialHi) ||
@@ -787,7 +787,7 @@ static sb32 ndsFighterNaturalMarioFamilyStatusIsSpecialLw(FTStruct *fp)
         return ((fp->status_id == nFTMarioStatusSpecialLw) ||
                 (fp->status_id == nFTMarioStatusSpecialAirLw)) ? TRUE : FALSE;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fp->fkind == nFTKindLuigi)
     {
         return ((fp->status_id == nFTLuigiStatusSpecialLw) ||
@@ -1584,7 +1584,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     {
         gNdsFighterSpecialsFoxSlot = 1u;
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     gNdsFighterDonkeySpecialsSlot = 0u;
     if (ndsFighterNaturalIsDonkey(p1) != FALSE)
     {

@@ -3,13 +3,13 @@
  * derived only from those matrices for one generation. */
 static u32 sNdsNativeStageMatrixGen = 1u;
 
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #include <nds/nds_native_actor_yoster_cloud.h>
 #include "generated/nds_native_actor_yoster_cloud.generated.inc"
 #include "nds_native_actor_yoster_cloud.exec.inc"
 #endif
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 #include "generated/nds_native_actor_tarucann.generated.inc"
 

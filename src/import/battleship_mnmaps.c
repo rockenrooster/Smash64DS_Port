@@ -298,7 +298,7 @@ void ndsMNMapsRunSelectVSBattleProbe(void)
     }
 }
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 /* P2-1f defines the real stage-select scene in src/nds/nds_menu_shell.c. This
  * one runs the ORIGINAL mnMapsFuncStart, which loads five menu files,
  * allocates two model heaps sized to the largest stage map file and builds the
@@ -319,7 +319,7 @@ void mnMapsStartScene(void)
 }
 #endif
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 /* THE STAGE SELECT'S 3D PREVIEW (owner BUGS.md 2026-10-12: "SSS: missing 3D
  * rendered previews"). mnMapsMakePreview loads the ground's map file, builds
  * its four display layers (mnMapsMakeLayer: the ground descriptors' DObjs,

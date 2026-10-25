@@ -51,7 +51,7 @@ static const NdsSceneDesc sNdsSceneTable[] = {
       NDS_SCENE_TRANSITION_SOURCE },
     { (u8)nSCKindTitle, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P2-1d. The main menu. It is the one scene in this table with no imported
      * translation unit behind it -- nSCKindModeSelect was an NDS_SCENE_STUB --
      * so its StartScene is the port's own (src/nds/nds_menu_shell.c). It
@@ -81,7 +81,7 @@ static const NdsSceneDesc sNdsSceneTable[] = {
       NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
 #endif
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
     /* These source menus have no campaign dependency. Their imports and the
      * source-menu pump use this same gate; each owns its own transitions. */
     /* mnoption.c (battleship_mnoption.c); the ModeSelect OPTION entry. */
@@ -103,7 +103,7 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     { (u8)nSCKindSoundTest, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
     /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. Under the
      * shell it is the native src/nds/nds_menu_shell_data.c screen
      * (2026-09-07); its remaining source child (Characters) stays
@@ -119,11 +119,11 @@ static const NdsSceneDesc sNdsSceneTable[] = {
       NDS_SCENE_TRANSITION_SOURCE },
     /* mncharacters.c; DATA's CHARACTERS target. Under the shell this is the
      * native src/nds/nds_menu_shell_characters.c surface. It is a DATA child,
-     * not a 1P-campaign dependency, so it must exist when NDS_P2_1P_GAME=0. */
+     * not a 1P-campaign dependency, so it must exist when NDS_1P_GAME=0. */
     { (u8)nSCKindCharacters, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* mn1pmode.c (battleship_mn1pmode.c); the ModeSelect 1P GAME entry. */
     { (u8)nSCKind1PMode, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
@@ -383,7 +383,7 @@ void ndsSceneManagerExit(void)
 
     ndsPlatformBeginSceneTransition();
 
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     /* Taskman finished the frame/VBlank bracket before returning here. Drain
      * renderer-owned DMA before deleting the stage's names/palette references. */
     ndsRendererHardwareReleaseHyruleTextures();

@@ -91,7 +91,7 @@ volatile u32 gNdsBattleHudScoreFrameMask;
 static NDSBattleHudEmblemState sNdsBattleHudEmblemBaked[NDS_BATTLE_HUD_PLAYERS];
 static u8 sNdsBattleHudEmblemValid[NDS_BATTLE_HUD_PLAYERS];
 static u32 sNdsBattleHudPrepared;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 static u32 sNdsBattleHudTeamStockCount;
 /* The bonus timer this render consumed (gNdsIFCommonHUDBonusTimer*). */
 static u32 sNdsBattleHudBonusTimerMask;
@@ -883,7 +883,7 @@ static void ndsBattleHudDrawEmblem(u32 player,
                        NDS_BATTLE_HUD_EMBLEM_PALETTE_BASE + player);
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* sc1PBonusStageTimerProcUpdate's six digits at their places (y 30) and the
  * two marks (y 20), each centred as the source centres its SObj. */
 static void ndsBattleHudDrawBonusTimer(u32 *next_id)
@@ -931,7 +931,7 @@ static void ndsBattleHudDrawTimer(u32 *next_id)
     u8 digits[4];
     u32 i;
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (sNdsBattleHudBonusTimerMask != 0u)
     {
         ndsBattleHudDrawBonusTimer(next_id);
@@ -972,7 +972,7 @@ static void ndsBattleHudDrawTimer(u32 *next_id)
         NDS_BATTLE_HUD_WHITE_PALETTE);
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* src/import/battleship_ifcommon.c: icons the source's team stock row shows
  * this frame (0 = none), each one's look in gNdsIFCommonHUDTeamStockLook.
  * Consumed by each render. */
@@ -1152,7 +1152,7 @@ void ndsBattleHudRender(void)
                                      ((u32)emblem->color_b << 16) |
                                      ((u32)emblem->stride << 24));
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     {
         u32 team_count = gNdsIFCommonHUDTeamStockCount;
         u32 i;
@@ -1228,7 +1228,7 @@ void ndsBattleHudRender(void)
         }
     }
     ndsBattleHudDrawScores(&next_id);
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     ndsBattleHudDrawTeamStock(sNdsBattleHudTeamStockCount, &next_id);
 #endif
     oamUpdate(&oamSub);

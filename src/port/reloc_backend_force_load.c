@@ -566,7 +566,7 @@ NDS_COLD void *lbRelocGetStatusBufferFile(const void *file_id)
                                       sNdsRelocStatusBufferCount,
                                       asset_id);
     }
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
     {
         /* A compact fighter pack makes Main and Model resident WITHOUT a
@@ -1290,7 +1290,7 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
         gNdsOpeningRoomRelocSymbolResolveFailCount++;
         return NULL;
     }
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     if ((loaded->reserved[0] != 0u) &&
         (loaded->reserved[0] != NDS_RELOC_IF_COMPACT_MARK) &&
         (ndsPreviewFileOffset(loaded, offset, 1u, &offset) == FALSE))
@@ -1371,8 +1371,8 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
 /* KEEP THIS IDENTICAL TO THE DECLARATION GUARD in nds_preview_pack.h.
  * Two callers arrive from outside the roster flags: the VS CSS compact
  * preview transaction (a RENDERER condition) and wpManagerMakeWeapon's
- * Yoshi egg root mapping under NDS_P2_YOSHI. The second is what stopped
- * NDS_P2_KIRBY_COPYLINK_PROOF -- the only scripted Kirby inhale in the
+ * Yoshi egg root mapping under NDS_YOSHI. The second is what stopped
+ * NDS_KIRBY_COPYLINK_PROOF -- the only scripted Kirby inhale in the
  * tree -- from linking. Spelled out rather than hidden behind a macro:
  * this file does not include that header here, and an undefined macro in
  * an #if is silently 0, which is a quieter version of the same bug. */

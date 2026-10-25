@@ -38,7 +38,7 @@
 #include <ft/fighter.h>
 #include <sc/scene.h>
 #include <if/interface.h>
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #include <gr/ground.h>
 #endif
 #include <nds/nds_reloc_assets.h>

@@ -38,7 +38,7 @@ So a Results demo row is closed only when BOTH hold:
   * the animation symbol resolves to something the port can actually load --
     a compiled-in clip in `battleship_scsubsysdata_ft.c`, one of the Mario/Fox
     bridge arrays in `reloc_backend_assets.c`, or a generated
-    `NDS_P2_<KIND>_ANIM_ASSET_ROWS` row with its NitroFS path; and
+    `NDS_<KIND>_ANIM_ASSET_ROWS` row with its NitroFS path; and
   * every model part the row's demo script installs has a native bake, which is
     `check_model_part_mutation_coverage.py`'s job -- this checker re-runs that
     resolution for the Results rows alone so a removed demo root fails HERE too,
@@ -151,12 +151,11 @@ def loadable_anim_symbols() -> dict[str, str]:
 
     if PRODUCTION_HEADER.is_file():
         header = PRODUCTION_HEADER.read_text(encoding="utf-8", errors="replace")
-        # `NDS_\w+` rather than `NDS_P2_\w+`: Mario and Fox are the
-        # always-compiled base pair and carry no P2 flag, so their Results demo
-        # rows are emitted as NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS. Narrowing this
-        # to the P2 prefix would hide three real routes (and Mario's Claps is
-        # Luigi's DemoLose besides). This only widens which producer text is
-        # read; every assertion below is unchanged.
+        # `NDS_\w+` takes every kind's rows. Mario and Fox are the
+        # always-compiled base pair and carry no fighter flag, so their Results
+        # demo rows are emitted as NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS; leaving
+        # them out would hide three real routes (and Mario's Claps is Luigi's
+        # DemoLose besides).
         for match in re.finditer(
                 r"#define (NDS_\w+_ANIM_ASSET_ROWS)\(X\)(.*?)\n\n",
                 header, re.S):

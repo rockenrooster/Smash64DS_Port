@@ -245,9 +245,9 @@ int main(void) {{
             self.assertIn(
                 f"NDS_NATIVE_OWNER_IMAGE_{flag} = "
                 f"$(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),"
-                f"$(NDS_P2_{flag}),0)", mk)
+                f"$(NDS_{flag}),0)", mk)
             # NitroFS staging membership under the same P2 guard.
-            self.assertIn(f"ifeq ($(NDS_P2_{flag}),1)", mk)
+            self.assertIn(f"ifeq ($(NDS_{flag}),1)", mk)
         staged = [line for line in mk.splitlines()
                   if "NDS_NATIVE_IMAGE_OWNERS += " in line]
         for flag, _title in VARIANTS:

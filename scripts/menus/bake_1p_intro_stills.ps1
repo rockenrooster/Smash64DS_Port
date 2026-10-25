@@ -1,7 +1,7 @@
 param(
     # melonDS runner slots baked in parallel, one boot per still.
     [int[]]$Slots = @(9, 10, 11, 12),
-    # The lab ROM: TARGET=smash64ds NDS_P2_MENU_WALK=1 NDS_1P_INTRO_BAKE=1.
+    # The lab ROM: TARGET=smash64ds NDS_MENU_WALK=1 NDS_1P_INTRO_BAKE=1.
     [string]$RomDir = 'builds\build-p2-intro-bake',
     # Raw 256x192 RGB15 captures, one <name>.raw per still.
     [string]$OutDir = 'artifacts\intro_bake\raw',

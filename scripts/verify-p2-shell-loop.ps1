@@ -215,7 +215,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         if ($m.Success) { return [int]$m.Groups[1].Value }
         return -1
     }
-    foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL', 'NDS_P2_MENU_WALK')) {
+    foreach ($flag in @('NDS_UI_KIT', 'NDS_MENU_SHELL', 'NDS_MENU_WALK')) {
         $value = Get-ConfigValue -Flag $flag
         Write-Output ("build config: {0}={1}" -f $flag, $value)
         if ($value -le 0) {
@@ -230,7 +230,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'scripted START, so ndsMNVSResultsSetLoadScene would never run ' +
             'and the rematch claim would be false. It must be 0 on this arm.')
     }
-    $compiledBudget = Get-ConfigValue -Flag 'NDS_P2_MENU_WALK'
+    $compiledBudget = Get-ConfigValue -Flag 'NDS_MENU_WALK'
     Write-Output ("walk budget: compiled={0} requested={1}" -f $compiledBudget, $Loops)
 
     $required = @(
@@ -308,7 +308,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         throw ("verify-p2-shell-loop: symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
     }
     # THE ITEM BLOCK IS CONFIGURATION-DEPENDENT, and listing it above was a
-    # mistake that turned the Boundary arm red. `NDS_P2_ITEM_CORE` is derived
+    # mistake that turned the Boundary arm red. `NDS_ITEM_CORE` is derived
     # (Makefile:737) from the landed fighters and the three item-bearing
     # stages, so the DEFAULT shell-loop build has no items and none of these
     # symbols -- while the all-stages lab ROM has all of them. A symbol that
@@ -338,10 +338,10 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
     $hasItems = @($itemSymbols | Where-Object { $symbols -notcontains $_ }).Count -eq 0
     $hasPickup = @($pickupSymbols | Where-Object { $symbols -notcontains $_ }).Count -eq 0
     if (-not $hasItems) {
-        Write-Output 'items: not in this build (NDS_P2_ITEM_CORE off); item ledger skipped.'
+        Write-Output 'items: not in this build (NDS_ITEM_CORE off); item ledger skipped.'
         if (($ItemRate -ne 0) -or ($ItemToggles -ne 0)) {
             throw ('verify-p2-shell-loop: -ItemRate/-ItemToggles was requested but this build ' +
-                'has no item core. Build with a stage or fighter that enables NDS_P2_ITEM_CORE ' +
+                'has no item core. Build with a stage or fighter that enables NDS_ITEM_CORE ' +
                 '(Makefile:737).')
         }
     }

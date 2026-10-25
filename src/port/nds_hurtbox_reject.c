@@ -12,7 +12,7 @@
  * ~0.002 world units at depth 12) from the source's own cached locals, places
  * the hurtbox's world axis-aligned bounds around it, and rejects when the
  * attack's swept segment bounds are separated from them on some world axis by
- * more than NDS_P2_HB_MARGIN_Q12 -- a thousand times the measured error. Every
+ * more than NDS_HB_MARGIN_Q12 -- a thousand times the measured error. Every
  * other case returns 0 and the decomp float path decides exactly as before.
  *
  * Nothing here writes a source latch (FTParts unk_dobjtrans_0x5/6/7, locals,
@@ -44,23 +44,23 @@
 #define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
 #include <nds/nds_r2_collision_fixed.h>
 
-#define NDS_P2_HB_CHAIN_MAX 18
+#define NDS_HB_CHAIN_MAX 18
 /* Four world units, Q12. */
-#define NDS_P2_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
+#define NDS_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
 /* 2026-10-05: four fighters bring ~100 joints to the hit-detection phase;
  * 64 direct-mapped slots evicted chain worlds the same tick recomposed. */
-#define NDS_P2_HB_CACHE_SLOTS 128u
-#define NDS_P2_HB_CACHE_SHIFT 25u
+#define NDS_HB_CACHE_SLOTS 128u
+#define NDS_HB_CACHE_SHIFT 25u
 
-__attribute__((used)) volatile u32 gNdsP2HurtboxRejects;
-__attribute__((used)) volatile u32 gNdsP2HurtboxPasses;
-__attribute__((used)) volatile u32 gNdsP2HurtboxDeclines;
+__attribute__((used)) volatile u32 gNdsHurtboxRejects;
+__attribute__((used)) volatile u32 gNdsHurtboxPasses;
+__attribute__((used)) volatile u32 gNdsHurtboxDeclines;
 /* Bumped wherever the source clears FTParts latches (the port's
  * ftParamsUpdateFighterPartsTransform shims and the flat-walk topology reset),
  * so a cached world never outlives the latch state it stands beside. */
-__attribute__((used)) volatile u32 gNdsP2HurtboxLatchEpoch;
+__attribute__((used)) volatile u32 gNdsHurtboxLatchEpoch;
 
-typedef struct NDSP2HbWorld
+typedef struct NDSHbWorld
 {
     const DObj *dobj;
     u32 epoch;
@@ -68,21 +68,21 @@ typedef struct NDSP2HbWorld
     /* 1/s_min at Q26, rounded up (0 = not yet derived): s_min is the shortest
      * world row, so radius * |W[k][c]| / s_k <= radius * |W[k][c]| * this. */
     int32_t inv_smin_q26;
-    /* 1 = composed by the animation-lock walk (ndsP2HbWorldOfLock), whose
+    /* 1 = composed by the animation-lock walk (ndsHbWorldOfLock), whose
      * entries also carry the joint's accumulated scale at Q16; each walk
      * takes only its own kind's entries. */
     u32 lock;
     int32_t nscale[3];
-    /* Stamped from sNdsP2HbWorldGen each time the world is written: the
+    /* Stamped from sNdsHbWorldGen each time the world is written: the
      * narrow-test frame below is valid only for the write it was built
      * from. */
     u32 gen;
-} NDSP2HbWorld;
+} NDSHbWorld;
 
-static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
-static u32 sNdsP2HbWorldGen;
+static NDSHbWorld sNdsHbCache[NDS_HB_CACHE_SLOTS];
+static u32 sNdsHbWorldGen;
 
-/* The narrow test's frame (ndsP2HbDecidePoints): the cofactor inverse of a
+/* The narrow test's frame (ndsHbDecidePoints): the cofactor inverse of a
  * slot's world, with the lock walk's 1/nscale when the slot is a lock world.
  * Only the tests the reject cannot settle build one (a few a frame), so it
  * lives in its own small cache rather than in every world slot (2026-10-07:
@@ -94,42 +94,42 @@ static u32 sNdsP2HbWorldGen;
  * DObj's nine transform words (68 entries, two ways). A heavy frame's ~100
  * chain joints cycle through it every tick, so it hit 38% and every lookup
  * paid its line fills: Saffron P95 +14K / +27K, every seed slower. */
-#define NDS_P2_HB_FRAME_SLOTS 16u
-typedef struct NDSP2HbFrameSlot
+#define NDS_HB_FRAME_SLOTS 16u
+typedef struct NDSHbFrameSlot
 {
-    const NDSP2HbWorld *slot;
+    const NDSHbWorld *slot;
     u32 gen;
     NDSR2CfxFrame frame;
-} NDSP2HbFrameSlot;
-static NDSP2HbFrameSlot sNdsP2HbFrames[NDS_P2_HB_FRAME_SLOTS];
+} NDSHbFrameSlot;
+static NDSHbFrameSlot sNdsHbFrames[NDS_HB_FRAME_SLOTS];
 
-static inline NDSP2HbFrameSlot *ndsP2HbFrameSlot(const NDSP2HbWorld *slot)
+static inline NDSHbFrameSlot *ndsHbFrameSlot(const NDSHbWorld *slot)
 {
-    return &sNdsP2HbFrames[((u32)(uintptr_t)slot * 0x9E3779B1u) >> 28];
+    return &sNdsHbFrames[((u32)(uintptr_t)slot * 0x9E3779B1u) >> 28];
 }
 
 /* Tags a slot whose world was just written. */
-static inline void ndsP2HbTag(NDSP2HbWorld *slot, const DObj *dobj, u32 epoch,
+static inline void ndsHbTag(NDSHbWorld *slot, const DObj *dobj, u32 epoch,
                               u32 lock)
 {
     slot->dobj = dobj;
     slot->epoch = epoch;
     slot->inv_smin_q26 = 0;
     slot->lock = lock;
-    slot->gen = ++sNdsP2HbWorldGen;
+    slot->gen = ++sNdsHbWorldGen;
 }
 
 /* A world of this epoch for a DObj is in the slot its pointer hashes to. A
  * fighter's DObjs are 136 bytes apart, so (ptr >> 4) & 63 put a joint and the
  * joints eight or nine places along the pool on one slot; the multiplicative
  * hash spreads them. */
-static inline NDSP2HbWorld *ndsP2HbSlot(const void *dobj)
+static inline NDSHbWorld *ndsHbSlot(const void *dobj)
 {
-    return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >>
-                          NDS_P2_HB_CACHE_SHIFT];
+    return &sNdsHbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >>
+                          NDS_HB_CACHE_SHIFT];
 }
 
-static inline u32 ndsP2HbBits(f32 value)
+static inline u32 ndsHbBits(f32 value)
 {
     u32 bits;
 
@@ -137,14 +137,14 @@ static inline u32 ndsP2HbBits(f32 value)
     return bits;
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* The relaxed local below. lbCommonSin's table index, (s32)(angle * K) with
  * K = 0xa2f983 * 2^-14, as mantissa * 0xa2f983 * 2^(exponent - 164) truncated:
  * the lean kernel's form (src/nds/nds_ftr_lean_kernel.c), without the float
  * multiply's rounding step. 0 = decline (|angle| >= 2^14 or not finite). */
-static int ndsP2HbAngleIndex(f32 angle, s32 *out)
+static int ndsHbAngleIndex(f32 angle, s32 *out)
 {
-    const u32 bits = ndsP2HbBits(angle);
+    const u32 bits = ndsHbBits(angle);
     const u32 exponent = (bits >> 23) & 0xffu;
     u32 magnitude;
 
@@ -171,7 +171,7 @@ static int ndsP2HbAngleIndex(f32 angle, s32 *out)
  * Weak: a build without the copy reads gSYSinTable. */
 extern u16 gNdsFtrLeanSinHalf[0x400] __attribute__((weak));
 
-static inline s32 ndsP2HbSinQ15(const u16 *half, s32 index)
+static inline s32 ndsHbSinQ15(const u16 *half, s32 index)
 {
     const u32 id = (u32)index & 0xfffu;
     const u32 h = id & 0x7ffu;
@@ -182,7 +182,7 @@ static inline s32 ndsP2HbSinQ15(const u16 *half, s32 index)
 }
 
 /* One copy of the float -> fixed edge for the six conversions a local takes. */
-static int32_t __attribute__((noinline)) ndsP2HbToFixed(f32 value,
+static int32_t __attribute__((noinline)) ndsHbToFixed(f32 value,
                                                         u32 frac_bits)
 {
     return ndsR2CollisionF32ToFixed(value, frac_bits);
@@ -197,7 +197,7 @@ static int32_t __attribute__((noinline)) ndsP2HbToFixed(f32 value,
  * angle + 90 degrees -- each one table step (1/4096 turn) at a rounding edge,
  * far inside the reject's four-unit margin. 0 = decline (a scale past 4, a
  * translation past 131,072 units, an angle the index declines). */
-static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
+static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 {
     const f32 scale[3] = { dobj->scale.vec.f.x, dobj->scale.vec.f.y,
                            dobj->scale.vec.f.z };
@@ -224,18 +224,18 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     {
         half = NULL;
     }
-    if ((ndsP2HbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
-        (ndsP2HbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
-        (ndsP2HbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
+    if ((ndsHbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
+        (ndsHbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
+        (ndsHbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
     {
         return 0;
     }
-    sx = ndsP2HbSinQ15(half, ix);
-    cx = ndsP2HbSinQ15(half, ix + 0x400);
-    sy = ndsP2HbSinQ15(half, iy);
-    cy = ndsP2HbSinQ15(half, iy + 0x400);
-    sz = ndsP2HbSinQ15(half, iz);
-    cz = ndsP2HbSinQ15(half, iz + 0x400);
+    sx = ndsHbSinQ15(half, ix);
+    cx = ndsHbSinQ15(half, ix + 0x400);
+    sy = ndsHbSinQ15(half, iy);
+    cy = ndsHbSinQ15(half, iy + 0x400);
+    sz = ndsHbSinQ15(half, iz);
+    cz = ndsHbSinQ15(half, iz + 0x400);
     /* Pair products of Q15 entries are at most 2^30; each sum below is a
      * rotation cell, so it stays within 2^30 plus the table's rounding. */
     sxsy = sx * sy;
@@ -253,7 +253,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     {
         int32_t s;
 
-        if (ndsP2HbBits(scale[row]) == 0x3f800000u)
+        if (ndsHbBits(scale[row]) == 0x3f800000u)
         {
             for (col = 0u; col < 3u; col++)
             {
@@ -261,7 +261,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
             }
             continue;
         }
-        s = ndsP2HbToFixed(scale[row], NDS_R2_CFX_ROT_BITS);
+        s = ndsHbToFixed(scale[row], NDS_R2_CFX_ROT_BITS);
         if ((s == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (ndsR2CfxAbs32(s) > NDS_R2_CFX_ROT_MAX))
         {
@@ -276,7 +276,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     }
     for (col = 0u; col < 3u; col++)
     {
-        const int32_t t = ndsP2HbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
+        const int32_t t = ndsHbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
 
         if ((t == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (ndsR2CfxAbs32(t) >= NDS_R2_CFX_POS_MAX))
@@ -288,7 +288,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     return 1;
 }
 #else
-static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
+static int ndsHbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 {
     const float rotate[3] = { dobj->rotate.vec.f.x, dobj->rotate.vec.f.y,
                               dobj->rotate.vec.f.z };
@@ -305,23 +305,23 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 /* The joint's local, as the source would use it: its cached float local when
  * transform_update_mode is set, otherwise built from the DObj TRS in fixed
  * point (gmCollisionTransformMatrixAll's terms). */
-static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
+static int ndsHbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
                         const FTParts *parts)
 {
     if (parts->transform_update_mode != 0)
     {
         return ndsR2CfxLoadF32(dst, (float (*)[4])parts->unk_dobjtrans_0x10);
     }
-    return ndsP2HbLocalFromDObj(dst, dobj);
+    return ndsHbLocalFromDObj(dst, dobj);
 }
 
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* ndsR2CfxCompose for the resident walk: dst = rhs carried into lhs, the
  * same products with truncating reductions (2^-26 a cell, far under the Q12
  * every consumer keeps) and one unsigned range test a cell for the same
  * guards. dst may alias lhs. */
-static int ndsP2HbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
+static int ndsHbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
                           const NDSR2CfxMtx *rhs)
 {
     NDSR2CfxMtx out;
@@ -363,9 +363,9 @@ static int ndsP2HbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
     *dst = out;
     return 1;
 }
-#define NDS_P2_HB_COMPOSE ndsP2HbCompose
+#define NDS_HB_COMPOSE ndsHbCompose
 #else
-#define NDS_P2_HB_COMPOSE ndsR2CfxCompose
+#define NDS_HB_COMPOSE ndsR2CfxCompose
 #endif
 
 /* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
@@ -378,7 +378,7 @@ static int ndsP2HbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
  * (q odd); the shift is exact. At most 1.56% above the exact value.
  * artifacts/performance/2026-09-29_p2-2p8-hurtbox-box/invsqrt_test.c checks
  * inv^2 * s2 >= 2^78 for every s2 in the range (1,069,547,521 values). */
-static const uint32_t sNdsP2HbInvSqrtEven[32] = {
+static const uint32_t sNdsHbInvSqrtEven[32] = {
     2965821u, 2920539u, 2877269u, 2835868u,
     2796203u, 2758158u, 2721624u, 2686505u,
     2652711u, 2620161u, 2588781u, 2558502u,
@@ -388,7 +388,7 @@ static const uint32_t sNdsP2HbInvSqrtEven[32] = {
     2241950u, 2222197u, 2202957u, 2184208u,
     2165930u, 2148103u, 2130709u, 2113731u,
 };
-static const uint32_t sNdsP2HbInvSqrtOdd[32] = {
+static const uint32_t sNdsHbInvSqrtOdd[32] = {
     4194304u, 4130266u, 4069073u, 4010522u,
     3954428u, 3900624u, 3848958u, 3799292u,
     3751500u, 3705468u, 3661089u, 3618268u,
@@ -399,19 +399,19 @@ static const uint32_t sNdsP2HbInvSqrtOdd[32] = {
     3063087u, 3037876u, 3013277u, 2989267u,
 };
 
-static int32_t ndsP2HbInvSqrtQ26(uint32_t s2)
+static int32_t ndsHbInvSqrtQ26(uint32_t s2)
 {
     const uint32_t q = 26u - (uint32_t)__builtin_clz(s2);
     const uint32_t m = s2 >> q;
-    const uint32_t t = ((q & 1u) != 0u) ? sNdsP2HbInvSqrtOdd[m - 32u]
-                                        : sNdsP2HbInvSqrtEven[m - 32u];
+    const uint32_t t = ((q & 1u) != 0u) ? sNdsHbInvSqrtOdd[m - 32u]
+                                        : sNdsHbInvSqrtEven[m - 32u];
 
     return (int32_t)(t << (15u - ((q + 1u) >> 1)));
 }
 
 /* 1/s_min for the world `w` (the caller keeps it in the joint's slot).
  * 0 = decline. */
-static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
+static int32_t ndsHbInvSMinOf(const NDSR2CfxMtx *w)
 {
     int32_t s2[3];
     int32_t s2_min;
@@ -425,15 +425,15 @@ static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
     if (s2[1] < s2_min) { s2_min = s2[1]; }
     if (s2[2] < s2_min) { s2_min = s2[2]; }
     /* RowScales' guard already put s2_min in the table's range. */
-    inv = ndsP2HbInvSqrtQ26((uint32_t)s2_min);
+    inv = ndsHbInvSqrtQ26((uint32_t)s2_min);
     return inv;
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* 1/min(nscale) at Q26, rounded up, for a lock joint's accumulated scale at
  * Q16; the same [1/4, 4] range the row-scale guard above allows (so the box
  * test's products keep their bounds). 0 = decline. */
-static int32_t ndsP2HbInvMinScaleOf(const int32_t nscale[3])
+static int32_t ndsHbInvMinScaleOf(const int32_t nscale[3])
 {
     int32_t m = nscale[0];
 
@@ -447,7 +447,7 @@ static int32_t ndsP2HbInvMinScaleOf(const int32_t nscale[3])
 }
 #endif
 
-static int ndsP2HbVec(int32_t out[3], const Vec3f *v)
+static int ndsHbVec(int32_t out[3], const Vec3f *v)
 {
     out[0] = ndsR2CollisionF32ToFixed(v->x, NDS_R2_CFX_POS_BITS);
     out[1] = ndsR2CollisionF32ToFixed(v->y, NDS_R2_CFX_POS_BITS);
@@ -466,20 +466,20 @@ static int ndsP2HbVec(int32_t out[3], const Vec3f *v)
  * memoized on the float bits they convert, so a hit returns exactly what the
  * conversion would (P2-2p8, 2026-09-27: Saffron's hazard frames made ~190
  * conversions a frame; same-ROM A/B there: top 5% -6.9K, replay identical). */
-typedef struct NDSP2HbAttackMemo
+typedef struct NDSHbAttackMemo
 {
     u32 bits[7];
     int32_t p0[3];
     int32_t p1[3];
     int32_t radius;
     u32 ok;
-} NDSP2HbAttackMemo;
+} NDSHbAttackMemo;
 /* An FTDamageColl is 11 words, so a victim's eleven colls take eleven
  * distinct slots of sixteen under (ptr >> 2) & 15; eight slots put three pairs
  * of one victim's colls on the same slot (P2-2p8, 2026-09-29: memo misses on
  * the gate 8,499 -> 2,150 a match). */
-#define NDS_P2_HB_DAMAGE_MEMO_SLOTS 16u
-typedef struct NDSP2HbDamageMemo
+#define NDS_HB_DAMAGE_MEMO_SLOTS 16u
+typedef struct NDSHbDamageMemo
 {
     const FTDamageColl *damage;
     u32 bits[6];
@@ -497,9 +497,9 @@ typedef struct NDSP2HbDamageMemo
     int32_t box_sum_abs[3];
     int32_t box_inv_smin;
     int64_t box_ext0[3];
-} NDSP2HbDamageMemo;
-static NDSP2HbAttackMemo sNdsP2HbAttackMemo;
-static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
+} NDSHbDamageMemo;
+static NDSHbAttackMemo sNdsHbAttackMemo;
+static NDSHbDamageMemo sNdsHbDamageMemo[NDS_HB_DAMAGE_MEMO_SLOTS];
 
 /* The float test's own frame (P2-2p8, 2026-09-29). The world-axis test below
  * bounds the box by its world-aligned extents, which for a rotated joint are up
@@ -518,13 +518,13 @@ static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
  * cyclic), local_k(p) = (p - t) . n_k / (R_k . n_k), so a point is beyond the
  * face local_k = h when (p - t) . n_k - h * det_k > 0 (det_k = R_k . n_k, made
  * positive by flipping n_k), and that difference over |n_k| is its world
- * distance to the face plane. Requiring it to exceed NDS_P2_HB_MARGIN_Q12 *
+ * distance to the face plane. Requiring it to exceed NDS_HB_MARGIN_Q12 *
  * |n_k|_1 keeps the world-axis test's four-unit margin; h uses the table bound
  * on 1/s_k, which is never below the float's. Values outside the guards
  * decline. */
-__attribute__((used)) volatile u32 gNdsP2HbLocalRejects;
+__attribute__((used)) volatile u32 gNdsHbLocalRejects;
 
-static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
+static int ndsHbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
                               const int32_t size[3], int32_t radius,
                               const int32_t p0[3], const int32_t p1[3])
 {
@@ -596,7 +596,7 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
         }
         /* size + radius / s_k, the radius term rounded up (Q12). */
         reach = (int64_t)size[k] +
-                (((int64_t)radius * ndsP2HbInvSqrtQ26((uint32_t)s2[k]) +
+                (((int64_t)radius * ndsHbInvSqrtQ26((uint32_t)s2[k]) +
                   (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
                  NDS_R2_CFX_ROT_BITS);
         hi = (int64_t)off[k] + reach;
@@ -608,7 +608,7 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
         }
         num0 = v0[0] * n[0] + v0[1] * n[1] + v0[2] * n[2];
         num1 = v1[0] * n[0] + v1[1] * n[1] + v1[2] * n[2];
-        thr = (int64_t)NDS_P2_HB_MARGIN_Q12 * n1;
+        thr = (int64_t)NDS_HB_MARGIN_Q12 * n1;
         if (((num0 - hi * det) > thr) && ((num1 - hi * det) > thr))
         {
             return 1;
@@ -632,14 +632,14 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
  * into its slot, and a slot's tag is cleared before its world is written, so a
  * failed build never leaves a tag on a stale world (P2-2p8, 2026-09-29: the
  * previous walk read FTParts first and copied every level three times). */
-static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
-                                        NDSP2HbWorld **slot_out)
+static const NDSR2CfxMtx *ndsHbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+                                        NDSHbWorld **slot_out)
 {
-    DObj *chain[NDS_P2_HB_CHAIN_MAX];
-    const FTParts *chain_parts[NDS_P2_HB_CHAIN_MAX];
-    const u32 epoch = gNdsP2HurtboxLatchEpoch;
+    DObj *chain[NDS_HB_CHAIN_MAX];
+    const FTParts *chain_parts[NDS_HB_CHAIN_MAX];
+    const u32 epoch = gNdsHurtboxLatchEpoch;
     const NDSR2CfxMtx *acc;
-    NDSP2HbWorld *slot;
+    NDSHbWorld *slot;
     DObj *cursor = joint;
     s32 depth = 0;
 
@@ -648,7 +648,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
     {
         const FTParts *parts;
 
-        slot = ndsP2HbSlot(cursor);
+        slot = ndsHbSlot(cursor);
         if ((slot->dobj == cursor) && (slot->epoch == epoch) &&
             (slot->lock == 0u))
         {
@@ -678,15 +678,15 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
         {
             /* The root's world is its local (gmCollisionCopyMatrix). */
             slot->dobj = NULL;
-            if (ndsP2HbLocal(&slot->world, cursor, parts) == 0)
+            if (ndsHbLocal(&slot->world, cursor, parts) == 0)
             {
                 return NULL;
             }
-            ndsP2HbTag(slot, cursor, epoch, 0u);
+            ndsHbTag(slot, cursor, epoch, 0u);
             acc = &slot->world;
             break;
         }
-        if (depth >= NDS_P2_HB_CHAIN_MAX)
+        if (depth >= NDS_HB_CHAIN_MAX)
         {
             return NULL;
         }
@@ -701,26 +701,26 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
 
         depth--;
         cursor = chain[depth];
-        slot = ndsP2HbSlot(cursor);
-        if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) == 0)
+        slot = ndsHbSlot(cursor);
+        if (ndsHbLocal(&local, cursor, chain_parts[depth]) == 0)
         {
             return NULL;
         }
         /* Compose reads lhs into a temp before writing dst, so acc may be
          * this very slot (a parent on the same slot). */
         slot->dobj = NULL;
-        if (NDS_P2_HB_COMPOSE(&slot->world, acc, &local) == 0)
+        if (NDS_HB_COMPOSE(&slot->world, acc, &local) == 0)
         {
             return NULL;
         }
-        ndsP2HbTag(slot, cursor, epoch, 0u);
+        ndsHbTag(slot, cursor, epoch, 0u);
         acc = &slot->world;
     }
     *slot_out = slot;
     return acc;
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* P2-2p8 (2026-10-05, owner: "Software floating point should not exist,
  * fixed point only"): the animation-lock chain in fixed point. A fighter whose
  * motion sets is_use_animlocks (every Yoshi motion) composes its joints the
@@ -737,21 +737,21 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
 /* 2^32 / scale for a parent's accumulated scale at Q16, memoized per axis
  * as the lean builder's (perf, 2026-10-18): a scaled chain carries one
  * accumulated scale down most of its joints. */
-static int32_t sNdsP2HbLockInvIn[3];
-static int32_t sNdsP2HbLockInvOut[3];
+static int32_t sNdsHbLockInvIn[3];
+static int32_t sNdsHbLockInvOut[3];
 
-static inline int32_t ndsP2HbLockInv(u32 axis, int32_t scale)
+static inline int32_t ndsHbLockInv(u32 axis, int32_t scale)
 {
-    if (scale != sNdsP2HbLockInvIn[axis])
+    if (scale != sNdsHbLockInvIn[axis])
     {
-        sNdsP2HbLockInvOut[axis] =
+        sNdsHbLockInvOut[axis] =
             (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32, scale);
-        sNdsP2HbLockInvIn[axis] = scale;
+        sNdsHbLockInvIn[axis] = scale;
     }
-    return sNdsP2HbLockInvOut[axis];
+    return sNdsHbLockInvOut[axis];
 }
 
-static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
+static int ndsHbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
                             const DObj *dobj, const int32_t parent[3])
 {
     const f32 scale[3] = { dobj->scale.vec.f.x, dobj->scale.vec.f.y,
@@ -780,15 +780,15 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
     {
         half = NULL;
     }
-    if ((ndsP2HbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
-        (ndsP2HbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
-        (ndsP2HbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
+    if ((ndsHbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
+        (ndsHbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
+        (ndsHbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
     {
         return 0;
     }
     for (row = 0u; row < 3u; row++)
     {
-        int32_t s = ndsP2HbToFixed(scale[row], 16u);
+        int32_t s = ndsHbToFixed(scale[row], 16u);
 
         if ((s == NDS_R2_COLLISION_F32_OVERFLOW) || (s <= 0) ||
             (s >= (INT32_C(16) << 16)))
@@ -815,17 +815,17 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
                 {
                     return 0;
                 }
-                inv[row] = ndsP2HbLockInv(row, parent[row]);
+                inv[row] = ndsHbLockInv(row, parent[row]);
             }
         }
         nscale[row] = s;
     }
-    sx = ndsP2HbSinQ15(half, ix);
-    cx = ndsP2HbSinQ15(half, ix + 0x400);
-    sy = ndsP2HbSinQ15(half, iy);
-    cy = ndsP2HbSinQ15(half, iy + 0x400);
-    sz = ndsP2HbSinQ15(half, iz);
-    cz = ndsP2HbSinQ15(half, iz + 0x400);
+    sx = ndsHbSinQ15(half, ix);
+    cx = ndsHbSinQ15(half, ix + 0x400);
+    sy = ndsHbSinQ15(half, iy);
+    cy = ndsHbSinQ15(half, iy + 0x400);
+    sz = ndsHbSinQ15(half, iz);
+    cz = ndsHbSinQ15(half, iz + 0x400);
     sxsy = sx * sy;
     cxsy = cx * sy;
     rot[0][0] = cy * cz;
@@ -860,7 +860,7 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
     }
     for (col = 0u; col < 3u; col++)
     {
-        const int32_t t = ndsP2HbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
+        const int32_t t = ndsHbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
 
         if ((t == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (ndsR2CfxAbs32(t) >= NDS_R2_CFX_POS_MAX))
@@ -877,16 +877,16 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
  * scale cached beside it) or one the source latched (its vec_scale latched with
  * it), or to the root; then each child's lock local carried into its parent's
  * world. *nscale_out is the joint's accumulated scale at Q16. */
-static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
-                                            NDSP2HbWorld **slot_out,
+static const NDSR2CfxMtx *ndsHbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
+                                            NDSHbWorld **slot_out,
                                             int32_t nscale_out[3])
 {
-    DObj *chain[NDS_P2_HB_CHAIN_MAX];
-    const u32 epoch = gNdsP2HurtboxLatchEpoch;
+    DObj *chain[NDS_HB_CHAIN_MAX];
+    const u32 epoch = gNdsHurtboxLatchEpoch;
     const NDSR2CfxMtx *acc;
     const int32_t *acc_scale;
     int32_t latched_scale[3];
-    NDSP2HbWorld *slot;
+    NDSHbWorld *slot;
     DObj *cursor = joint;
     s32 depth = 0;
     u32 c;
@@ -896,7 +896,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
     {
         const FTParts *parts;
 
-        slot = ndsP2HbSlot(cursor);
+        slot = ndsHbSlot(cursor);
         if ((slot->dobj == cursor) && (slot->epoch == epoch) &&
             (slot->lock != 0u))
         {
@@ -919,9 +919,9 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
             {
                 return NULL;
             }
-            latched_scale[0] = ndsP2HbToFixed(parts->vec_scale.x, 16u);
-            latched_scale[1] = ndsP2HbToFixed(parts->vec_scale.y, 16u);
-            latched_scale[2] = ndsP2HbToFixed(parts->vec_scale.z, 16u);
+            latched_scale[0] = ndsHbToFixed(parts->vec_scale.x, 16u);
+            latched_scale[1] = ndsHbToFixed(parts->vec_scale.y, 16u);
+            latched_scale[2] = ndsHbToFixed(parts->vec_scale.z, 16u);
             for (c = 0u; c < 3u; c++)
             {
                 if ((latched_scale[c] == NDS_R2_COLLISION_F32_OVERFLOW) ||
@@ -945,17 +945,17 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
         if (cursor->parent == DOBJ_PARENT_NULL)
         {
             slot->dobj = NULL;
-            if (ndsP2HbLocalLock(&slot->world, slot->nscale, cursor, NULL) ==
+            if (ndsHbLocalLock(&slot->world, slot->nscale, cursor, NULL) ==
                 0)
             {
                 return NULL;
             }
-            ndsP2HbTag(slot, cursor, epoch, 1u);
+            ndsHbTag(slot, cursor, epoch, 1u);
             acc = &slot->world;
             acc_scale = slot->nscale;
             break;
         }
-        if (depth >= NDS_P2_HB_CHAIN_MAX)
+        if (depth >= NDS_HB_CHAIN_MAX)
         {
             return NULL;
         }
@@ -970,14 +970,14 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
 
         depth--;
         cursor = chain[depth];
-        slot = ndsP2HbSlot(cursor);
-        if (ndsP2HbLocalLock(&local, scale, cursor, acc_scale) == 0)
+        slot = ndsHbSlot(cursor);
+        if (ndsHbLocalLock(&local, scale, cursor, acc_scale) == 0)
         {
             return NULL;
         }
         /* As above, acc (and acc_scale) may be this very slot. */
         slot->dobj = NULL;
-        if (NDS_P2_HB_COMPOSE(&slot->world, acc, &local) == 0)
+        if (NDS_HB_COMPOSE(&slot->world, acc, &local) == 0)
         {
             return NULL;
         }
@@ -985,7 +985,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
         {
             slot->nscale[c] = scale[c];
         }
-        ndsP2HbTag(slot, cursor, epoch, 1u);
+        ndsHbTag(slot, cursor, epoch, 1u);
         acc = &slot->world;
         acc_scale = slot->nscale;
     }
@@ -996,22 +996,22 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
     *slot_out = slot;
     return acc;
 }
-#endif /* NDS_P2_JOINT_RESIDENT */
+#endif /* NDS_JOINT_RESIDENT */
 
-/* The attack's two points and radius, as ndsP2HbVec / the radius conversion
+/* The attack's two points and radius, as ndsHbVec / the radius conversion
  * give them; NULL when any is out of range. */
-static const NDSP2HbAttackMemo *ndsP2HbAttackPoints(const Vec3f *pos_curr,
+static const NDSHbAttackMemo *ndsHbAttackPoints(const Vec3f *pos_curr,
                                                      const Vec3f *pos_prev,
                                                      f32 attack_size)
 {
-    NDSP2HbAttackMemo *m = &sNdsP2HbAttackMemo;
-    const u32 b0 = ndsP2HbBits(pos_curr->x);
-    const u32 b1 = ndsP2HbBits(pos_curr->y);
-    const u32 b2 = ndsP2HbBits(pos_curr->z);
-    const u32 b3 = ndsP2HbBits(pos_prev->x);
-    const u32 b4 = ndsP2HbBits(pos_prev->y);
-    const u32 b5 = ndsP2HbBits(pos_prev->z);
-    const u32 b6 = ndsP2HbBits(attack_size);
+    NDSHbAttackMemo *m = &sNdsHbAttackMemo;
+    const u32 b0 = ndsHbBits(pos_curr->x);
+    const u32 b1 = ndsHbBits(pos_curr->y);
+    const u32 b2 = ndsHbBits(pos_curr->z);
+    const u32 b3 = ndsHbBits(pos_prev->x);
+    const u32 b4 = ndsHbBits(pos_prev->y);
+    const u32 b5 = ndsHbBits(pos_prev->z);
+    const u32 b6 = ndsHbBits(attack_size);
 
     if (((b0 ^ m->bits[0]) | (b1 ^ m->bits[1]) | (b2 ^ m->bits[2]) |
          (b3 ^ m->bits[3]) | (b4 ^ m->bits[4]) | (b5 ^ m->bits[5]) |
@@ -1022,8 +1022,8 @@ static const NDSP2HbAttackMemo *ndsP2HbAttackPoints(const Vec3f *pos_curr,
 
         m->ok = ((radius != NDS_R2_COLLISION_F32_OVERFLOW) &&
                  (ndsR2CfxAbs32(radius) < NDS_R2_CFX_POS_MAX) &&
-                 (ndsP2HbVec(m->p0, pos_curr) != 0) &&
-                 (ndsP2HbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
+                 (ndsHbVec(m->p0, pos_curr) != 0) &&
+                 (ndsHbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
         m->radius = radius;
         m->bits[0] = b0; m->bits[1] = b1; m->bits[2] = b2; m->bits[3] = b3;
         m->bits[4] = b4; m->bits[5] = b5; m->bits[6] = b6;
@@ -1032,24 +1032,24 @@ static const NDSP2HbAttackMemo *ndsP2HbAttackPoints(const Vec3f *pos_curr,
 }
 
 /* The damage box's offset and size in Q12; NULL when either is out of range. */
-static NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
+static NDSHbDamageMemo *ndsHbDamageBox(const FTDamageColl *damage)
 {
-    NDSP2HbDamageMemo *m =
-        &sNdsP2HbDamageMemo[((u32)(uintptr_t)damage >> 2) &
-                            (NDS_P2_HB_DAMAGE_MEMO_SLOTS - 1u)];
-    const u32 b0 = ndsP2HbBits(damage->offset.x);
-    const u32 b1 = ndsP2HbBits(damage->offset.y);
-    const u32 b2 = ndsP2HbBits(damage->offset.z);
-    const u32 b3 = ndsP2HbBits(damage->size.x);
-    const u32 b4 = ndsP2HbBits(damage->size.y);
-    const u32 b5 = ndsP2HbBits(damage->size.z);
+    NDSHbDamageMemo *m =
+        &sNdsHbDamageMemo[((u32)(uintptr_t)damage >> 2) &
+                            (NDS_HB_DAMAGE_MEMO_SLOTS - 1u)];
+    const u32 b0 = ndsHbBits(damage->offset.x);
+    const u32 b1 = ndsHbBits(damage->offset.y);
+    const u32 b2 = ndsHbBits(damage->offset.z);
+    const u32 b3 = ndsHbBits(damage->size.x);
+    const u32 b4 = ndsHbBits(damage->size.y);
+    const u32 b5 = ndsHbBits(damage->size.z);
 
     if ((m->damage != damage) ||
         (((b0 ^ m->bits[0]) | (b1 ^ m->bits[1]) | (b2 ^ m->bits[2]) |
           (b3 ^ m->bits[3]) | (b4 ^ m->bits[4]) | (b5 ^ m->bits[5])) != 0u))
     {
-        m->ok = ((ndsP2HbVec(m->off, &damage->offset) != 0) &&
-                 (ndsP2HbVec(m->size, &damage->size) != 0)) ? 1u : 0u;
+        m->ok = ((ndsHbVec(m->off, &damage->offset) != 0) &&
+                 (ndsHbVec(m->size, &damage->size) != 0)) ? 1u : 0u;
         m->damage = damage;
         m->bits[0] = b0; m->bits[1] = b1; m->bits[2] = b2;
         m->bits[3] = b3; m->bits[4] = b4; m->bits[5] = b5;
@@ -1060,7 +1060,7 @@ static NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
 
 /* The world-axis separation test on its pieces: ext0[c] = margin + sum_k
  * |W[k][c]| * size_k (each term rounded up), sum_abs[c] = sum_k |W[k][c]|. */
-static inline int ndsP2HbAxisReject(const int32_t center[3],
+static inline int ndsHbAxisReject(const int32_t center[3],
                                     const int64_t ext0[3],
                                     const int32_t sum_abs[3],
                                     int32_t inv_smin, int32_t radius,
@@ -1101,7 +1101,7 @@ static inline int ndsP2HbAxisReject(const int32_t center[3],
  * kept in the coll's damage memo entry for the epoch; a re-test runs the same
  * separation test on them and goes on to the full path only when it does not
  * separate (the local test needs the world). */
-__attribute__((used)) volatile u32 gNdsP2HbBoxHits;
+__attribute__((used)) volatile u32 gNdsHbBoxHits;
 
 /* 1 = the float test would certainly miss; 0 = let it decide.
  *
@@ -1116,16 +1116,16 @@ __attribute__((used)) volatile u32 gNdsP2HbBoxHits;
  *
  * The memos and the world are read in place: nothing between their lookup and
  * the last use below writes another memo entry or cache slot. */
-static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+static int ndsHbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                f32 attack_size, const FTDamageColl *damage)
 {
-    const u32 epoch = gNdsP2HurtboxLatchEpoch;
+    const u32 epoch = gNdsHurtboxLatchEpoch;
     DObj *joint = damage->joint;
     const FTStruct *fp;
-    const NDSP2HbAttackMemo *am;
-    NDSP2HbDamageMemo *dm;
+    const NDSHbAttackMemo *am;
+    NDSHbDamageMemo *dm;
     const NDSR2CfxMtx *w;
-    NDSP2HbWorld *slot;
+    NDSHbWorld *slot;
     NDSR2CfxMtx scratch;
     int32_t center[3];
     int32_t sum_abs[3];
@@ -1141,7 +1141,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
      * built only after the head below passed, and nothing the head reads
      * (the joint, its fighter) changes within an epoch but the animlocks
      * flag, which is read again. */
-    dm = ndsP2HbDamageBox(damage);
+    dm = ndsHbDamageBox(damage);
     if (dm == NULL)
     {
         return 0;
@@ -1150,16 +1150,16 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         (dm->box_lock ==
          ((dm->box_fp->is_use_animlocks != FALSE) ? 1u : 0u)))
     {
-        am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
+        am = ndsHbAttackPoints(pos_curr, pos_prev, attack_size);
         if (am == NULL)
         {
             return 0;
         }
-        if (ndsP2HbAxisReject(dm->box_center, dm->box_ext0, dm->box_sum_abs,
+        if (ndsHbAxisReject(dm->box_center, dm->box_ext0, dm->box_sum_abs,
                               dm->box_inv_smin, ndsR2CfxAbs32(am->radius),
                               am->p0, am->p1) != 0)
         {
-            NDS_DIAG(gNdsP2HbBoxHits++);
+            NDS_DIAG(gNdsHbBoxHits++);
             return 1;
         }
         /* Not separated: the full path below repeats the test and goes on
@@ -1175,18 +1175,18 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         return 0;
     }
     lock = (fp->is_use_animlocks != FALSE) ? 1u : 0u;
-#if !NDS_P2_JOINT_RESIDENT
+#if !NDS_JOINT_RESIDENT
     if (lock != 0u)
     {
         return 0;
     }
 #endif
-    am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
+    am = ndsHbAttackPoints(pos_curr, pos_prev, attack_size);
     if (am == NULL)
     {
         return 0;
     }
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
     if (lock != 0u)
     {
         /* The lock chain's world (2026-10-07; these tests all went to the
@@ -1196,7 +1196,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
          * itself holds for any world. */
         int32_t nscale[3];
 
-        w = ndsP2HbWorldOfLock(joint, &scratch, &slot, nscale);
+        w = ndsHbWorldOfLock(joint, &scratch, &slot, nscale);
         if (w == NULL)
         {
             return 0;
@@ -1207,7 +1207,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         }
         else
         {
-            inv_smin = ndsP2HbInvMinScaleOf(nscale);
+            inv_smin = ndsHbInvMinScaleOf(nscale);
             if (inv_smin <= 0)
             {
                 return 0;
@@ -1221,7 +1221,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     else
 #endif
     {
-        w = ndsP2HbWorldOf(joint, &scratch, &slot);
+        w = ndsHbWorldOf(joint, &scratch, &slot);
         if (w == NULL)
         {
             return 0;
@@ -1232,7 +1232,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         }
         else
         {
-            inv_smin = ndsP2HbInvSMinOf(w);
+            inv_smin = ndsHbInvSMinOf(w);
             if (inv_smin <= 0)
             {
                 return 0;
@@ -1247,7 +1247,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     radius = ndsR2CfxAbs32(am->radius);
     for (c = 0u; c < 3u; c++)
     {
-        int64_t ext = NDS_P2_HB_MARGIN_Q12;
+        int64_t ext = NDS_HB_MARGIN_Q12;
         int32_t abs_sum = 0;
         u32 k;
 
@@ -1275,7 +1275,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         dm->box_sum_abs[c] = sum_abs[c];
         dm->box_ext0[c] = ext0[c];
     }
-    if (ndsP2HbAxisReject(center, ext0, sum_abs, inv_smin, radius, am->p0,
+    if (ndsHbAxisReject(center, ext0, sum_abs, inv_smin, radius, am->p0,
                           am->p1) != 0)
     {
         return 1;
@@ -1286,10 +1286,10 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 0;
     }
-    if (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
+    if (ndsHbRejectLocal(w, dm->off, dm->size, radius, am->p0,
                            am->p1) != 0)
     {
-        NDS_DIAG(gNdsP2HbLocalRejects++);
+        NDS_DIAG(gNdsHbLocalRejects++);
         return 1;
     }
     return 0;
@@ -1310,55 +1310,55 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
  * The FTParts latches are not written, as for a rejected pair; their readers
  * build them as before. 1 = hit, 0 = miss, -1 = a value outside the fixed
  * guards, for the float tail. */
-__attribute__((used)) volatile u32 gNdsP2HbNarrowDecided;
-__attribute__((used)) volatile u32 gNdsP2HbNarrowDeclined;
+__attribute__((used)) volatile u32 gNdsHbNarrowDecided;
+__attribute__((used)) volatile u32 gNdsHbNarrowDeclined;
 
-static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+static int ndsHbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                f32 attack_size, s32 attack_state,
                                const FTDamageColl *damage)
 {
-    const NDSP2HbAttackMemo *am;
-    const NDSP2HbDamageMemo *dm;
+    const NDSHbAttackMemo *am;
+    const NDSHbDamageMemo *dm;
     const NDSR2CfxMtx *w;
     const FTStruct *fp;
-    NDSP2HbWorld *slot;
-    NDSP2HbFrameSlot *fs;
+    NDSHbWorld *slot;
+    NDSHbFrameSlot *fs;
     NDSR2CfxMtx scratch;
     NDSR2CfxFrame frame;
     int result;
 
-    if (ndsP2HbRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
+    if (ndsHbRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
     {
         return 0;
     }
     /* The reject left its pieces cached -- both memos and the joint's world
      * for the epoch -- so these are lookups; a head it declined declines here
      * too. */
-    dm = ndsP2HbDamageBox(damage);
+    dm = ndsHbDamageBox(damage);
     if ((dm == NULL) || (damage->joint == NULL) ||
         (damage->joint->parent_gobj == NULL))
     {
-        NDS_DIAG(gNdsP2HbNarrowDeclined++);
+        NDS_DIAG(gNdsHbNarrowDeclined++);
         return -1;
     }
     fp = ftGetStruct(damage->joint->parent_gobj);
-    am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
+    am = ndsHbAttackPoints(pos_curr, pos_prev, attack_size);
     if ((fp == NULL) || (am == NULL))
     {
-        NDS_DIAG(gNdsP2HbNarrowDeclined++);
+        NDS_DIAG(gNdsHbNarrowDeclined++);
         return -1;
     }
     if (fp->is_use_animlocks != FALSE)
     {
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
         /* The lock chain's world, and its accumulated scale as the radius
          * divisor (the source's vec_scale for a lock joint) instead of the
          * frame's row lengths. */
         int32_t nscale[3];
         u32 c;
 
-        w = ndsP2HbWorldOfLock(damage->joint, &scratch, &slot, nscale);
-        fs = (slot != NULL) ? ndsP2HbFrameSlot(slot) : NULL;
+        w = ndsHbWorldOfLock(damage->joint, &scratch, &slot, nscale);
+        fs = (slot != NULL) ? ndsHbFrameSlot(slot) : NULL;
         if ((fs != NULL) && (fs->slot == slot) && (fs->gen == slot->gen))
         {
             frame = fs->frame;
@@ -1367,7 +1367,7 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         {
             if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
             {
-                NDS_DIAG(gNdsP2HbNarrowDeclined++);
+                NDS_DIAG(gNdsHbNarrowDeclined++);
                 return -1;
             }
             for (c = 0u; c < 3u; c++)
@@ -1385,14 +1385,14 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
             }
         }
 #else
-        NDS_DIAG(gNdsP2HbNarrowDeclined++);
+        NDS_DIAG(gNdsHbNarrowDeclined++);
         return -1;
 #endif
     }
     else
     {
-        w = ndsP2HbWorldOf(damage->joint, &scratch, &slot);
-        fs = (slot != NULL) ? ndsP2HbFrameSlot(slot) : NULL;
+        w = ndsHbWorldOf(damage->joint, &scratch, &slot);
+        fs = (slot != NULL) ? ndsHbFrameSlot(slot) : NULL;
         if ((fs != NULL) && (fs->slot == slot) && (fs->gen == slot->gen))
         {
             frame = fs->frame;
@@ -1401,7 +1401,7 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         {
             if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
             {
-                NDS_DIAG(gNdsP2HbNarrowDeclined++);
+                NDS_DIAG(gNdsHbNarrowDeclined++);
                 return -1;
             }
             if (fs != NULL)
@@ -1417,29 +1417,29 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                    dm->off, dm->size, frame.inv_scale);
     if (result == NDS_R2_CFX_DECLINE)
     {
-        NDS_DIAG(gNdsP2HbNarrowDeclined++);
+        NDS_DIAG(gNdsHbNarrowDeclined++);
         return -1;
     }
-    NDS_DIAG(gNdsP2HbNarrowDecided++);
+    NDS_DIAG(gNdsHbNarrowDecided++);
     return result;
 }
 
-int ndsP2HurtboxDecideTest(const FTAttackColl *attack,
+int ndsHurtboxDecideTest(const FTAttackColl *attack,
                            const FTDamageColl *damage)
 {
-    return ndsP2HbDecidePoints(&attack->pos_curr, &attack->pos_prev,
+    return ndsHbDecidePoints(&attack->pos_curr, &attack->pos_prev,
                                attack->size, attack->attack_state, damage);
 }
 
-int ndsP2HurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+int ndsHurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                              f32 attack_size, s32 attack_state,
                              const FTDamageColl *damage)
 {
-    return ndsP2HbDecidePoints(pos_curr, pos_prev, attack_size, attack_state,
+    return ndsHbDecidePoints(pos_curr, pos_prev, attack_size, attack_state,
                                damage);
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* P2-2p8 (2026-10-04), owner ruling D13: fighter joint worlds stay in fixed
  * point end to end. The cache above holds one world per joint per latch
  * epoch; gmCollisionGetFighterPartsWorldPosition (src/import/
@@ -1451,11 +1451,11 @@ int ndsP2HurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
  * item's latches feed it. */
 
 /* Animation-lock fighters take gmCollisionSetMatrixNcs's chain in fixed point
- * (ndsP2HbWorldOfLock, 2026-10-05); everyone else the plain walk. */
-static const NDSR2CfxMtx *ndsP2JointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
+ * (ndsHbWorldOfLock, 2026-10-05); everyone else the plain walk. */
+static const NDSR2CfxMtx *ndsJointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
 {
     const FTStruct *fp;
-    NDSP2HbWorld *slot;
+    NDSHbWorld *slot;
 
     if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) ||
         (joint->parent_gobj == NULL))
@@ -1469,19 +1469,19 @@ static const NDSR2CfxMtx *ndsP2JointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
     }
     if (fp->is_use_animlocks != FALSE)
     {
-        /* 2026-10-05: the lock chain in fixed point (ndsP2HbWorldOfLock). */
+        /* 2026-10-05: the lock chain in fixed point (ndsHbWorldOfLock). */
         int32_t nscale[3];
 
-        return ndsP2HbWorldOfLock(joint, scratch, &slot, nscale);
+        return ndsHbWorldOfLock(joint, scratch, &slot, nscale);
     }
-    return ndsP2HbWorldOf(joint, scratch, &slot);
+    return ndsHbWorldOf(joint, scratch, &slot);
 }
 
 /* gmCollisionGetFighterPartsWorldPosition (gm/gmcollision.c:491): *vec carried
  * by the joint's world. The source carries it up the chain through each
  * joint's float local, latching the locals on the way. 1 = *vec written;
  * 0 = declined with *vec untouched (the caller runs the float body). */
-int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec)
+int ndsJointWorldPosition(DObj *joint, Vec3f *vec)
 {
     NDSR2CfxMtx scratch;
     const NDSR2CfxMtx *w;
@@ -1489,11 +1489,11 @@ int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec)
     int64_t out[3];
     u32 col;
 
-    if (ndsP2HbVec(p, vec) == 0)
+    if (ndsHbVec(p, vec) == 0)
     {
         return 0;
     }
-    w = ndsP2JointWorldOf(joint, &scratch);
+    w = ndsJointWorldOf(joint, &scratch);
     if (w == NULL)
     {
         return 0;
@@ -1525,7 +1525,7 @@ int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec)
  * added to the translation. Written as the Q20.12 matrix the GX takes
  * (m[r][c]: rotation rows 0-2, translation row 3, column 3 = 0, 0, 0, 1).
  * 0 = decline, nothing written (the caller runs the float builder). */
-int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
+int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
 {
     NDSR2CfxMtx scratch;
     NDSR2CfxMtx local;
@@ -1547,8 +1547,8 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
     {
         /* A few units (dFTDisplayMainShufflePositions); OVERFLOW is
          * INT32_MIN, which the magnitude test alone would pass. */
-        shuffle_q12[0] = ndsP2HbToFixed(shuffle->x, NDS_R2_CFX_POS_BITS);
-        shuffle_q12[1] = ndsP2HbToFixed(shuffle->y, NDS_R2_CFX_POS_BITS);
+        shuffle_q12[0] = ndsHbToFixed(shuffle->x, NDS_R2_CFX_POS_BITS);
+        shuffle_q12[1] = ndsHbToFixed(shuffle->y, NDS_R2_CFX_POS_BITS);
         if ((shuffle_q12[0] == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (shuffle_q12[1] == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (ndsR2CfxAbs32(shuffle_q12[0]) >= NDS_R2_CFX_POS_ONE * 64) ||
@@ -1557,8 +1557,8 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
             return 0;
         }
     }
-    w = ndsP2JointWorldOf(attach->parent, &scratch);
-    if ((w == NULL) || (ndsP2HbLocalFromDObj(&local, attach) == 0) ||
+    w = ndsJointWorldOf(attach->parent, &scratch);
+    if ((w == NULL) || (ndsHbLocalFromDObj(&local, attach) == 0) ||
         (ndsR2CfxRowScales(&local, NULL, NULL, NULL, inv_l) == 0) ||
         (ndsR2CfxRowScales(w, NULL, NULL, NULL, inv_w) == 0))
     {
@@ -1577,7 +1577,7 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
         }
         f.t[row] = local.t[row];
     }
-    if (NDS_P2_HB_COMPOSE(&item, w, &f) == 0)
+    if (NDS_HB_COMPOSE(&item, w, &f) == 0)
     {
         return 0;
     }
@@ -1595,7 +1595,7 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
     m[3][3] = NDS_R2_CFX_POS_ONE;
     return 1;
 }
-#endif /* NDS_P2_JOINT_RESIDENT */
+#endif /* NDS_JOINT_RESIDENT */
 
 /* gm/gmcollision.c's three "is this attack near that fighter" tests
  * (gmCollisionCheckFighterInFighterRange, ...WeaponInFighterRange,
@@ -1731,12 +1731,12 @@ static sb32 ndsAttackRangeTest(const Vec3f *pos_curr, const Vec3f *pos_prev,
     return ndsAttackRangeHit(pos_prev, obj, lo_x, hi_x, lo_y, hi_y);
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* gmcollision.c's four FTParts latch readers (weak in
  * src/import/battleship_gmcollision.c, 2026-10-06; owner: "hit VFX play at
  * wrong locations"). Each is the source's body with the hurt or shield joint's
  * world taken by gmCollisionGetFighterPartsWorldPosition -- the resident fixed
- * world ndsP2HbDecidePoints decided the hit on, the float walk as fallback --
+ * world ndsHbDecidePoints decided the hit on, the float walk as fallback --
  * instead of read from parts->mtx_translate, which the fixed hit test no
  * longer fills. */
 void gmCollisionGetFighterAttackPosition(Vec3f *dst, FTAttackColl *attack_coll);

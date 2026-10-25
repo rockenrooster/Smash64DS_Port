@@ -308,7 +308,7 @@ P4_DONOR_OWNERS: set[str] = set()
 # part on a selected joint, or a hidden part's). Registered with the donor.
 P4_CANONICAL_DISPLAY_OVERRIDES: dict[str, dict[str, dict[int, int]]] = {}
 
-P2_O2R_ASSETS = {
+OWNER_O2R_ASSETS = {
     **O2R_ASSETS,
     "luigi": (
         Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LuigiModel"),
@@ -1615,7 +1615,7 @@ def _decode_control(owner_name: str, root_index: int, commands, image_refs):
             if op == 0xfd:
                 ref = image_refs[command_index]
                 w1 = ref.offset
-                if ref.asset_id != P2_O2R_ASSETS[owner_name][1]:
+                if ref.asset_id != OWNER_O2R_ASSETS[owner_name][1]:
                     if not 0 <= ref.asset_id < 0xffff:
                         raise ValueError("foreign IMAGE asset does not fit u16+1")
                     asset_plus_one = ref.asset_id + 1
@@ -1782,7 +1782,7 @@ def _build_source_export_for_owners(
                if deferred.get(owner_name)]
     for owner_name, is_deferred in passes:
         payload = load_o2r_payload(repo_root, owner_name)
-        image_path, image_file_id, image_sha = P2_O2R_ASSETS[owner_name]
+        image_path, image_file_id, image_sha = OWNER_O2R_ASSETS[owner_name]
         image_resource = stage_manifest.load_o2r(
             repo_root, stage_manifest.InputSpec(
                 str(image_path), image_sha, image_file_id))
@@ -2090,7 +2090,7 @@ def build_p2_owner_source_export(
         repo_root: Path, owner_name: str, detail: str = "high"
         ) -> dict[str, bytes]:
     """Decode a P2-3 owner without changing the frozen Mario/Fox program."""
-    if owner_name not in P2_O2R_ASSETS:
+    if owner_name not in OWNER_O2R_ASSETS:
         raise ValueError(f"unknown P2 native owner {owner_name}")
     return _build_source_export_for_owners(repo_root, (owner_name,), detail)
 
@@ -2207,29 +2207,29 @@ P2_OWNER_MODEL_CENSUS = {
 # build flag beside the owner name so generation and runtime selection cannot
 # silently disagree about which independent table set owns a slot.
 P2_RUNTIME_OWNERS = (
-    ("luigi", "NDS_P2_LUIGI"),
-    ("donkey", "NDS_P2_DONKEY"),
-    ("captain", "NDS_P2_CAPTAIN"),
-    ("samus", "NDS_P2_SAMUS"),
-    ("link", "NDS_P2_LINK"),
-    ("pikachu", "NDS_P2_PIKACHU"),
-    ("yoshi", "NDS_P2_YOSHI"),
-    ("ness", "NDS_P2_NESS"),
-    ("purin", "NDS_P2_PURIN"),
-    ("kirby", "NDS_P2_KIRBY"),
-    ("mmario", "NDS_P2_MMARIO"),
-    ("nmario", "NDS_P2_NMARIO"),
-    ("nfox", "NDS_P2_NFOX"),
-    ("ndonkey", "NDS_P2_NDONKEY"),
-    ("nsamus", "NDS_P2_NSAMUS"),
-    ("nlink", "NDS_P2_NLINK"),
-    ("nyoshi", "NDS_P2_NYOSHI"),
-    ("ncaptain", "NDS_P2_NCAPTAIN"),
-    ("nkirby", "NDS_P2_NKIRBY"),
-    ("npikachu", "NDS_P2_NPIKACHU"),
-    ("npurin", "NDS_P2_NPURIN"),
-    ("nness", "NDS_P2_NNESS"),
-    ("boss", "NDS_P2_1P_GAME"),
+    ("luigi", "NDS_LUIGI"),
+    ("donkey", "NDS_DONKEY"),
+    ("captain", "NDS_CAPTAIN"),
+    ("samus", "NDS_SAMUS"),
+    ("link", "NDS_LINK"),
+    ("pikachu", "NDS_PIKACHU"),
+    ("yoshi", "NDS_YOSHI"),
+    ("ness", "NDS_NESS"),
+    ("purin", "NDS_PURIN"),
+    ("kirby", "NDS_KIRBY"),
+    ("mmario", "NDS_MMARIO"),
+    ("nmario", "NDS_NMARIO"),
+    ("nfox", "NDS_NFOX"),
+    ("ndonkey", "NDS_NDONKEY"),
+    ("nsamus", "NDS_NSAMUS"),
+    ("nlink", "NDS_NLINK"),
+    ("nyoshi", "NDS_NYOSHI"),
+    ("ncaptain", "NDS_NCAPTAIN"),
+    ("nkirby", "NDS_NKIRBY"),
+    ("npikachu", "NDS_NPIKACHU"),
+    ("npurin", "NDS_NPURIN"),
+    ("nness", "NDS_NNESS"),
+    ("boss", "NDS_1P_GAME"),
 )
 
 # DS VERTEX16 has enough precision to preserve every source coordinate exactly,
@@ -3701,7 +3701,7 @@ def build_p2_owner_model_inventory(
     if owner_name not in P2_OWNER_MODEL_CENSUS:
         raise ValueError(f"no P2 native-owner census for {owner_name}")
 
-    relative_path, file_id, expected_hash = P2_O2R_ASSETS[owner_name]
+    relative_path, file_id, expected_hash = OWNER_O2R_ASSETS[owner_name]
     source_path = repo_root / relative_path
     if hashlib.sha256(source_path.read_bytes()).hexdigest() != expected_hash:
         raise ValueError(f"{owner_name} model O2R changed before inventory")
@@ -3872,7 +3872,7 @@ def unpack_many(fmt: str, payload: bytes):
 
 
 def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
-    relative_path, expected_file_id, expected_hash = P2_O2R_ASSETS[owner_name]
+    relative_path, expected_file_id, expected_hash = OWNER_O2R_ASSETS[owner_name]
     path = repo_root / relative_path
     source = path.read_bytes()
     actual_hash = hashlib.sha256(source).hexdigest()
@@ -10159,13 +10159,13 @@ def generate(repo_root: Path | None = None) -> str:
         lines += render_p2_owner_runtime_program(low_context)
         lines += [f"#endif  /* {flag} */", ""]
     lines += [
-        "#if NDS_P2_LINK || NDS_P2_KIRBY",
+        "#if NDS_LINK || NDS_KIRBY",
         "/* Link/Kirby Neutral-B donor: LinkBoomerangModel asset 0x146. */",
         "",
     ]
     lines += render_p2_owner_runtime_program(copylink_boomerang_high)
     lines += render_p2_owner_runtime_program(copylink_boomerang_low)
-    lines += ["#endif  /* NDS_P2_LINK || NDS_P2_KIRBY */", ""]
+    lines += ["#endif  /* NDS_LINK || NDS_KIRBY */", ""]
     return "\n".join(lines)
 
 
@@ -10960,7 +10960,7 @@ def render_tarucann_header(parsed: dict) -> str:
         "",
         "/* Hierarchy slot entry (renderer_adapter_matrix.c) and the route's",
         " * commit wrapper (reloc_backend_movement.c). The imported Jungle TU",
-        " * owns the GObj pointer accessor; both live behind NDS_P2_STAGE_JUNGLE.",
+        " * owns the GObj pointer accessor; both live behind NDS_STAGE_JUNGLE.",
         " */",
         "sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root, void *cobj,",
         "    u32 initial_geometry_mode, NDSRendererStats *stats);",

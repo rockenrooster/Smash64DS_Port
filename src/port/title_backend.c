@@ -93,91 +93,91 @@ NDS_SCENE_STUB(dbBattleStartScene)
 NDS_SCENE_STUB(dbCubeStartScene)
 NDS_SCENE_STUB(dbFallsStartScene)
 NDS_SCENE_STUB(dbMapsStartScene)
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mn1PModeStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnBackupClearStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnCharactersStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnCongraStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnDataStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnMessageStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 /* P2-1d defines the real main-menu scene in src/nds/nds_menu_shell.c. */
 NDS_SCENE_STUB(mnModeSelectStartScene)
 #endif
 NDS_SCENE_STUB(mnNoControllerStartScene)
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnOptionStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PBonusStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PGameContinueStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PGameStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnScreenAdjustStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnSoundTestStartScene)
 #endif
 NDS_SCENE_STUB(mnUnusedFightersStartScene)
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 NDS_SCENE_STUB(mnVSItemSwitchStartScene)
 NDS_SCENE_STUB(mnVSOptionsStartScene)
 #endif
-#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
+#if !NDS_MENU_SHELL && !NDS_1P_GAME
 NDS_SCENE_STUB(mnVSRecordStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(mvEndingStartScene)
 #endif
 NDS_SCENE_STUB(mvUnknownMarioStartScene)
-/* P2-6 step 5 owns this scene when NDS_P2_1P_GAME=1
+/* P2-6 step 5 owns this scene when NDS_1P_GAME=1
  * (battleship_sc1pbonusstage.c defines the real sc1PBonusStageStartScene). */
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PBonusStageStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PChallengerStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PIntroStartScene)
 #endif
-/* P2-6 step 1 owns this scene when NDS_P2_1P_GAME=1
+/* P2-6 step 1 owns this scene when NDS_1P_GAME=1
  * (battleship_sc1pmanager.c defines the real sc1PManagerUpdateScene). */
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PManagerUpdateScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PStageClearStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(sc1PTrainingModeStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(scAutoDemoStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(scExplainStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 NDS_SCENE_STUB(scStaffrollStartScene)
 #endif
 

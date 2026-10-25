@@ -33,7 +33,7 @@ itself (measured: lane1-stage-ground-files.md, artifacts/performance/
 Every existing offset in the map is unchanged (the stub is appended), so the
 map's own symbols, the packet's pinned roots and the Dream Land P1 golden pin
 keep meaning what they meant. The packet asset SIZE of the map does grow, which
-is why the runtime side is a P2-only translation (NDS_P2_COMPACT_GROUND_MAPS,
+is why the runtime side is a P2-only translation (NDS_COMPACT_GROUND_MAPS,
 src/port/reloc_backend_assets.c) and not an edit of the pinned descriptors.
 
 The source files under decomp/ are read only. Output goes to the path named on

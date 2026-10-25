@@ -3,7 +3,7 @@
  * (ndsRendererPrepareNativeKirbyVulcan). TEXTUAL INCLUDE ONLY:
  * nds_renderer.c includes it; the stage DL submit calls it. */
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_RENDERER_HW_TRIANGLES && NDS_KIRBY
 static u32 sVulcanTextureNames[5];
 static u32 sVulcanTextureGeneration;
 volatile u32 gNdsKirbyVulcanNativeDraws[2];

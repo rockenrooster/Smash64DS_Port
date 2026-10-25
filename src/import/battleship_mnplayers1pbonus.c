@@ -43,7 +43,7 @@
  *   src/port/title_backend.c:434 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <string.h>
@@ -54,7 +54,7 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 #include <nds/nds_menu_shell.h>
 #endif
 #include <reloc_data.h>
@@ -116,7 +116,7 @@ static void ndsMNPlayers1PBonusDraw(void);
 
 #undef mnPlayers1PBonusStartScene
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 /* The total row is rebuilt only where the source rebuilds it -- at entry
  * (:2860-2863) and on the title toggle (:2093-2101) -- so its three values
  * are read once per made GObj and kind instead of summing twelve records a
@@ -237,7 +237,7 @@ static void ndsMNPlayers1PBonusDraw(void)
 {
     GObj *fighter = sMNPlayers1PBonusSlot.player;
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     ndsMNPlayers1PBonusPresentNative();
 #endif
     ndsPlatformSet3DLayerEnabled((fighter != NULL) &&
@@ -251,7 +251,7 @@ extern void mnPlayersVSStartScene(void);
 
 void mnPlayers1PBonusStartScene(void)
 {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P7 C2 (2026-10-19): with Remix contents the bonus practice selects are
      * the native VS screen in its one-card mode (nds_menu_shell_css.c
      * sCssOneP 2), started as the 1P select is (battleship_mnplayers1pgame.c). */
@@ -272,11 +272,11 @@ void mnPlayers1PBonusStartScene(void)
      * after the first). The 1P game select's InitSlot nulls its own
      * (mnplayers1pgame.c:3356); this one never did. */
     memset(&sMNPlayers1PBonusSlot, 0, sizeof(sMNPlayers1PBonusSlot));
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     sNdsMNPlayers1PBonusTotalGObj = NULL;
 #endif
     ndsBaseMNPlayers1PBonusStartScene();
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     ndsMenuShellOnePlayerCssExit();
 #endif
     ndsFighterManagerRegisterDisplayFighter(NULL,
@@ -284,4 +284,4 @@ void mnPlayers1PBonusStartScene(void)
     ndsMNPlayers1PPreviewRetire();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

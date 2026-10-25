@@ -2,7 +2,7 @@
  * Immutable root/state/quad data is generated from file 155 root 0x0B40.
  * The source item keeps its DObj transform, MatAnim and MObj alive; only the
  * MOBJ_FLAG_ALPHA current-image hook is translated to typed native state. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_STAGE_INISHIE
 
 /* One memo per animation frame: the three images alternate every few ticks,
  * so a single row would refill on nearly every draw. */

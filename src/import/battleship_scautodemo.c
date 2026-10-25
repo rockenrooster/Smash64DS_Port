@@ -17,8 +17,8 @@
  * - exit on A/B/START tap back to nSCKindTitle (:224-241); focus timeline
  *   ends via scAutoDemoExit to nSCKindStartup (US) (:384-394).
  *
- * Gated on NDS_P2_1P_GAME: Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05: only NDS_P2_1P_GAME at Makefile:700, gate block at
+ * Gated on NDS_1P_GAME: Makefile has no NDS_MODES_META flag
+ * (verified 2026-09-05: only NDS_1P_GAME at Makefile:700, gate block at
  * :4042), so rides campaign flag like P2-6 step 5 bonus-stage TU until P2-7
  * mints own gate.
  *
@@ -71,7 +71,7 @@
  *   src/port/title_backend.c:489 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -144,4 +144,4 @@ void scAutoDemoStartScene(void)
     ndsBaseSCAutoDemoStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

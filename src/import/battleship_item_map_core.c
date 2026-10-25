@@ -15,7 +15,7 @@
  * right way to ask what this port defines, and it answers "no" for a function
  * that is present in source and merely unreferenced.
  *
- * Gated on NDS_P2_ITEM_CORE like battleship_item_gbumper.c; no fighter flag
+ * Gated on NDS_ITEM_CORE like battleship_item_gbumper.c; no fighter flag
  * involved.
  */
 
@@ -163,8 +163,8 @@ void itMainCopyDamageStats(GObj *item_gobj)
  * refuse an immediate repeat. */
 /* decomp sc/sc1pmode/sc1pgame.c:726. The 1P mode that reads it is P2-6, so
  * it is defined here beside its only writer until that phase owns it; with
- * NDS_P2_1P_GAME the included sc1pgame.c (battleship_sc1pgame_runtime.c) does. */
-#if !NDS_P2_1P_GAME
+ * NDS_1P_GAME the included sc1pgame.c (battleship_sc1pgame_runtime.c) does. */
+#if !NDS_1P_GAME
 __attribute__((used)) ub8 gSC1PGameBonusMewCatcher;
 #endif
 

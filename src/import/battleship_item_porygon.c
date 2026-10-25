@@ -18,7 +18,7 @@
  * (nSYAudioVoiceYamabukiPorygon, decomp gmsound.h:653) are referenced
  * verbatim and listed in the task report -- no values invented here.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITPORYGON_* rides on <it/item.h>; the event-id clamp at 2 back to 1 is the
  * source's own).

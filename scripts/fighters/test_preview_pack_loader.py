@@ -192,7 +192,7 @@ enum { nSCKind1PGamePlayers = 0xA5u, nSCKindPlayersVS = 0xA6u, nSCKindVSResults 
        nSCKind1PBonus1Players = 0xA8u, nSCKind1PBonus2Players = 0xA9u,
        nSCKindOther = 0x00u };
 static struct { u8 scene_curr; u8 scene_prev; } gSCManagerSceneData;
-#define NDS_P2_COMPACT_BATTLE_FIGHTERS 1
+#define NDS_COMPACT_BATTLE_FIGHTERS 1
 static u32 gNdsSceneManagerCurrIsBattle;
 
 /* Portable native-32 read (stub seam; production adds an aligned fast path). */
@@ -650,10 +650,10 @@ class CompactConsumerAdmissionTests(unittest.TestCase):
         )
         configurations = (
             (set(), False),
-            ({"NDS_P2_1P_GAME"}, True),
-            ({"NDS_P2_MENU_SHELL"}, True),
-            ({"NDS_P2_COMPACT_BATTLE_FIGHTERS"}, True),
-            ({"NDS_P2_MENU_SHELL", "NDS_P2_SHELL_ARGMAX_ROSTER"}, True),
+            ({"NDS_1P_GAME"}, True),
+            ({"NDS_MENU_SHELL"}, True),
+            ({"NDS_COMPACT_BATTLE_FIGHTERS"}, True),
+            ({"NDS_MENU_SHELL", "NDS_SHELL_ARGMAX_ROSTER"}, True),
         )
         for path, pattern in consumers:
             text = source(ROOT / path)

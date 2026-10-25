@@ -637,25 +637,25 @@ u32 ndsStageGCDrawAllLoopNdlWeaponKind(void *display_gobj_ptr)
         (weapon_gobj->id != nGCCommonKindWeapon) ||
         (weapon_gobj->dl_link_id != 14))
     {
-        return NDS_P2_NDL_KIND_COUNT;
+        return NDS_NDL_KIND_COUNT;
     }
     wp = wpGetStruct(weapon_gobj);
     root = DObjGetStruct(weapon_gobj);
     if ((wp == NULL) || (root == NULL) ||
         ((root->dv == NULL) && (root->child == NULL)))
     {
-        return NDS_P2_NDL_KIND_COUNT;
+        return NDS_NDL_KIND_COUNT;
     }
     if ((wp->kind == nWPKindFireball) &&
         (weapon_gobj->proc_display == wpDisplayDLHead1))
     {
-        return NDS_P2_NDL_KIND_WP_FIREBALL;
+        return NDS_NDL_KIND_WP_FIREBALL;
     }
     if (ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE)
     {
-        return NDS_P2_NDL_KIND_WP_BLASTER;
+        return NDS_NDL_KIND_WP_BLASTER;
     }
-    return NDS_P2_NDL_KIND_COUNT;
+    return NDS_NDL_KIND_COUNT;
 }
 
 static sb32 ndsStageGCDrawAllLoopNdlWeaponModelVisible(const WPStruct *wp)
@@ -699,7 +699,7 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
 
     switch (kind)
     {
-    case NDS_P2_NDL_KIND_WP_FIREBALL:
+    case NDS_NDL_KIND_WP_FIREBALL:
         if ((wp->kind == nWPKindFireball) &&
             (weapon_gobj->proc_display == wpDisplayDLHead1) &&
             (ndsStageGCDrawAllLoopDrawFireballQuad(root, wp) != FALSE))
@@ -711,7 +711,7 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
             handled = TRUE;
         }
         break;
-    case NDS_P2_NDL_KIND_WP_BLASTER:
+    case NDS_NDL_KIND_WP_BLASTER:
         if ((ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE) &&
             (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(
                  root, wp, camera_gobj) != FALSE))
@@ -1200,7 +1200,7 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
     return (ndsFighterStructIsPoolPointer(fp) != FALSE) ? TRUE : FALSE;
 }
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 /* P2-4 native stage actor: Congo Jungle barrel cannon. The imported Jungle TU
  * owns the GObj pointer (gGRCommonStruct.jungle.tarucann_gobj, written once
  * by grJungleMakeTaruCann); this route recognises the barrel by that pointer
@@ -1241,7 +1241,7 @@ static sb32 ndsStageGCDrawAllLoopIsTaruCann(GObj *gobj)
  * source procs (gcPlayAnimAll plus grYosterProcUpdate: yakumono pose on
  * the root, Solid/Evaporate prim scripts on the drawables) already ran
  * before display, so the admitted tree carries the live pose + alpha. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 volatile u32 gNdsStageGCDrawAllLoopYosterCloudDisplayCallbackCount;
 volatile u32 gNdsStageGCDrawAllLoopYosterCloudTriangleCount;
 volatile u32 gNdsStageGCDrawAllLoopYosterCloudRejectCount;
@@ -1344,7 +1344,7 @@ static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
 #endif
 
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 static sb32 ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(
     GObj *tarucann_gobj, GObj *camera_gobj, u32 callback_kind,
     u32 initial_geometry_mode, sb32 record_reject)
@@ -1428,21 +1428,21 @@ u32 ndsStageGCDrawAllLoopNdlGroundKind(void *display_gobj)
 
     if ((gobj == NULL) || (gobj->proc_display != gcDrawDObjTreeForGObj))
     {
-        return NDS_P2_NDL_KIND_COUNT;
+        return NDS_NDL_KIND_COUNT;
     }
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     if (ndsStageGCDrawAllLoopIsYosterCloud(gobj, NULL) != FALSE)
     {
-        return NDS_P2_NDL_KIND_GR_YOSTER_CLOUD;
+        return NDS_NDL_KIND_GR_YOSTER_CLOUD;
     }
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     if (ndsStageGCDrawAllLoopIsTaruCann(gobj) != FALSE)
     {
-        return NDS_P2_NDL_KIND_GR_TARUCANN;
+        return NDS_NDL_KIND_GR_TARUCANN;
     }
 #endif
-    return NDS_P2_NDL_KIND_COUNT;
+    return NDS_NDL_KIND_COUNT;
 }
 
 s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
@@ -1461,8 +1461,8 @@ s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
     }
     switch (kind)
     {
-#if NDS_P2_STAGE_YOSTER
-    case NDS_P2_NDL_KIND_GR_YOSTER_CLOUD:
+#if NDS_STAGE_YOSTER
+    case NDS_NDL_KIND_GR_YOSTER_CLOUD:
         handled = ndsStageGCDrawAllLoopSubmitYosterCloudDObjForCamera(
             display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
             initial_geometry_mode, FALSE);
@@ -1472,8 +1472,8 @@ s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
         }
         break;
 #endif
-#if NDS_P2_STAGE_JUNGLE
-    case NDS_P2_NDL_KIND_GR_TARUCANN:
+#if NDS_STAGE_JUNGLE
+    case NDS_NDL_KIND_GR_TARUCANN:
         handled = ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(
             display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
             initial_geometry_mode, FALSE);
@@ -1508,8 +1508,8 @@ s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
  * tree through the item hardware DL submission, passing the source callback
  * kind through so TREE walks dv lists, TREE_DLLINKS walks each DObj's
  * dl_link array, and DLHEAD0 draws only head 0. */
-#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
-    NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_ZEBES || NDS_STAGE_SECTOR || NDS_STAGE_YAMABUKI || \
+    NDS_STAGE_INISHIE
 volatile u32 gNdsStageGCDrawAllLoopGroundActorSubmitCount;
 volatile u32 gNdsStageGCDrawAllLoopGroundActorRejectCount;
 volatile u32 gNdsStageGCDrawAllLoopGroundActorCallCount;
@@ -1536,7 +1536,7 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
                                            u32 callback_kind);
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 static sb32 ndsStageGCDrawAllLoopIsZebesAcid(GObj *gobj)
 {
     GObj *acid_gobj;
@@ -1558,7 +1558,7 @@ static sb32 ndsStageGCDrawAllLoopIsZebesAcid(GObj *gobj)
     return (gobj->dl_link_id == 12u) ? TRUE : FALSE;
 }
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 static sb32 ndsStageGCDrawAllLoopIsSectorArwing(GObj *gobj)
 {
     GObj *arwing_gobj;
@@ -1580,7 +1580,7 @@ static sb32 ndsStageGCDrawAllLoopIsSectorArwing(GObj *gobj)
     return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
 }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 static sb32 ndsStageGCDrawAllLoopIsYamabukiGate(GObj *gobj)
 {
     GObj *gate_gobj;
@@ -1662,7 +1662,7 @@ static sb32 ndsStageGCDrawAllLoopIsYamabukiGate(GObj *gobj)
     return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
 }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 static sb32 ndsStageGCDrawAllLoopIsInishieScale(GObj *gobj)
 {
     u32 i;
@@ -1694,8 +1694,8 @@ static sb32 ndsStageGCDrawAllLoopIsInishieScale(GObj *gobj)
     return FALSE;
 }
 #endif
-#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
-    NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_ZEBES || NDS_STAGE_SECTOR || NDS_STAGE_YAMABUKI || \
+    NDS_STAGE_INISHIE
 static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
                                                        u32 callback_kind)
 {
@@ -1704,7 +1704,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     u32 triangle_delta;
     u32 initial_geometry_mode;
     sb32 is_actor = FALSE;
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     sb32 is_sector_arwing = FALSE;
     u32 two_pass_dobjs = 0u;
 #endif
@@ -1719,26 +1719,26 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     gNdsStageGCDrawAllLoopGroundActorLastGObj = (u32)(uintptr_t)actor_gobj;
     gNdsStageGCDrawAllLoopGroundActorLastId = actor_gobj->id;
     gNdsStageGCDrawAllLoopGroundActorLastLink = actor_gobj->dl_link_id;
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     if (ndsStageGCDrawAllLoopIsZebesAcid(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
     }
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     if (ndsStageGCDrawAllLoopIsSectorArwing(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
         is_sector_arwing = TRUE;
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     if (ndsStageGCDrawAllLoopIsYamabukiGate(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
     }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     if (ndsStageGCDrawAllLoopIsInishieScale(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
@@ -1769,7 +1769,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
      * cost ~5 FPS on the same frame, so the proven stage route stays. */
     ndsRendererAdapterBeginStageTraversal();
     sNdsStageGCDrawAllLoopActorKeepsZBuffer = TRUE;
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     /* Sector Z's Arwing: the scan's lists in two passes, matrices first
      * (ndsRendererAdapterSubmitArwingTwoPass). The scan's own bookkeeping for
      * an actor (owner mask 0) is the submit count and the kind bit. */
@@ -1934,7 +1934,7 @@ void ndsStageGCDrawAllLoopRecordCameraCallback(void)
 }
 
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Board the Platforms: the platforms hung under a layer the native packet just
  * drew (ndsRendererAdapterIsForeignStageSubtree) draw here, after it, as the
  * source's gcDrawDObjTreeDLLinks reaches them inside the same layer. Each
@@ -2082,13 +2082,13 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     {
         NDS_DIAG(gNdsStageGCDrawAllLoopFighterDisplayCallbackCount++);
     }
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     else if (ndsStageGCDrawAllLoopIsTaruCann(display) != FALSE)
     {
         NDS_DIAG(gNdsStageGCDrawAllLoopActorDisplayCallbackCount++);
     }
 #endif
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     else if (ndsStageGCDrawAllLoopIsYosterCloud(display, NULL) != FALSE)
     {
         NDS_DIAG(gNdsStageGCDrawAllLoopYosterCloudDisplayCallbackCount++);
@@ -2105,7 +2105,7 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
          * only the stage's own segments commit. The tick HUD's STG span is
          * taken inside ndsRendererAdapterCommitNativeStageDisplay, on the
          * matched segment only, instead of two clock reads per display. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         {
             s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
                 display, link_id);
@@ -2335,12 +2335,12 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             default:
                 break;
             }
-#if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
-    NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
-    NDS_P2_STAGE_INISHIE)
+#if NDS_TICK_HUD && (NDS_STAGE_JUNGLE || NDS_STAGE_YOSTER || \
+    NDS_STAGE_ZEBES || NDS_STAGE_SECTOR || NDS_STAGE_YAMABUKI || \
+    NDS_STAGE_INISHIE)
             misc_split_mark = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
             /* The barrel is none of weapon/item/effect (ground kind), so the
              * three submits above no-op on it; its actor commit runs here, in
              * the same ClassifyGObj-rejected branch, and lands its triangles
@@ -2348,12 +2348,12 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             ndsStageGCDrawAllLoopSubmitTaruCannDObj(stage_gobj,
                                                     callback_kind);
 #endif
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
             ndsStageGCDrawAllLoopSubmitYosterCloudDObj(stage_gobj,
                                                        callback_kind);
 #endif
-#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || \
-    NDS_P2_STAGE_YAMABUKI || NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_ZEBES || NDS_STAGE_SECTOR || \
+    NDS_STAGE_YAMABUKI || NDS_STAGE_INISHIE
             /* Ground-kind stage actors (Zebes acid, Sector Arwing, Saffron
              * gate, Inishie scales): none of weapon/item/effect kind, so the
              * three submits above no-op on them. The generic actor commit
@@ -2363,9 +2363,9 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             ndsStageGCDrawAllLoopSubmitGroundActorDObj(stage_gobj,
                                                        callback_kind);
 #endif
-#if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
-    NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
-    NDS_P2_STAGE_INISHIE)
+#if NDS_TICK_HUD && (NDS_STAGE_JUNGLE || NDS_STAGE_YOSTER || \
+    NDS_STAGE_ZEBES || NDS_STAGE_SECTOR || NDS_STAGE_YAMABUKI || \
+    NDS_STAGE_INISHIE)
             gNdsMiscActorDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
         }

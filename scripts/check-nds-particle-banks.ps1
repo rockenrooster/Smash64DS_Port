@@ -181,7 +181,7 @@ if (-not $renderer.Contains('glColor((rgb)color);')) {
     throw 'Particle draw lost source prim-color modulation.'
 }
 
-# The generator's Yoster rows are gated on NDS_P2_STAGE_YOSTER in ITS OWN
+# The generator's Yoster rows are gated on NDS_STAGE_YOSTER in ITS OWN
 # environment, so --check has to be run with the same flags the on-disk pack was
 # baked with or it compares a flag-on pack against a flag-off bake and calls it
 # stale. That is not hypothetical: every shipped configuration has Yoster on,
@@ -199,16 +199,16 @@ if (Test-Path -LiteralPath $flagsStampPath -PathType Leaf) {
         throw "Particle bank flags stamp is not 0 or 1: '$yosterFlag'"
     }
 }
-$previousYoster = $env:NDS_P2_STAGE_YOSTER
-$env:NDS_P2_STAGE_YOSTER = $yosterFlag
+$previousYoster = $env:NDS_STAGE_YOSTER
+$env:NDS_STAGE_YOSTER = $yosterFlag
 try {
     & $Python $generator --repo-root $root --check
     if ($LASTEXITCODE -ne 0) {
         throw ('Generated particle bank pack differs from its BattleShip ' +
-               "sources (checked with NDS_P2_STAGE_YOSTER=$yosterFlag).")
+               "sources (checked with NDS_STAGE_YOSTER=$yosterFlag).")
     }
 } finally {
-    $env:NDS_P2_STAGE_YOSTER = $previousYoster
+    $env:NDS_STAGE_YOSTER = $previousYoster
 }
 
 $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
@@ -653,7 +653,7 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
         "$([int64]$report.quads.bytes) B used, " +
         "$([int64]$report.quads.frame_count) frames, " +
         "$(@($report.quads.admitted).Count) admitted, excluded [" +
-        ($actualExcluded -join ',') + "] where NDS_P2_STAGE_YOSTER=" +
+        ($actualExcluded -join ',') + "] where NDS_STAGE_YOSTER=" +
         "$yosterFlag expects [" + ($expectedExcluded -join ',') + '].')
 }
 $ness = $report.ness

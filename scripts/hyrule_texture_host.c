@@ -8,7 +8,7 @@
 typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32; typedef int32_t s32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_STAGE_HYRULE 1
+#define NDS_STAGE_HYRULE 1
 #define NDS_RENDERER_HW_TRIANGLES 1
 #define NDS_RENDERER_BENCHMARK_MODE 0
 #define NDS_RENDERER_BENCHMARK_NONE 0

@@ -2,7 +2,7 @@
  * captures, the dust and sparkle effects, the visual damage scale, animation
  * locks and the parts' figatree and setup. A slice of reloc_backend.c. */
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 /* P2-4s3. The fighter half of Congo Jungle's barrel cannon, transcribed from
  * decomp ft/ftcommon/ftcommontarucann.c:8-48 and :97-116. SetStatus and
  * ProcPhysics above were already here; these three are what made a captured
@@ -173,7 +173,7 @@ void ftCommonTaruCannProcInterrupt(GObj *fighter_gobj)
             fp->status_vars.common.tarucann.tarucann_gobj);
     }
 }
-#endif /* NDS_P2_STAGE_JUNGLE */
+#endif /* NDS_STAGE_JUNGLE */
 
 void ftCommonCaptureTrappedInitBreakoutVars(FTStruct *fp, s32 breakout_wait)
 {

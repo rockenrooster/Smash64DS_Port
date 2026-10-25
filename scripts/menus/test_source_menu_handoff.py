@@ -81,7 +81,7 @@ typedef int32_t s32;
 #define FALSE 0
 /* Boundary configuration values the live fix ships under. */
 #define NDS_HARNESS_FAST_LOGIC 0
-#define NDS_P2_MENU_WALK 0
+#define NDS_MENU_WALK 0
 #define NDS_SEAM_CONTROLLER_PAIR 0
 #define NDS_IMPORT_BATTLESHIP_VS_RESULTS 1
 #define NDS_IMPORT_BATTLESHIP_AUDIO_BGM 0

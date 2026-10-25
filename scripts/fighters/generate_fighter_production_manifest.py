@@ -132,7 +132,7 @@ RESULTS_DEMO_SUBMOTIONS = (
     ("Pikachu", "llFTPikachuAnimClapsFileID", "reloc_submotions/FTPikachuSubMotionAppearAlt2"),
 )
 # Mario and Fox share one always-compiled macro/table; every other gate is its
-# own NDS_P2_<KIND> flag.
+# own NDS_<KIND> flag.
 RESULTS_DEMO_BASE_GATES = ("Mario", "Fox")
 
 # The 1P scenes' demo poses (P2-6).  The intro's player and ally cards take
@@ -1742,7 +1742,7 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
             for asset in row["nitrofs_files"]
             if str(asset["path"]) not in baseline
         ]
-        variable = f"NDS_P2_{name.upper()}_FIGHTER_RELOC_FILES"
+        variable = f"NDS_{name.upper()}_FIGHTER_RELOC_FILES"
         if not added:
             lines.append(f"{variable} :=")
             lines.append("")
@@ -1752,7 +1752,7 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
             suffix = " \\" if index + 1 < len(added) else ""
             lines.append(f"\t{path}{suffix}")
         lines.append("")
-    # Variant kinds aggregate only under their own NDS_P2_<VARIANT> flag
+    # Variant kinds aggregate only under their own NDS_<VARIANT> flag
     # (admit_fighter.py); reused base files already ride the base list, so
     # these are incremental over the Mario/Fox baseline like every other row.
     for name in VARIANT_RELOC_ROOTS:
@@ -1761,7 +1761,7 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
             path for path in row["nitrofs_files"]
             if path not in baseline
         ]
-        variable = f"NDS_P2_{name.upper()}_FIGHTER_RELOC_FILES"
+        variable = f"NDS_{name.upper()}_FIGHTER_RELOC_FILES"
         if not added:
             lines.append(f"{variable} :=")
             lines.append("")
@@ -1790,7 +1790,7 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
         ("NDS_MARIOFOX_DEMO_RELOC_FILES", base_demo)
     ]
     demo_lists.extend(
-        (f"NDS_P2_{name.upper()}_DEMO_RELOC_FILES", demo_by_gate.get(name, []))
+        (f"NDS_{name.upper()}_DEMO_RELOC_FILES", demo_by_gate.get(name, []))
         for name in BOOTSTRAP_FIGHTERS[2:]
     )
     demo_lists.append((
@@ -1864,7 +1864,7 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
     # incremental P2-3 rows emitted below.  Publish AOT size metadata by
     # admission group, though: a canonical Mario/Fox build must not pay linked
     # bytes for DK merely because the generator knows DK exists.  The runtime
-    # selects the incremental macros under the same NDS_P2_* flags as the asset
+    # selects the incremental macros under the same NDS_<KIND> flags as the asset
     # and native-owner rows.
     published_alloc_ids: set[int] = set()
     published_payload_ids: set[int] = set()
@@ -1911,9 +1911,9 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             lines.append(f"    X(0x{file_id:x}u, {alloc_bytes}u){suffix}")
         lines.append("")
 
-    append_alloc_rows("NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS", ("Mario", "Fox"))
+    append_alloc_rows("NDS_BASE_FIGHTER_ALLOC_SIZE_ROWS", ("Mario", "Fox"))
     for name in BOOTSTRAP_FIGHTERS[2:]:
-        append_alloc_rows(f"NDS_P2_{name.upper()}_ALLOC_SIZE_ROWS", (name,))
+        append_alloc_rows(f"NDS_{name.upper()}_ALLOC_SIZE_ROWS", (name,))
 
     def append_payload_rows(macro_name: str, names: tuple[str, ...]) -> None:
         """Publish exact per-file payload sizes for fighter-main extern trees.
@@ -1961,16 +1961,16 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         lines.append("")
 
     append_payload_rows(
-        "NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS", ("Mario", "Fox")
+        "NDS_BASE_FIGHTER_PAYLOAD_SIZE_ROWS", ("Mario", "Fox")
     )
     for name in BOOTSTRAP_FIGHTERS[2:]:
         append_payload_rows(
-            f"NDS_P2_{name.upper()}_PAYLOAD_SIZE_ROWS", (name,)
+            f"NDS_{name.upper()}_PAYLOAD_SIZE_ROWS", (name,)
         )
 
     for name in BOOTSTRAP_FIGHTERS[2:]:
         fighter = fighters[name]
-        prefix = f"NDS_P2_{name.upper()}"
+        prefix = f"NDS_{name.upper()}"
         incremental_paths = {
             str(asset["path"])
             for asset in fighter["nitrofs_files"]
@@ -2016,7 +2016,7 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         # another fighter's stem: Luigi takes 131 from FTMarioAnim, Purin 77
         # from FTKirbyAnim, Kirby 2 from FTKirbyCopyAnim (measured 2026-09-02).
         # Emitting only his own stem left Purin unable to resolve 77 animations
-        # unless NDS_P2_KIRBY happened to be in the build too, and a Purin-only
+        # unless NDS_KIRBY happened to be in the build too, and a Purin-only
         # ROM never presented a battle frame. So every segment he needs is
         # emitted here. Mario's and Fox's ranges are excluded because their
         # resolvers are always compiled and carry the three odd unnumbered
@@ -2203,7 +2203,7 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         ("NDS_MARIOFOX_DEMO", base_demo_rows)
     ]
     demo_macros.extend(
-        (f"NDS_P2_{name.upper()}_DEMO", demo_by_gate.get(name, []))
+        (f"NDS_{name.upper()}_DEMO", demo_by_gate.get(name, []))
         for name in BOOTSTRAP_FIGHTERS[2:]
     )
     emitted_demo = 0

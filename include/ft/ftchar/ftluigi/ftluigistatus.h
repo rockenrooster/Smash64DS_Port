@@ -1,5 +1,5 @@
 #ifndef _FTLUIGI_STATUS_H_
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 #include <ft/ftstatus_callbacks.h>
 #include "../../../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/ftluigistatus.h"
 #else

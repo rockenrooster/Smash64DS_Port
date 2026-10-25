@@ -1358,7 +1358,7 @@ typedef struct NDSStageMPWallHitScoutResultSnapshot {
 /* decomp mp/mpcollision.c:4023-4026 and :4176-4190 verbatim (2026-09-05). The 1P scenes are
  * the only callers -- Master Hand's statuses and the bonus boards count and
  * list the lines of one kind, and sc1pgame.c sets the ground's music -- so
- * the port never carried them; a NDS_P2_1P_GAME=1 link needs all three.
+ * the port never carried them; a NDS_1P_GAME=1 link needs all three.
  *
  * THE GROUPS ARE BUILT LAZILY HERE, NOT BY THE LOADER.
  *

@@ -13,7 +13,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
-		echo '#define NDS_P2_COMPACT_GROUND_MAPS $(NDS_P2_COMPACT_GROUND_MAPS)'; \
+		echo '#define NDS_COMPACT_GROUND_MAPS $(NDS_COMPACT_GROUND_MAPS)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
 		echo '#define NDS_STAGE_HW_COMPOSE $(NDS_STAGE_HW_COMPOSE)'; \
@@ -37,17 +37,17 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FOX_BLASTER_BORE_OFFSET_Y $(NDS_FOX_BLASTER_BORE_OFFSET_Y)'; \
 		echo "#define NDS_R2_BATTLEPACK_BLOB_BYTES $$(test -f '$(NDS_BATTLEPACK_BLOB)' && wc -c < '$(NDS_BATTLEPACK_BLOB)' || echo 0)u"; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
-		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
+		echo '#define NDS_FOUR_CPU_STRESS $(NDS_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_NET_LAB_INPUT $(NDS_NET_LAB_INPUT)'; \
 		echo '#define NDS_NET_LAB_LOBBY $(NDS_NET_LAB_LOBBY)'; \
 		echo '#define NDS_NET_LAB_DROP $(NDS_NET_LAB_DROP)'; \
 		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
 		echo '#define NDS_NET_LAB_SWEEP_REPRO $(NDS_NET_LAB_SWEEP_REPRO)'; \
-		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
-		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
-		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
-		echo '#define NDS_P2_FOUR_CPU_KIND2 $(NDS_P2_FOUR_CPU_KIND2)'; \
-		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
+		echo '#define NDS_FOUR_CPU_ROSTER $(NDS_FOUR_CPU_ROSTER)'; \
+		echo '#define NDS_FOUR_CPU_KIND0 $(NDS_FOUR_CPU_KIND0)'; \
+		echo '#define NDS_FOUR_CPU_KIND1 $(NDS_FOUR_CPU_KIND1)'; \
+		echo '#define NDS_FOUR_CPU_KIND2 $(NDS_FOUR_CPU_KIND2)'; \
+		echo '#define NDS_FOUR_CPU_KIND3 $(NDS_FOUR_CPU_KIND3)'; \
 		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)),echo '#define NDS_LAB_FOURCPU_SWEEP 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)$(NDS_LAB_FOURCPU_WORDS)),echo '#define NDS_LAB_FOURCPU_WORDS 1';) \
@@ -56,47 +56,47 @@ $(NDS_BUILD_CONFIG): FORCE
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_P4)),echo '#define NDS_LAB_FOURCPU_SWEEP_P4 $(NDS_LAB_FOURCPU_SWEEP_P4)u';) \
 		$(if $(strip $(NDS_LAB_LEAN_ROOT_CENSUS)),echo '#define NDS_LAB_LEAN_ROOT_CENSUS 1';) \
 		$(if $(strip $(NDS_LAB_TEXMISS)),echo '#define NDS_LAB_TEXMISS 1';) \
-		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
+		echo '#define NDS_LUIGI $(NDS_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
-		echo '#define NDS_P2_DONKEY $(NDS_P2_DONKEY)'; \
-		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
-		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
-		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
-		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
-		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
-		echo '#define NDS_P2_STAGE_YOSTER $(NDS_P2_STAGE_YOSTER)'; \
-		echo '#define NDS_P2_STAGE_CASTLE $(NDS_P2_STAGE_CASTLE)'; \
-		echo '#define NDS_P2_STAGE_JUNGLE $(NDS_P2_STAGE_JUNGLE)'; \
-		echo '#define NDS_P2_STAGE_ZEBES $(NDS_P2_STAGE_ZEBES)'; \
-		echo '#define NDS_P2_STAGE_HYRULE $(NDS_P2_STAGE_HYRULE)'; \
-		echo '#define NDS_P2_STAGE_YAMABUKI $(NDS_P2_STAGE_YAMABUKI)'; \
-		echo '#define NDS_P2_STAGE_INISHIE $(NDS_P2_STAGE_INISHIE)'; \
-		echo '#define NDS_P2_STAGE_SECTOR $(NDS_P2_STAGE_SECTOR)'; \
-		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
-		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
-		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
-		echo '#define NDS_P2_GDONKEY $(NDS_P2_GDONKEY)'; \
-		echo '#define NDS_P2_MMARIO $(NDS_P2_MMARIO)'; \
-		echo '#define NDS_P2_NMARIO $(NDS_P2_NMARIO)'; \
-		echo '#define NDS_P2_NFOX $(NDS_P2_NFOX)'; \
+		echo '#define NDS_DONKEY $(NDS_DONKEY)'; \
+		echo '#define NDS_CAPTAIN $(NDS_CAPTAIN)'; \
+		echo '#define NDS_SAMUS $(NDS_SAMUS)'; \
+		echo '#define NDS_LINK $(NDS_LINK)'; \
+		echo '#define NDS_PIKACHU $(NDS_PIKACHU)'; \
+		echo '#define NDS_YOSHI $(NDS_YOSHI)'; \
+		echo '#define NDS_STAGE_YOSTER $(NDS_STAGE_YOSTER)'; \
+		echo '#define NDS_STAGE_CASTLE $(NDS_STAGE_CASTLE)'; \
+		echo '#define NDS_STAGE_JUNGLE $(NDS_STAGE_JUNGLE)'; \
+		echo '#define NDS_STAGE_ZEBES $(NDS_STAGE_ZEBES)'; \
+		echo '#define NDS_STAGE_HYRULE $(NDS_STAGE_HYRULE)'; \
+		echo '#define NDS_STAGE_YAMABUKI $(NDS_STAGE_YAMABUKI)'; \
+		echo '#define NDS_STAGE_INISHIE $(NDS_STAGE_INISHIE)'; \
+		echo '#define NDS_STAGE_SECTOR $(NDS_STAGE_SECTOR)'; \
+		echo '#define NDS_NESS $(NDS_NESS)'; \
+		echo '#define NDS_PURIN $(NDS_PURIN)'; \
+		echo '#define NDS_KIRBY $(NDS_KIRBY)'; \
+		echo '#define NDS_GDONKEY $(NDS_GDONKEY)'; \
+		echo '#define NDS_MMARIO $(NDS_MMARIO)'; \
+		echo '#define NDS_NMARIO $(NDS_NMARIO)'; \
+		echo '#define NDS_NFOX $(NDS_NFOX)'; \
 		echo '#define NDS_P4 $(NDS_P4)'; \
 		$(foreach row,$(NDS_P4_REGISTRY),echo '#define NDS_P4_$(call nds_p4_field,$(row),2) $(NDS_P4_$(call nds_p4_field,$(row),2))';) \
 		echo '#define NDS_P5 $(NDS_P5)'; \
-		echo '#define NDS_P2_NDONKEY $(NDS_P2_NDONKEY)'; \
-		echo '#define NDS_P2_NSAMUS $(NDS_P2_NSAMUS)'; \
-		echo '#define NDS_P2_NLUIGI $(NDS_P2_NLUIGI)'; \
-		echo '#define NDS_P2_NLINK $(NDS_P2_NLINK)'; \
-		echo '#define NDS_P2_NYOSHI $(NDS_P2_NYOSHI)'; \
-		echo '#define NDS_P2_NCAPTAIN $(NDS_P2_NCAPTAIN)'; \
-		echo '#define NDS_P2_NKIRBY $(NDS_P2_NKIRBY)'; \
-		echo '#define NDS_P2_NPIKACHU $(NDS_P2_NPIKACHU)'; \
-		echo '#define NDS_P2_NPURIN $(NDS_P2_NPURIN)'; \
-		echo '#define NDS_P2_NNESS $(NDS_P2_NNESS)'; \
-		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
-		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
-		$(foreach venue,$(NDS_P2_1P_STAGE_FLAGS),echo '#define NDS_P2_STAGE_$(venue) $(NDS_P2_1P_GAME)';) \
-		echo '#define NDS_P2_COMPACT_BATTLE_FIGHTERS $(NDS_P2_COMPACT_BATTLE_FIGHTERS)'; \
+		echo '#define NDS_NDONKEY $(NDS_NDONKEY)'; \
+		echo '#define NDS_NSAMUS $(NDS_NSAMUS)'; \
+		echo '#define NDS_NLUIGI $(NDS_NLUIGI)'; \
+		echo '#define NDS_NLINK $(NDS_NLINK)'; \
+		echo '#define NDS_NYOSHI $(NDS_NYOSHI)'; \
+		echo '#define NDS_NCAPTAIN $(NDS_NCAPTAIN)'; \
+		echo '#define NDS_NKIRBY $(NDS_NKIRBY)'; \
+		echo '#define NDS_NPIKACHU $(NDS_NPIKACHU)'; \
+		echo '#define NDS_NPURIN $(NDS_NPURIN)'; \
+		echo '#define NDS_NNESS $(NDS_NNESS)'; \
+		echo '#define NDS_ITEM_CORE $(NDS_ITEM_CORE)'; \
+		echo '#define NDS_1P_GAME $(NDS_1P_GAME)'; \
+		$(foreach venue,$(NDS_1P_STAGE_FLAGS),echo '#define NDS_STAGE_$(venue) $(NDS_1P_GAME)';) \
+		echo '#define NDS_COMPACT_BATTLE_FIGHTERS $(NDS_COMPACT_BATTLE_FIGHTERS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
@@ -120,14 +120,14 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NNESS $(NDS_NATIVE_OWNER_IMAGE_NNESS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_GDONKEY $(NDS_NATIVE_OWNER_IMAGE_GDONKEY)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_BOSS $(NDS_NATIVE_OWNER_IMAGE_BOSS)'; \
-		echo '#define NDS_P2_NESS_VFX_PROOF $(NDS_P2_NESS_VFX_PROOF)'; \
-		echo '#define NDS_P2_YOSHI_BUG_PROOF $(NDS_P2_YOSHI_BUG_PROOF)'; \
+		echo '#define NDS_NESS_VFX_PROOF $(NDS_NESS_VFX_PROOF)'; \
+		echo '#define NDS_YOSHI_BUG_PROOF $(NDS_YOSHI_BUG_PROOF)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_UPDATES_PER_PRESENT $(NDS_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
-		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
-		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
-		echo '#define NDS_P2_MENU_WALK $(NDS_P2_MENU_WALK)u'; \
+		echo '#define NDS_UI_KIT $(NDS_UI_KIT)'; \
+		echo '#define NDS_MENU_SHELL $(NDS_MENU_SHELL)'; \
+		echo '#define NDS_MENU_WALK $(NDS_MENU_WALK)u'; \
 		echo '#define NDS_1P_INTRO_BAKE $(NDS_1P_INTRO_BAKE)'; \
 		echo '#define NDS_1P_WALK_START_STAGE ($(NDS_1P_WALK_START_STAGE))'; \
 		echo '#define NDS_1P_PLAYTEST_START_STAGE ($(NDS_1P_PLAYTEST_START_STAGE))'; \
@@ -156,7 +156,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIREBALL_MAP_COLL_SCALE $(NDS_R2_FIREBALL_MAP_COLL_SCALE)F'; \
 		echo '#define NDS_R2_REBIRTH_HALO_GX_GROUP_MASK $(NDS_R2_REBIRTH_HALO_GX_GROUP_MASK)'; \
 		echo '#define NDS_DEMO_FOX_CPU_LADDER $(NDS_DEMO_FOX_CPU_LADDER)'; \
-		echo '#define NDS_P2_JOINT_RESIDENT $(NDS_P2_JOINT_RESIDENT)'; \
+		echo '#define NDS_JOINT_RESIDENT $(NDS_JOINT_RESIDENT)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#endif'; \
@@ -235,7 +235,7 @@ $(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_FX_HIT_SPARKS_ASSET)
 # The payload is not linked -- see the header comment: .rodata is taken out of
 # the boot-time taskman arena one-for-one and this pack is big enough to push
 # that search past its floor.
-# The bake varies with NDS_P2_STAGE_YOSTER -- generate_nds_particle_banks.py:114
+# The bake varies with NDS_STAGE_YOSTER -- generate_nds_particle_banks.py:114
 # reads it from the environment and this Makefile exports it -- while the .inc,
 # all three payloads and the committed JSON land on SHARED paths. The per-BUILD
 # config header below is therefore not enough on its own, for exactly the reason
@@ -245,4 +245,4 @@ $(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_FX_HIT_SPARKS_ASSET)
 # differ from the BattleShip sources on 2026-09-03. This stamp carries the flag
 # value itself and is rewritten only when it changes, so the bake is keyed on
 # what varies rather than on a timestamp another build controls.
-NDS_PARTICLE_BANKS_FLAGS := $(NDS_P2_STAGE_YOSTER)
+NDS_PARTICLE_BANKS_FLAGS := $(NDS_STAGE_YOSTER)

@@ -1,5 +1,5 @@
 # The target name and the feature knobs every build reads: the roster and
-# fighter switches (NDS_P2_*), the shell rosters, the native owner image
+# fighter switches (NDS_<KIND>), the shell rosters, the native owner image
 # switches and the defaults the play, walk and gate ROMs build from.
 # Included in place from the Makefile (P8 G); its text is unchanged.
 
@@ -79,10 +79,10 @@ NDS_TICK_HUD ?= 0
 # P2-2p8 (2026-10-04), owner ruling D13: fighter joint worlds stay fixed point
 # end to end. The hurtbox reject's per-epoch world cache serves
 # gmCollisionGetFighterPartsWorldPosition and the held item's 0x52 matrix in
-# place of the float latch walk (src/port/nds_p2_hurtbox_reject.c). Re-baselines
+# place of the float latch walk (src/port/nds_hurtbox_reject.c). Re-baselines
 # the replay digest; the P2 VS targets only (the frozen P1 target keeps the
-# float walk). gNdsP2JointResident is the same-ROM A/B word.
-NDS_P2_JOINT_RESIDENT ?= $(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
+# float walk). gNdsJointResident is the same-ROM A/B word.
+NDS_JOINT_RESIDENT ?= $(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
 # P2-2p8 T1 (A7 memory): 1 stages each of the nine VS ground maps (GR<Stage>Map)
 # as a COMPACT map -- the stage wallpaper's Sprite and Bitmap[44] table (776 B)
 # appended, MPGroundData.wallpaper pointing at them -- so the map's extern tree
@@ -93,11 +93,11 @@ NDS_P2_JOINT_RESIDENT ?= $(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash6
 # load VS stages -- the four-CPU stress target and the shell family (the
 # published smash64ds is the free-play twin) -- and 0 everywhere else, notably
 # the frozen P1 battle-playable target, whose NitroFS map files, packet rows and
-# Dream Land golden pin stay the source sizes. `NDS_P2_COMPACT_GROUND_MAPS=0` is
+# Dream Land golden pin stay the source sizes. `NDS_COMPACT_GROUND_MAPS=0` is
 # the same-ROM A/B control. The staged maps follow the flag through a per-build
 # stamp (nds_compact_ground_maps.stamp), so a flip inside one BUILD dir re-stages
 # them instead of shipping the other arm's files.
-NDS_P2_COMPACT_GROUND_MAPS ?= \
+NDS_COMPACT_GROUND_MAPS ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
@@ -218,7 +218,7 @@ NDS_R2_STRIP_ROUTE ?= 0
 # historical two-player meaning to preserve: it seeds four level-3 CPU fighter
 # INSTANCES (Mario/Fox/Mario/Fox) while the generated renderer owners remain the
 # two fighter KINDS. Only the dedicated P2 stress target below enables it.
-NDS_P2_FOUR_CPU_STRESS ?= 0
+NDS_FOUR_CPU_STRESS ?= 0
 # P2 STRESS SET: FOUR DISTINCT LANDED KINDS RATHER THAN FOUR INSTANCES.
 #
 # The four-CPU stress arm seeds four VSBattle INSTANCES of the two kinds the
@@ -237,15 +237,15 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # roster stopped being an honest argmax over landed content. Boundary's
 # `p2_fourcpu_stress` therefore builds Mario/Fox/Luigi/Donkey.
 #
-# `NDS_P2_FOUR_CPU_ROSTER=0` still builds the mirror arm and is the A/B control;
+# `NDS_FOUR_CPU_ROSTER=0` still builds the mirror arm and is the A/B control;
 # the stress harness stamps which roster produced every figure into
 # `p2-2-fourcpu-memory.json` (`fighterRoster`), because a tick number from one
 # roster is not comparable with a tick number from the other.
 #
 # The "needs the four-name roster" check is a `#error` in nds_match_config.c
-# rather than a `$(error)` here, because NDS_P2_DONKEY is not defined until
+# rather than a `$(error)` here, because NDS_DONKEY is not defined until
 # below and a make-time test would read it empty and never fire.
-NDS_P2_FOUR_CPU_ROSTER ?= \
+NDS_FOUR_CPU_ROSTER ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),1,0)
 # The four kinds the roster arm instantiates (BattleShip fttypes.h ordinals:
 # Mario 0, Fox 1, Donkey 2, Samus 3, Luigi 4, Link 5, Yoshi 6, Captain 7,
@@ -254,10 +254,10 @@ NDS_P2_FOUR_CPU_ROSTER ?= \
 # to the current pack-capacity argmax. nds_match_config.c refuses a kind whose
 # admission flag is off, and the verifier reads these back out of
 # nds_build_config.h to name the roster it expects.
-NDS_P2_FOUR_CPU_KIND0 ?= 3
-NDS_P2_FOUR_CPU_KIND1 ?= 1
-NDS_P2_FOUR_CPU_KIND2 ?= 7
-NDS_P2_FOUR_CPU_KIND3 ?= 2
+NDS_FOUR_CPU_KIND0 ?= 3
+NDS_FOUR_CPU_KIND1 ?= 1
+NDS_FOUR_CPU_KIND2 ?= 7
+NDS_FOUR_CPU_KIND3 ?= 2
 # P2-2p8 Phase 1 slice 6 (LAB ONLY, the four-CPU roster arm): `NDS_LAB_FOURCPU_TWO=1`
 # keeps roster slots 0/1 and leaves slots 2/3 empty, so the direct battle is a
 # two-fighter match -- the source's HIGH-detail case (scvsbattle.c selects Low
@@ -389,12 +389,12 @@ NDS_LAB_LEAN_ROOT_CENSUS ?=
 #
 # Costs, still true and still worth knowing: Jigglypuff +9,440 B (3 arena
 # pages), Ness +22,576 B, Kirby a further 13 pages. None of it blocks anything.
-NDS_P2_SHELL_ROSTER ?= 10
+NDS_SHELL_ROSTER ?= 10
 
 # THE ROSTER LADDER, DEFINED ONCE AND EVALUATED IN ALL THREE SHELL TARGETS.
 #
 # Rung N is N fighters beyond Mario and Fox, cumulatively, so lowering
-# NDS_P2_SHELL_ROSTER is how a fighter comes back OUT of the owner ROM without
+# NDS_SHELL_ROSTER is how a fighter comes back OUT of the owner ROM without
 # touching anything else. The in-progress roster ships in EVERY shell
 # configuration -- the published ROM, its free-play twin, the gate's realtime
 # arm and the loop arm -- so the playable roster is the verifier-covered one,
@@ -418,40 +418,40 @@ NDS_P2_SHELL_ROSTER ?= 10
 # anim-fallback counter at 0), and at 72,368 B he is the smallest closure after
 # Mario. He borrows 77 Kirby animation files, which P2-3f51 proved resolve from
 # a Purin-only build.
-define NDS_P2_SHELL_ROSTER_LADDER
-override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_LINK := $(if $(filter 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PIKACHU := $(if $(filter 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_YOSHI := $(if $(filter 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PURIN := $(if $(filter 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_NESS := $(if $(filter 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_KIRBY := $(if $(filter 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+define NDS_SHELL_ROSTER_LADDER
+override NDS_LUIGI := $(if $(filter 0,$(NDS_SHELL_ROSTER)),0,1)
+override NDS_DONKEY := $(if $(filter 2 3 4 5 6 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_CAPTAIN := $(if $(filter 3 4 5 6 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_SAMUS := $(if $(filter 4 5 6 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_LINK := $(if $(filter 5 6 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_PIKACHU := $(if $(filter 6 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_YOSHI := $(if $(filter 7 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_PURIN := $(if $(filter 8 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_NESS := $(if $(filter 9 10,$(NDS_SHELL_ROSTER)),1,0)
+override NDS_KIRBY := $(if $(filter 10,$(NDS_SHELL_ROSTER)),1,0)
 endef
 # P2-6, the 1P Game campaign.
 #
 # The ladder tables and bonus counters come from the textual include of
 # sc1pgame.c in battleship_sc1pgame_runtime.c (2026-09-04); the transcribed
 # battleship_sc1pgame_tables.c was deleted once the include owned them.
-NDS_P2_1P_GAME ?= 0
+NDS_1P_GAME ?= 0
 # The 1P venues -- the five arenas and the 25 bonus boards -- ride the 1P Game
-# flag: their NDS_P2_STAGE_<VENUE> defines (the guards every registry site
+# flag: their NDS_STAGE_<VENUE> defines (the guards every registry site
 # carries, see register_native_stage_runtime.py) are derived from
-# NDS_P2_1P_GAME in the config header rather than each carrying a ?=.
+# NDS_1P_GAME in the config header rather than each carrying a ?=.
 # Until 2026-09-05 nothing defined them at all, so the five arenas' adapter
 # capture tables were compiled out of every configuration.
-NDS_P2_1P_STAGE_FLAGS := PUPUPUSMALL YOSTERSMALL METAL ZAKO LAST BONUS3 BONUS1_MARIO BONUS1_FOX BONUS1_DONKEY BONUS1_SAMUS BONUS1_LUIGI BONUS1_LINK BONUS1_YOSHI BONUS1_CAPTAIN BONUS1_KIRBY BONUS1_PIKACHU BONUS1_PURIN BONUS1_NESS BONUS2_MARIO BONUS2_FOX BONUS2_DONKEY BONUS2_SAMUS BONUS2_LUIGI BONUS2_LINK BONUS2_YOSHI BONUS2_CAPTAIN BONUS2_KIRBY BONUS2_PIKACHU BONUS2_PURIN BONUS2_NESS
-NDS_P2_LUIGI ?= 0
+NDS_1P_STAGE_FLAGS := PUPUPUSMALL YOSTERSMALL METAL ZAKO LAST BONUS3 BONUS1_MARIO BONUS1_FOX BONUS1_DONKEY BONUS1_SAMUS BONUS1_LUIGI BONUS1_LINK BONUS1_YOSHI BONUS1_CAPTAIN BONUS1_KIRBY BONUS1_PIKACHU BONUS1_PURIN BONUS1_NESS BONUS2_MARIO BONUS2_FOX BONUS2_DONKEY BONUS2_SAMUS BONUS2_LUIGI BONUS2_LINK BONUS2_YOSHI BONUS2_CAPTAIN BONUS2_KIRBY BONUS2_PIKACHU BONUS2_PURIN BONUS2_NESS
+NDS_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
 # Donkey build also carries the already-qualified Luigi owner instead of
 # inventing a hole or a build-dependent owner number.
-NDS_P2_DONKEY ?= 0
-ifeq ($(NDS_P2_DONKEY),1)
-ifneq ($(NDS_P2_LUIGI),1)
-$(error NDS_P2_DONKEY=1 requires NDS_P2_LUIGI=1 so native-owner slots stay dense)
+NDS_DONKEY ?= 0
+ifeq ($(NDS_DONKEY),1)
+ifneq ($(NDS_LUIGI),1)
+$(error NDS_DONKEY=1 requires NDS_LUIGI=1 so native-owner slots stay dense)
 endif
 endif
 # P2-3f5. Captain Falcon's admission flag.
@@ -464,49 +464,49 @@ endif
 # would make him SELECTABLE: the native-owner tables (this row unblocked the
 # decode, but Falcon is not a runtime owner yet), the CSS/HUD surfaces, the
 # audio ordinals, and the arena budget a third in-progress fighter costs. The
-# worst case NDS_P2_SHELL_ROSTER is sized against is still Luigi versus Donkey
+# worst case NDS_SHELL_ROSTER is sized against is still Luigi versus Donkey
 # at 36,276 B of resident owner images; Falcon has none, so admitting him to the
 # roster today would put his model on the N64 interpreter path with no
 # measurement behind it. Build the slice with:
 #
-#   make TARGET=smash64ds BUILD=build-<lab> NDS_P2_CAPTAIN=1
+#   make TARGET=smash64ds BUILD=build-<lab> NDS_CAPTAIN=1
 #
-# THERE IS DELIBERATELY NO "REQUIRES NDS_P2_DONKEY=1" LADDER CHECK HERE, unlike
+# THERE IS DELIBERATELY NO "REQUIRES NDS_DONKEY=1" LADDER CHECK HERE, unlike
 # the Donkey/Luigi pair above, and the reason is not laziness in both
 # directions. That check exists because a native-owner SLOT is a dense ABI, and
 # Falcon occupies no slot -- he has no generated owner tables at all. A check
 # would also be unreadable at this point in the file: every shell target sets
-# NDS_P2_LUIGI/NDS_P2_DONKEY by `override` around line 2500, more than 1,900
+# NDS_LUIGI/NDS_DONKEY by `override` around line 2500, more than 1,900
 # lines BELOW this one, so a test here reads the `?=` defaults and reds on a
 # command line that is in fact correct -- the same evaluation-order trap the
-# NDS_P2_FOUR_CPU_ROSTER comment above had to push into a C `#error`. Reinstate
+# NDS_FOUR_CPU_ROSTER comment above had to push into a C `#error`. Reinstate
 # the ladder when Falcon becomes a native owner, and put it where the flags are
 # final.
-NDS_P2_CAPTAIN ?= 0
+NDS_CAPTAIN ?= 0
 # P2-3 Samus source-gameplay admission. Her native owner is source-derived from
 # the non-contiguous setup_parts mask; the generator mirrors BattleShip's
 # per-descriptor bit walk instead of requiring the older prefix-shaped masks.
-NDS_P2_SAMUS ?= 0
+NDS_SAMUS ?= 0
 # P2-3 fighter 5. Link remains opt-in until his source state machines, real
 # boomerang weapon, LinkBomb item client, native owner, CSS/audio surfaces and
 # runtime proofs are all admitted. The production manifest may know his files
 # before this flips in a shipping shell; that is intentional staging.
-NDS_P2_LINK ?= 0
+NDS_LINK ?= 0
 # P2-3 fighter 6. Pikachu stays opt-in until his source specials (Thunder
 # Jolt, Thunder, Quick Attack), both weapon articles, native owner, CSS/audio
 # surfaces and runtime proofs are admitted; the manifest knows his files first.
-NDS_P2_PIKACHU ?= 0
+NDS_PIKACHU ?= 0
 # P2-3 fighter 7. Yoshi stays opt-in until his source specials (Egg Lay's
 # two-body capture, Egg Throw, Yoshi Bomb), both weapon articles, the egg
 # shield / double-jump armor seams, native owner, CSS/audio surfaces and
 # runtime proofs are admitted; the manifest knows his files first.
-NDS_P2_YOSHI ?= 0
+NDS_YOSHI ?= 0
 # P2-3 fighter: Ness stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NESS ?= 0
+NDS_NESS ?= 0
 # P2-3 fighter: Purin stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_PURIN ?= 0
+NDS_PURIN ?= 0
 # DERIVED, not a knob: BattleShip's shared item subsystem (itmain/itmap/
 # itmanager/itprocess/itvisuals, imported by battleship_item_link_core.c).
 # It is not Link's -- LinkBomb was only its first client -- so it compiles for
@@ -519,10 +519,10 @@ NDS_P2_PURIN ?= 0
 # this subsystem's itManagerInitItems is what loads -- so a ROM admitting any
 # of them needs the item core for the same reason Link and Ness do.
 #
-# THE ASSIGNMENT IS DEFERRED ON PURPOSE. NDS_P2_KIRBY is defaulted BELOW this
+# THE ASSIGNMENT IS DEFERRED ON PURPOSE. NDS_KIRBY is defaulted BELOW this
 # line, so a `:=` here would read an empty value for him and silently leave
 # his stars stubbed on a Kirby-only build. This is the same trap the
-# NDS_P2_CAPTAIN comment above describes for its ladder check, avoided rather
+# NDS_CAPTAIN comment above describes for its ladder check, avoided rather
 # than worked around: `=` is evaluated where it is used, by which point every
 # admission flag is final.
 # P2-4 adds a second reason to need the item core, and it is not a fighter:
@@ -530,27 +530,27 @@ NDS_P2_PURIN ?= 0
 # through itManagerMakeItemSetupCommon, so a Castle build without the core
 # does not link at all. Mushroom Kingdom and Saffron City will join this list
 # for the same reason.
-NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
-	$(NDS_P2_FOUR_CPU_STRESS) \
-	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY) \
-	$(NDS_P2_STAGE_CASTLE) \
-	$(NDS_P2_STAGE_YAMABUKI) \
-	$(NDS_P2_STAGE_INISHIE)),1,0)
+NDS_ITEM_CORE = $(if $(filter 1,$(NDS_LINK) $(NDS_NESS) \
+	$(NDS_FOUR_CPU_STRESS) \
+	$(NDS_PIKACHU) $(NDS_PURIN) $(NDS_KIRBY) \
+	$(NDS_STAGE_CASTLE) \
+	$(NDS_STAGE_YAMABUKI) \
+	$(NDS_STAGE_INISHIE)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_KIRBY ?= 0
+NDS_KIRBY ?= 0
 # P2-3 fighter: GDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_GDONKEY ?= 0
+NDS_GDONKEY ?= 0
 # P2-3 fighter: MMario stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_MMARIO ?= 0
+NDS_MMARIO ?= 0
 # P2-3 fighter: NMario stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NMARIO ?= 0
+NDS_NMARIO ?= 0
 # P2-3 fighter: NFox stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NFOX ?= 0
+NDS_NFOX ?= 0
 # P4 (docs/P4/P4_STATUS.md): Smash Remix fighters, generated at build time from
 # the user's own ROM through the staged donor build (scripts/p4). Opt-in until
 # admitted; NDS_P4 follows any enabled content. The staging and export roots are
@@ -585,64 +585,64 @@ NDS_P4_LAB_FALLBACK ?= 0
 # P5 (docs/P5/New_Stages.md): the new VS stages and the 6x3 stage select,
 # from scripts/p5/stages.json; Remix's select art comes from the P4 staging
 # above and Meta Crystal, Duel Zone and Final Destination are the 1P venues
-# (NDS_P2_1P_GAME). Opt-in until admitted.
+# (NDS_1P_GAME). Opt-in until admitted.
 NDS_P5 ?= 0
 # P2-3 fighter: NDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NDONKEY ?= 0
+NDS_NDONKEY ?= 0
 # P2-3 fighter: NSamus stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NSAMUS ?= 0
+NDS_NSAMUS ?= 0
 # P2-3 fighter: NLuigi stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NLUIGI ?= 0
+NDS_NLUIGI ?= 0
 # P2-3 fighter: NLink stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NLINK ?= 0
+NDS_NLINK ?= 0
 # P2-3 fighter: NYoshi stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NYOSHI ?= 0
+NDS_NYOSHI ?= 0
 # P2-3 fighter: NCaptain stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NCAPTAIN ?= 0
+NDS_NCAPTAIN ?= 0
 # P2-3 fighter: NKirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NKIRBY ?= 0
+NDS_NKIRBY ?= 0
 # P2-3 fighter: NPikachu stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NPIKACHU ?= 0
+NDS_NPIKACHU ?= 0
 # P2-3 fighter: NPurin stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NPURIN ?= 0
+NDS_NPURIN ?= 0
 # P2-3 fighter: NNess stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
-NDS_P2_NNESS ?= 0
+NDS_NNESS ?= 0
 # P2-4 first stage: Yoshi's Island (Yoster). It belongs HERE with the other
 # admission flags and not down beside its reloc file list, because the CFILES
 # gate at :3851 and the nds_build_config.h line both read it before that point
 # in the file. A `?=` placed later left the config header emitting
-# `#define NDS_P2_STAGE_YOSTER` with an EMPTY value, which is not the same as 0
+# `#define NDS_STAGE_YOSTER` with an EMPTY value, which is not the same as 0
 # -- `#if` on an empty macro is "#if with no expression", a hard compile error,
 # and `#if !` on one is "operator '!' has no right operand". Both fired on the
 # default build.
-NDS_P2_STAGE_YOSTER ?= 0
+NDS_STAGE_YOSTER ?= 0
 # P2-4 stage 2: Peach's Castle (Castle). Same reason as Yoster above for
 # living here rather than beside its reloc list.
-NDS_P2_STAGE_CASTLE ?= 0
+NDS_STAGE_CASTLE ?= 0
 # P2-4 stage 3: Congo Jungle (Jungle). Same reason as the two above for
 # living here rather than beside its reloc list.
-NDS_P2_STAGE_JUNGLE ?= 0
+NDS_STAGE_JUNGLE ?= 0
 # P2-4 stage 4: Planet Zebes (Zebes).
-NDS_P2_STAGE_ZEBES ?= 0
+NDS_STAGE_ZEBES ?= 0
 # P2-4 stage 5: Hyrule Castle (Hyrule).
-NDS_P2_STAGE_HYRULE ?= 0
+NDS_STAGE_HYRULE ?= 0
 # P2-4 stage 6: Saffron City (Yamabuki).
-NDS_P2_STAGE_YAMABUKI ?= 0
+NDS_STAGE_YAMABUKI ?= 0
 # P2-4 stage 7: Mushroom Kingdom (Inishie).
-NDS_P2_STAGE_INISHIE ?= 0
+NDS_STAGE_INISHIE ?= 0
 # P2-4 stage 8: Sector Z (Sector), the largest stage in the game.
-NDS_P2_STAGE_SECTOR ?= 0
-NDS_P2_COMPACT_BATTLE_FIGHTERS ?= 0
+NDS_STAGE_SECTOR ?= 0
+NDS_COMPACT_BATTLE_FIGHTERS ?= 0
 # P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
 #
 # 1 = NitroFS image (the default, and the only thing that scales): the owner's
@@ -656,65 +656,65 @@ NDS_P2_COMPACT_BATTLE_FIGHTERS ?= 0
 # suspected loader fault against known-good tables -- not because it is a
 # supported shipping configuration. It does not fit a four-name roster.
 NDS_NATIVE_OWNER_IMAGE ?= 1
-NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LUIGI),0)
-NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
-NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
-NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_SAMUS),0)
-NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LINK),0)
-NDS_NATIVE_OWNER_IMAGE_PIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PIKACHU),0)
-NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_YOSHI),0)
-NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NESS),0)
-NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PURIN),0)
-NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_KIRBY),0)
-NDS_NATIVE_OWNER_IMAGE_MMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_MMARIO),0)
-NDS_NATIVE_OWNER_IMAGE_NMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NMARIO),0)
-NDS_NATIVE_OWNER_IMAGE_NFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NFOX),0)
-NDS_NATIVE_OWNER_IMAGE_NDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NDONKEY),0)
-NDS_NATIVE_OWNER_IMAGE_NSAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NSAMUS),0)
-NDS_NATIVE_OWNER_IMAGE_NLINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NLINK),0)
-NDS_NATIVE_OWNER_IMAGE_NYOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NYOSHI),0)
-NDS_NATIVE_OWNER_IMAGE_NCAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NCAPTAIN),0)
-NDS_NATIVE_OWNER_IMAGE_NKIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NKIRBY),0)
-NDS_NATIVE_OWNER_IMAGE_NPIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPIKACHU),0)
-NDS_NATIVE_OWNER_IMAGE_NPURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPURIN),0)
-NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NNESS),0)
+NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_LUIGI),0)
+NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_DONKEY),0)
+NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_CAPTAIN),0)
+NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_SAMUS),0)
+NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_LINK),0)
+NDS_NATIVE_OWNER_IMAGE_PIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_PIKACHU),0)
+NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_YOSHI),0)
+NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NESS),0)
+NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_PURIN),0)
+NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_KIRBY),0)
+NDS_NATIVE_OWNER_IMAGE_MMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_MMARIO),0)
+NDS_NATIVE_OWNER_IMAGE_NMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NMARIO),0)
+NDS_NATIVE_OWNER_IMAGE_NFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NFOX),0)
+NDS_NATIVE_OWNER_IMAGE_NDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NDONKEY),0)
+NDS_NATIVE_OWNER_IMAGE_NSAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NSAMUS),0)
+NDS_NATIVE_OWNER_IMAGE_NLINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NLINK),0)
+NDS_NATIVE_OWNER_IMAGE_NYOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NYOSHI),0)
+NDS_NATIVE_OWNER_IMAGE_NCAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NCAPTAIN),0)
+NDS_NATIVE_OWNER_IMAGE_NKIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NKIRBY),0)
+NDS_NATIVE_OWNER_IMAGE_NPIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NPIKACHU),0)
+NDS_NATIVE_OWNER_IMAGE_NPURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NPURIN),0)
+NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_NNESS),0)
 # Mario's and Fox's shared table set (P8 R7): in every build, so imaged
 # exactly when images are.
 NDS_NATIVE_OWNER_IMAGE_MARIOFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),1,0)
 # Giant DK's echo landed (0b564186676) without this line, so the config header
 # emitted `#define NDS_NATIVE_OWNER_IMAGE_GDONKEY` with an EMPTY value -- the
-# same "#if with no expression" trap as NDS_P2_STAGE_YOSTER above, latent only
+# same "#if with no expression" trap as NDS_STAGE_YOSTER above, latent only
 # because no source tests it yet. check_build_flag_census.py reports EMPTY.
-NDS_NATIVE_OWNER_IMAGE_GDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_GDONKEY),0)
+NDS_NATIVE_OWNER_IMAGE_GDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_GDONKEY),0)
 # Master Hand (P2-6): the boss owner export tests this flag in the generated
 # owner include; he rides the 1P Game flag like his reloc files.
-NDS_NATIVE_OWNER_IMAGE_BOSS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_1P_GAME),0)
+NDS_NATIVE_OWNER_IMAGE_BOSS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_1P_GAME),0)
 # Ness Up-B VFX-only proof.  This keeps the normal Ness source-special tour's
 # immediate PK Thunder self-hit steering unchanged; when enabled, the proof
 # controller lets PK Thunder fly naturally so head, spawned trail and attached
 # Wave can each receive presented frames before the verifier exits.
-NDS_P2_NESS_VFX_PROOF ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_NESS_VFX_PROOF)),$(NDS_P2_NESS_VFX_PROOF))
-$(error NDS_P2_NESS_VFX_PROOF must be 0 or 1)
+NDS_NESS_VFX_PROOF ?= 0
+ifneq ($(filter 0 1,$(NDS_NESS_VFX_PROOF)),$(NDS_NESS_VFX_PROOF))
+$(error NDS_NESS_VFX_PROOF must be 0 or 1)
 endif
-ifeq ($(NDS_P2_NESS_VFX_PROOF),1)
-ifneq ($(NDS_P2_NESS),1)
-$(error NDS_P2_NESS_VFX_PROOF=1 requires NDS_P2_NESS=1)
+ifeq ($(NDS_NESS_VFX_PROOF),1)
+ifneq ($(NDS_NESS),1)
+$(error NDS_NESS_VFX_PROOF=1 requires NDS_NESS=1)
 endif
-$(error NDS_P2_NESS_VFX_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
+$(error NDS_NESS_VFX_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
 endif
 # Yoshi BUGS.md visual proof.  This is a controller-only verifier arm: the
 # source game still owns SpecialHi / SpecialN statuses, EggThrow, EggLay,
 # collision, animation, lifetimes and renderer submission.
-NDS_P2_YOSHI_BUG_PROOF ?= 0
-ifneq ($(filter 0 1,$(NDS_P2_YOSHI_BUG_PROOF)),$(NDS_P2_YOSHI_BUG_PROOF))
-$(error NDS_P2_YOSHI_BUG_PROOF must be 0 or 1)
+NDS_YOSHI_BUG_PROOF ?= 0
+ifneq ($(filter 0 1,$(NDS_YOSHI_BUG_PROOF)),$(NDS_YOSHI_BUG_PROOF))
+$(error NDS_YOSHI_BUG_PROOF must be 0 or 1)
 endif
-ifeq ($(NDS_P2_YOSHI_BUG_PROOF),1)
-ifneq ($(NDS_P2_YOSHI),1)
-$(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_YOSHI=1)
+ifeq ($(NDS_YOSHI_BUG_PROOF),1)
+ifneq ($(NDS_YOSHI),1)
+$(error NDS_YOSHI_BUG_PROOF=1 requires NDS_YOSHI=1)
 endif
-$(error NDS_P2_YOSHI_BUG_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
+$(error NDS_YOSHI_BUG_PROOF=1 needs a slot-0 proof fighter; that selector is gone)
 endif
 # THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
 # harness seeding alone, which is the canonical one-minute Time match; non-zero
@@ -755,7 +755,7 @@ NDS_R2_FTR_DRAW_MEMO ?= 1
 # src/nds/nds_ui_kit.c is one #if, the NitroFS pack below is not staged, and
 # both published ROMs are byte-identical to a build without the row. P2-1d
 # turns it on for real.
-NDS_P2_UI_KIT ?= 0
+NDS_UI_KIT ?= 0
 # P2-1d. The VS shell's real screens: splash, title, main menu, and the VS menu
 # that carries the rules (src/nds/nds_menu_shell.c). It turns the kit above on
 # for the first time, replaces the bounded Startup/Title/VSMode park branches
@@ -765,7 +765,7 @@ NDS_P2_UI_KIT ?= 0
 # published and Boundary configuration -- mode 163 boots straight into the
 # battle exactly as it always has, no menu symbol is linked, and the NitroFS
 # pack is not staged.
-NDS_P2_MENU_SHELL ?= 0
+NDS_MENU_SHELL ?= 0
 # P2-1L item (11). The BOOT SELF-TEST TEXT -- "NitroFS: PASS", "OS
 # queues/threads: PASS", "Original boot: PARTIAL" -- printed to the sub
 # engine's libnds console during `main`. It is a lab instrument: every one of
@@ -783,12 +783,12 @@ NDS_BOOT_DIAG_TEXT ?= 1
 # row, both value directions and the refusal, then VS START -- with a dwell
 # between steps so each screen is both measurable and capturable. Zero means no
 # injection at all and the shell is driven only by the player.
-NDS_P2_MENU_WALK ?= 0
+NDS_MENU_WALK ?= 0
 # LAB ONLY. 1 builds the 1P intro with its live fighter cards and the gdb-driven
 # display-capture hook that bakes the shipping intro's fighter stills
 # (scripts/menus/bake_1p_intro_stills.ps1). Never 1 in anything published.
 NDS_1P_INTRO_BAKE ?= 0
-# LAB ONLY (with NDS_P2_MENU_WALK): the 1P ladder stage the walk starts at; -1
+# LAB ONLY (with NDS_MENU_WALK): the 1P ladder stage the walk starts at; -1
 # is the source's own start. For instruments that run without a debugger.
 NDS_1P_WALK_START_STAGE ?= -1
 # PLAYTEST ROMs only (owner 2026-10-06: "a way to easily playtest masterhand

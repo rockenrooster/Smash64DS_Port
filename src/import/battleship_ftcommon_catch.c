@@ -187,7 +187,7 @@ sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 #undef ftCommonThrowSetStatus
 #undef ftCommonThrowCheckInterruptCatchWait
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 /*
  * Donkey's cargo victim is nFTCommonStatusShouldered.  The normal P1/P2 catch
  * slice never reaches that status, so it historically left the shouldered

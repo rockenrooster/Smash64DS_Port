@@ -1,4 +1,4 @@
-/* Copied from $(CALICO)/lib/ds7.ld for NDS_P2_ARM9_WRAM; only the wram region differs. */
+/* Copied from $(CALICO)/lib/ds7.ld for NDS_ARM9_WRAM; only the wram region differs. */
 /*--------------------------------------------------------------------------------
 	** Linker script for DS/DSi homebrew, ARM7 side **
 --------------------------------------------------------------------------------*/
@@ -13,7 +13,7 @@ MEMORY {
 	/* Runtime memory layout for code/data areas (VMAs) */
 	main    : ORIGIN = 0x2fcc000, LENGTH = 0x28000 /* Main RAM (usable area for ARM7) */
 	twlwram : ORIGIN = 0x37c0000, LENGTH = 0x38000 /* DSi exclusive ARM7 WRAM (minus 32KB used as part of below) */
-	/* P2-2p8 (NDS_P2_ARM9_WRAM): the SDK script with the ARM7 image moved up
+	/* P2-2p8 (NDS_ARM9_WRAM): the SDK script with the ARM7 image moved up
 	 * 32 KB, out of shared WRAM into ARM7's private WRAM, so ARM9 can take
 	 * both shared blocks (WRAMCNT = 0). __sys_start is unchanged; the image
 	 * must end below the DLDI shelter (linker/nds_arm7_contract.ld), which is

@@ -1086,7 +1086,7 @@ void scSubsysFighterSetLightParams(f32 light_angle_x, f32 light_angle_y,
                                    u8 r, u8 g, u8 b, u8 a);
 
 /* Public campaign interfaces from sc1pgame.h and sc1pmanager.h. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 extern sb32 gSC1PGameBonusBrosCalamity;
 extern u8 gSC1PGameBonusTomatoCount;
 extern u8 gSC1PGameBonusHeartCount;

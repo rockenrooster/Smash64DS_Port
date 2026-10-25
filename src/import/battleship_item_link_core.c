@@ -1,8 +1,8 @@
 /* BattleShip's shared item owner. Link's Bomb was its first live client and
  * gave the file its name; Ness's PK Fire pillar is the second, so the TU is
- * gated on NDS_P2_ITEM_CORE (any fighter with an item article) rather than on
+ * gated on NDS_ITEM_CORE (any fighter with an item article) rather than on
  * one fighter's flag. LinkBomb's own attribute load and status dispatch stay
- * behind NDS_P2_LINK below.
+ * behind NDS_LINK below.
  *
  * Keep gameplay/state ownership common-item shaped, but do not drag the whole
  * P2-5 common-item bank/random-spawn registry into a fighter row. Generic
@@ -129,7 +129,7 @@ extern void gmCollisionGetItemAttackItemDamagePosition(
     Vec3f *dst, ITAttackColl *attack_coll, s32 attack_id,
     ITDamageColl *damage_coll, GObj *item_gobj);
 
-#if NDS_P2_LINK
+#if NDS_LINK
 /* LinkBomb status dispatch is the first common-item table client. Its three
  * call sites below are already keyed on `ip->kind == nITKindLinkBomb`, so with
  * Link out of the build no item can reach them and the dispatch goes with him.
@@ -1383,7 +1383,7 @@ extern GObj *itPakkunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
  * dGRYamabukiMonsterAttackKind. Those five are the Saffron GATE monsters
  * (decomp it/itground/, not it/itmonster/), so gating them costs no Poke Ball
  * content -- the thirteen Poke Ball Pokemon are the itmonster/ set below. */
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 #endif
 /* The two 1P-only ground kinds (2026-09-05): the bonus boards' Target and
@@ -1392,17 +1392,17 @@ extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32
  * grBonus3TaruBombMakeActor spawned nothing. Providers ride the 1P flag.
  *
  * THE GUARD MUST MATCH THE ROWS. These two declarations sat inside the
- * NDS_P2_STAGE_INISHIE block above while their table rows below carry
- * #if NDS_P2_1P_GAME. NDS_P2_STAGE_INISHIE is an independent stage flag
+ * NDS_STAGE_INISHIE block above while their table rows below carry
+ * #if NDS_1P_GAME. NDS_STAGE_INISHIE is an independent stage flag
  * defaulting to 0 (Makefile:867) and nothing derives it from the campaign
- * flag, so the ordinary 1P build -- NDS_P2_1P_GAME=1, no VS stage flags --
+ * flag, so the ordinary 1P build -- NDS_1P_GAME=1, no VS stage flags --
  * named two functions it had never declared. Same guard on both ends now.
  */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 extern GObj *itTargetMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itTaruBombMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 extern GObj *itGLuckyMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itMarumineMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itPorygonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1451,14 +1451,14 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindGBumper] = itGBumperMakeItem,
     [nITKindMBall] = itMBallMakeItem,
     [nITKindPakkun] = itPakkunMakeItem,
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     [nITKindTarget] = itTargetMakeItem,
     [nITKindTaruBomb] = itTaruBombMakeItem,
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     [nITKindPowerBlock] = itPowerBlockMakeItem,
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     [nITKindGLucky] = itGLuckyMakeItem,
     [nITKindMarumine] = itMarumineMakeItem,
     [nITKindPorygon] = itPorygonMakeItem,
@@ -2195,7 +2195,7 @@ void itMainSetFighterDrop(GObj *item_gobj, Vec3f *vel, f32 throw_mul)
     {
         sNdsITMainProcDroppedList[ip->kind](item_gobj);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombDroppedSetStatus(item_gobj);
 #endif
     else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_DROPPED);
@@ -2225,7 +2225,7 @@ void itMainSetFighterThrow(GObj *item_gobj, Vec3f *vel, f32 throw_mul,
     {
         sNdsITMainProcThrownList[ip->kind](item_gobj);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombThrownSetStatus(item_gobj);
 #endif
     else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_THROWN);
@@ -2273,7 +2273,7 @@ void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj)
     {
         sNdsITMainProcHoldList[ip->kind](item_gobj);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombHoldSetStatus(item_gobj);
 #endif
     else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_HOLD);

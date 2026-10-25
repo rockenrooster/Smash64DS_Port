@@ -4,7 +4,7 @@
 
 $(OUTPUT).nds: $(NDS_NITROFS_NATIVE_STAGE_BLOB_FILES)
 
-ifneq ($(filter 1,$(NDS_P2_1P_GAME) $(NDS_P2_MENU_SHELL)),)
+ifneq ($(filter 1,$(NDS_1P_GAME) $(NDS_MENU_SHELL)),)
 # Source-derived Main/Model data for all twelve character-select previews.
 # 1P and VS CSS share the same native compact format; VS keeps at most four
 # packs live in resettable slot arenas instead of raw full fighter closures.
@@ -36,7 +36,7 @@ $(NITROFS_DIR)/fighters/preview/%.fpc: $(NDS_PREVIEW_CORE_DIR)/%.fpc
 $(OUTPUT).nds: $(NDS_PREVIEW_NITRO_FILES)
 endif
 
-ifneq ($(filter 1,$(NDS_P2_COMPACT_BATTLE_FIGHTERS)),)
+ifneq ($(filter 1,$(NDS_COMPACT_BATTLE_FIGHTERS)),)
 # Source-exact LOW-detail VSBattle core packs.  These are deliberately
 # separate from the HIGH-only CSS/1P preview packs above: BattleShip's 3/4
 # player path constructs LOW commonparts and falls back to HIGH per joint when
@@ -94,7 +94,7 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # reloc_data.h` is a real prerequisite -- the generator reads every sprite
 # offset out of it rather than carrying a second copy, so a moved offset must
 # re-bake.
-# P2-4: the bake now varies with NDS_P2_STAGE_YOSTER, so the config header is a
+# P2-4: the bake now varies with NDS_STAGE_YOSTER, so the config header is a
 # prerequisite. Without it a flag flip leaves the previous kit in place and the
 # stage select shows the wrong preview set -- generated output under a shared
 # path that no longer matches the flags that produced it.
@@ -106,7 +106,7 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # below carries the flag values themselves and is rewritten only when they
 # change, so the bake is keyed on what actually varies rather than on a
 # timestamp that another build controls.
-NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)$(NDS_P2_STAGE_INISHIE)$(NDS_P2_STAGE_SECTOR)
+NDS_MN_UI_KIT_FLAGS := $(NDS_STAGE_YOSTER)$(NDS_STAGE_CASTLE)$(NDS_STAGE_JUNGLE)$(NDS_STAGE_ZEBES)$(NDS_STAGE_HYRULE)$(NDS_STAGE_YAMABUKI)$(NDS_STAGE_INISHIE)$(NDS_STAGE_SECTOR)
 # P4 bakes the VS character select on the Remix grid, with gate art for each
 # compiled content (NDS_P4_CSS below).
 ifeq ($(NDS_P4),1)
@@ -132,7 +132,7 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_
 		$(NDS_MN_UI_KIT_P4_CSS) \
 		$(NDS_MN_UI_KIT_P5_SSS) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P4_CSS=$(NDS_MN_UI_KIT_P4_CSS) NDS_P5_SSS=$(NDS_MN_UI_KIT_P5_SSS) NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P4_CSS=$(NDS_MN_UI_KIT_P4_CSS) NDS_P5_SSS=$(NDS_MN_UI_KIT_P5_SSS) NDS_STAGE_YOSTER=$(NDS_STAGE_YOSTER) NDS_STAGE_CASTLE=$(NDS_STAGE_CASTLE) NDS_STAGE_JUNGLE=$(NDS_STAGE_JUNGLE) NDS_STAGE_ZEBES=$(NDS_STAGE_ZEBES) NDS_STAGE_HYRULE=$(NDS_STAGE_HYRULE) NDS_STAGE_YAMABUKI=$(NDS_STAGE_YAMABUKI) NDS_STAGE_INISHIE=$(NDS_STAGE_INISHIE) NDS_STAGE_SECTOR=$(NDS_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_UI_KIT_NET_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

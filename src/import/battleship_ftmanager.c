@@ -55,7 +55,7 @@ GObj *ndsBaseFTManagerMakeFighter(FTDesc *desc);
 void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 void ndsBaseFTManagerAllocFighter(u32 data_flags, s32 allocs_num);
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #include <nds/nds_frontend_overlay.h>
 
 /* Campaign battles (1P game, bonus, training) borrow the front-end overlay's
@@ -193,7 +193,7 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
             sFTManagerStructsAllocBuf[i].nds_p4_kirby_hat = 0u;
             sFTManagerStructsAllocBuf[i].nds_kirby_metal = 0u;
         }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
         ndsKirbyMetalResetMatch();
 #endif
         ndsP4SetupFileSizes(data_flags);
@@ -263,7 +263,7 @@ u8 gNdsP7OnePlayerMetal;
  * kind); set by the bonus select's commit. */
 u8 gNdsP7BonusPracticeMetal;
 
-#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+#if NDS_1P_GAME && NDS_MMARIO
 
 sb32 ndsP7OnePlayerMetalActive(void)
 {
@@ -341,7 +341,7 @@ void *ftManagerAllocFigatreeHeapKind(s32 fkind)
     FTData *data;
     void *heap;
 
-#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+#if NDS_1P_GAME && NDS_MMARIO
     /* The player's heap is asked for under Mario's kind: size it for
      * whichever of the two takes more. */
     if ((fkind == nFTKindMario) && (ndsP7OnePlayerMetalActive() != FALSE) &&
@@ -404,7 +404,7 @@ void ftManagerSetupFileSize(void)
     }
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Campaign variant images. Zako waves replace the fighter mid-battle
  * (sc1PGameSpawnEnemyTeamNext picks the next N-kind variation and calls
  * ftManagerMakeFighter, with either detail by fighter count). Preloading all
@@ -439,7 +439,7 @@ static void ndsFTManagerPreloadVariantOwnerImages(void)
 }
 #endif
 
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
 static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 {
     FTData *data = dFTManagerDataFiles[fkind];
@@ -629,7 +629,7 @@ void ndsP4LendArticleDeadSpans(void)
  * the source loader runs instead. */
 static sb32 ndsP4SetupPackFiles(u32 content, s32 fkind)
 {
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
     FTData *data = dFTManagerDataFiles[fkind];
     s32 kind = (s32)(NDS_P4_SEL_BASE + content);
     s32 preview;
@@ -828,7 +828,7 @@ sb32 ndsFTManagerSetupPreviewFilesP4(u32 content)
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
-#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+#if NDS_1P_GAME && NDS_MMARIO
     /* The campaign's Metal Mario player: his own files, and Mario's only
      * when another seat is Mario. */
     if ((fkind == nFTKindMario) && (ndsP7OnePlayerMetalActive() != FALSE))
@@ -845,12 +845,12 @@ void ftManagerSetupFilesAllKind(s32 fkind)
     {
         return;
     }
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
     {
         FTData *data = dFTManagerDataFiles[fkind];
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
         if ((preview == 2) &&
             (ndsRelocUseBattleCoreFighterData() != FALSE))
         {
@@ -886,7 +886,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
      * EntryCar/Kick/Punch all use the same deferred-desc contract. */
     ndsBaseFTManagerSetupFilesAllKind(fkind);
     ndsEFManagerRetryDeferredDescs();
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* Scene-start preload for wave-replaced variant owners; no-op by
      * residency on repeats and on stages that never use them. */
     ndsFTManagerPreloadVariantOwnerImages();
@@ -897,7 +897,7 @@ __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindCount;
 __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindBytes;
 __attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 /* BattleShip's Kirby constructor needs only the copy table at offset zero of
  * KirbyMainMotion while building a CSS preview (ftmanager.c:632-634). The DS
  * compact preview pack deliberately omits the rest of MainMotion. Publish the
@@ -939,7 +939,7 @@ static sb32 sNdsFTManagerKirbyPreviewMainMotionActive;
 
 void ndsFTManagerRestoreKirbyPreviewMainMotion(void)
 {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     if (sNdsFTManagerKirbyPreviewMainMotionActive != FALSE)
     {
         if (gFTDataKirbyMainMotion == sNdsFTManagerKirbyPreviewCopyTable)
@@ -1003,19 +1003,19 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
         image_slot = NDS_NATIVE_IMAGE_SLOT_MARIOFOX;
     }
 #endif
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fkind == nFTKindLuigi)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_LUIGI;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (fkind == nFTKindDonkey)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_DONKEY;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (fkind == nFTKindCaptain)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_CAPTAIN;
@@ -1025,7 +1025,7 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_SAMUS;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (fkind == nFTKindLink)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_LINK;
@@ -1051,92 +1051,92 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_KIRBY;
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (fkind == nFTKindMMario)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_MMARIO;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (fkind == nFTKindNMario)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (fkind == nFTKindNFox)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NFOX;
     }
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (fkind == nFTKindNDonkey)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NDONKEY;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (fkind == nFTKindNSamus)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NSAMUS;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (fkind == nFTKindNLink)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NLINK;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (fkind == nFTKindNYoshi)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NYOSHI;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (fkind == nFTKindNCaptain)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NCAPTAIN;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (fkind == nFTKindNKirby)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NKIRBY;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (fkind == nFTKindNPikachu)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NPIKACHU;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (fkind == nFTKindNPurin)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NPURIN;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (fkind == nFTKindNNess)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_NNESS;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (fkind == nFTKindBoss)
     {
         image_slot = NDS_NATIVE_IMAGE_SLOT_BOSS;
     }
 #endif
-#if NDS_P2_NLUIGI
+#if NDS_NLUIGI
     if (fkind == nFTKindNLuigi)
     {
         /* Reuses the NMario image packet. */
         image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
     }
 #endif
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     if (fkind == nFTKindGDonkey)
     {
         /* Reuses the Donkey image packet. */
@@ -1161,7 +1161,7 @@ static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
     return ndsFTManagerImageSlotForKind(fkind);
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Polygon image pool eviction (nds_renderer_assets.c): does a linked fighter
  * still name this image slot? sc1PGameSpawnEnemyTeamNext makes the next
  * polygon in the replaced one's FTStruct before its GObj unlinks, so that GObj
@@ -1203,7 +1203,7 @@ sb32 ndsFTManagerLowDetailOnly(s32 player)
     u32 pkind;
 
     if (((gSCManagerSceneData.scene_curr != nSCKindVSBattle)
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
          && (gSCManagerSceneData.scene_curr != nSCKind1PGame)
 #endif
         ) ||
@@ -1282,7 +1282,7 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
              * select and in a three- or four-fighter match's Results:
              * ndsFTManagerSelectLowDetail), so only that image (S15). */
             if (((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
-#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+#if NDS_1P_GAME && NDS_MENU_SHELL
                  /* The training select is the same native screen. */
                  (gSCManagerSceneData.scene_curr == nSCKindPlayers1PTraining) ||
 #endif
@@ -1292,7 +1292,7 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
                 first_detail = last_detail =
                     (desc->detail == nFTPartsDetailLow) ? 1u : 0u;
             }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
             /* These source display scenes keep each actor's chosen detail.
              * CSS uses HIGH; the intro explicitly chooses LOW for some team
              * opponents. Neither update changes detail, so load only the
@@ -1411,13 +1411,13 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail, u32 content);
 
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
 extern volatile u32 gNdsMenuShellWalkRoute;
 extern volatile u32 gNdsCampaignWalkMeasure;
 
 /* Campaign walk only (owner 2026-09-30: "make the human a lvl 9 CPU and the
  * opponents lvl 1 CPUs for campaign walking"; playtest ROMs keep the source
- * defaults). NDS_P2_MENU_WALK is 0 in every published configuration, and the
+ * defaults). NDS_MENU_WALK is 0 in every published configuration, and the
  * walk's campaign route is the only caller that sets route 1. The battle
  * state keeps the source's own pkind/level rows, so the 1P setup, its counts
  * and the fighters' detail level are exactly a human run's; only the made
@@ -1501,7 +1501,7 @@ static void ndsFTManagerSelectLowDetail(FTDesc *desc)
     }
 }
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 /* P7 B5 (docs/P7/P7_Implementation_Plan.md Board 3, the owner's brief): in a
  * VS battle Metal Mario falls 1.25x as fast, through a VS copy of his
  * attributes (the main file's stay the source's, so the 1P campaign's boss is
@@ -1538,7 +1538,7 @@ static u32 ndsP7MMarioVs(const FTDesc *desc)
     {
         return TRUE;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* P7 C1: the campaign's Metal Mario player is the selectable one too;
      * his stage's Metal Mario stays the source's. */
     return ((ndsP7OnePlayerMetalActive() != FALSE) &&
@@ -1619,10 +1619,10 @@ f32 ndsP7MMarioVsUpBRise(void)
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
     ndsCampaignWalkCpuRoute(desc);
 #endif
-#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+#if NDS_1P_GAME && NDS_MMARIO
     ndsP7OnePlayerMetalDesc(desc);
 #endif
     ndsFTManagerBattleLowDetail(desc);
@@ -1642,7 +1642,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             gNdsFTManagerFigatreeSlotKindMin = expect;
         }
     }
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* Installed whenever the table is not, not only over a NULL pointer:
      * after a battle or Results that loaded Kirby, gFTDataKirbyMainMotion
      * still points into that scene's rewound arena (no select reloads it --
@@ -1733,7 +1733,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                                        ftGetStruct(fighter_gobj)->nds_p4_content
                                        );
         }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
         if ((fighter_gobj != NULL) && (ndsP7MMarioVs(desc) != FALSE))
         {
             ndsP7MMarioVsAttr(fighter_gobj);

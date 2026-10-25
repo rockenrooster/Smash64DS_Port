@@ -32,7 +32,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeFoxRootsLow, sNdsNativeFoxCrossPaletteSlotsLow,
     sNdsNativeMarioFoxRootLightPreambles, 0x7e50u);
 
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 #if NDS_NATIVE_OWNER_IMAGE_LUIGI
 /* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
  * mutable and start empty.  The arrays that used to initialise them are
@@ -133,7 +133,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLuigiRootLightPreambles, NDS_NATIVE_LUIGI_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 #if NDS_NATIVE_OWNER_IMAGE_DONKEY
 /* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
  * mutable and start empty.  The arrays that used to initialise them are
@@ -234,7 +234,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeDonkeyRootLightPreambles, NDS_NATIVE_DONKEY_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 #if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
 /* P2-3r4: these tables are FILLED AT LOAD from the owner image, so they are
  * mutable and start empty.  The arrays that used to initialise them are
@@ -467,7 +467,7 @@ sNdsNativeLinkBoomerangFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochsLow)
 };
 
-#if NDS_P2_LINK
+#if NDS_LINK
 #if NDS_NATIVE_OWNER_IMAGE_LINK
 static NDSNativeFighterRuntimeTables sNdsNativeLinkFighterHighTables;
 #else
@@ -853,7 +853,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 #if NDS_NATIVE_OWNER_IMAGE_MMARIO
 static NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterHighTables;
 #else
@@ -942,7 +942,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeMMarioRootLightPreambles, NDS_NATIVE_MMARIO_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
 #if NDS_NATIVE_OWNER_IMAGE_NMARIO
 static NDSNativeFighterRuntimeTables sNdsNativeNMarioFighterHighTables;
 #else
@@ -1031,7 +1031,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNMarioRootLightPreambles, NDS_NATIVE_NMARIO_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NFOX
+#if NDS_NFOX
 #if NDS_NATIVE_OWNER_IMAGE_NFOX
 static NDSNativeFighterRuntimeTables sNdsNativeNFoxFighterHighTables;
 #else
@@ -1252,7 +1252,7 @@ static const NDSP4RootProgram *ndsP4RootPrograms(u32 slot, u32 *count)
     return NULL;
 }
 
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
 static NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterHighTables;
 #else
@@ -1341,7 +1341,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNDonkeyRootLightPreambles, NDS_NATIVE_NDONKEY_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
 #if NDS_NATIVE_OWNER_IMAGE_NSAMUS
 static NDSNativeFighterRuntimeTables sNdsNativeNSamusFighterHighTables;
 #else
@@ -1430,7 +1430,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNSamusRootLightPreambles, NDS_NATIVE_NSAMUS_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NLINK
+#if NDS_NLINK
 #if NDS_NATIVE_OWNER_IMAGE_NLINK
 static NDSNativeFighterRuntimeTables sNdsNativeNLinkFighterHighTables;
 #else
@@ -1519,7 +1519,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNLinkRootLightPreambles, NDS_NATIVE_NLINK_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
 #if NDS_NATIVE_OWNER_IMAGE_NYOSHI
 static NDSNativeFighterRuntimeTables sNdsNativeNYoshiFighterHighTables;
 #else
@@ -1608,7 +1608,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNYoshiRootLightPreambles, NDS_NATIVE_NYOSHI_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
 #if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN
 static NDSNativeFighterRuntimeTables sNdsNativeNCaptainFighterHighTables;
 #else
@@ -1697,7 +1697,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNCaptainRootLightPreambles, NDS_NATIVE_NCAPTAIN_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
 #if NDS_NATIVE_OWNER_IMAGE_NKIRBY
 static NDSNativeFighterRuntimeTables sNdsNativeNKirbyFighterHighTables;
 #else
@@ -1786,7 +1786,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNKirbyRootLightPreambles, NDS_NATIVE_NKIRBY_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
 #if NDS_NATIVE_OWNER_IMAGE_NPIKACHU
 static NDSNativeFighterRuntimeTables sNdsNativeNPikachuFighterHighTables;
 #else
@@ -1875,7 +1875,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNPikachuRootLightPreambles, NDS_NATIVE_NPIKACHU_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
 #if NDS_NATIVE_OWNER_IMAGE_NPURIN
 static NDSNativeFighterRuntimeTables sNdsNativeNPurinFighterHighTables;
 #else
@@ -1964,7 +1964,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNPurinRootLightPreambles, NDS_NATIVE_NPURIN_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_NNESS
+#if NDS_NNESS
 #if NDS_NATIVE_OWNER_IMAGE_NNESS
 static NDSNativeFighterRuntimeTables sNdsNativeNNessFighterHighTables;
 #else
@@ -2053,7 +2053,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNNessRootLightPreambles, NDS_NATIVE_NNESS_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #if NDS_NATIVE_OWNER_IMAGE_BOSS
 static NDSNativeFighterRuntimeTables sNdsNativeBossFighterHighTables;
 #else

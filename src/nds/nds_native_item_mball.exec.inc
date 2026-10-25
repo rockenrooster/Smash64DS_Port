@@ -21,7 +21,7 @@
  * frames -- the ITEM has no MatAnimJoint at all (ITAttributes+0x6F0 is NULL),
  * which is why a still item only ever selects one of them.
  * Do not narrow the live root to a single image to "tidy" this. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemMBall(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,

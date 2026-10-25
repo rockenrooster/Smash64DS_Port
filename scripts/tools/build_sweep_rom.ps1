@@ -39,10 +39,10 @@ $labLd = Join-Path $PWD "builds/$Build/nds_hot_text.lab.ld"
 $old = if (Test-Path $labLd) { [IO.File]::ReadAllText($labLd) } else { '' }
 if ($old -ne $labText) { [IO.File]::WriteAllText($labLd, $labText) }
 $makeArgs = @("TARGET=$($rom -replace '\.nds$', '')", "BUILD=builds/$Build", 'NDS_LAB_FOURCPU_WORDS=1',
-    'NDS_P2_STAGE_YOSTER=1', 'NDS_P2_STAGE_CASTLE=1', 'NDS_P2_STAGE_JUNGLE=1', 'NDS_P2_STAGE_ZEBES=1',
-    'NDS_P2_STAGE_HYRULE=1', 'NDS_P2_STAGE_YAMABUKI=1', 'NDS_P2_STAGE_INISHIE=1', 'NDS_P2_STAGE_SECTOR=1',
+    'NDS_STAGE_YOSTER=1', 'NDS_STAGE_CASTLE=1', 'NDS_STAGE_JUNGLE=1', 'NDS_STAGE_ZEBES=1',
+    'NDS_STAGE_HYRULE=1', 'NDS_STAGE_YAMABUKI=1', 'NDS_STAGE_INISHIE=1', 'NDS_STAGE_SECTOR=1',
     # The sweep pokes any kind; only admitted kinds are compiled (a missing one wedges melonDS).
-    'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1',
+    'NDS_PIKACHU=1', 'NDS_YOSHI=1', 'NDS_NESS=1', 'NDS_PURIN=1',
     "NDS_HOT_TEXT_LINKER_SCRIPT=$($labLd -replace '\\', '/')")
 if ($Gkind -ne '') { $makeArgs += "NDS_LAB_FOURCPU_SWEEP_GKIND=$Gkind" }
 $makeArgs += $Extra

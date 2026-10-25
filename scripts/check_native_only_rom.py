@@ -25,7 +25,7 @@ FORBIDDEN = frozenset((
     "ndsRendererTask36ReplayRecord", "ndsRendererTask36ReplayRun",
     "ndsRendererTask36ReplayBeginFrame", "ndsRendererTask36ReplayStartCapture",
     "sNdsRendererTask36ReplayOwner", "sNdsRendererTask36CaptureActive",
-    "gNdsP2StageProg",
+    "gNdsStageProg",
 ))
 # These are the exact SDK archive leaves extracted by the existing Task 9/37
 # rules, not project translation units. Their archive/code pins remain enforced

@@ -173,42 +173,42 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
  * stage contributes its own bit or zero, and the remaining six extend the
  * chain by two lines each rather than doubling a conditional. With every flag
  * off the value is exactly the old Dream Land-only one. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #define NDS_SSS_MASK_YOSTER LBBACKUP_MASK_STAGE(nGRKindYoster)
 #else
 #define NDS_SSS_MASK_YOSTER 0u
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 #define NDS_SSS_MASK_CASTLE LBBACKUP_MASK_STAGE(nGRKindCastle)
 #else
 #define NDS_SSS_MASK_CASTLE 0u
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #define NDS_SSS_MASK_JUNGLE LBBACKUP_MASK_STAGE(nGRKindJungle)
 #else
 #define NDS_SSS_MASK_JUNGLE 0u
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 #define NDS_SSS_MASK_ZEBES LBBACKUP_MASK_STAGE(nGRKindZebes)
 #else
 #define NDS_SSS_MASK_ZEBES 0u
 #endif
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 #define NDS_SSS_MASK_HYRULE LBBACKUP_MASK_STAGE(nGRKindHyrule)
 #else
 #define NDS_SSS_MASK_HYRULE 0u
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 #define NDS_SSS_MASK_YAMABUKI LBBACKUP_MASK_STAGE(nGRKindYamabuki)
 #else
 #define NDS_SSS_MASK_YAMABUKI 0u
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 #define NDS_SSS_MASK_INISHIE LBBACKUP_MASK_STAGE(nGRKindInishie)
 #else
 #define NDS_SSS_MASK_INISHIE 0u
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #define NDS_SSS_MASK_SECTOR LBBACKUP_MASK_STAGE(nGRKindSector)
 #else
 #define NDS_SSS_MASK_SECTOR 0u
@@ -247,50 +247,50 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
  * (SSS_PREVIEW_WALLPAPER in generate_mn_ui_kit.py) only emits
  * SSS_PREVIEW_YOSHIS_ISLAND -- manifest id
  * NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND -- when the kit bakes with
- * NDS_P2_STAGE_YOSTER=1, so the id is only named when the flag is on. Off, the
+ * NDS_STAGE_YOSTER=1, so the id is only named when the flag is on. Off, the
  * NONE sentinel leaves the panel on the last preview rather than blitting a
  * wrong stage (the sync skips NONE entries), and the plaque
  * (SSS_PLAQUE_FRONT_5, baked for all ten slots already) still names the
  * stage. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #define NDS_SSS_PREVIEW_YOSTER NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND
 #else
 #define NDS_SSS_PREVIEW_YOSTER NDS_MENU_VS_SURFACE_NONE
 #endif
 /* P2-4s2 slot 0, on the same terms: the kit only emits
- * SSS_PREVIEW_PEACHS_CASTLE when it bakes with NDS_P2_STAGE_CASTLE=1, so the
+ * SSS_PREVIEW_PEACHS_CASTLE when it bakes with NDS_STAGE_CASTLE=1, so the
  * id is only named when the flag is on. */
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 #define NDS_SSS_PREVIEW_CASTLE NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_PEACHS_CASTLE
 #else
 #define NDS_SSS_PREVIEW_CASTLE NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #define NDS_SSS_PREVIEW_JUNGLE NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_CONGO_JUNGLE
 #else
 #define NDS_SSS_PREVIEW_JUNGLE NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 #define NDS_SSS_PREVIEW_ZEBES NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_PLANET_ZEBES
 #else
 #define NDS_SSS_PREVIEW_ZEBES NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 #define NDS_SSS_PREVIEW_HYRULE NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_HYRULE_CASTLE
 #else
 #define NDS_SSS_PREVIEW_HYRULE NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 #define NDS_SSS_PREVIEW_YAMABUKI NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_SAFFRON_CITY
 #else
 #define NDS_SSS_PREVIEW_YAMABUKI NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 #define NDS_SSS_PREVIEW_INISHIE NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_MUSHROOM_KINGDOM
 #else
 #define NDS_SSS_PREVIEW_INISHIE NDS_MENU_VS_SURFACE_NONE
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #define NDS_SSS_PREVIEW_SECTOR NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_SECTOR_Z
 #else
 #define NDS_SSS_PREVIEW_SECTOR NDS_MENU_VS_SURFACE_NONE
@@ -967,7 +967,7 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
             }
             ndsNetUiClear();
         }
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
         /* A lap is a completed menu pass into the match, counted where the
          * pass actually ends. P2-1d counted it on the VS screen and P2-1e
          * moved it to the character select for the same reason: this screen

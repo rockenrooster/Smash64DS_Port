@@ -34,11 +34,11 @@ if ($Rosters -ne '') {
         $runs += @{ Name = ('r' + ($cs -join '-')); Kinds = ([string]([uint32]$kw)); Content = ([string]([uint32]$cw)) }
     }
 }
-$extras = @('gNdsTaskmanGeneralHeapFreeMin', 'gNdsNativeFailureLabCount', 'gNdsFtrLeanDeclineCount', 'gNdsP2StageProgLoads',
-    'gNdsP2StageProgDeclines', 'gNdsR2AnimCacheMisses', 'gNdsR2AnimCacheHits', 'gNdsAudioStorageRequests',
+$extras = @('gNdsTaskmanGeneralHeapFreeMin', 'gNdsNativeFailureLabCount', 'gNdsFtrLeanDeclineCount', 'gNdsStageProgLoads',
+    'gNdsStageProgDeclines', 'gNdsR2AnimCacheMisses', 'gNdsR2AnimCacheHits', 'gNdsAudioStorageRequests',
     'gNdsR2AnimCacheArenaReservedBytes', 'gNdsAObjEvent32NormalizeScriptCount', 'gNdsAObjEvent32NormalizedHighWater',
-    'gNdsAObjEvent32CapacityLimit', 'gNdsAObjEvent32NormalizeFailCount', 'gNdsP2StageProgSegments', 'gNdsP2StageProgBytes',
-    'gNdsP2StageProgReason', 'gNdsNativeStageLentLayerSkips', 'gNdsBattleDeadSpanServedBytes', 'gNdsBattleDeadSpanLentBytes') + $MoreGlobals
+    'gNdsAObjEvent32CapacityLimit', 'gNdsAObjEvent32NormalizeFailCount', 'gNdsStageProgSegments', 'gNdsStageProgBytes',
+    'gNdsStageProgReason', 'gNdsNativeStageLentLayerSkips', 'gNdsBattleDeadSpanServedBytes', 'gNdsBattleDeadSpanLentBytes') + $MoreGlobals
 $stages = if ($Gkinds.Count -gt 0) { $Gkinds } else { @($Gkind) }
 foreach ($g in $stages) {
     foreach ($r in $runs) {

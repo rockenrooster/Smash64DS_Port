@@ -209,13 +209,13 @@ extern intptr_t lGRPupupuParticleTextureBankLo;
 extern intptr_t lGRPupupuParticleTextureBankHi;
 /* P2-4 Yoster vapor bank markers, decomp gr/grcommon/gryoster.h:9-12.
  * Defined by src/import/battleship_gryoster_ground.c behind
- * NDS_P2_STAGE_YOSTER; address identity only, as with the Pupupu bank. */
+ * NDS_STAGE_YOSTER; address identity only, as with the Pupupu bank. */
 extern intptr_t lGRYosterParticleScriptBankLo;
 extern intptr_t lGRYosterParticleScriptBankHi;
 extern intptr_t lGRYosterParticleTextureBankLo;
 extern intptr_t lGRYosterParticleTextureBankHi;
 /* Item particle bank markers, decomp it/itmanager.h:8-11. Defined by
- * src/import/battleship_item_link_core.c behind NDS_P2_ITEM_CORE; address
+ * src/import/battleship_item_link_core.c behind NDS_ITEM_CORE; address
  * identity only, as with the Pupupu/Yoster banks. */
 extern intptr_t lITManagerParticleScriptBankLo;
 extern intptr_t lITManagerParticleScriptBankHi;

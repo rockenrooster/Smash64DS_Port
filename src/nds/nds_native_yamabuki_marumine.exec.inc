@@ -17,7 +17,7 @@
  *
  * The adapter has already COMPARED both relocated SETTIMG words against the
  * loaded file's own base, so nothing is re-derived here. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_RENDERER_HW_TRIANGLES && NDS_STAGE_YAMABUKI
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_marumine[1];

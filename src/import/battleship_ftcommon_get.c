@@ -14,7 +14,7 @@
  * without editing that file; `ftCommonGetCheckInterruptCommon` is NOT weak and
  * its shim is gated off in reloc_backend_compat_shims.c.
  *
- * Gated on NDS_P2_ITEM_CORE: without items there is nothing to pick up, and
+ * Gated on NDS_ITEM_CORE: without items there is nothing to pick up, and
  * the weak stubs remain the right answer.
  */
 
@@ -36,9 +36,9 @@
 /* decomp sc/sc1pmode/sc1pgame.c. The 1P bonuses the consume path increments;
  * P2-6 owns the mode that reads them, so they live beside their only writer
  * until then, exactly as gSC1PGameBonusMewCatcher does in
- * battleship_item_map_core.c. With NDS_P2_1P_GAME the included sc1pgame.c
+ * battleship_item_map_core.c. With NDS_1P_GAME the included sc1pgame.c
  * (battleship_sc1pgame_runtime.c) owns them. */
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 __attribute__((used)) u8 gSC1PGameBonusTomatoCount;
 __attribute__((used)) u8 gSC1PGameBonusHeartCount;
 #endif
@@ -55,7 +55,7 @@ extern void ftHammerSetStatusHammerWait(GObj *fighter_gobj);
 extern sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj);
 extern sb32 mpCommonCheckFighterOnEdge(GObj *fighter_gobj);
 extern sb32 ftCommonHeavyThrowCheckInterruptCommon(GObj *fighter_gobj);
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 extern void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj);
 #endif
 
@@ -262,7 +262,7 @@ void ftCommonGetProcUpdate(GObj *fighter_gobj)
         {
             if (fp->item_gobj != NULL)
             {
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
                 if ((fp->fkind == nFTKindDonkey) || (fp->fkind == nFTKindNDonkey) || (fp->fkind == nFTKindGDonkey))
                 {
                     ftDonkeyThrowFWaitSetStatus(fighter_gobj);

@@ -28,7 +28,7 @@ def host_source(adapter):
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "line %d: %s\n", __LINE__, #x); exit(1); } } while (0)
 #define FALSE 0
 #define TRUE 1
-#define NDS_P2_MENU_SHELL 1
+#define NDS_MENU_SHELL 1
 #define NDS_DEMO_FOX_CPU_LADDER 0
 typedef uint32_t u32;
 typedef uint16_t u16;
@@ -76,7 +76,7 @@ static void complete_starters(void)
         gSCManagerBackupData.spgame_records[i].is_spgame_complete =
             (LBBACKUP_CHARACTER_MASK_STARTER & (1 << i)) != 0;
 }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 static void accept(int index, int unlock)
 {
     CHECK(gSCManagerSceneData.scene_curr == nSCKindMessage);
@@ -91,7 +91,7 @@ int main(void)
     reset(); gSCManagerBackupData.vs_itemswitch_battles = 99;
     source_results_exit(); CHECK(gSCManagerSceneData.scene_curr == nSCKindPlayersVS);
     CHECK(loads == 1 && writes == 0);
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     reset(); gSCManagerBackupData.vs_itemswitch_battles = 100;
     source_results_exit(); accept(0, nLBBackupUnlockItemSwitch); CHECK(writes == 1);
     reset(); complete_starters(); source_results_exit();
@@ -133,7 +133,7 @@ class ResultsUnlockRoutingTest(unittest.TestCase):
                 candidate = adapter.replace("(u32)gSCManagerSceneData.scene_curr", "(u32)nSCKindPlayersVS") if broken else adapter
                 self.assertEqual(candidate != adapter, broken)
                 source.write_text(host_source(candidate))
-                subprocess.run([compiler, "-std=c11", "-DREGION_US=1", f"-DNDS_P2_1P_GAME={enabled}",
+                subprocess.run([compiler, "-std=c11", "-DREGION_US=1", f"-DNDS_1P_GAME={enabled}",
                                 "-Wall", "-Wextra", "-Werror",
                                 str(source), "-o", str(program)], check=True)
                 result = subprocess.run([str(program)], capture_output=True, text=True)

@@ -38,7 +38,7 @@
  *   battleship_item_capsule.c:73; proven present in the linked ROM text.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <ef/effect.h>
 #include <ft/fighter.h>
@@ -64,4 +64,4 @@ extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
 
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpboss/wpbossbullet.c"
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

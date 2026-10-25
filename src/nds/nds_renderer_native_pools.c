@@ -2,7 +2,7 @@
  * pool, texgen owners, the native stage's dense records and its bind
  * workspace. A slice of nds_renderer.c. */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* THE POLYGON TEAM SHARES FIVE IMAGE BUFFERS, NOT TWELVE.
  *
  * sc1PGame stage 12 loads every polygon kind at FuncStart and replaces a
@@ -212,7 +212,7 @@ NDS_RENDERER_COLD s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_
      * Kongo Jungle at load. The scratch is empty in every other scene and
      * re-seeded with the arena at each battle entry, and the slot's
      * heap_generation retires the image on exactly that boundary. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (ndsRendererNativePolygonPoolOwns(owner_slot) != FALSE)
     {
         buffer = ndsRendererNativePolygonPoolTake(owner_slot, bytes);
@@ -310,7 +310,7 @@ NDS_RENDERER_COLD void ndsRendererNativeReleaseOwnerImagesInRange(const void *ba
             }
         }
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if ((sNdsNativePolygonPool.base != NULL) &&
         ((uintptr_t)sNdsNativePolygonPool.base >= start) &&
         ((uintptr_t)sNdsNativePolygonPool.base < end))
@@ -333,21 +333,21 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             &sNdsNativeFoxLowOwner : &sNdsNativeFoxHighOwner;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (slot == 2u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeLuigiLowOwner : &sNdsNativeLuigiHighOwner;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (slot == 3u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeDonkeyLowOwner : &sNdsNativeDonkeyHighOwner;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (slot == 4u)
     {
         return (use_low_detail != 0u) ?
@@ -359,7 +359,7 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             &sNdsNativeSamusLowOwner : &sNdsNativeSamusHighOwner;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (slot == 6u)
     {
         return (use_low_detail != 0u) ?
@@ -391,21 +391,21 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             &sNdsNativeKirbyLowOwner : &sNdsNativeKirbyHighOwner;
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (slot == 12u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeMMarioLowOwner : &sNdsNativeMMarioHighOwner;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (slot == 13u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNMarioLowOwner : &sNdsNativeNMarioHighOwner;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (slot == 14u)
     {
         return (use_low_detail != 0u) ?
@@ -420,70 +420,70 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_LOOKUP)
 #undef NDS_P4_OWNER_LOOKUP
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (slot == 15u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNDonkeyLowOwner : &sNdsNativeNDonkeyHighOwner;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (slot == 16u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNSamusLowOwner : &sNdsNativeNSamusHighOwner;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (slot == 17u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNLinkLowOwner : &sNdsNativeNLinkHighOwner;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (slot == 18u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNYoshiLowOwner : &sNdsNativeNYoshiHighOwner;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (slot == 19u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNCaptainLowOwner : &sNdsNativeNCaptainHighOwner;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (slot == 20u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNKirbyLowOwner : &sNdsNativeNKirbyHighOwner;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (slot == 21u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNPikachuLowOwner : &sNdsNativeNPikachuHighOwner;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (slot == 22u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNPurinLowOwner : &sNdsNativeNPurinHighOwner;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (slot == 23u)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNNessLowOwner : &sNdsNativeNNessHighOwner;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (slot == 24u)
     {
         return (use_low_detail != 0u) ?
@@ -528,7 +528,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             &sNdsNativeSamusFSmashLowOwner : &sNdsNativeSamusFSmashHighOwner;
     }
 #endif
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
         if (program == 1u)
@@ -661,7 +661,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             return programs[program - 1u].owners[(use_low_detail != 0u) ? 1u : 0u];
         }
     }
-#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
+#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -681,7 +681,7 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
         ndsRendererNativeFighterCanonicalOwnerForDetail(slot, use_low_detail);
 }
 
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
 #if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
 #define NDS_NATIVE_LINK_LAST_PROGRAM 6u
 #else
@@ -763,7 +763,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) &&
         (program <= NDS_NATIVE_LINK_LAST_PROGRAM))
     {
@@ -830,7 +830,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
             return;
         }
     }
-#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
+#if (!defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && (!(NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))) && (!defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && (!defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -962,7 +962,7 @@ u32 ndsRendererNativeFighterSelectRootProgram(
         program_count = 5u;
     }
 #endif
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
         /* canonical + Entry + Catch + SpecialN + Claps + SpecialNItem
@@ -1161,7 +1161,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeFoxRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeFoxRootVariants);
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     /* Luigi's Results Win2 pose sets model part 1 on both hand joints, exactly
      * as Mario's Lose pose does above (scsubsysdataluigi.c D_ovl1_803917A0). */
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LUIGI)
@@ -1173,7 +1173,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeLuigiRootVariants);
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
     {
         variants = (use_low_detail != 0u) ?
@@ -1183,7 +1183,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeDonkeyRootVariants);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_CAPTAIN)
     {
         variants = (use_low_detail != 0u) ?

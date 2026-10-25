@@ -4,7 +4,7 @@
  * decomp gr/grcommon/grhyrule.c verbatim, so the tornado's seven-state machine
  * is mechanically equivalent to the source, and exposes ndsGRHyruleSetupInitAll
  * for the shared grCommonSetupInitAll gate. Only built when
- * NDS_P2_STAGE_HYRULE=1.
+ * NDS_STAGE_HYRULE=1.
  *
  * WHAT THIS STAGE SHARES AND WHAT IT DOES NOT. The tornado uses the
  * ground-OBSTACLE seam -- ftMainCheckAddGroundObstacle (grhyrule.c:172), the
@@ -25,7 +25,7 @@
  * malformed tornado data suppresses only the tornado while the common stage
  * geometry and actors still initialize.
  */
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -59,7 +59,7 @@ sb32 grHyruleTwisterCheckGetDamageKind(GObj *ground_gobj, GObj *fighter_gobj,
 /* Tornado particle bank markers, decomp gr/grcommon/grhyrule.h:9-12. Address
  * identity only, exactly as the Pupupu and Yoster bank markers are:
  * efParticleGetLoadBankID matches &lGRHyruleParticleScriptBankLo by symbol
- * (src/import/battleship_lbparticle.c, NDS_P2_STAGE_HYRULE) and installs the
+ * (src/import/battleship_lbparticle.c, NDS_STAGE_HYRULE) and installs the
  * generated Hyrule bank (8 scripts, 3 native textures; see
  * include/nds/generated/nds_particle_banks.generated.h). The bank fails closed
  * to empty if any script does not normalize, which leaves the funnel invisible
@@ -119,4 +119,4 @@ void ndsGRHyruleSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
-#endif /* NDS_P2_STAGE_HYRULE */
+#endif /* NDS_STAGE_HYRULE */

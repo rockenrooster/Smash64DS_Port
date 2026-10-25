@@ -49,7 +49,7 @@
  * state, and calls `ndsPlatformEndFrame` -- the same present the battle uses.
  *
  * MODE 163 IS UNTOUCHED. Every entry point here is compiled out at
- * `NDS_P2_MENU_SHELL == 0`, which is every published and Boundary
+ * `NDS_MENU_SHELL == 0`, which is every published and Boundary
  * configuration, and the boot scene only reaches the title when the flag is
  * on. The battle scene, its harness seeding and its transitions are not
  * modified by this row at all. */
@@ -290,11 +290,11 @@ extern volatile u32 gNdsMenuShellCommitCount;
 extern volatile u32 gNdsMenuShellCommitRule;
 extern volatile u32 gNdsMenuShellCommitTime;
 extern volatile u32 gNdsMenuShellCommitStocks;
-/* Scripted-walk state (NDS_P2_MENU_WALK). Steps injected and loops closed. */
+/* Scripted-walk state (NDS_MENU_WALK). Steps injected and loops closed. */
 extern volatile u32 gNdsMenuShellWalkSteps;
 extern volatile u32 gNdsMenuShellWalkDwellSteps;
 extern volatile u32 gNdsMenuShellWalkLoops;
-/* P2-1g. Laps the walk will drive, seeded from NDS_P2_MENU_WALK and writable,
+/* P2-1g. Laps the walk will drive, seeded from NDS_MENU_WALK and writable,
  * so one linked ROM covers a three-lap smoke and a twenty-lap phase-close run.
  * Poke it before the first lap closes; the walk parks when Loops reaches it. */
 extern volatile u32 gNdsMenuShellWalkBudget;
@@ -305,13 +305,13 @@ extern volatile u32 gNdsMenuShellWalkBudget;
 extern volatile u32 gNdsMenuShellWalkResultsPressCount;
 extern volatile u32 gNdsMenuShellWalkResultsHoldFrames;
 /* Returns 1 while the walk wants START held on the Results screen. Defined
- * only under NDS_P2_MENU_WALK and called only from ndsPlatformReadInput under
+ * only under NDS_MENU_WALK and called only from ndsPlatformReadInput under
  * the same guard -- the DS key constant stays on the platform side, the scene
  * test stays in the shell. Declared unconditionally: a declaration nothing
  * calls costs nothing, and a #if here would depend on every includer having
  * pulled nds_build_config.h first. */
 u32 ndsMenuShellWalkWantsResultsStart(void);
-/* P2-6/P2-7 walk (NDS_P2_MENU_WALK). Route select, 0 = VS tour (default),
+/* P2-6/P2-7 walk (NDS_MENU_WALK). Route select, 0 = VS tour (default),
  * 1 = Title -> ModeSelect -> 1PMode -> 1P CSS -> first battle, 2 = Data menu
  * and all three children; GDB-writable before the first lap closes. Source-menu leg, called once per pump
  * iteration from the source-menu pump in taskman_seam_harness.c; drives the

@@ -56,7 +56,7 @@ def nl_of(s):
 
 
 def guard(mac):
-    return f"#if defined(NDS_P2_STAGE_{mac}) && (NDS_P2_STAGE_{mac} == 1)"
+    return f"#if defined(NDS_STAGE_{mac}) && (NDS_STAGE_{mac} == 1)"
 
 
 def linked_guard(mac):
@@ -67,7 +67,7 @@ def linked_guard(mac):
     stage. Blob residency gates only the .inc include, the packet row, the
     registry slot and the workspace-maxima level.
     """
-    return (f"#if defined(NDS_P2_STAGE_{mac}) && (NDS_P2_STAGE_{mac} == 1) "
+    return (f"#if defined(NDS_STAGE_{mac}) && (NDS_STAGE_{mac} == 1) "
             f"&& (NDS_NATIVE_STAGE_LINKED_{mac} == 1)")
 
 
@@ -91,10 +91,10 @@ def register_select(stage, desc, dry):
                       f"#define NDS_NATIVE_STAGE_GKIND_{MAC} {gk}u\n#define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u\n", 1)
         changed = True
     # 2. MULTI condition
-    if f"(defined(NDS_P2_STAGE_{MAC}) && (NDS_P2_STAGE_{MAC} == 1))" not in s.split("#define NDS_NATIVE_STAGE_MULTI 1")[0]:
-        m = re.search(r"(#if \(defined\(NDS_P2_STAGE_\w+\) && \(NDS_P2_STAGE_\w+ == 1\)\)(?: \|\| \\\n    \(defined\(NDS_P2_STAGE_\w+\) && \(NDS_P2_STAGE_\w+ == 1\)\))*)\n#define NDS_NATIVE_STAGE_MULTI 1", s)
+    if f"(defined(NDS_STAGE_{MAC}) && (NDS_STAGE_{MAC} == 1))" not in s.split("#define NDS_NATIVE_STAGE_MULTI 1")[0]:
+        m = re.search(r"(#if \(defined\(NDS_STAGE_\w+\) && \(NDS_STAGE_\w+ == 1\)\)(?: \|\| \\\n    \(defined\(NDS_STAGE_\w+\) && \(NDS_STAGE_\w+ == 1\)\))*)\n#define NDS_NATIVE_STAGE_MULTI 1", s)
         assert m, "MULTI condition"
-        s = s.replace(m.group(1), m.group(1) + f" || \\\n    (defined(NDS_P2_STAGE_{MAC}) && (NDS_P2_STAGE_{MAC} == 1))", 1)
+        s = s.replace(m.group(1), m.group(1) + f" || \\\n    (defined(NDS_STAGE_{MAC}) && (NDS_STAGE_{MAC} == 1))", 1)
         changed = True
     # 3. maxima chain: add a level BASEn -> MAX, renaming the current MAX level
     if f"NDS_NATIVE_STAGE_{MAC}_SEGMENT_COUNT)" not in s.split("};", 1)[0]:

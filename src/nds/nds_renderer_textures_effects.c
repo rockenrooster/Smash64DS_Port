@@ -2352,7 +2352,7 @@ ndsRendererHardwareAllocTexture(void)
     return NULL;
 }
 
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 static u32 sNdsHyruleNativeNames[NDS_HYRULE_NATIVE_FRAME_COUNT];
 volatile u32 gNdsHyruleNativeTexturePrepareCount;
 volatile u32 gNdsHyruleNativeTextureFailCount;
@@ -2388,7 +2388,7 @@ NDS_RENDERER_COLD void ndsRendererHardwareDiscardTextureCache(void)
                 &sNdsRendererHardwareTextureCache[i]);
         }
     }
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     ndsRendererHardwareReleaseHyruleTextures();
 #endif
     memset(sNdsRendererHardwareTextureLookup, 0,

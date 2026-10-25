@@ -26,13 +26,13 @@
  *   table in the MMario slot (ftmain.c:80,93).
  * - Entry reuses the Mario AppearR/AppearL pair and the Dokan pipe effect
  *   (ftcommonentry.c table :26 + switch :194-197; port arm in
- *   battleship_ftcommon_entry.c under NDS_P2_MMARIO; the old comment that
+ *   battleship_ftcommon_entry.c under NDS_MMARIO; the old comment that
  *   deliberately skipped Metal is replaced by the real arm).
  *
  * Visual delta (recorded, not hidden): the owner generator has no metal
  * material path, so the Metal Mario owner is generated from its own
  * MMarioModel file with its own textures exactly as any fighter
- * (admit_fighter.py P2_O2R_ASSETS row). The DS metallic look is therefore the
+ * (admit_fighter.py OWNER_O2R_ASSETS row). The DS metallic look is therefore the
  * source textures under the standard fighter lighting, not an env-mapped or
  * reflective approximation. A native metal material remains the visual owner's
  * work; this file claims only geometry/texture parity plus the attr/SFX gates

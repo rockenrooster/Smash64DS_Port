@@ -20,7 +20,7 @@ NDS_COMPACT_GROUND_MAPS_STAMP := $(PROJECT_ROOT)/$(BUILD)/nds_compact_ground_map
 
 $(NDS_COMPACT_GROUND_MAPS_STAMP): FORCE
 	@mkdir -p $(dir $@)
-	@printf %s "$(NDS_P2_COMPACT_GROUND_MAPS)" > $@.tmp
+	@printf %s "$(NDS_COMPACT_GROUND_MAPS)" > $@.tmp
 	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
 
 NDS_COMPACT_GROUND_MAP_TARGETS := \
@@ -28,7 +28,7 @@ NDS_COMPACT_GROUND_MAP_TARGETS := \
 
 $(NDS_COMPACT_GROUND_MAP_TARGETS): $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)
-	@if test "$(NDS_P2_COMPACT_GROUND_MAPS)" = 1; then \
+	@if test "$(NDS_COMPACT_GROUND_MAPS)" = 1; then \
 		python "$(PROJECT_ROOT)/scripts/stages/generate_compact_ground_maps.py" \
 			--o2r-root "$(BATTLESHIP_O2R)" --map "$*" --output "$@" || exit 1; \
 	else \
@@ -45,10 +45,10 @@ $(NDS_COMPACT_GROUND_MAP_TARGETS): $(NDS_COMPACT_GROUND_MAP_CONTAINERS) \
 # list's source offset). scripts/fighters/generate_compact_polygon_models.py
 # keeps the joint tree and an identity cell per named display list; the
 # runtime side is ndsRelocCompactModelProbe (src/port/reloc_backend_assets.c),
-# which a plain file passes unchanged, so `NDS_P2_COMPACT_POLYGON_MODELS=0`
+# which a plain file passes unchanged, so `NDS_COMPACT_POLYGON_MODELS=0`
 # stages the plain copies as the A/B control. Default 1 with the 1P game, the
 # only scene family that loads them; the stamp re-stages on a flip.
-NDS_P2_COMPACT_POLYGON_MODELS ?= $(if $(filter 1,$(NDS_P2_1P_GAME)),1,0)
+NDS_COMPACT_POLYGON_MODELS ?= $(if $(filter 1,$(NDS_1P_GAME)),1,0)
 NDS_COMPACT_POLYGON_MODEL_FILES := \
 	reloc_fighters_main/NMarioModel reloc_fighters_main/NFoxModel \
 	reloc_fighters_main/NYoshiModel reloc_fighters_main/NKirbyModel \
@@ -64,7 +64,7 @@ NDS_COMPACT_POLYGON_MODELS_STAMP := $(PROJECT_ROOT)/$(BUILD)/nds_compact_polygon
 
 $(NDS_COMPACT_POLYGON_MODELS_STAMP): FORCE
 	@mkdir -p $(dir $@)
-	@printf %s "$(NDS_P2_COMPACT_POLYGON_MODELS)" > $@.tmp
+	@printf %s "$(NDS_COMPACT_POLYGON_MODELS)" > $@.tmp
 	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
 
 NDS_COMPACT_POLYGON_MODEL_TARGETS := \
@@ -72,7 +72,7 @@ NDS_COMPACT_POLYGON_MODEL_TARGETS := \
 
 $(NDS_COMPACT_POLYGON_MODEL_TARGETS): $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)
-	@if test "$(NDS_P2_COMPACT_POLYGON_MODELS)" = 1; then \
+	@if test "$(NDS_COMPACT_POLYGON_MODELS)" = 1; then \
 		python "$(PROJECT_ROOT)/scripts/fighters/generate_compact_polygon_models.py" \
 			--o2r-root "$(BATTLESHIP_O2R)" --model "$*" --output "$@" || exit 1; \
 	else \
@@ -94,49 +94,49 @@ $(NITROFS_DIR)/audio/bgm_pupupu_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_pupupu
 
 # P2-4 Yoster BGM: same shape as the per-track rules above; gated on the
 # stage flag so the default NitroFS set is unchanged.
-ifeq ($(NDS_P2_STAGE_YOSTER),1)
+ifeq ($(NDS_STAGE_YOSTER),1)
 $(NITROFS_DIR)/audio/bgm_yoster_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yoster_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_CASTLE),1)
+ifeq ($(NDS_STAGE_CASTLE),1)
 $(NITROFS_DIR)/audio/bgm_castle_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_castle_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_ZEBES),1)
+ifeq ($(NDS_STAGE_ZEBES),1)
 $(NITROFS_DIR)/audio/bgm_zebes_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_zebes_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_HYRULE),1)
+ifeq ($(NDS_STAGE_HYRULE),1)
 $(NITROFS_DIR)/audio/bgm_hyrule_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_hyrule_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+ifeq ($(NDS_STAGE_YAMABUKI),1)
 $(NITROFS_DIR)/audio/bgm_yamabuki_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yamabuki_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 $(NITROFS_DIR)/audio/bgm_inishie_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+ifeq ($(NDS_STAGE_JUNGLE),1)
 $(NITROFS_DIR)/audio/bgm_jungle_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_jungle_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
 
-ifeq ($(NDS_P2_STAGE_SECTOR),1)
+ifeq ($(NDS_STAGE_SECTOR),1)
 $(NITROFS_DIR)/audio/bgm_sector_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_sector_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -171,12 +171,12 @@ $(NITROFS_DIR)/audio/bgm_win_pmonsters_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm
 $(NITROFS_DIR)/audio/bgm_win_zelda_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_zelda_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 $(NITROFS_DIR)/audio/bgm_inishie_hurry_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
-ifeq ($(NDS_P2_ITEM_CORE),1)
+ifeq ($(NDS_ITEM_CORE),1)
 $(NITROFS_DIR)/audio/bgm_hammer_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_hammer_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -184,7 +184,7 @@ $(NITROFS_DIR)/audio/bgm_star_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_star_ima
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 $(NITROFS_DIR)/audio/bgm_boss_stage_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_boss_stage_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -303,7 +303,7 @@ $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
 # closed on a descriptor pin mismatch (generate_nds_native_stage.py:4534), so
 # a stale descriptor stops the build here instead of reaching a ROM. Dream
 # Land is the generator's default stage. Yoster's include is generated
-# unconditionally so it cannot go stale behind NDS_P2_STAGE_YOSTER; the
+# unconditionally so it cannot go stale behind NDS_STAGE_YOSTER; the
 # translation unit includes it only when that flag is 1.
 NDS_NATIVE_STAGE_OWNER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_owner.generated.inc
 NDS_NATIVE_STAGE_YOSTER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yoster.generated.inc
@@ -511,7 +511,7 @@ CFLAGS += -I$(NDS_NATIVE_STAGE_BLOB_DIR)
 # Phase 2 GX templates live on NitroFS; no duplicated template slab in main RAM.
 NDS_STAGE_GX_STAGES := castle sector jungle zebes hyrule yoster dreamland yamabuki inishie
 # P2-6: the 1P campaign's venues take the same templates (sNdsStageGxPaths).
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_STAGE_GX_STAGES += pupupusmall yostersmall metal zako last bonus3 \
 	$(foreach f,mario fox donkey samus luigi link yoshi captain kirby pikachu purin ness,bonus1_$(f) bonus2_$(f))
 endif

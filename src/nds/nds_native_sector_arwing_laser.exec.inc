@@ -6,7 +6,7 @@
  * SETTIMG words, already relocated into file 161 by the loader's external
  * fixup pass (reloc_backend_assets.c:8420), so nothing is re-derived here.
  * There is no display-list scan or execution on this path. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_RENDERER_HW_TRIANGLES && NDS_STAGE_SECTOR
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_sector_laser[1];

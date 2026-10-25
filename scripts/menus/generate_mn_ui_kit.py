@@ -139,14 +139,14 @@ def o2r_sprite(container: str, offset: int) -> tuple[str, str]:
 
 
 _STAGE_FLAG_NAMES = (
-    "NDS_P2_STAGE_YOSTER",
-    "NDS_P2_STAGE_CASTLE",
-    "NDS_P2_STAGE_JUNGLE",
-    "NDS_P2_STAGE_ZEBES",
-    "NDS_P2_STAGE_HYRULE",
-    "NDS_P2_STAGE_YAMABUKI",
-    "NDS_P2_STAGE_INISHIE",
-    "NDS_P2_STAGE_SECTOR",
+    "NDS_STAGE_YOSTER",
+    "NDS_STAGE_CASTLE",
+    "NDS_STAGE_JUNGLE",
+    "NDS_STAGE_ZEBES",
+    "NDS_STAGE_HYRULE",
+    "NDS_STAGE_YAMABUKI",
+    "NDS_STAGE_INISHIE",
+    "NDS_STAGE_SECTOR",
 )
 
 
@@ -3641,7 +3641,7 @@ SSS_ICON_SYMBOL = (
     "llMNMapsMushroomKingdomSprite")
 # Which grounds this build HAS. Same bound the shell's NDS_SSS_GROUND_MASK
 # carries (`LBBACKUP_MASK_STAGE(nGRKindPupupu)`).
-# P2-4: gkind 5 (Yoster) joins when the bake runs with NDS_P2_STAGE_YOSTER=1,
+# P2-4: gkind 5 (Yoster) joins when the bake runs with NDS_STAGE_YOSTER=1,
 # matching the shell mask in src/nds/nds_menu_shell_sss.c. Default bake is
 # unchanged (Dream Land only) so flag-off ROMs keep their verified kit.
 # P2-4: one contributing tuple per landed stage rather than a conditional
@@ -3649,14 +3649,14 @@ SSS_ICON_SYMBOL = (
 def _sss_built_gkind() -> tuple[int, ...]:
     return (
         (6,)
-        + ((5,) if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
-        + ((0,) if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ())
-        + ((2,) if os.environ.get("NDS_P2_STAGE_JUNGLE") == "1" else ())
-        + ((3,) if os.environ.get("NDS_P2_STAGE_ZEBES") == "1" else ())
-        + ((4,) if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
-        + ((7,) if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
-        + ((8,) if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ())
-        + ((1,) if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
+        + ((5,) if os.environ.get("NDS_STAGE_YOSTER") == "1" else ())
+        + ((0,) if os.environ.get("NDS_STAGE_CASTLE") == "1" else ())
+        + ((2,) if os.environ.get("NDS_STAGE_JUNGLE") == "1" else ())
+        + ((3,) if os.environ.get("NDS_STAGE_ZEBES") == "1" else ())
+        + ((4,) if os.environ.get("NDS_STAGE_HYRULE") == "1" else ())
+        + ((7,) if os.environ.get("NDS_STAGE_YAMABUKI") == "1" else ())
+        + ((8,) if os.environ.get("NDS_STAGE_INISHIE") == "1" else ())
+        + ((1,) if os.environ.get("NDS_STAGE_SECTOR") == "1" else ())
     )
 
 
@@ -3919,13 +3919,13 @@ SSS_PREVIEW_WALLPAPER_SCALE = (37, 125)
 # unreachable rather than missing.  P2-4 adds a row here per stage it lands.
 # P2-4 Yoster row: StageYoshi container carries llStageYoshiSprite at 0x26c88
 # (same sprite offset as StageDreamLand), baked only when the shell mask admits
-# slot 5 (NDS_P2_STAGE_YOSTER=1 bake, same gate as SSS_BUILT_GKIND above).
+# slot 5 (NDS_STAGE_YOSTER=1 bake, same gate as SSS_BUILT_GKIND above).
 def _sss_preview_wallpaper() -> tuple[tuple[str, int, str, str], ...]:
     return (
     # token suffix, gkind, o2r container, wallpaper symbol
     ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
 ) + ((("YOSHIS_ISLAND", 5, "StageYoshi", "llStageYoshiSprite"),)
-     if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ()
+     if os.environ.get("NDS_STAGE_YOSTER") == "1" else ()
   # P2-4s2 Peach's Castle, and it is NOT the Stage<Name> pattern.
   #
   # This row used to read StageCastle/llStageCastleSprite, and the note here
@@ -3949,24 +3949,24 @@ def _sss_preview_wallpaper() -> tuple[tuple[str, int, str, str], ...]:
   # nds_reloc_assets.c. Only O2R_DIRS had to learn reloc_movies.
 ) + ((("PEACHS_CASTLE", 0, "MVOpeningRoomWallpaper",
        "llMVOpeningRoomWallpaperSprite"),)
-     if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ()
+     if os.environ.get("NDS_STAGE_CASTLE") == "1" else ()
   # P2-4s3 Congo Jungle, gkind 2, same Stage<Name> pattern.
 ) + ((("CONGO_JUNGLE", 2, "StageJungle", "llStageJungleSprite"),)
-     if os.environ.get("NDS_P2_STAGE_JUNGLE") == "1" else ()
+     if os.environ.get("NDS_STAGE_JUNGLE") == "1" else ()
 ) + ((("PLANET_ZEBES", 3, "StageZebes", "llStageZebesSprite"),)
-     if os.environ.get("NDS_P2_STAGE_ZEBES") == "1" else ()
+     if os.environ.get("NDS_STAGE_ZEBES") == "1" else ()
   # P2-4s5 Hyrule Castle, gkind 4. It borrows StageCastle the way its map
   # does -- the two stages share that sprite container.
 ) + ((("HYRULE_CASTLE", 4, "StageCastle", "llStageCastleSprite"),)
-     if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ()
+     if os.environ.get("NDS_STAGE_HYRULE") == "1" else ()
 ) + ((("SAFFRON_CITY", 7, "StagePokemon", "llStagePokemonSprite"),)
-     if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ()
+     if os.environ.get("NDS_STAGE_YAMABUKI") == "1" else ()
   # P2-4s7 Mushroom Kingdom, gkind 8. Its map borrows the Hyrule wallpaper
   # container, which is what its own header points at.
 ) + ((("MUSHROOM_KINGDOM", 8, "StageHyruleWallpaper", "llStageInishieBackgroundSprite"),)
-     if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ()
+     if os.environ.get("NDS_STAGE_INISHIE") == "1" else ()
 ) + ((("SECTOR_Z", 1, "StageSector", "llStageSectorSprite"),)
-     if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
+     if os.environ.get("NDS_STAGE_SECTOR") == "1" else ())
 
 
 # P5: the preview panels scripts/p5/p5_stages.py lists -- a landed 1P arena's

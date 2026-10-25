@@ -38,7 +38,7 @@
  *   src/port/title_backend.c:413 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -63,11 +63,11 @@ void ndsBaseMNBackupClearStartScene(void);
 
 #undef mnBackupClearStartScene
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 void mnBackupClearStartScene(void)
 {
     ndsBaseMNBackupClearStartScene();
 }
 #endif
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

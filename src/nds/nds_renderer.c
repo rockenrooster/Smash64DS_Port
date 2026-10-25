@@ -43,25 +43,25 @@
 #include "generated/nds_native_damage_slash.generated.inc"
 #include "nds_native_damage_slash.exec.inc"
 #include "nds_renderer_native_owners.c"
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 #include "nds_native_inishie_pakkun.generated.inc"
 #include "nds_native_inishie_pakkun.exec.inc"
 #include "generated/nds_native_inishie_powblock.generated.inc"
 #include "nds_native_inishie_powblock.exec.inc"
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #include "generated/nds_native_sector_arwing_laser.generated.inc"
 #include "nds_native_sector_arwing_laser.exec.inc"
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 #include "generated/nds_native_castle_bumper.generated.inc"
 #include "nds_native_castle_bumper.exec.inc"
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
 #include "generated/nds_native_link_bomb.generated.inc"
 #include "nds_native_link_bomb.exec.inc"
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 #include "generated/nds_native_yamabuki_marumine.generated.inc"
 #include "nds_native_yamabuki_marumine.exec.inc"
 #include "generated/nds_native_item_glucky.generated.inc"

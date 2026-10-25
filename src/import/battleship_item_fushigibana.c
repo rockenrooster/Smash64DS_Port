@@ -23,7 +23,7 @@
  * include :14) are referenced verbatim through local externs and listed in
  * the task report -- no values invented here.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITFUSHIGIBANA_* rides on <it/item.h>; the 0x03 razor render flags and the
  * event-id clamp at 2 back to 1 are the source's own).

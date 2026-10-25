@@ -17,7 +17,7 @@
  * production path, and emit the real shared corners once per drawable
  * with live matrices. No generic DObj interpreter, no baked worlds.
  */
-#if NDS_P2_STAGE_YOSTER && NDS_RENDERER_HW_TRIANGLES
+#if NDS_STAGE_YOSTER && NDS_RENDERER_HW_TRIANGLES
 
 #ifndef NDS_NATIVE_ACTOR_YOSTER_CLOUD_EXEC_INC
 #define NDS_NATIVE_ACTOR_YOSTER_CLOUD_EXEC_INC

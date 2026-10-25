@@ -63,7 +63,7 @@ def root_offsets(repo: Path, name: str, skeleton_id=1) -> tuple[int, ...]:
         if not word:
             continue
         root = source.decode_ptr(word)
-        if edges.get(joint * 8) != (root, owners.P2_O2R_ASSETS[name][1]):
+        if edges.get(joint * 8) != (root, owners.OWNER_O2R_ASSETS[name][1]):
             raise ValueError(f"{name}: skeleton joint {joint + 4} relocation mismatch")
         if joint not in selected:
             raise ValueError(f"{name}: skeleton uses a noncanonical joint {joint + 4}")
@@ -97,7 +97,7 @@ def render_runtime(contexts):
     for name, sid in PROGRAMS:
         context = contexts[(f"{name}_skeleton{sid}", "high")]
         title = owners._owner_title(name) + str(sid)
-        guard = "1" if name in ("mario", "fox") else f"NDS_P2_{name.upper()}"
+        guard = "1" if name in ("mario", "fox") else f"NDS_{name.upper()}"
         lines += [f"#if {guard}",
                   f"static NDSNativeFighterRuntimeTables sNds{title}SkeletonTables;",
                   f"static const NDSNativeRoot sNds{title}SkeletonRoots[] = {{"]
@@ -112,7 +112,7 @@ def render_runtime(contexts):
                   "};", "#endif"]
     lines += ["static const NDSNativeFighterOwnerRuntime *ndsNativeSkeletonOwner(u32 slot, u32 sid)", "{"]
     for name, sid in PROGRAMS:
-        guard = "1" if name in ("mario", "fox") else f"NDS_P2_{name.upper()}"
+        guard = "1" if name in ("mario", "fox") else f"NDS_{name.upper()}"
         lines += [f"#if {guard}", f"    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_{name.upper()} && sid == {sid}u)",
                   f"        return &sNds{owners._owner_title(name)}{sid}SkeletonOwner;", "#endif"]
     lines += ["    return NULL;", "}", ""]

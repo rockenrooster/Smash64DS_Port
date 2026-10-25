@@ -6,7 +6,7 @@
  * clear dispatch, challenger, ending), following battleship_sc1pbonusstage.c
  * (scene TU imported as ndsBase* and re-exported under its source name).
  *
- * Gated on NDS_P2_1P_GAME like battleship_sc1pgame_runtime.c. The scene entry
+ * Gated on NDS_1P_GAME like battleship_sc1pgame_runtime.c. The scene entry
  * is imported as ndsBaseSC1PManagerUpdateScene and re-exported under its
  * source name, so the dispatch in battleship_scmanager.c
  * (case nSCKind1PGame) keeps calling sc1PManagerUpdateScene while the DS
@@ -36,7 +36,7 @@
  *   port headers (sys/dma.h, mn/menu.h, ft/fighter.h).
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <string.h>
 #include <ft/fighter.h>
@@ -506,7 +506,7 @@ static void ndsP7AfterManager(void)
     gSCManagerSceneData.scene_curr = curr;
 }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* LAB (walk builds only, P7 U10): an unlock row poked by the probe; the
  * manager's next entry fights that challenger at once and goes back to the
  * title, unlocking nothing. */
@@ -534,7 +534,7 @@ static u32 ndsSC1PManagerPlayerSel(void)
 
 void sc1PManagerUpdateScene(void)
 {
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
     if (gNdsP7LabChallengerRow < ndsP7UnlockRowCount())
     {
         u32 row = gNdsP7LabChallengerRow;
@@ -556,7 +556,7 @@ void sc1PManagerUpdateScene(void)
         return;
     }
 #endif
-#if NDS_P2_MENU_WALK && (NDS_1P_WALK_START_STAGE >= 0)
+#if NDS_MENU_WALK && (NDS_1P_WALK_START_STAGE >= 0)
     /* LAB (Makefile NDS_1P_WALK_START_STAGE): the walk enters the ladder at
      * one stage, for instruments that cannot poke it -- the ARM9 profiler
      * runs without a debugger. */
@@ -605,4 +605,4 @@ void sc1PManagerUpdateScene(void)
     ndsP7OnePRunEnd();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

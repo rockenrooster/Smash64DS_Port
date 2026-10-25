@@ -24,7 +24,9 @@ def test_existing_capture_and_census_refresh_is_idempotent(tmp_path, monkeypatch
     assert (acid['source'],acid['index'],acid['link'],acid['dl_links']) == ('ZEBES_ACID',0,12,1)
     for attr,path,call in [('MATRIX','src/port/renderer_adapter_matrix.c',register.register_matrix),
                            ('SELECT','src/nds/nds_native_stage_select.inc',register.register_select)]:
-        previous = subprocess.check_output(['git','show','28047525acd:'+path])
+        # The snapshot predates the P2 prefix's removal (P8 F): today's names.
+        previous = re.sub(rb'\bNDS_P2_', b'NDS_',
+                          subprocess.check_output(['git','show','28047525acd:'+path]))
         dest = tmp_path / Path(path).name
         dest.write_bytes(previous+b'\n/* unrelated edit must survive */\n')
         monkeypatch.setattr(register,attr,str(dest))
@@ -52,7 +54,7 @@ def test_capture_uses_live_acid_gobj_and_source_callback(tmp_path):
 typedef unsigned u32; typedef int sb32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_STAGE_ZEBES 1
+#define NDS_STAGE_ZEBES 1
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER 0
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP 1
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID 2

@@ -5,7 +5,7 @@
  * material slots 0 then 1.  Both material snapshots are LIGHT1|LIGHT2 only,
  * so their animated light colours are replayed at the exact source boundary;
  * no runtime N64 display-list traversal remains. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_RENDERER_HW_TRIANGLES && NDS_NESS
 
 static sb32 ndsNativeNessPKFireEmitGroup(
     u32 group, const NDSRendererConfig *config, NDSRendererStats *stats,

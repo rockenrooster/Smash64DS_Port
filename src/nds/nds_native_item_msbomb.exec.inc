@@ -1,6 +1,6 @@
 /* Motion-Sensor Bomb executor. TEXTUAL INCLUDE ONLY.
  * File 86 roots 0x37A0 and 0x38B0 contain no 0xDE and are fully baked. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemMSBomb(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,

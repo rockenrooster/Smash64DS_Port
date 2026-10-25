@@ -1,5 +1,5 @@
 #ifndef _FTDONKEY_STATUS_H_
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 /* P2-3: DK is deliberately not a DS-local approximation.  The project fighter
  * header mirrors BattleShip's DK enum/vars ABI and ftstatus_callbacks.h mirrors
  * the callback declarations; include only the source descriptor table here.

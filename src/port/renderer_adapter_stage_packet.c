@@ -7,16 +7,16 @@
 /* P2-4n1 step 6: every per-segment fact below reads the active stage's
  * capture row (renderer_adapter_matrix.c). Dream Land's rows are the switch,
  * arrays and ternary that used to live here, value for value. */
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 extern void *ndsGRZebesAcidGObj(void);
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 extern void *ndsGRYamabukiGateGObj(void);
 #endif
-#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_ZEBES || NDS_STAGE_YAMABUKI
 extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 extern void *ndsGRInishieScaleStringGObj(u32 index);
 extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #endif
@@ -65,15 +65,15 @@ static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP:
         return (row->index < 4u) ?
             gGRCommonStruct.pupupu.map_gobj[row->index] : NULL;
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID:
         return (GObj *)ndsGRZebesAcidGObj();
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE:
         return (GObj *)ndsGRYamabukiGateGObj();
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE:
         return (GObj *)ndsGRInishieScaleStringGObj(0u);
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM:
@@ -111,21 +111,21 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
         const NDSRendererAdapterNativeStageCaptureSegment *row =
             ndsRendererAdapterNativeStageCaptureRow(segment_index);
 
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
         if ((row != NULL) &&
             (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID))
         {
             return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
         }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
         if ((row != NULL) &&
             (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE))
         {
             return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
         }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
         if ((row != NULL) &&
             (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE))
         {
@@ -240,7 +240,7 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
     return FALSE;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Board the Platforms' platforms (sc1PBonusStageInitPlatforms and
  * sc1PBonusStageUpdatePlatformCount, sc1pbonusstage.c:539/614) are DObj trees
  * from Bonus2Common hung under the board's yakumono DObjs at runtime. They are
@@ -277,7 +277,7 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
         u32 index;
         u16 transform_flags;
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         if (ndsRendererAdapterIsForeignStageSubtree(dobj) != FALSE)
         {
             continue;
@@ -1283,7 +1283,7 @@ void ndsRendererAdapterSetStagePreviewActor(u32 source, u32 index, void *gobj)
     }
 }
 
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 extern DObj *ndsGRSectorPlatformDObj(void);
 #endif
 
@@ -1494,7 +1494,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     workspace->frame.topology_stamp = workspace->topology_stamp;
     workspace->frame.hidden_binding_mask = 0u;
     {
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
         /* Owner (r58): the Sector Z wing-platform collision proxy is not
          * drawn (ndsGRSectorPlatformDObj). */
         const DObj *hidden_dobj = ndsGRSectorPlatformDObj();

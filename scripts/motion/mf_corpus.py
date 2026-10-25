@@ -58,7 +58,7 @@ KINDS = ("mario", "fox", "donkey", "samus", "luigi", "link", "yoshi",
 
 # Dictionary families: a kind whose motion table borrows another kind's clips
 # shares that kind's clip bank (Luigi plays Mario clips, Purin plays Kirby
-# clips; generated.h NDS_P2_PURIN_ANIM_SEGMENTS / ftdata.c:2699-2712).
+# clips; generated.h NDS_PURIN_ANIM_SEGMENTS / ftdata.c:2699-2712).
 FAMILY_OF = {"luigi": "mario", "purin": "kirby"}
 
 # Bank segments: every clip id belongs to exactly one bank (the kind whose
@@ -185,7 +185,7 @@ def aobj32_ids():
     producer's own list."""
     text = GEN_H.read_text()
     ids = set()
-    for block in re.finditer(r"#define NDS_P2_\w+_AOBJ32_ASSET_ROWS\(X\)((?:[^\n]*\\\n)*[^\n]*)",
+    for block in re.finditer(r"#define NDS_\w+_AOBJ32_ASSET_ROWS\(X\)((?:[^\n]*\\\n)*[^\n]*)",
                              text):
         for m in re.finditer(r"X\(ll\w+FileID,\s*(0x[0-9a-f]+)u\)", block.group(1)):
             ids.add(int(m.group(1), 16))

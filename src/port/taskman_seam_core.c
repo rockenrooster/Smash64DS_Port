@@ -696,7 +696,7 @@ NDS_COLD void ndsResetStartupDiagnostics(void)
     NDS_DIAG_RESET0(gNdsFighterSpecialsFoxHiBoundFrames);
     NDS_DIAG_RESET0(gNdsFighterSpecialsFoxHiWaitFrames);
     NDS_DIAG_RESET0(gNdsFighterSpecialsFoxHiRootYMilli);
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     {
         static const uintptr_t words[] = {
             NDS_DIAG_WORD0(gNdsFighterDonkeySpecialsSlot)

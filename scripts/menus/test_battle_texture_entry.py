@@ -117,7 +117,7 @@ class BattleTextureEntryTest(unittest.TestCase):
     def test_source_lifecycle_and_no_music_hook(self):
         vs, harness, prepare, gate = sources()
         self.assertEqual(harness.count("ndsBattlePrepareSceneTextures();"), 1)
-        outer = harness.index("if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle)\n#if NDS_P2_1P_GAME")
+        outer = harness.index("if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle)\n#if NDS_1P_GAME")
         self.assertLess(outer, harness.index(gate))
         self.assertLess(harness.index(gate), harness.index("gNdsTaskmanContexts = 2;", outer))
         taskman = (DECOMP / "sys/taskman.c").read_text()

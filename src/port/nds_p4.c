@@ -330,7 +330,7 @@ u32 ndsP4MatchContent(s32 player)
     case nSCKindVSBattle:
     case nSCKindVSResults:
         return gNdsP4PlayerContent[player];
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     case nSCKind1PBonusStage:
         /* The campaign's boards are entered from nSCKind1PGame
          * (sc1PBonusStageInitVars) and seat the campaign player; practice
@@ -435,7 +435,7 @@ sb32 ndsP4LowDetailBattle(void)
     const u32 scene = (u32)gSCManagerSceneData.scene_curr;
 
     if ((scene != (u32)nSCKindVSBattle)
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         && (scene != (u32)nSCKind1PGame) &&
         (scene != (u32)nSCKind1PBonusStage) &&
         (scene != (u32)nSCKind1PTrainingMode)
@@ -463,7 +463,7 @@ sb32 ndsP4DuelHighDetail(s32 player, s32 fkind)
     {
         duel = TRUE;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* P7 U5: a challenger fight is one on one. */
     if ((gSCManagerSceneData.scene_curr == nSCKind1PGame) && (gNdsP7Challenger.active != 0u))
     {
@@ -487,7 +487,7 @@ static sb32 ndsP4SceneIsSelect(void)
     const u32 scene = (u32)gSCManagerSceneData.scene_curr;
 
     return ((scene == (u32)nSCKindPlayersVS)
-#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+#if NDS_1P_GAME && NDS_MENU_SHELL
             || (scene == (u32)nSCKindPlayers1PTraining) ||
             (scene == (u32)nSCKind1PGamePlayers) ||
             /* P7 C2: the bonus practice selects too. */
@@ -684,7 +684,7 @@ sb32 ndsP4ParentFilesNeeded(s32 fkind)
     {
         state = &gSCManagerTransferBattleState;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     else if ((gSCManagerSceneData.scene_curr == nSCKind1PGame) &&
              (gNdsP7Challenger.active != 0u))
     {
@@ -1698,7 +1698,7 @@ const NDSP4Jab *ndsP4JabRows(const FTStruct *fp)
     return ((f != NULL) && (f->jab != NULL)) ? f->jab : &none;
 }
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 static void ndsKirbyMetalAfterProcMap(FTStruct *fp);
 #endif
 
@@ -1797,7 +1797,7 @@ void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
             f->overrides->kirby_after_proc_map(fighter_gobj);
         }
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (fp->nds_kirby_metal != 0u)
     {
         ndsKirbyMetalAfterProcMap(ftGetStruct(fighter_gobj));
@@ -2347,7 +2347,7 @@ sb32 ndsP4KirbyPlayerNoCopy(s32 player)
     return ndsP4KirbyNoCopy(ndsP4MatchContent(player));
 }
 
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 /* Owner 2026-10-18 ("Metal Mario Kirby hat (metal skin overlay similar to
  * mrgaw hat and gravity like metal Mario)"): a Kirby who swallows Metal Mario
  * takes Mario's power, as the source's copy row gives him, and Metal Mario's
@@ -2540,7 +2540,7 @@ void ndsP4KirbyCatch(FTStruct *kirby_fp, FTStruct *victim_fp)
         }
     }
     sNdsP4KirbyPending[kirby_fp->player & 3u] = (u8)power;
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     ndsKirbyMetalCatch(kirby_fp, victim_fp);
 #endif
 }
@@ -2591,7 +2591,7 @@ void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script)
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
     ndsP4KirbyClearSilhouette(fp);
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     ndsKirbyMetalClear(fp);
 #endif
     fp->nds_p4_kirby_copy = 0u;

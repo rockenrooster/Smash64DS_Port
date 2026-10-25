@@ -23,7 +23,7 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_itcm_placement.h>
 #include <nds/renderer_fighter_lean.h>
-#if NDS_P2_LINK
+#if NDS_LINK
 const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #endif
 #include <nds/generated/nds_particle_banks.generated.h>

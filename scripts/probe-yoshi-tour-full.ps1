@@ -41,11 +41,11 @@ $text = Get-Content -LiteralPath $config -Raw
 foreach ($definition in @(
     ('#define NDS_DEV_LIVE_INPUT_PREVIEW ' + $(if ($FastLogic) { '0' } else { '1' })),
     ('#define NDS_HARNESS_FAST_LOGIC ' + $(if ($FastLogic) { '1' } else { '0' })),
-    '#define NDS_P2_YOSHI 1',
-    '#define NDS_P2_1P_GAME 1',
-    '#define NDS_P2_COMPACT_BATTLE_FIGHTERS 1',
-    '#define NDS_P2_PROOF_FIGHTER0 6',
-    '#define NDS_P2_YOSHI_BUG_PROOF 1',
+    '#define NDS_YOSHI 1',
+    '#define NDS_1P_GAME 1',
+    '#define NDS_COMPACT_BATTLE_FIGHTERS 1',
+    '#define NDS_PROOF_FIGHTER0 6',
+    '#define NDS_YOSHI_BUG_PROOF 1',
     ('#define NDS_R2_PATH ' + $(if ($FastLogic) { '0' } else { '1' })),
     ('#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST ' + $(if ($FastLogic) { '1' } else { '0' }))
 )) {
@@ -54,8 +54,8 @@ foreach ($definition in @(
 }
 if ($ShellFlow) {
     foreach ($definition in @(
-        '#define NDS_P2_MENU_SHELL 1',
-        '#define NDS_P2_MENU_WALK 1u'
+        '#define NDS_MENU_SHELL 1',
+        '#define NDS_MENU_WALK 1u'
     )) {
         Assert-YoshiTour $text.Contains($definition) `
             "Yoshi shell proof build is missing: $definition"
@@ -63,7 +63,7 @@ if ($ShellFlow) {
 }
 foreach ($stage in @(
     'YOSTER','CASTLE','JUNGLE','ZEBES','HYRULE','YAMABUKI','INISHIE','SECTOR')) {
-    Assert-YoshiTour $text.Contains("#define NDS_P2_STAGE_$stage 1") `
+    Assert-YoshiTour $text.Contains("#define NDS_STAGE_$stage 1") `
         "Yoshi tour build is missing VS stage $stage"
 }
 

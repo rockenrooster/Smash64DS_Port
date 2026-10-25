@@ -35,7 +35,7 @@
  *   src/port/title_backend.c:423 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -60,11 +60,11 @@ void ndsBaseMNOptionStartScene(void);
 
 #undef mnOptionStartScene
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 void mnOptionStartScene(void)
 {
     ndsBaseMNOptionStartScene();
 }
 #endif
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

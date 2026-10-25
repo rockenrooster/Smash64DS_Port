@@ -26,7 +26,7 @@ build's own gates:
   2. staged paths and routed paths are a bijection -- a route with no file
      cannot load, and a packed file with no route is dead NitroFS bytes;
   3. every generated `*_DEMO_ANIM_ASSET_ROWS` macro is expanded by
-     `sNdsRelocDemoAnimTokens`, under the same `NDS_P2_<KIND>` gate;
+     `sNdsRelocDemoAnimTokens`, under the same `NDS_<KIND>` gate;
   4. every generated `*_DEMO_RELOC_FILES` list is fanned into
      `NDS_VS_RESULTS_RELOC_FILES`, under that same gate, so the ROM the routed
      id names is actually in the ROM;
@@ -80,7 +80,7 @@ def demo_rows() -> list[dict]:
             "results_demo_submotions; the Results demo table was removed from "
             "the generator and this test must follow it")
     # The 1P scenes' poses (P2-6) ride the same two tables and the same
-    # staging fan-in under one gate, NDS_P2_1P_GAME.
+    # staging fan-in under one gate, NDS_1P_GAME.
     one_p = [dict(row, gate="1P")
              for row in manifest.get("one_p_demo_submotions", [])]
     return list(rows) + one_p
@@ -183,7 +183,7 @@ def check(rows: list[dict] | None = None,
             "%s is staged into NitroFS but no token routes to it; dead bytes"
             % path)
 
-    # 3 -- every generated macro is consumed by the C table. The NDS_P2_<KIND>
+    # 3 -- every generated macro is consumed by the C table. The NDS_<KIND>
     # roster flags are 1 in every build and were resolved out of the C sources
     # (docs/OLD_MACHINERY_DELETED.md, Phase A), so the table expands every
     # fighter's rows unconditionally; the Makefile fan-in (4) keeps its gates.
@@ -223,10 +223,10 @@ def check(rows: list[dict] | None = None,
         gate = gate_for(name)
         if gate == "MARIOFOX":
             continue
-        guard = "ifeq ($(NDS_P2_%s),1)\n%s\nendif" % (gate, fan)
+        guard = "ifeq ($(NDS_%s),1)\n%s\nendif" % (gate, fan)
         if guard not in makefile:
             failures.append(
-                "%s is fanned in without its `ifeq ($$(NDS_P2_%s),1)` gate, so "
+                "%s is fanned in without its `ifeq ($$(NDS_%s),1)` gate, so "
                 "a build without that fighter would pack his poses" % (name, gate))
 
     # 5 -- no fighter is gated out of a row he needs.
@@ -270,11 +270,11 @@ def self_test() -> int:
 
     # ARM 2 -- the C table stops expanding a generated macro.
     stripped = backend.replace(
-        "    NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)\n",
+        "    NDS_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)\n",
         "")
     if stripped == backend:
         problems.append(
-            "control arm: NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS is not expanded "
+            "control arm: NDS_KIRBY_DEMO_ANIM_ASSET_ROWS is not expanded "
             "the way this arm expects, so removing it proves nothing")
     elif not any("never expands it" in line for line in
                  check(rows, header, stripped, makefile)):
@@ -284,7 +284,7 @@ def self_test() -> int:
 
     # ARM 3 -- the Makefile stops packing a routed fighter's poses.
     unpacked = makefile.replace(
-        "NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_KIRBY_DEMO_RELOC_FILES)", "")
+        "NDS_VS_RESULTS_RELOC_FILES += $(NDS_KIRBY_DEMO_RELOC_FILES)", "")
     if unpacked == makefile:
         problems.append(
             "control arm: the Kirby demo fan-in is not in the Makefile the way "

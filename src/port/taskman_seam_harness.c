@@ -44,13 +44,13 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
         /* P2-1g adds the second disjunct. The fast-logic arm used to skip
          * the controller pipeline entirely here, so Results could only be
          * left by its update cap -- and the scripted walk's START (which
-         * travels the real keypad latch) had no reader. `NDS_P2_MENU_WALK`
+         * travels the real keypad latch) had no reader. `NDS_MENU_WALK`
          * is 0 in every published and Boundary configuration, so mode 163
          * evaluates the identical expression it always did. */
-        if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
+        if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_MENU_WALK != 0))
         {
             (void)ndsPlatformReadInput();
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
             ndsCampaignDrivePlayback();
 #endif
 #if NDS_SEAM_CONTROLLER_PAIR
@@ -58,7 +58,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
             syControllerUpdateGlobalData();
 #endif
         }
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
         /* P2-6 campaign walk: the shell walk injects into native screens, but
          * the 1P route's two source menus (mn1pmode, mnplayers1pgame) read the
          * source controller pipeline, so their leg is driven here -- once per
@@ -90,7 +90,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
              * No Contest result animation. */
             gNdsFtPoseEvalTick = 1u;
         }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         /* Source 1P display scenes also evaluate one pose per presented tick. */
         if ((gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
             (gNdsSceneManagerCurrKind == nSCKind1PBonus1Players) ||
@@ -172,7 +172,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
     gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
     if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
     {
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
         if (gNdsMenuShellWalkRoute == 1u)
         {
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
@@ -188,7 +188,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P2-1d. The VS shell's four real screens, ahead of every bounded branch
      * below because they REPLACE those branches rather than sit beside them:
      * with the shell on, Startup/Title/ModeSelect/VSMode are screens the player
@@ -236,9 +236,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
          * not a park: the imported PlayersVS branch further down runs the
          * original setup and its transition probe. That branch is unreachable
          * with the shell on, because this switch runs first -- and the imported
-         * scene's own StartScene is compiled out at NDS_P2_MENU_SHELL so the
+         * scene's own StartScene is compiled out at NDS_MENU_SHELL so the
          * heavy original func_start cannot run either. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     case nSCKindPlayers1PTraining:
         /* P7 C4: the training select is the same native screen in its
          * two-slot mode (nds_menu_shell_css.c sCssTraining); the imported
@@ -260,7 +260,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
          * branch further down runs the original setup and its own bounded
          * select-transition probe. That branch is unreachable with the shell
          * on because this switch runs first, and the imported scene's own
-         * StartScene is compiled out at NDS_P2_MENU_SHELL so the heavy
+         * StartScene is compiled out at NDS_MENU_SHELL so the heavy
          * original func_start (five menu files, two stage-sized model heaps,
          * the 3D preview graph) cannot run either. */
         ndsMenuShellRunStageSelect();
@@ -361,7 +361,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         osStopThread(NULL);
         return;
     }
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
     /* P2-7 item 9. The imported SOURCE menu scenes from the registry block of
      * the same gate. A source menu has no fighter packets to release, no
      * results recorder and no pose tick, so all three stay out of this path
@@ -370,16 +370,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * LoadScene return. */
     switch (gSCManagerSceneData.scene_curr)
     {
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
     case nSCKindOption:
     case nSCKindBackupClear:
 #endif
     case nSCKindScreenAdjust:
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
     case nSCKindSoundTest:
 #endif
-#if NDS_P2_1P_GAME
-#if !NDS_P2_MENU_SHELL
+#if NDS_1P_GAME
+#if !NDS_MENU_SHELL
     case nSCKindData:
     case nSCKindVSRecord:
     case nSCKindCharacters:
@@ -672,7 +672,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * update, which ndsSeamSceneUpdate ticks in place of the VS one. The VS
      * match's path through this block is unchanged. */
     if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle)
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         || (gSCManagerSceneData.scene_curr == nSCKind1PGame)
         || (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage)
         || (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode)
@@ -688,7 +688,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
         )
     {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         /* func_start has registered the current ground/banks and built the
          * fighters/interface. VS prepared before its BGM call; other battle
          * scenes prepare once here, before their first update or presentation.
@@ -960,7 +960,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     gNdsK0BattleInGo =
                         (battle_status_before ==
                          (u32)nSCBattleGameStatusGo) ? 1u : 0u;
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
                     ndsCampaignDrivePlayback();
 #endif
                     NDS_FREEZE_DIAGNOSTICS_MARK(

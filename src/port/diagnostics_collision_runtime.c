@@ -134,7 +134,7 @@ volatile u32 gNdsFighterSpecialsFoxHiEndFrames;
 volatile u32 gNdsFighterSpecialsFoxHiBoundFrames;
 volatile u32 gNdsFighterSpecialsFoxHiWaitFrames;
 volatile s32 gNdsFighterSpecialsFoxHiRootYMilli;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 volatile u32 gNdsFighterDonkeySpecialsSlot;
 volatile u32 gNdsFighterDonkeySpecialsNChargePressFrames;
 volatile u32 gNdsFighterDonkeySpecialsNStartFrames;

@@ -387,7 +387,7 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         *out_offset = NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER;
         return TRUE;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if ((loaded->asset_id == NDS_RELOC_ASSET_GR_LAST_MAP) &&
         (symbol == &llGRLastMapMapHeader))
     {
@@ -832,70 +832,70 @@ NDS_COLD s32 ndsRelocLoadAssetTree(u32 asset_id)
         TRUE : FALSE;
 }
 
-typedef struct NDSP2FighterPayloadSizeRow
+typedef struct NDSFighterPayloadSizeRow
 {
     u16 asset_id;
     u16 payload_units_16;
-} NDSP2FighterPayloadSizeRow;
+} NDSFighterPayloadSizeRow;
 
-#define NDS_P2_PAYLOAD_SIZE_ROW(id_, bytes_) \
+#define NDS_PAYLOAD_SIZE_ROW(id_, bytes_) \
     { (u16)(id_), (u16)((bytes_) >> 4) },
-static const NDSP2FighterPayloadSizeRow sNdsP2BaseFighterPayloadSizes[] =
+static const NDSFighterPayloadSizeRow sNdsBaseFighterPayloadSizes[] =
 {
-    NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-#if NDS_P2_LUIGI
-static const NDSP2FighterPayloadSizeRow sNdsP2LuigiPayloadSizes[] =
+#if NDS_LUIGI
+static const NDSFighterPayloadSizeRow sNdsLuigiPayloadSizes[] =
 {
-    NDS_P2_LUIGI_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
-};
-#endif
-#if NDS_P2_DONKEY
-static const NDSP2FighterPayloadSizeRow sNdsP2DonkeyPayloadSizes[] =
-{
-    NDS_P2_DONKEY_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_LUIGI_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
 #endif
-#if NDS_P2_CAPTAIN
-static const NDSP2FighterPayloadSizeRow sNdsP2CaptainPayloadSizes[] =
+#if NDS_DONKEY
+static const NDSFighterPayloadSizeRow sNdsDonkeyPayloadSizes[] =
 {
-    NDS_P2_CAPTAIN_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_DONKEY_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
 #endif
-static const NDSP2FighterPayloadSizeRow sNdsP2SamusPayloadSizes[] =
+#if NDS_CAPTAIN
+static const NDSFighterPayloadSizeRow sNdsCaptainPayloadSizes[] =
 {
-    NDS_P2_SAMUS_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
-};
-#if NDS_P2_LINK
-static const NDSP2FighterPayloadSizeRow sNdsP2LinkPayloadSizes[] =
-{
-    NDS_P2_LINK_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_CAPTAIN_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
 #endif
-static const NDSP2FighterPayloadSizeRow sNdsP2PikachuPayloadSizes[] =
+static const NDSFighterPayloadSizeRow sNdsSamusPayloadSizes[] =
 {
-    NDS_P2_PIKACHU_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_SAMUS_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-static const NDSP2FighterPayloadSizeRow sNdsP2YoshiPayloadSizes[] =
+#if NDS_LINK
+static const NDSFighterPayloadSizeRow sNdsLinkPayloadSizes[] =
 {
-    NDS_P2_YOSHI_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_LINK_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-static const NDSP2FighterPayloadSizeRow sNdsP2NessPayloadSizes[] =
+#endif
+static const NDSFighterPayloadSizeRow sNdsPikachuPayloadSizes[] =
 {
-    NDS_P2_NESS_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_PIKACHU_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-static const NDSP2FighterPayloadSizeRow sNdsP2PurinPayloadSizes[] =
+static const NDSFighterPayloadSizeRow sNdsYoshiPayloadSizes[] =
 {
-    NDS_P2_PURIN_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_YOSHI_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-static const NDSP2FighterPayloadSizeRow sNdsP2KirbyPayloadSizes[] =
+static const NDSFighterPayloadSizeRow sNdsNessPayloadSizes[] =
 {
-    NDS_P2_KIRBY_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+    NDS_NESS_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
 };
-#undef NDS_P2_PAYLOAD_SIZE_ROW
+static const NDSFighterPayloadSizeRow sNdsPurinPayloadSizes[] =
+{
+    NDS_PURIN_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
+};
+static const NDSFighterPayloadSizeRow sNdsKirbyPayloadSizes[] =
+{
+    NDS_KIRBY_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)
+};
+#undef NDS_PAYLOAD_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedPayloadSize(
-    const NDSP2FighterPayloadSizeRow *rows, u32 count, u32 asset_id)
+    const NDSFighterPayloadSizeRow *rows, u32 count, u32 asset_id)
 {
     u32 lo = 0u;
     u32 hi = count;
@@ -924,73 +924,73 @@ static size_t ndsRelocP2FindGeneratedPayloadSize(
 NDS_COLD static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
 {
     size_t size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2BaseFighterPayloadSizes,
-        sizeof(sNdsP2BaseFighterPayloadSizes) /
-            sizeof(sNdsP2BaseFighterPayloadSizes[0]),
+        sNdsBaseFighterPayloadSizes,
+        sizeof(sNdsBaseFighterPayloadSizes) /
+            sizeof(sNdsBaseFighterPayloadSizes[0]),
         asset_id);
 
     if (size != 0u)
     {
         return size;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2LuigiPayloadSizes,
-        sizeof(sNdsP2LuigiPayloadSizes) / sizeof(sNdsP2LuigiPayloadSizes[0]),
+        sNdsLuigiPayloadSizes,
+        sizeof(sNdsLuigiPayloadSizes) / sizeof(sNdsLuigiPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2DonkeyPayloadSizes,
-        sizeof(sNdsP2DonkeyPayloadSizes) / sizeof(sNdsP2DonkeyPayloadSizes[0]),
+        sNdsDonkeyPayloadSizes,
+        sizeof(sNdsDonkeyPayloadSizes) / sizeof(sNdsDonkeyPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2CaptainPayloadSizes,
-        sizeof(sNdsP2CaptainPayloadSizes) /
-            sizeof(sNdsP2CaptainPayloadSizes[0]),
-        asset_id);
-    if (size != 0u) return size;
-#endif
-    size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2SamusPayloadSizes,
-        sizeof(sNdsP2SamusPayloadSizes) / sizeof(sNdsP2SamusPayloadSizes[0]),
-        asset_id);
-    if (size != 0u) return size;
-#if NDS_P2_LINK
-    size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2LinkPayloadSizes,
-        sizeof(sNdsP2LinkPayloadSizes) / sizeof(sNdsP2LinkPayloadSizes[0]),
+        sNdsCaptainPayloadSizes,
+        sizeof(sNdsCaptainPayloadSizes) /
+            sizeof(sNdsCaptainPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2PikachuPayloadSizes,
-        sizeof(sNdsP2PikachuPayloadSizes) /
-            sizeof(sNdsP2PikachuPayloadSizes[0]),
+        sNdsSamusPayloadSizes,
+        sizeof(sNdsSamusPayloadSizes) / sizeof(sNdsSamusPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#if NDS_LINK
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsLinkPayloadSizes,
+        sizeof(sNdsLinkPayloadSizes) / sizeof(sNdsLinkPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsPikachuPayloadSizes,
+        sizeof(sNdsPikachuPayloadSizes) /
+            sizeof(sNdsPikachuPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2YoshiPayloadSizes,
-        sizeof(sNdsP2YoshiPayloadSizes) / sizeof(sNdsP2YoshiPayloadSizes[0]),
+        sNdsYoshiPayloadSizes,
+        sizeof(sNdsYoshiPayloadSizes) / sizeof(sNdsYoshiPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2NessPayloadSizes,
-        sizeof(sNdsP2NessPayloadSizes) / sizeof(sNdsP2NessPayloadSizes[0]),
+        sNdsNessPayloadSizes,
+        sizeof(sNdsNessPayloadSizes) / sizeof(sNdsNessPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2PurinPayloadSizes,
-        sizeof(sNdsP2PurinPayloadSizes) / sizeof(sNdsP2PurinPayloadSizes[0]),
+        sNdsPurinPayloadSizes,
+        sizeof(sNdsPurinPayloadSizes) / sizeof(sNdsPurinPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
     size = ndsRelocP2FindGeneratedPayloadSize(
-        sNdsP2KirbyPayloadSizes,
-        sizeof(sNdsP2KirbyPayloadSizes) / sizeof(sNdsP2KirbyPayloadSizes[0]),
+        sNdsKirbyPayloadSizes,
+        sizeof(sNdsKirbyPayloadSizes) / sizeof(sNdsKirbyPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
     return 0u;
@@ -1699,70 +1699,70 @@ NDS_COLD void lbRelocInitSetup(LBRelocSetup *setup)
     }
 }
 
-typedef struct NDSP2FighterAllocSizeRow
+typedef struct NDSFighterAllocSizeRow
 {
     u16 asset_id;
     u16 alloc_units_16;
-} NDSP2FighterAllocSizeRow;
+} NDSFighterAllocSizeRow;
 
-#define NDS_P2_ALLOC_SIZE_ROW(id_, bytes_) \
+#define NDS_ALLOC_SIZE_ROW(id_, bytes_) \
     { (u16)(id_), (u16)((bytes_) >> 4) },
-static const NDSP2FighterAllocSizeRow sNdsP2BaseFighterAllocSizes[] =
+static const NDSFighterAllocSizeRow sNdsBaseFighterAllocSizes[] =
 {
-    NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_BASE_FIGHTER_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-#if NDS_P2_LUIGI
-static const NDSP2FighterAllocSizeRow sNdsP2LuigiAllocSizes[] =
+#if NDS_LUIGI
+static const NDSFighterAllocSizeRow sNdsLuigiAllocSizes[] =
 {
-    NDS_P2_LUIGI_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
-};
-#endif
-#if NDS_P2_DONKEY
-static const NDSP2FighterAllocSizeRow sNdsP2DonkeyAllocSizes[] =
-{
-    NDS_P2_DONKEY_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_LUIGI_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
 #endif
-#if NDS_P2_CAPTAIN
-static const NDSP2FighterAllocSizeRow sNdsP2CaptainAllocSizes[] =
+#if NDS_DONKEY
+static const NDSFighterAllocSizeRow sNdsDonkeyAllocSizes[] =
 {
-    NDS_P2_CAPTAIN_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_DONKEY_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
 #endif
-static const NDSP2FighterAllocSizeRow sNdsP2SamusAllocSizes[] =
+#if NDS_CAPTAIN
+static const NDSFighterAllocSizeRow sNdsCaptainAllocSizes[] =
 {
-    NDS_P2_SAMUS_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
-};
-#if NDS_P2_LINK
-static const NDSP2FighterAllocSizeRow sNdsP2LinkAllocSizes[] =
-{
-    NDS_P2_LINK_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_CAPTAIN_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
 #endif
-static const NDSP2FighterAllocSizeRow sNdsP2PikachuAllocSizes[] =
+static const NDSFighterAllocSizeRow sNdsSamusAllocSizes[] =
 {
-    NDS_P2_PIKACHU_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_SAMUS_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-static const NDSP2FighterAllocSizeRow sNdsP2YoshiAllocSizes[] =
+#if NDS_LINK
+static const NDSFighterAllocSizeRow sNdsLinkAllocSizes[] =
 {
-    NDS_P2_YOSHI_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_LINK_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-static const NDSP2FighterAllocSizeRow sNdsP2NessAllocSizes[] =
+#endif
+static const NDSFighterAllocSizeRow sNdsPikachuAllocSizes[] =
 {
-    NDS_P2_NESS_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_PIKACHU_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-static const NDSP2FighterAllocSizeRow sNdsP2PurinAllocSizes[] =
+static const NDSFighterAllocSizeRow sNdsYoshiAllocSizes[] =
 {
-    NDS_P2_PURIN_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_YOSHI_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-static const NDSP2FighterAllocSizeRow sNdsP2KirbyAllocSizes[] =
+static const NDSFighterAllocSizeRow sNdsNessAllocSizes[] =
 {
-    NDS_P2_KIRBY_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+    NDS_NESS_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
 };
-#undef NDS_P2_ALLOC_SIZE_ROW
+static const NDSFighterAllocSizeRow sNdsPurinAllocSizes[] =
+{
+    NDS_PURIN_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
+};
+static const NDSFighterAllocSizeRow sNdsKirbyAllocSizes[] =
+{
+    NDS_KIRBY_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)
+};
+#undef NDS_ALLOC_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedAllocSize(
-    const NDSP2FighterAllocSizeRow *rows, u32 count, u32 asset_id)
+    const NDSFighterAllocSizeRow *rows, u32 count, u32 asset_id)
 {
     u32 lo = 0u;
     u32 hi = count;
@@ -1807,56 +1807,38 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
      * the compiler's sparse switch table and binary search is still tiny beside
      * the NitroFS metadata walk it replaces. */
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2BaseFighterAllocSizes,
-        sizeof(sNdsP2BaseFighterAllocSizes) /
-            sizeof(sNdsP2BaseFighterAllocSizes[0]),
+        sNdsBaseFighterAllocSizes,
+        sizeof(sNdsBaseFighterAllocSizes) /
+            sizeof(sNdsBaseFighterAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2LuigiAllocSizes,
-        sizeof(sNdsP2LuigiAllocSizes) / sizeof(sNdsP2LuigiAllocSizes[0]),
-        asset_id);
-    if (size != 0u)
-    {
-        return size;
-    }
-#endif
-#if NDS_P2_DONKEY
-    size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2DonkeyAllocSizes,
-        sizeof(sNdsP2DonkeyAllocSizes) / sizeof(sNdsP2DonkeyAllocSizes[0]),
+        sNdsLuigiAllocSizes,
+        sizeof(sNdsLuigiAllocSizes) / sizeof(sNdsLuigiAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_DONKEY
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2CaptainAllocSizes,
-        sizeof(sNdsP2CaptainAllocSizes) / sizeof(sNdsP2CaptainAllocSizes[0]),
+        sNdsDonkeyAllocSizes,
+        sizeof(sNdsDonkeyAllocSizes) / sizeof(sNdsDonkeyAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
 #endif
+#if NDS_CAPTAIN
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2SamusAllocSizes,
-        sizeof(sNdsP2SamusAllocSizes) / sizeof(sNdsP2SamusAllocSizes[0]),
-        asset_id);
-    if (size != 0u)
-    {
-        return size;
-    }
-#if NDS_P2_LINK
-    size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2LinkAllocSizes,
-        sizeof(sNdsP2LinkAllocSizes) / sizeof(sNdsP2LinkAllocSizes[0]),
+        sNdsCaptainAllocSizes,
+        sizeof(sNdsCaptainAllocSizes) / sizeof(sNdsCaptainAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
@@ -1864,40 +1846,58 @@ NDS_COLD static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     }
 #endif
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2PikachuAllocSizes,
-        sizeof(sNdsP2PikachuAllocSizes) / sizeof(sNdsP2PikachuAllocSizes[0]),
+        sNdsSamusAllocSizes,
+        sizeof(sNdsSamusAllocSizes) / sizeof(sNdsSamusAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#if NDS_LINK
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsLinkAllocSizes,
+        sizeof(sNdsLinkAllocSizes) / sizeof(sNdsLinkAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsPikachuAllocSizes,
+        sizeof(sNdsPikachuAllocSizes) / sizeof(sNdsPikachuAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2YoshiAllocSizes,
-        sizeof(sNdsP2YoshiAllocSizes) / sizeof(sNdsP2YoshiAllocSizes[0]),
+        sNdsYoshiAllocSizes,
+        sizeof(sNdsYoshiAllocSizes) / sizeof(sNdsYoshiAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2NessAllocSizes,
-        sizeof(sNdsP2NessAllocSizes) / sizeof(sNdsP2NessAllocSizes[0]),
+        sNdsNessAllocSizes,
+        sizeof(sNdsNessAllocSizes) / sizeof(sNdsNessAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2PurinAllocSizes,
-        sizeof(sNdsP2PurinAllocSizes) / sizeof(sNdsP2PurinAllocSizes[0]),
+        sNdsPurinAllocSizes,
+        sizeof(sNdsPurinAllocSizes) / sizeof(sNdsPurinAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
         return size;
     }
     size = ndsRelocP2FindGeneratedAllocSize(
-        sNdsP2KirbyAllocSizes,
-        sizeof(sNdsP2KirbyAllocSizes) / sizeof(sNdsP2KirbyAllocSizes[0]),
+        sNdsKirbyAllocSizes,
+        sizeof(sNdsKirbyAllocSizes) / sizeof(sNdsKirbyAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {

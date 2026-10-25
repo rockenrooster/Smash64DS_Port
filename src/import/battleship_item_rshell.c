@@ -14,7 +14,7 @@
  * each shell TU owns its own token variables, so no TU shares or
  * redefines another's.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  */
 
 #include <it/item.h>

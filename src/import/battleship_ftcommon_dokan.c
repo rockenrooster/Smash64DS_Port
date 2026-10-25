@@ -50,7 +50,7 @@ void ftCommonDokanWalkSetStatus(GObj *fighter_gobj);
 #define ftCommonDokanStartCheckInterruptCommon ndsBaseFTCommonDokanStartCheckInterruptCommon
 sb32 ndsBaseFTCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj);
 
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 /* Owned by src/import/battleship_grinishie_ground.c (decomp grinishie.c:402)
  * wherever Mushroom Kingdom is built. */
 void grInishiePakkunSetWaitFighter(void);

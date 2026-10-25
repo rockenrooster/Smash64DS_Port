@@ -17,7 +17,7 @@
  * include/it/item.h:964) because Mushroom Kingdom calls it before this kind
  * lands; defining it twice is a link error.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITPAKKUN_* rides on <it/item.h>; the 0x30 secondary matrix kind and the
  * 0x46 XObj kind are the source's literals, kept verbatim). Symbols the port

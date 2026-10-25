@@ -14,7 +14,7 @@ if (-not $NoMal) {
 }
 $persist += 'dprintf ndsStageGxLoad,"SGX f=%u free=%u\n", gNdsBattlePlayablePacingPresentedFrames, (unsigned)gSYTaskmanGeneralHeap.end - (unsigned)gSYTaskmanGeneralHeap.ptr'
 $end = @(
-    'printf "END1 heapmin=%u free=%u sgx=%u reason=%u\n", gNdsTaskmanGeneralHeapFreeMin, (unsigned)gSYTaskmanGeneralHeap.end - (unsigned)gSYTaskmanGeneralHeap.ptr, gNdsP2StageProgLoads, gNdsP2StageProgReason',
+    'printf "END1 heapmin=%u free=%u sgx=%u reason=%u\n", gNdsTaskmanGeneralHeapFreeMin, (unsigned)gSYTaskmanGeneralHeap.end - (unsigned)gSYTaskmanGeneralHeap.ptr, gNdsStageProgLoads, gNdsStageProgReason',
     'printf "END2 hits=%u misses=%u zc=%u\n", gNdsR2AnimCacheHits, gNdsR2AnimCacheMisses, gNdsR2AnimZeroCopyHits',
     'printf "END4 arena=%u used=%u\n", gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes',
     'printf "END5 stagerej=%u first=%u\n", gNdsRendererStageOwnerRejectCount, gNdsRendererStageOwnerFirstRejectReason',

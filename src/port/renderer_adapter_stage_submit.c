@@ -24,7 +24,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     u32 rebirth_halo_root_offset = 0u;
     sb32 rebirth_halo_native_candidate = FALSE;
     sb32 rebirth_halo_native_handled = FALSE;
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     NDSRendererNativeMaterial inishie_pakkun_material;
     NDSRelocLoadedFile *inishie_pakkun_palette_file = NULL;
     sb32 inishie_pakkun_native_candidate = FALSE;
@@ -86,27 +86,27 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     const void *yoshi_egglay_image = NULL;
     sb32 yoshi_egglay_native_candidate = FALSE;
     sb32 yoshi_egglay_native_handled = FALSE;
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
     sb32 castle_bumper_native_candidate = FALSE;
     sb32 castle_bumper_native_handled = FALSE;
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     const void *sector_laser_tlut = NULL;
     const void *sector_laser_image = NULL;
     sb32 sector_laser_native_candidate = FALSE;
     sb32 sector_laser_native_handled = FALSE;
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
     u32 link_bomb_root = 0u;
     sb32 link_bomb_native_candidate = FALSE;
     sb32 link_bomb_native_handled = FALSE;
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     sb32 marumine_native_candidate = FALSE;
     sb32 marumine_native_handled = FALSE;
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     sb32 glucky_native_candidate = FALSE;
     sb32 glucky_native_handled = FALSE;
     sb32 porygon_native_candidate = FALSE;
@@ -409,7 +409,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
     NDS_LAB_SDL_MARK(4);
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
     {
         /* The native item owner consumes the typed MObj snapshot directly.
@@ -435,7 +435,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * executes. */
     }
     else
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     if (inishie_pakkun_native_candidate != FALSE)
     {
         /* The native item owner consumes the typed MObj snapshot directly. */

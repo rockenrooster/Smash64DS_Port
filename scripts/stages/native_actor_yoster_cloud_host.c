@@ -17,7 +17,7 @@ typedef int sb32;
 typedef uint16_t v16;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_STAGE_YOSTER 1
+#define NDS_STAGE_YOSTER 1
 #define NDS_RENDERER_HW_TRIANGLES 1
 #define NDS_RENDERER_GEOM_ZBUFFER 1u
 #define NDS_RENDERER_GEOM_LIGHTING 0x00020000u

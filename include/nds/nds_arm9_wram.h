@@ -1,7 +1,7 @@
 #ifndef NDS_ARM9_WRAM_H
 #define NDS_ARM9_WRAM_H
 
-/* P2-2p8 (NDS_P2_ARM9_WRAM): ARM9's 32 KB of shared WRAM. src/nds/main.c
+/* P2-2p8 (NDS_ARM9_WRAM): ARM9's 32 KB of shared WRAM. src/nds/main.c
  * sets WRAMCNT = 0 and maps it cached at 0x03000000; ARM7 links in its
  * private WRAM (linker/nds_arm7_ds7_arm9wram.ld). Every user here is a
  * scene-lifetime block handed out again after each scene's reset, never a

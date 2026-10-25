@@ -82,48 +82,48 @@ CFILES += nds_r2_battle.c
 endif
 # P2-4 first stage: Yoshi's Island ground logic (decomp gryoster.c import).
 # Flag off, the TU is not linked at all, so the default arm is unchanged.
-ifeq ($(NDS_P2_STAGE_YOSTER),1)
+ifeq ($(NDS_STAGE_YOSTER),1)
 CFILES += battleship_gryoster_ground.c
 endif
 # P2-4 stage 2: Peach's Castle ground logic (decomp grcastle.c import).
 # Flag off, the TU is not linked at all, so the default arm is unchanged.
-ifeq ($(NDS_P2_STAGE_CASTLE),1)
+ifeq ($(NDS_STAGE_CASTLE),1)
 CFILES += battleship_grcastle_ground.c
 endif
 # P2-4 stage 3: Congo Jungle ground logic (decomp grjungle.c import).
-ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+ifeq ($(NDS_STAGE_JUNGLE),1)
 CFILES += battleship_grjungle_ground.c
 endif
 # P2-4 stage 4: Planet Zebes ground logic (decomp grzebes.c import).
-ifeq ($(NDS_P2_STAGE_ZEBES),1)
+ifeq ($(NDS_STAGE_ZEBES),1)
 CFILES += battleship_grzebes_ground.c
 endif
 # P2-4 stage 5: Hyrule Castle ground logic (decomp grhyrule.c import). It
 # adds no reloc payload: its map declares only StageCastle and
 # ExternDataBank113, both already staged and rowed for other reasons.
-ifeq ($(NDS_P2_STAGE_HYRULE),1)
+ifeq ($(NDS_STAGE_HYRULE),1)
 CFILES += battleship_grhyrule_ground.c
 endif
 # P2-4 stage 6: Saffron City ground logic (decomp gryamabuki.c import).
-ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+ifeq ($(NDS_STAGE_YAMABUKI),1)
 CFILES += battleship_gryamabuki_ground.c
 endif
 # P2-4 stage 7: Mushroom Kingdom ground logic (decomp grinishie.c import).
 # MUTUALLY EXCLUSIVE with the older scale-only import: that file defines
 # grInishieMakeScale on its own, and this one brings in the whole stage
 # including it, so linking both is a duplicate definition.
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
-$(error NDS_P2_STAGE_INISHIE and NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP both define grInishieMakeScale; pick one)
+$(error NDS_STAGE_INISHIE and NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP both define grInishieMakeScale; pick one)
 endif
 CFILES += battleship_grinishie_ground.c
 endif
 # P2-4 stage 8: Sector Z ground logic (decomp grsector.c import).
-ifeq ($(NDS_P2_STAGE_SECTOR),1)
+ifeq ($(NDS_STAGE_SECTOR),1)
 CFILES += battleship_grsector_ground.c
 endif
 CFILES += nds_r2_sqrtf.c
-CFILES += nds_p2_hurtbox_reject.c
+CFILES += nds_hurtbox_reject.c
 CFILES += nds_fast_mem.c
 CFILES += nds_shield_pose.c
 CFILES += nds_ft_pose.c
@@ -135,12 +135,12 @@ CFILES += battleship_ftcommon_normal_moveset.c
 # textually included: the decomp region also defines ftParamProcStopEffect,
 # which already has a strong port definition and would collide.
 CFILES += battleship_ftparam_effectprocs.c
-ifneq ($(filter 1,$(NDS_P2_MENU_SHELL) $(NDS_P2_1P_GAME)),)
+ifneq ($(filter 1,$(NDS_MENU_SHELL) $(NDS_1P_GAME)),)
 # These source menus need no campaign fighter or stage runtime.
 CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c battleship_mnscreenadjust.c
 endif
 # P2-6, compiled only when the campaign flag is on.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 # P2-6 step 5 (2026-09-04): Break the Targets / Board the Platforms, source imports.
 CFILES += battleship_sc1pbonusstage.c battleship_sc1pbonusstagefiles.c
 # P2-6 step 1 (2026-09-04): the campaign driver and the runtime half of sc1pgame.c.
@@ -176,37 +176,37 @@ CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	reloc_backend_ftdata_symbols.c
 CFILES += battleship_ftanim.c battleship_ftanimend.c battleship_ftkey.c
 CFILES += battleship_ftmanager.c
-ifeq ($(NDS_P2_DONKEY),1)
+ifeq ($(NDS_DONKEY),1)
 # P2-3 DK is the first non-Mario archetype.  Compile BattleShip's own special
 # and cargo state machines as one port TU rather than re-implementing their
 # update/interrupt/physics/map ordering in DS glue.
 CFILES += battleship_donkey.c
 endif
-ifneq ($(filter 1,$(NDS_P2_DONKEY) $(NDS_P2_LINK) $(NDS_P2_ITEM_CORE)),)
+ifneq ($(filter 1,$(NDS_DONKEY) $(NDS_LINK) $(NDS_ITEM_CORE)),)
 # DK first needed the items-off common throw subset. Link or the shared P2 item
 # core graduates the same TU to BattleShip's full item-throw runtime; the TU's
-# own source gate is NDS_P2_LINK || NDS_P2_ITEM_CORE, so keep the build-input
+# own source gate is NDS_LINK || NDS_ITEM_CORE, so keep the build-input
 # admission in sync with that contract even on the Mario/Fox mirror control.
 CFILES += battleship_ftcommon_itemthrow.c
 endif
-ifeq ($(NDS_P2_CAPTAIN),1)
+ifeq ($(NDS_CAPTAIN),1)
 # P2-3f5. Falcon Punch / Falcon Kick / Falcon Dive as one port TU, plus the
 # VICTIM side of Falcon Dive -- which is an ftcommon TU, not an ftcaptain one,
 # because nFTCommonStatusCaptureCaptain is a status any fighter can end up in.
 CFILES += battleship_captain.c battleship_ftcommon_capturecaptain.c
 endif
-ifeq ($(NDS_P2_SAMUS),1)
+ifeq ($(NDS_SAMUS),1)
 # BattleShip owns Charge Shot storage/cancel/release, Screw Attack and Bomb
 # behavior; the companion TU owns the source Charge Shot/Bomb weapons.
 CFILES += battleship_samus.c battleship_samus_weapons.c
 endif
-ifeq ($(NDS_P2_LINK),1)
+ifeq ($(NDS_LINK),1)
 # BattleShip owns Link's rapid jab, entry pair, Boomerang/return state machine,
 # Spin Attack and Bomb-pull/throw transitions. The shared weapon manager owns
 # Boomerang and grounded Spin Attack; LinkBomb graduates through the item owner.
 CFILES += battleship_link.c battleship_link_weapons.c battleship_link_bomb.c
 endif
-ifeq ($(NDS_P2_ITEM_CORE),1)
+ifeq ($(NDS_ITEM_CORE),1)
 # The shared item owner, compiled for whichever fighters bring an item article.
 CFILES += battleship_item_link_core.c
 # P2-5i1 GBumper (stage bumper, kind 23): same gate, no new asset work --
@@ -253,12 +253,12 @@ CFILES += battleship_item_sawamura.c battleship_item_pippi.c
 # battleship_item_target.c is a BONUS STAGE item: it calls
 # sc1PBonusStageUpdateTargetCount and its descriptor names
 # gSC1PBonusStageItemFile, both provided by battleship_sc1pbonusstage.c
-# behind NDS_P2_1P_GAME since 2026-09-04 (P2-6 step 5), so it rides that flag.
+# behind NDS_1P_GAME since 2026-09-04 (P2-6 step 5), so it rides that flag.
 CFILES += battleship_item_pakkun.c
 # battleship_item_tarubomb.c is Race to the Finish's timed barrel bomb
 # (grbonus3.c:53-55 spawns nITKindTaruBomb every 180 ticks); its descriptor
 # reads the Bonus3 ground's item head, so it rides the same flag.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 CFILES += battleship_item_target.c battleship_item_tarubomb.c
 endif
 # Six of the ten itground/ kinds reach back into their own stage's ground
@@ -274,10 +274,10 @@ endif
 # them in it/itground/, not it/itmonster/), so gating them costs no Poke Ball
 # content: the thirteen Poke Ball Pokemon are the itmonster/ set above and
 # reference no stage symbol.
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 CFILES += battleship_item_powerblock.c
 endif
-ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+ifeq ($(NDS_STAGE_YAMABUKI),1)
 CFILES += battleship_item_glucky.c battleship_item_marumine.c
 CFILES += battleship_item_porygon.c
 CFILES += battleship_item_hitokage.c battleship_item_fushigibana.c
@@ -295,96 +295,96 @@ CFILES += battleship_ftcommon_itemuse.c
 # no-op shims, so the fighter never entered any Hammer state.
 CFILES += battleship_ftcommon_hammer.c
 endif
-ifeq ($(NDS_P2_PIKACHU),1)
+ifeq ($(NDS_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack.
 CFILES += battleship_pikachu.c
 endif
-ifneq ($(filter 1,$(NDS_P2_PIKACHU) $(NDS_P2_KIRBY)),)
+ifneq ($(filter 1,$(NDS_PIKACHU) $(NDS_KIRBY)),)
 # Pikachu's source weapon TU also owns the Thunder Jolt maker used by Kirby's
 # copied neutral special. Kirby therefore needs this source support even when
 # Pikachu itself is not an admitted fighter in the selected battle roster.
 CFILES += battleship_pikachu_weapons.c
 endif
-ifeq ($(NDS_P2_YOSHI),1)
+ifeq ($(NDS_YOSHI),1)
 # BattleShip owns Egg Lay, Egg Throw and Yoshi Bomb; the companion TU owns the
 # source egg/star weapons.
 CFILES += battleship_yoshi.c battleship_yoshi_weapons.c
 endif
-ifneq ($(filter 1,$(NDS_P2_YOSHI) $(NDS_P2_KIRBY)),)
+ifneq ($(filter 1,$(NDS_YOSHI) $(NDS_KIRBY)),)
 # Kirby's copied Egg Lay enters BattleShip's victim-side Yoshi capture state,
 # so that shared source status is part of Kirby's behavior closure too.
 CFILES += battleship_ftcommon_captureyoshi.c
 endif
-ifeq ($(NDS_P2_NESS),1)
+ifeq ($(NDS_NESS),1)
 # BattleShip owns Ness's fighter-side specials verbatim (admit_fighter.py).
 CFILES += battleship_ness.c
 endif
-ifneq ($(filter 1,$(NDS_P2_NESS) $(NDS_P2_KIRBY)),)
+ifneq ($(filter 1,$(NDS_NESS) $(NDS_KIRBY)),)
 # Ness's source weapon/item pair owns PK Fire and its pillar, which Kirby's
 # copied neutral special calls even when Ness himself is not instantiated.
 CFILES += battleship_ness_weapons.c battleship_ness_items.c
 endif
-ifeq ($(NDS_P2_PURIN),1)
+ifeq ($(NDS_PURIN),1)
 # BattleShip owns Purin's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_purin.c
 endif
-ifeq ($(NDS_P2_KIRBY),1)
+ifeq ($(NDS_KIRBY),1)
 # BattleShip owns Kirby's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_kirby.c battleship_kirby_copy.c battleship_kirby_weapons.c battleship_ftcommon_capturekirby.c
 endif
-ifeq ($(NDS_P2_GDONKEY),1)
+ifeq ($(NDS_GDONKEY),1)
 # BattleShip owns GDonkey's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_gdonkey.c
 endif
-ifeq ($(NDS_P2_MMARIO),1)
+ifeq ($(NDS_MMARIO),1)
 # BattleShip owns MMario's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_mmario.c
 endif
-ifeq ($(NDS_P2_NMARIO),1)
+ifeq ($(NDS_NMARIO),1)
 # BattleShip owns NMario's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NFOX),1)
+ifeq ($(NDS_NFOX),1)
 # BattleShip owns NFox's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NDONKEY),1)
+ifeq ($(NDS_NDONKEY),1)
 # BattleShip owns NDonkey's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NSAMUS),1)
+ifeq ($(NDS_NSAMUS),1)
 # BattleShip owns NSamus's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NLUIGI),1)
+ifeq ($(NDS_NLUIGI),1)
 # BattleShip owns NLuigi's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NLINK),1)
+ifeq ($(NDS_NLINK),1)
 # BattleShip owns NLink's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NYOSHI),1)
+ifeq ($(NDS_NYOSHI),1)
 # BattleShip owns NYoshi's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NCAPTAIN),1)
+ifeq ($(NDS_NCAPTAIN),1)
 # BattleShip owns NCaptain's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NKIRBY),1)
+ifeq ($(NDS_NKIRBY),1)
 # BattleShip owns NKirby's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NPIKACHU),1)
+ifeq ($(NDS_NPIKACHU),1)
 # BattleShip owns NPikachu's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NPURIN),1)
+ifeq ($(NDS_NPURIN),1)
 # BattleShip owns NPurin's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_P2_NNESS),1)
+ifeq ($(NDS_NNESS),1)
 # BattleShip owns NNess's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
@@ -466,7 +466,7 @@ CFILES += battleship_ftmain.c
 # specific: Congo Jungle builds its barrel cannon with it too
 # (grjungle.c:119). The gate is the OR of everyone who needs it, so the
 # translation unit is linked once and no stage carries a private copy.
-ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_INISHIE)$(NDS_P2_STAGE_SECTOR),0000)
+ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)$(NDS_STAGE_JUNGLE)$(NDS_STAGE_INISHIE)$(NDS_STAGE_SECTOR),0000)
 else
 CFILES += battleship_grmodelsetup.c
 endif
@@ -475,7 +475,7 @@ SFILES := coroutine_arm.s
 SFILES += nds_float_fcmpeq.s
 SFILES += nds_float_compare.s
 SFILES += nds_float_i2f.s
-ifeq ($(NDS_P2_FLOAT_CONV),1)
+ifeq ($(NDS_FLOAT_CONV),1)
 CFILES += nds_float_conv.c
 endif
 SFILES += nds_float_addsub.s
@@ -483,10 +483,10 @@ ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
 SFILES += nds_freeze_diagnostics_irq.s
 endif
-ifeq ($(NDS_P2_UI_KIT),1)
+ifeq ($(NDS_UI_KIT),1)
 CFILES += nds_ui_kit.c
 endif
-ifeq ($(NDS_P2_MENU_SHELL),1)
+ifeq ($(NDS_MENU_SHELL),1)
 CFILES += nds_menu_shell.c
 endif
 CFILES += nds_p4.c
@@ -525,14 +525,14 @@ export NITROFS_DIR := $(NITROFS_DIR)
 export BATTLESHIP_O2R := $(BATTLESHIP_O2R)
 export BATTLESHIP_RELOCDATA := $(BATTLESHIP_RELOCDATA)
 # P2-4s1: generators gate Yoster rows on this env var, so export it to every recipe (ui kit + particle banks).
-export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
-export NDS_P2_STAGE_CASTLE := $(NDS_P2_STAGE_CASTLE)
-export NDS_P2_STAGE_JUNGLE := $(NDS_P2_STAGE_JUNGLE)
-export NDS_P2_STAGE_ZEBES := $(NDS_P2_STAGE_ZEBES)
-export NDS_P2_STAGE_HYRULE := $(NDS_P2_STAGE_HYRULE)
-export NDS_P2_STAGE_YAMABUKI := $(NDS_P2_STAGE_YAMABUKI)
-export NDS_P2_STAGE_INISHIE := $(NDS_P2_STAGE_INISHIE)
-export NDS_P2_STAGE_SECTOR := $(NDS_P2_STAGE_SECTOR)
+export NDS_STAGE_YOSTER := $(NDS_STAGE_YOSTER)
+export NDS_STAGE_CASTLE := $(NDS_STAGE_CASTLE)
+export NDS_STAGE_JUNGLE := $(NDS_STAGE_JUNGLE)
+export NDS_STAGE_ZEBES := $(NDS_STAGE_ZEBES)
+export NDS_STAGE_HYRULE := $(NDS_STAGE_HYRULE)
+export NDS_STAGE_YAMABUKI := $(NDS_STAGE_YAMABUKI)
+export NDS_STAGE_INISHIE := $(NDS_STAGE_INISHIE)
+export NDS_STAGE_SECTOR := $(NDS_STAGE_SECTOR)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \

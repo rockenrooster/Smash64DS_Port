@@ -28,7 +28,7 @@ lookup still gets the source offset. Payload layout (big-endian, like O2R):
           anchor words (see below), then zero pad to S
     S     the joint tree, source bytes [X, Y), zero padded to 16
 
-The runtime (reloc_backend_assets.c, NDS_P2_COMPACT_POLYGON_MODELS) registers
+The runtime (reloc_backend_assets.c, NDS_COMPACT_POLYGON_MODELS) registers
 the record with data = physical + S - X and data_size = the source size, so
 every source offset keeps its meaning: the joint tree's own slots and every
 other file's extern targets resolve unchanged, and only [X - S, X + P - S) is

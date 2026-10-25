@@ -1287,7 +1287,7 @@ u32 ndsIFCommonSkipDamageDisplay(void)
             (gNdsSceneManagerCurrIsBattle != 0u)) ? TRUE : FALSE;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* 1P team battles (the Yoshi, Kirby and Polygon teams): the source's rows of
  * enemy stock icons (sc1PGameTeamStockDisplayProcDisplay, sc1pgame.c) join
  * the lower HUD with the rest of the battle interface (owner 2026-08-17: the
@@ -1397,7 +1397,7 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
         route = 4u;
         gNdsIFCommonHUDLowerDamageRouteCount++;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     else if (gobj->proc_display == sc1PGameTeamStockDisplayProcDisplay)
     {
         SObj *sobj;

@@ -5,7 +5,7 @@
  * differences are confined to scene routing, video and taskman setup.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <nds/nds_frontend_overlay.h>
 #include <nds/nds_p7.h>
@@ -321,4 +321,4 @@ void sc1PGameStartScene(void)
     ndsFrontendOverlayRestoreTail();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

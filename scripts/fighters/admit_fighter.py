@@ -389,7 +389,7 @@ SPECS: dict[str, dict] = {
     # P2-6 Master Hand. A 1P-only boss, neither selectable nor variant: no
     # native owner packet, no CSS portrait/emblem/name, no stock icons, no
     # selected demo, no audio bank, no entry arm. His behavior TUs already
-    # ride NDS_P2_1P_GAME (Makefile P2-6 step 7) and his kind/status/ftdata
+    # ride NDS_1P_GAME (Makefile P2-6 step 7) and his kind/status/ftdata
     # rows are source-owned whole imports (battleship_ftdata.c,
     # battleship_ftmain.c + the ftbossstatus.h shadow), so admission is only
     # the three reloc roots below (admit_boss) plus the manifest Boss entry
@@ -422,7 +422,7 @@ CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby", "gdonkey", "mmario",
          "ncaptain", "nkirby", "npikachu", "npurin", "nness"]
 KIND_NAMES = ["Mario", "Fox", "Donkey", "Samus", "Luigi", "Link", "Yoshi",
               "Captain", "Kirby", "Pikachu", "Purin", "Ness"]
-OPT_IN_FLAGS = ["NDS_P2_LINK", "NDS_P2_PIKACHU", "NDS_P2_YOSHI"]  # CSS mask arms carry these conditionally
+OPT_IN_FLAGS = ["NDS_LINK", "NDS_PIKACHU", "NDS_YOSHI"]  # CSS mask arms carry these conditionally
 
 
 class Tree:
@@ -911,7 +911,7 @@ class BossPlan:
 
 
 def admit_boss(root: Path, dry: bool) -> None:
-    """Stage Master Hand's three reloc roots behind NDS_P2_1P_GAME.
+    """Stage Master Hand's three reloc roots behind NDS_1P_GAME.
 
     Dry run prints the per-file plan (ids, payloads, symbols, blocks) and
     writes nothing; the real run applies the stage tool's own edits and
@@ -1139,7 +1139,7 @@ def admit(root: Path, key: str, dry: bool) -> None:
     P = SPECS[S["prev"]]
     N, U, L = S["Name"], S["token"], key
     PN, PU, PL = P["Name"], P["token"], S["prev"]
-    F, PF = f"NDS_P2_{U}", f"NDS_P2_{PU}"
+    F, PF = f"NDS_{U}", f"NDS_{PU}"
     T = Tree(root, dry)
     ords = sound_ordinals(root)
     is_variant = bool(S.get("variant", False))
@@ -1161,19 +1161,19 @@ def admit(root: Path, key: str, dry: bool) -> None:
     while SPECS[_oak].get("variant") and SPECS[_oak].get("reuse_owner"):
         _oak = SPECS[_oak]["prev"]
     OPN, OPU, OPL = SPECS[_oak]["Name"], SPECS[_oak]["token"], _oak
-    OPF = f"NDS_P2_{OPU}"
+    OPF = f"NDS_{OPU}"
 
     # ---- Makefile ----------------------------------------------------------
-    T.replace_make(f"NDS_P2_{PU} ?= 0\n",
-              f"NDS_P2_{PU} ?= 0\n"
+    T.replace_make(f"NDS_{PU} ?= 0\n",
+              f"NDS_{PU} ?= 0\n"
               f"# P2-3 fighter: {N} stays opt-in until his source specials, articles, native\n"
               f"# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).\n"
               f"{F} ?= 0\n")
     if not is_variant:
         T.replace_make(
-                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
-                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
-                  f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
+                  f"ifeq ($(NDS_{PU}),1)\nNDS_FIGHTER_RELOC_FILES += $(NDS_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
+                  f"ifeq ($(NDS_{PU}),1)\nNDS_FIGHTER_RELOC_FILES += $(NDS_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
+                  f"ifeq ($({F}),1)\nNDS_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
     else:
         # Variants stage only their own Main (+ own MainMotion/Model when they
         # own one); reused base files already ride the base fighter's list.
@@ -1181,21 +1181,21 @@ def admit(root: Path, key: str, dry: bool) -> None:
         # it does, this aggregation expands empty and the missing Main is the
         # first thing a link/run reveals (reported at admission).
         T.replace_make(
-                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
-                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
-                  f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
+                  f"ifeq ($(NDS_{PU}),1)\nNDS_FIGHTER_RELOC_FILES += $(NDS_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
+                  f"ifeq ($(NDS_{PU}),1)\nNDS_FIGHTER_RELOC_FILES += $(NDS_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
+                  f"ifeq ($({F}),1)\nNDS_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
     if (not is_variant) or (not reuse_owner):
         T.replace_make(
-                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n",
-                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n"
+                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_{OPU}),0)\n",
+                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_{OPU}),0)\n"
                   f"NDS_NATIVE_OWNER_IMAGE_{U} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$({F}),0)\n")
         T.replace_make(
-                  f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n",
-                  f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n"
+                  f"ifeq ($(NDS_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n",
+                  f"ifeq ($(NDS_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n"
                   f"ifeq ($({F}),1)\nNDS_NATIVE_IMAGE_OWNERS += {L}\nendif\n")
     T.replace_make(
-              f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n",
-              f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n"
+              f"\t\techo '#define NDS_{PU} $(NDS_{PU})'; \\\n",
+              f"\t\techo '#define NDS_{PU} $(NDS_{PU})'; \\\n"
               f"\t\techo '#define {F} $({F})'; \\\n")
     if (not is_variant) or (not reuse_owner):
         T.replace_make(
@@ -1203,7 +1203,7 @@ def admit(root: Path, key: str, dry: bool) -> None:
                   f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{OPU} $(NDS_NATIVE_OWNER_IMAGE_{OPU})'; \\\n"
                   f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{U} $(NDS_NATIVE_OWNER_IMAGE_{U})'; \\\n")
     tus = " ".join(S["tus"])
-    prev_cfiles = re.search(rf"ifeq \(\$\(NDS_P2_{PU}\),1\)\n(?:#[^\n]*\n)*CFILES \+= [^\n]*(?:\\\n[^\n]*)*\nendif\n",
+    prev_cfiles = re.search(rf"ifeq \(\$\(NDS_{PU}\),1\)\n(?:#[^\n]*\n)*CFILES \+= [^\n]*(?:\\\n[^\n]*)*\nendif\n",
                             T.make_text().replace("\r\n", "\n"))
     if not prev_cfiles:
         raise SystemExit(f"Makefile: no CFILES block for {PU}")
@@ -1224,7 +1224,7 @@ def admit(root: Path, key: str, dry: bool) -> None:
 {extra}{pins}#endif
 """)
     chain_old = T.text(rb).replace("\r\n", "\n")
-    m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", chain_old)
+    m = re.search(r"#if NDS_LUIGI \|\| NDS_DONKEY \|\| NDS_CAPTAIN \|\| NDS_SAMUS \|\| NDS_LINK \|\| NDS_PIKACHU \|\| NDS_YOSHI(?: \|\| NDS_\w+)*\n", chain_old)
     if not m:
         raise SystemExit(f"{rb}: no combined admission condition")
     combined = m.group(0)
@@ -1232,22 +1232,22 @@ def admit(root: Path, key: str, dry: bool) -> None:
         T.replace(rb, combined, combined.rstrip("\n") + f" || {F}\n", chain_old.count(combined))
     # Variants own no generated ANIM/CORE/PAYLOAD/ALLOC rows; they keep only the
     # FTAttributes offset arm (field 24) and the validator below. The rows need
-    # NDS_P2_<VARIANT>_* macros the manifest does not emit yet.
+    # NDS_<VARIANT>_* macros the manifest does not emit yet.
     variant_asset_rows = (
         (f"attr_offset = NDS_RELOC_SYMBOL_{PU}_MAIN_ATTRIBUTES;", f"#if {F}\n    else if (loaded->asset_id == NDS_RELOC_ASSET_{U}_MAIN)\n    {{\n        attr_offset = NDS_RELOC_SYMBOL_{U}_MAIN_ATTRIBUTES;\n    }}\n#endif\n"),
     )
     full_asset_rows = (
-        (f"(asset_id >= NDS_P2_{PU}_ANIM_FIRST) &&", f"#if {F}\n    if ((asset_id >= NDS_P2_{U}_ANIM_FIRST) &&\n        (asset_id <= NDS_P2_{U}_ANIM_LAST))\n    {{\n        return TRUE;\n    }}\n#endif\n"),
-        (f"NDS_P2_{PU}_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)", f"#if {F}\n    NDS_P2_{U}_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)\n#endif\n"),
-        (f"(token >= NDS_P2_{PU}_ANIM_FIRST)", f"#if {F}\n    if ((token >= NDS_P2_{U}_ANIM_FIRST) &&\n        (token <= NDS_P2_{U}_ANIM_LAST))\n    {{\n        return token;\n    }}\n#endif\n"),
-        (f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)", f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)\n#endif\n"),
-        (f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)", f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)\n#endif\n"),
-        (f"NDS_P2_{PU}_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)", f"#if {F}\n    NDS_P2_{U}_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)\n#endif\n"),
+        (f"(asset_id >= NDS_{PU}_ANIM_FIRST) &&", f"#if {F}\n    if ((asset_id >= NDS_{U}_ANIM_FIRST) &&\n        (asset_id <= NDS_{U}_ANIM_LAST))\n    {{\n        return TRUE;\n    }}\n#endif\n"),
+        (f"NDS_{PU}_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)", f"#if {F}\n    NDS_{U}_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)\n#endif\n"),
+        (f"(token >= NDS_{PU}_ANIM_FIRST)", f"#if {F}\n    if ((token >= NDS_{U}_ANIM_FIRST) &&\n        (token <= NDS_{U}_ANIM_LAST))\n    {{\n        return token;\n    }}\n#endif\n"),
+        (f"NDS_{PU}_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)", f"#if {F}\n    NDS_{U}_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)\n    NDS_{U}_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)\n#endif\n"),
+        (f"NDS_{PU}_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)", f"#if {F}\n    NDS_{U}_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)\n    NDS_{U}_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)\n#endif\n"),
+        (f"NDS_{PU}_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)", f"#if {F}\n    NDS_{U}_AOBJ32_ASSET_ROWS(NDS_FIGHTER_AOBJ32_TEST)\n#endif\n"),
         (f"attr_offset = NDS_RELOC_SYMBOL_{PU}_MAIN_ATTRIBUTES;", f"#if {F}\n    else if (loaded->asset_id == NDS_RELOC_ASSET_{U}_MAIN)\n    {{\n        attr_offset = NDS_RELOC_SYMBOL_{U}_MAIN_ATTRIBUTES;\n    }}\n#endif\n"),
-        (f"sNdsP2{PN}PayloadSizes[] =", f"#if {F}\nstatic const NDSP2FighterPayloadSizeRow sNdsP2{N}PayloadSizes[] =\n{{\n    NDS_P2_{U}_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)\n}};\n#endif\n"),
-        (f"        sNdsP2{PN}PayloadSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedPayloadSize(\n        sNdsP2{N}PayloadSizes,\n        sizeof(sNdsP2{N}PayloadSizes) / sizeof(sNdsP2{N}PayloadSizes[0]),\n        asset_id);\n    if (size != 0u) return size;\n#endif\n"),
-        (f"sNdsP2{PN}AllocSizes[] =", f"#if {F}\nstatic const NDSP2FighterAllocSizeRow sNdsP2{N}AllocSizes[] =\n{{\n    NDS_P2_{U}_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)\n}};\n#endif\n"),
-        (f"        sNdsP2{PN}AllocSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedAllocSize(\n        sNdsP2{N}AllocSizes,\n        sizeof(sNdsP2{N}AllocSizes) / sizeof(sNdsP2{N}AllocSizes[0]),\n        asset_id);\n    if (size != 0u)\n    {{\n        return size;\n    }}\n#endif\n"),
+        (f"sNds{PN}PayloadSizes[] =", f"#if {F}\nstatic const NDSFighterPayloadSizeRow sNds{N}PayloadSizes[] =\n{{\n    NDS_{U}_PAYLOAD_SIZE_ROWS(NDS_PAYLOAD_SIZE_ROW)\n}};\n#endif\n"),
+        (f"        sNds{PN}PayloadSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedPayloadSize(\n        sNds{N}PayloadSizes,\n        sizeof(sNds{N}PayloadSizes) / sizeof(sNds{N}PayloadSizes[0]),\n        asset_id);\n    if (size != 0u) return size;\n#endif\n"),
+        (f"sNds{PN}AllocSizes[] =", f"#if {F}\nstatic const NDSFighterAllocSizeRow sNds{N}AllocSizes[] =\n{{\n    NDS_{U}_ALLOC_SIZE_ROWS(NDS_ALLOC_SIZE_ROW)\n}};\n#endif\n"),
+        (f"        sNds{PN}AllocSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedAllocSize(\n        sNds{N}AllocSizes,\n        sizeof(sNds{N}AllocSizes) / sizeof(sNds{N}AllocSizes[0]),\n        asset_id);\n    if (size != 0u)\n    {{\n        return size;\n    }}\n#endif\n"),
     )
     for hint, block in (variant_asset_rows if is_variant else full_asset_rows):
         T.insert_after_block(rb, PF, hint, block)
@@ -1272,7 +1272,7 @@ def admit(root: Path, key: str, dry: bool) -> None:
 #endif
 """)
     if S.get("weapon_pins"):
-        guard_old = re.search(r"#if NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", T.text(rb).replace("\r\n", "\n")).group(0)
+        guard_old = re.search(r"#if NDS_PIKACHU \|\| NDS_YOSHI(?: \|\| NDS_\w+)*\n", T.text(rb).replace("\r\n", "\n")).group(0)
         if F not in guard_old:
             T.replace(rb, guard_old, guard_old.rstrip("\n") + f" || {F}\n", 2)
         by_asset: dict[str, list] = {}
@@ -1295,7 +1295,7 @@ def admit(root: Path, key: str, dry: bool) -> None:
         }}
 #endif
 """
-        T.insert_after_block(rb, "NDS_P2_YOSHI", "NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES,\n                 0, 0, 100, 0, -100, 96", arms)
+        T.insert_after_block(rb, "NDS_YOSHI", "NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES,\n                 0, 0, 100, 0, -100, 96", arms)
 
     # ---- nds_reloc_assets.c ------------------------------------------------
     # Variants own no generated CORE_ASSET rows (the production manifest tracks
@@ -1307,13 +1307,13 @@ def admit(root: Path, key: str, dry: bool) -> None:
     if not is_variant:
         ra = "src/nds/nds_reloc_assets.c"
         txt = T.text(ra).replace("\r\n", "\n")
-        m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
+        m = re.search(r"#if NDS_LUIGI \|\| NDS_DONKEY \|\| NDS_CAPTAIN \|\| NDS_SAMUS \|\| NDS_LINK \|\| NDS_PIKACHU \|\| NDS_YOSHI(?: \|\| NDS_\w+)*\n", txt)
         if m and F not in m.group(0):
             T.replace(ra, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
-        T.insert_after_block(ra, PF, f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)",
-                             f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)\n#endif\n")
+        T.insert_after_block(ra, PF, f"NDS_{PU}_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)",
+                             f"#if {F}\n    NDS_{U}_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)\n    NDS_{U}_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)\n#endif\n")
     # The animation path table is generated: nds_reloc_assets.c walks every
-    # enabled fighter's NDS_P2_<X>_ANIM_SEGMENTS rows, so admitting a fighter
+    # enabled fighter's NDS_<X>_ANIM_SEGMENTS rows, so admitting a fighter
     # needs no hand-inserted resolver arm. Only the #if list above gates it.
 
     # ---- fighter.h / callbacks / status header ------------------------------
@@ -1402,7 +1402,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         ek = S["prev"]
         while ek != "yoshi" and not SPECS[ek].get("effect_descs"):
             ek = SPECS[ek]["prev"]
-        EN, EU, EF = SPECS[ek]["Name"], SPECS[ek]["token"], f"NDS_P2_{SPECS[ek]['token']}"
+        EN, EU, EF = SPECS[ek]["Name"], SPECS[ek]["token"], f"NDS_{SPECS[ek]['token']}"
         hooks = "".join(f"""    if (file_head == &gFTData{sym})
     {{
         /* {note}. */
@@ -1423,8 +1423,8 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
     # no arm. GDonkey/MMario reuse their base pair verbatim.
     en = "src/import/battleship_ftcommon_entry.c"
     if S.get("entry_effect_decl"):
-        T.replace(en, f"#if NDS_P2_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n",
-                  f"#if NDS_P2_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n#if {F}\n{S['entry_effect_decl']}\n#endif\n")
+        T.replace(en, f"#if NDS_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n",
+                  f"#if NDS_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n#if {F}\n{S['entry_effect_decl']}\n#endif\n")
     if S.get("entry_statuses") is not None:
         r_, l_ = S["entry_statuses"]
         eff = f"        {S['entry_effect']}\n" if S.get("entry_effect") else ""
@@ -1463,10 +1463,10 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
 """)
 
     # ---- nds_match_config ---------------------------------------------------
-    # (The slot-0 proof fighter selector, NDS_P2_PROOF_FIGHTER0, is gone: no
+    # (The slot-0 proof fighter selector, NDS_PROOF_FIGHTER0, is gone: no
     # proof-fighter #error row.)
     mc = "src/port/nds_match_config.c"
-    adm = re.search(r"#define NDS_P2_KIND_ADMITTED\(k\) \\\n(?:.*\\\n)*.*\)\)\n", T.text(mc).replace("\r\n", "\n")).group(0)
+    adm = re.search(r"#define NDS_KIND_ADMITTED\(k\) \\\n(?:.*\\\n)*.*\)\)\n", T.text(mc).replace("\r\n", "\n")).group(0)
     if F not in adm:
         T.replace(mc, adm, adm.rstrip("\n").rstrip(")") + f" || \\\n     ((k) == {S['kind']} && {F}))\n")
 
@@ -1531,13 +1531,13 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
                     alts.remove(sym)
                     T.replace(al, m.group(0), m.group(0).replace("(" + m.group(1) + ")", "(" + "|".join(alts) + ")"))
         css_c = "src/nds/nds_menu_shell_css.c"
-        terms = ["(NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u)",
-                 "(NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u)",
-                 "(NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u)"]
+        terms = ["(NDS_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u)",
+                 "(NDS_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u)",
+                 "(NDS_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u)"]
         for k in CHAIN[CHAIN.index("ness"):CHAIN.index(key)]:
             if SPECS[k].get("variant"):
                 continue
-            terms.append(f"(NDS_P2_{SPECS[k]['token']} ? LBBACKUP_MASK_FIGHTER(nFTKind{SPECS[k]['Name']}) : 0u)")
+            terms.append(f"(NDS_{SPECS[k]['token']} ? LBBACKUP_MASK_FIGHTER(nFTKind{SPECS[k]['Name']}) : 0u)")
         joined = " | \\\n     ".join(terms)
         T.replace(css_c, f"#if {PF}\n/* ", f"""#if {F}
     /* {N} lands behind his own flag; every earlier opt-in fighter rides its own
@@ -1585,7 +1585,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.replace(og, f'    "{OPL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{_opm}"),\n        0x{_opmid:04x},\n',
                   f'    "{L}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{S["model"]}"),\n        0x{S["model_file_id"]:04x},\n        "{sha}",\n    ),\n    "{OPL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{_opm}"),\n        0x{_opmid:04x},\n')
         oi = "scripts/fighters/generate_nds_native_owner_images.py"
-        io = re.search(r'P2_IMAGE_OWNERS = \(([^)]*)\)', T.text(oi), re.S).group(0)
+        io = re.search(r'NATIVE_IMAGE_OWNERS = \(([^)]*)\)', T.text(oi), re.S).group(0)
         if f'"{L}"' not in io:
             T.replace(oi, io, io.rstrip(")").rstrip() + f', "{L}")')
 
@@ -1607,7 +1607,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.insert_after_block(af, OPF, f"return NDS_RENDERER_PROFILE_OWNER_{OPU};", f"#if {F}\n    if (owner_slot == {S['owner_slot']}u)\n    {{\n        return NDS_RENDERER_PROFILE_OWNER_{U};\n    }}\n#endif\n")
         fm = "src/import/battleship_ftmanager.c"
     txt = T.text(fm).replace("\r\n", "\n")
-    m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
+    m = re.search(r"#if NDS_LUIGI \|\| NDS_DONKEY \|\| NDS_CAPTAIN \|\| NDS_SAMUS \|\| NDS_LINK \|\| NDS_PIKACHU \|\| NDS_YOSHI(?: \|\| NDS_\w+)*\n", txt)
     if m and F not in m.group(0):
         T.replace(fm, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
     if is_variant and reuse_owner:
@@ -1620,7 +1620,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.flush()
         return
     txt = T.text(rs).replace("\r\n", "\n")
-    m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
+    m = re.search(r"#if NDS_LUIGI \|\| NDS_DONKEY \|\| NDS_CAPTAIN \|\| NDS_SAMUS \|\| NDS_LINK \|\| NDS_PIKACHU \|\| NDS_YOSHI(?: \|\| NDS_\w+)*\n", txt)
     if m and F not in m.group(0):
         T.replace(rs, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
     APF, APU, APN, APL = (OPF, OPU, OPN, OPL) if is_variant else (PF, PU, PN, PL)

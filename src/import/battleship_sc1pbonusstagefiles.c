@@ -14,7 +14,7 @@
  * gSC1PBonusStageItemFile). The Target item's provider is the sibling TU:
  * gSC1PBonusStageItemFile is decomp sc1pbonusstage.c:318 and
  * sc1PBonusStageUpdateTargetCount is :483, both defined by
- * battleship_sc1pbonusstage.c behind the same NDS_P2_1P_GAME gate, which is
+ * battleship_sc1pbonusstage.c behind the same NDS_1P_GAME gate, which is
  * what lets battleship_item_target.c:31,50,80 link. This file's job is the
  * common-file setup both bonus scenes share (sc1PBonusStageFuncStart calls
  * sc1PBonusStageSetupFiles at sc1pbonusstage.c:1008).
@@ -22,10 +22,10 @@
  * No shims: every symbol this TU touches (lLBRelocTableAddr,
  * llRelocFileCount, dGMCommonFileIDs, gGMCommonFiles, lbRelocInitSetup,
  * lbRelocLoadFilesListed) is port-provided (reloc_data.h + gm/generic.h).
- * Gated on NDS_P2_1P_GAME with its sibling.
+ * Gated on NDS_1P_GAME with its sibling.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <ssb_types.h>
 #include <gm/generic.h>
@@ -165,4 +165,4 @@ void sc1PBonusStageSetupFiles(void)
     ndsBaseSC1PBonusStageSetupFiles();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

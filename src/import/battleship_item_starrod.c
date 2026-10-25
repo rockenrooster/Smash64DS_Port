@@ -17,7 +17,7 @@
  * weapon descriptor's attribute row, exactly as the source does. The star's
  * per-weapon countdown lives in the decomp wpStarRodWeaponVarsStar payload.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITSTARROD_* now rides on <it/item.h>, the star payload on <wp/weapon.h>,
  * itMapCheckDestroyLanding on <it/item.h>). efManagerStarRodSparkMakeEffect

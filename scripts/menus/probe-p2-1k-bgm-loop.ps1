@@ -27,7 +27,7 @@ param(
 # of scripted dwell -- nowhere near its own stream length, let alone a loop.
 #
 # HOW THE HOLD WORKS, AND WHY NO NEW HARNESS MODE WAS NEEDED. The scripted
-# walk (NDS_P2_MENU_WALK) already exposes exactly the control this needs:
+# walk (NDS_MENU_WALK) already exposes exactly the control this needs:
 # `ndsMenuShellWalkTap` (nds_menu_shell.c) refuses to inject any further input
 # once `gNdsMenuShellWalkLoops >= gNdsMenuShellWalkBudget` -- "stop driving and
 # leave the shell to the player. The screen parks rather than looping
@@ -124,7 +124,7 @@ if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
     throw "bgm-loop probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
 $configText = Get-Content -LiteralPath $buildConfig -Raw
-foreach ($flag in @('NDS_P2_MENU_SHELL', 'NDS_HARNESS_FAST_LOGIC', 'NDS_BGM_FALSIFIER_OFF')) {
+foreach ($flag in @('NDS_MENU_SHELL', 'NDS_HARNESS_FAST_LOGIC', 'NDS_BGM_FALSIFIER_OFF')) {
     $m = [regex]::Match($configText, ('(?m)^#define\s+' + $flag + '\s+(\d+)u?$'))
     $value = if ($m.Success) { $m.Groups[1].Value } else { 'absent' }
     Write-Output ("build config: {0}={1}" -f $flag, $value)

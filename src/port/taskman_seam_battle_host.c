@@ -180,7 +180,7 @@ static void ndsAudioBackendUpdate(void)
  * taskman recorded for it. */
 static void ndsSeamSceneUpdate(void)
 {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if ((gSCManagerSceneData.scene_curr != (u8)nSCKindVSBattle) &&
         (sSYTaskmanDefaultFunction.scene_update != NULL))
     {
@@ -383,7 +383,7 @@ void __attribute__((noinline, used)) ndsBattlePlayableFrameCompleteMarker(void)
     __asm__ volatile("" ::: "memory");
 }
 
-#if NDS_P2_FOUR_CPU_STRESS && NDS_TICK_HUD
+#if NDS_FOUR_CPU_STRESS && NDS_TICK_HUD
 /* The four-CPU whole-match tick sampler consumes the in-guest 128-entry ring,
  * so the debugger only needs to wake often enough to drain that ring before it
  * wraps. Breaking on FrameComplete every presented frame makes GDB dominate
@@ -914,7 +914,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
      * count have all advanced. See NDS_PUBLISH_DEBUGGER_GROUP in
      * nds_platform.h. */
     ndsPlatformPublishBattleFrameCompleteGroups();
-#if NDS_P2_FOUR_CPU_STRESS && NDS_TICK_HUD
+#if NDS_FOUR_CPU_STRESS && NDS_TICK_HUD
     if ((gNdsBattlePlayablePacingPresentedFrames & 31u) == 0u)
     {
         ndsBattlePlayableTickHudSparseMarker();
@@ -984,7 +984,7 @@ void ndsR2HostBattleIterationBegin(void)
 
 #endif /* NDS_R2_PATH */
 
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
 /* P2-6 transition proof. The campaign probe already enables the controller
  * backend's DTCM playback pad for player 0 while it drives 1P Mode/CSS. Keep
  * using that same pad after GO, but move the fight/tally/Continue sequence
@@ -1472,7 +1472,7 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * pre-GO side; every acquisition inside a GO update is counted. */
     gNdsK0BattleInGo =
         (battle_status_before == (u32)nSCBattleGameStatusGo) ? 1u : 0u;
-#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+#if NDS_1P_GAME && NDS_MENU_WALK
     ndsCampaignDrivePlayback();
 #endif
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_UPDATE_START);

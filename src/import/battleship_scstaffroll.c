@@ -22,7 +22,7 @@
  * Unified-owner rule (stated in battleship_sc1pgame_runtime.c, followed
  * here): the include OWNS every symbol it defines under its source name --
  * no renamed private copies. The only rename is the scene entry, imported as
- * ndsBase* and re-exported under its source name. Gated on NDS_P2_1P_GAME
+ * ndsBase* and re-exported under its source name. Gated on NDS_1P_GAME
  * like the rest of the P2-6 step 8 tail.
  *
  * Reloc files (dSCStaffrollFileIDs scstaffroll.c:329): SCStaffroll 0xc3
@@ -91,7 +91,7 @@
  * rendering is still owed (source-derived, no invented bitmap).
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -601,4 +601,4 @@ void scStaffrollStartScene(void)
     syTaskmanStartTask(&setup);
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

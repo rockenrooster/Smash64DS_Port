@@ -43,7 +43,7 @@
  *   none in this TU. ftboss.c data slots stay in battleship_ftchar_data_slots.c.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <ft/fighter.h>
 #include <gm/generic.h>
@@ -81,4 +81,4 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossdeadright.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossstatus.h"
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

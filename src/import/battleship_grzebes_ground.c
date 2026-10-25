@@ -4,7 +4,7 @@
  * decomp gr/grcommon/grzebes.c verbatim, so the acid's five-state rise cycle
  * is mechanically equivalent to the source, and exposes ndsGRZebesSetupInitAll
  * for the shared grCommonSetupInitAll gate. Only built when
- * NDS_P2_STAGE_ZEBES=1.
+ * NDS_STAGE_ZEBES=1.
  *
  * WHAT MAKES THIS STAGE DIFFERENT. Dream Land's wind pushes velocity, Yoshi's
  * Island's clouds are collision, Peach's Castle's bumper is an item, and Congo
@@ -15,7 +15,7 @@
  * That seam did not exist in this port until P2-4h2 imported it; Mushroom
  * Kingdom's POW block is its only other caller.
  */
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -116,4 +116,4 @@ void *ndsGRZebesAcidGObj(void)
     return (void *)gGRCommonStruct.zebes.map_gobj;
 }
 
-#endif /* NDS_P2_STAGE_ZEBES */
+#endif /* NDS_STAGE_ZEBES */

@@ -557,7 +557,7 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     O.P4_DONOR_OWNERS.add(name)
     if tables["dl_pairs"]:
         O.OWNER_DL_PAIR_MODE = O.OWNER_DL_PAIR_MODE | {name}
-    O.P2_O2R_ASSETS[name] = (_o2r_rel(REPO, model_path), spec["model"], sha)
+    O.OWNER_O2R_ASSETS[name] = (_o2r_rel(REPO, model_path), spec["model"], sha)
     O.OWNER_JOINT_TREES[name] = tuple(tables["trees"][0])
     O.OWNER_JOINT_TREES_LOW[name] = tuple(tables["trees"][1])
     setup = list(tables["setup"])

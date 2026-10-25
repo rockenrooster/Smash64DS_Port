@@ -1,7 +1,7 @@
 /* Poké Ball Onix / Iwark executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0xA050 contains no 0xDE; the complete fixed material/geometry
  * program is baked into the generated packet. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemIwark(
     const void *file_base_ptr, u32 file_bytes,

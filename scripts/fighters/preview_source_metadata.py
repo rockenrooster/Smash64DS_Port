@@ -1230,7 +1230,7 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
     # to NULL and the CSS drew them untextured gray, with no reject. Keep each
     # load's exact extent; G_SETTIMG alone moves no bytes.
     try:
-        o2r_path, o2r_id, o2r_sha = gen.P2_O2R_ASSETS[key]
+        o2r_path, o2r_id, o2r_sha = gen.OWNER_O2R_ASSETS[key]
         image_resource = gen.stage_manifest.load_o2r(
             REPO, gen.stage_manifest.InputSpec(str(o2r_path), o2r_sha,
                                                o2r_id))

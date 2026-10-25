@@ -2,7 +2,7 @@
  * this batch. TEXTUAL INCLUDE ONLY. State/material ownership remains in the
  * per-item executors; this helper only converts an already-baked vertex/index
  * packet into DS GX triangles under the supplied traversal state. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 #include <nds/nds_item_replay.h>
 

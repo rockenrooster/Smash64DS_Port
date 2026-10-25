@@ -23,7 +23,7 @@ $S64ContentFlags = @('FALCO', 'GANONDORF', 'WOLF', 'BOWSER', 'MARTH', 'ROY', 'WA
     'CRASH', 'LANKY', 'SHEIK', 'SONIC', 'DEDEDE', 'PIANO', 'METAKNIGHT', 'MRGAW', 'SNAKE', 'IKE',
     'PALUTENA') | ForEach-Object { "NDS_P4_$_=1" }
 $S64PlayFlags = $S64ContentFlags + @('NDS_P5=1')
-$S64ShipFlags = $S64PlayFlags + @('NDS_P2_1P_GAME=1', 'NDS_P2_MENU_SHELL=1', 'NDS_P2_UI_KIT=1',
+$S64ShipFlags = $S64PlayFlags + @('NDS_1P_GAME=1', 'NDS_MENU_SHELL=1', 'NDS_UI_KIT=1',
     'NDS_FREEZE_DIAGNOSTICS=1', 'NDS_SHIP_TELEMETRY=1', 'NDS_BOOT_DIAG_TEXT=0',
     'NDS_DEMO_FOX_CPU_LADDER=0')
 # The sweep ROM's lab-only ITCM evictions (memory lab-build-needs-itcm-evictions).

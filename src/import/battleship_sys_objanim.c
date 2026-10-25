@@ -3331,7 +3331,7 @@ static inline sb32 ndsMObjMatAnimWasStableZero(const MObj *mobj)
         TRUE : FALSE;
 }
 
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 /* P2-2p8 (2026-09-28). Yoshi's Island's three cloud GObjs run gcPlayAnimAll
  * every tick over AnimJoint 0x1E0, whose tracks drive the root's and the three
  * mids' rotation and scale. gryoster.c builds those DObjs with
@@ -3422,7 +3422,7 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
         MObj *mobj;
 
         gcParseDObjAnimJoint(dobj);
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
         if ((tra_only != FALSE) && (ndsGcDObjAnimValuesUnread(dobj) != FALSE))
         {
             ndsGcAdvanceDObjAnimJoint(dobj);
@@ -3558,7 +3558,7 @@ void gcPlayAnimAll(GObj *gobj)
     ndsGcPlayAnimAllBody(gobj, FALSE, TRUE, gNdsMObjTickMul);
 }
 
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 /* Yoshi's Island's cloud GObjs (see ndsGcDObjAnimValuesUnread). */
 void ndsGRYosterCloudPlayAnimAll(GObj *gobj)
 {

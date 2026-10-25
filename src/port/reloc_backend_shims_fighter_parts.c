@@ -1831,7 +1831,7 @@ __attribute__((weak)) void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 void ftBossCommonSetNextAttackWait(GObj *fighter_gobj)
 {
     (void)fighter_gobj;

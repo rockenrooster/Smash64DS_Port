@@ -21,13 +21,13 @@
  *   fighter, L/R pages the ranking columns on the Ranking kind and walks the
  *   portrait on the Indiv kind (:2010-2164).
  *
- * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mndata.c:
+ * Gated on NDS_MENU_SHELL || NDS_1P_GAME like battleship_mndata.c:
  * the shell compiles the source as ndsBaseMNVSRecordStartScene either way
  * and re-exports it as mnVSRecordStartScene only with the shell off, so
  * the native VS Record screen's own mnVSRecordStartScene
  * (src/nds/nds_menu_shell_router.c) wins when the shell is on -- the exact
- * DATA arrangement. The Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05; only NDS_P2_1P_GAME gates the P2-6/P2-7 imports),
+ * DATA arrangement. The Makefile has no NDS_MODES_META flag
+ * (verified 2026-09-05; only NDS_1P_GAME gates the P2-6/P2-7 imports),
  * so this rides the campaign flag like the item-5 SoundTest TU until P2-7
  * mints its own gate.
  *
@@ -59,7 +59,7 @@
  *   src/port/title_backend.c:433 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -95,11 +95,11 @@ extern f32 mnVSRecordGetWinPercentAgainst(s32 this_fkind, s32 against_fkind);
 
 #undef mnVSRecordStartScene
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 void mnVSRecordStartScene(void)
 {
     ndsBaseMNVSRecordStartScene();
 }
 #endif
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

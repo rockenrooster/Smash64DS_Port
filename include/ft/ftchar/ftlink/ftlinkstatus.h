@@ -1,5 +1,5 @@
 #ifndef _FTLINK_STATUS_H_
-#if NDS_P2_LINK
+#if NDS_LINK
 /* P2-3 Link. The project fighter header mirrors Link's enum/passive/status-var
  * ABI; publish BattleShip's exact seventeen-entry table once his runtime is
  * admitted. Keep the compatibility table for builds where Link is inactive. */

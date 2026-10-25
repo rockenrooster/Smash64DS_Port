@@ -97,7 +97,7 @@ def test_creation_residency(tmp_path):
 #include <stddef.h>
 typedef unsigned u32;
 #define FALSE 0
-#define NDS_P2_PIKACHU 1
+#define NDS_PIKACHU 1
 #define NDS_NATIVE_IMAGE_OWNER_SLOTS 25
 #define NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1 23
 #define NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1 24

@@ -566,7 +566,7 @@ void grCommonSetupInitAll(void)
         return;
     }
 
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     /* P2-4 first stage. Same admission shape as Pupupu: Yoster enters the
      * original common setup (whose dispatch reaches grYosterMakeGround in
      * battleship_gryoster_ground.c) only on its own gkind with resolved
@@ -582,7 +582,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     /* P2-4 stage 2. Same admission shape as Pupupu and Yoster: Castle enters
      * the original common setup (whose dispatch reaches grCastleMakeGround in
      * battleship_grcastle_ground.c) only on its own gkind with resolved
@@ -597,7 +597,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     /* P2-4 stage 3. Same admission shape as the three above; the dispatch
      * reaches grJungleMakeGround in battleship_grjungle_ground.c. */
     if ((gSCManagerBattleState != NULL) &&
@@ -610,7 +610,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     /* P2-4 stage 4. Same admission shape; the dispatch reaches
      * grZebesMakeGround in battleship_grzebes_ground.c. */
     if ((gSCManagerBattleState != NULL) &&
@@ -623,7 +623,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     /* P2-4 stage 5. Hazard validation belongs inside grHyruleMakeGround: an
      * invalid tornado table must not suppress the common geometry, yakumono,
      * item-appear and effect-appear setup that surrounds grMainSetupMakeGround. */
@@ -637,7 +637,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     /* P2-4 stage 6. Same admission shape as the five above. */
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindYamabuki) &&
@@ -649,7 +649,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     /* P2-4 stage 7. The POW table is validated inside grInishieMakeGround so
      * a bad optional hazard cannot suppress the stage's common setup, scales
      * or Piranha Plants. */
@@ -663,7 +663,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     /* P2-4 stage 8. Same admission shape as the seven above. */
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindSector) &&
@@ -690,7 +690,7 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* The 1P-only grounds (small Yoshi's Island, Meta Crystal, Duel Zone,
      * Race to the Finish, Final Destination and the 24 bonus boards) have no
      * stage TU of their own: the original common setup builds their four
@@ -723,37 +723,37 @@ static GObj *ndsGRNonPupupuGroundStub(void)
     return NULL;
 }
 
-#if !NDS_P2_STAGE_CASTLE
+#if !NDS_STAGE_CASTLE
 /* P2-4: the real grCastleMakeGround lives in battleship_grcastle_ground.c
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grCastleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_SECTOR
+#if !NDS_STAGE_SECTOR
 GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_JUNGLE
+#if !NDS_STAGE_JUNGLE
 /* P2-4: the real grJungleMakeGround lives in battleship_grjungle_ground.c
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_ZEBES
+#if !NDS_STAGE_ZEBES
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_HYRULE
+#if !NDS_STAGE_HYRULE
 GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_YOSTER
+#if !NDS_STAGE_YOSTER
 /* P2-4: the real grYosterMakeGround lives in battleship_gryoster_ground.c
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grYosterMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_YAMABUKI
+#if !NDS_STAGE_YAMABUKI
 GObj *grYamabukiMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 /* P2-6 step 6 (Race last): the real grBonus3MakeGround lives in
  * battleship_grbonus3.c when the flag is on; the stub below only exists
  * while it is off, so the strong definition owns the name. Prototype at the
@@ -762,8 +762,8 @@ GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
 
 /* Stand-ins for the flag-off build only: battleship_sc1pbonusstage.c owns
- * both names when NDS_P2_1P_GAME is 1 (P2-6 step 5). */
-#if !NDS_P2_1P_GAME
+ * both names when NDS_1P_GAME is 1 (P2-6 step 5). */
+#if !NDS_1P_GAME
 void sc1PBonusStageInitBonus2(void)
 {
 }

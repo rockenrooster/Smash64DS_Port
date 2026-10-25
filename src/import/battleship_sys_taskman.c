@@ -96,7 +96,7 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
          /* A P4 build's 1P select is the native screen (P7 C1): the VS
           * select's own setup, not rebudgeted either. */
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||

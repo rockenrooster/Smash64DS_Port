@@ -221,7 +221,7 @@ static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
     return NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
 }
 
-#if NDS_P2_LINK
+#if NDS_LINK
 /* P2-2p8. Patch only the FIFO_TEX_COORD words whose source run used
  * G_TEXTURE_GEN.  This is the exact math from
  * ndsRendererNativeRebuildProductionRunUv, evaluated from the packet's frozen
@@ -1026,7 +1026,7 @@ void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
  * list, so it is resolved once, when the list is materialized, into the
  * entry's tail after its words; the per-draw pass is then the same arithmetic
  * on the same helpers and a table copy. */
-#if NDS_P2_LINK
+#if NDS_LINK
 /* Link's lists hold at most this many groups; the map stays this size when
  * a list's group array grows (32 since 2026-10-05, for the 1P owners' GX
  * texgen, which the map never covers). */
@@ -1045,7 +1045,7 @@ typedef struct NDSFtrLeanTexgenMap
 #define NDS_FTR_LEAN_TEXGEN_MAP_READY 1u
 #define NDS_FTR_LEAN_TEXGEN_MAP_REFUSE 2u    /* the generic patch would fail */
 
-#if NDS_P2_LINK
+#if NDS_LINK
 static NDSFtrLeanTexgenMap *ndsFtrLeanTexgenMapOf(const NDSFighterPacket *lean)
 {
     u32 offset = ((u32)lean->word_count + 7u) & ~7u;

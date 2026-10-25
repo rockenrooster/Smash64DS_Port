@@ -27,7 +27,7 @@
 
 /* Hierarchy slot entry (renderer_adapter_matrix.c) and the route's
  * commit wrapper (reloc_backend_movement.c). The imported Jungle TU
- * owns the GObj pointer accessor; both live behind NDS_P2_STAGE_JUNGLE.
+ * owns the GObj pointer accessor; both live behind NDS_STAGE_JUNGLE.
  */
 sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root, void *cobj,
     u32 initial_geometry_mode, NDSRendererStats *stats);

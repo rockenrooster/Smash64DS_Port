@@ -279,7 +279,7 @@ static u32 ndsFtrLeanPoolFloor(const NDSFtrLeanEntryState *es,
 {
     u32 floor = packet->word_count;
 
-#if NDS_P2_LINK
+#if NDS_LINK
     if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
     {
         floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;
@@ -2141,7 +2141,7 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         {
             return nNDSFtrLeanDeclineTexgen;
         }
-#if NDS_P2_LINK
+#if NDS_LINK
         if (state->texgen_map == NDS_FTR_LEAN_TEXGEN_MAP_READY)
         {
             texgen_ok = ndsFtrLeanPatchTexgenMapped(

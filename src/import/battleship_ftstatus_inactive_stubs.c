@@ -45,7 +45,7 @@ NDS_INACTIVE_STATUS_STUB(ftCommonHammerLandingProcUpdate)
  * fallbacks.  The source TUs are linked beside this file and own the complete
  * Fly -> Fall -> Down -> Stand -> FuraFura lifecycle. */
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCommonStarProcMap)
-#if !NDS_P2_CAPTAIN
+#if !NDS_CAPTAIN
 /* P2-3f5: battleship_ftcommon_capturecaptain.c owns the real body wherever
  * Falcon is built. A strong definition wins over this weak twin at link either
  * way -- DK's four Special setters prove that on the shipped ELF -- but leaving
@@ -53,7 +53,7 @@ NDS_INACTIVE_STATUS_STUB(ftCommonThrownCommonStarProcMap)
  * compile in, which is exactly the shape that has bitten this queue twice. */
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureCaptainProcPhysics)
 #endif
-#if !NDS_P2_DONKEY
+#if !NDS_DONKEY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureShoulderedProcInterrupt)
 #endif
 #undef NDS_INACTIVE_STATUS_STUB

@@ -175,7 +175,7 @@ void ndsKirbyHatPrepareMatch(void)
     ndsKirbyHatAdmit(high, low);
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 void ndsKirbyHatPrepare1PMatch(const u8 *team_copy_kinds, u32 team_count,
                                s32 team_final_copy)
 {

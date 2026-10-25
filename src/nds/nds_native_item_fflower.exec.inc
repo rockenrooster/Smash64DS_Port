@@ -1,7 +1,7 @@
 /* Fire Flower executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x4520 branches at word 9 to relocated 0x4578. Root 0x4608
  * has a word-3 segment-0xE palette hook driven by its one live MObj. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY: the render state each Fire Flower root meets at its emit (the

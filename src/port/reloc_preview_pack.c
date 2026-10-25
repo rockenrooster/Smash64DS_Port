@@ -14,10 +14,10 @@
 
 NDS_COLD u32 ndsRelocUseBattleCoreFighterData(void)
 {
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
     return (gNdsSceneManagerCurrIsBattle != 0u) ||
            (gSCManagerSceneData.scene_curr == nSCKindVSResults)
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
            /* P7 C1: the 1P continue and the ending movie stand one fighter
             * in its demo poses, as Results does, and a content's whole main
             * tree did not fit there (Palutena's continue: 262,320 B asked,
@@ -31,7 +31,7 @@ NDS_COLD u32 ndsRelocUseBattleCoreFighterData(void)
 #endif
 }
 
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
 typedef struct NDSBattleForeignImageRow {
     u16 asset_id;
     u16 reserved;
@@ -74,7 +74,7 @@ typedef struct NDSPreviewResident {
     u32 sorted_sections;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
     NDSBattleForeignImageRow *foreign_images;
     u32 foreign_count;
 #endif
@@ -124,7 +124,7 @@ volatile u32 gNdsPreviewPackLoadCount;
 volatile u32 gNdsPreviewPackDataBytes;
 volatile u32 gNdsPreviewPackFailure;
 volatile u32 gNdsPreviewPackFailureKind;
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
 volatile u32 gNdsBattleCoreExternPatchCount;
 volatile u32 gNdsBattleCoreExternLoadCount;
 volatile u32 gNdsBattleCoreExternFailure;
@@ -350,7 +350,7 @@ static u32 ndsRelocSceneShowsPreviewFighter(void)
     u8 scene = gSCManagerSceneData.scene_curr;
 
     return ((scene == nSCKind1PGamePlayers) || (scene == nSCKindPlayersVS) ||
-#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+#if NDS_1P_GAME && NDS_MENU_SHELL
             /* P7 C4: the training select is the native VS screen. */
             (scene == nSCKindPlayers1PTraining) ||
 #endif
@@ -470,7 +470,7 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     NDSRelocLoadedFile *loaded;
     u32 mapped;
     if ((ndsRelocSceneShowsPreviewFighter() == FALSE)
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
         && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
        )
@@ -497,7 +497,7 @@ NDS_COLD const void *ndsRelocNativeForeignImageAddress(const void *base, u32 ass
         (owner->owner_scene != (u32)gSCManagerSceneData.scene_curr)) { return NULL; }
     if (owner->reserved[0] != 0u)
     {
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
         const NDSPreviewResident *resident;
         u32 i;
         if (ndsPreviewSection(owner, &resident) == NULL) { return NULL; }
@@ -802,7 +802,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     FTData *fighter;
     FILE *file;
     char preview_path[] = "nitro:/fighters/preview/00.fpc";
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
     char battle_path[] = "nitro:/fighters/battle/00.fpc";
 #endif
     char *path = preview_path;
@@ -813,14 +813,14 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     u32 i;
 
     if (((ndsRelocSceneShowsPreviewFighter() == FALSE)
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
          && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
         ) ||
         (ndsPreviewKindIndex(fkind) < 0)) { return NULL; }
     if ((fkind == nFTKindMMario) &&
         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
-#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+#if NDS_1P_GAME && NDS_MENU_SHELL
         && (gSCManagerSceneData.scene_curr != nSCKindPlayers1PTraining)
         /* P7 C1: the 1P select is the same screen; C2: the bonus selects. */
         && (gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
@@ -831,7 +831,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     {
         return NULL;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* Giant DK's stage. GDonkeyMain's extern tree names DonkeyModel, and the
      * relocator resolves those externs by SOURCE offset. A compact DK pack
      * (a DK player or ally) publishes DonkeyModel re-laid-out by its spans,
@@ -887,7 +887,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
     if ((ndsRelocUseBattleCoreFighterData() != FALSE) && (fkind < 12))
     {
         path = battle_path;
@@ -1126,7 +1126,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * behind at all. */
         resident = &sNdsPreviewResidents[ndsPreviewKindIndex(fkind)];
         resident->model_source_bytes = load->model_source_bytes;
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
         resident->foreign_images = NULL;
         resident->foreign_count = 0u;
 #endif
@@ -1201,7 +1201,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * generated source slots only after all generic normalization is
          * complete so no later byte-lane pass can reinterpret a native
          * pointer. */
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
         if ((load->is_battle_pack != 0u) &&
             (ndsShieldPosePatchCompactMain(
                 fkind, records[0]->data, records[0]->data_size) < 0))
@@ -1292,7 +1292,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     return ndsPreviewPackLoadPublish(load);
 }
 
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
 static s32 ndsBattleForeignImagesValid(const NDSBattleForeignImageRow *rows,
                                        u32 count, u32 bytes)
 {
@@ -1583,7 +1583,7 @@ NDS_COLD s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 }
 #endif
 
-#if !NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if !NDS_COMPACT_BATTLE_FIGHTERS
 NDS_COLD void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
 {
     (void)content;

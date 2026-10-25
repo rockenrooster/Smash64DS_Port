@@ -18,15 +18,15 @@ $text = $text.Replace('*(.text.ndsRendererProfileSetOwner)', '/* LAB sweep: evic
 foreach ($sym in $S64SweepEvictions) { $text = $text.Replace("*(.text.$sym)", "/* LAB sweep: evicted $sym */") }
 [IO.File]::WriteAllText($labLd, $text)
 $gate = @('TARGET=smash64ds-p2-fourcpu-tickhud-hwtri', 'NDS_LAB_FOURCPU_WORDS=1',
-    'NDS_P2_STAGE_YOSTER=1', 'NDS_P2_STAGE_CASTLE=1', 'NDS_P2_STAGE_JUNGLE=1', 'NDS_P2_STAGE_ZEBES=1',
-    'NDS_P2_STAGE_HYRULE=1', 'NDS_P2_STAGE_YAMABUKI=1', 'NDS_P2_STAGE_INISHIE=1', 'NDS_P2_STAGE_SECTOR=1',
-    'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1',
+    'NDS_STAGE_YOSTER=1', 'NDS_STAGE_CASTLE=1', 'NDS_STAGE_JUNGLE=1', 'NDS_STAGE_ZEBES=1',
+    'NDS_STAGE_HYRULE=1', 'NDS_STAGE_YAMABUKI=1', 'NDS_STAGE_INISHIE=1', 'NDS_STAGE_SECTOR=1',
+    'NDS_PIKACHU=1', 'NDS_YOSHI=1', 'NDS_NESS=1', 'NDS_PURIN=1',
     "NDS_HOT_TEXT_LINKER_SCRIPT=$($labLd -replace '\\', '/')") + $S64ShipFlags
 $profile = @('NDS_CPU_PROFILE=1', 'NDS_CPU_PROFILE_START=800', 'NDS_CPU_PROFILE_FRAMES=800',
              'NDS_CPU_PROFILE_PER_FRAME_REGION=1')
 $configs = [ordered]@{
     play = @('TARGET=smash64ds') + $S64PlayFlags
-    walk = @('TARGET=smash64ds', 'NDS_P2_MENU_WALK=1') + $S64PlayFlags
+    walk = @('TARGET=smash64ds', 'NDS_MENU_WALK=1') + $S64PlayFlags
     net  = @('TARGET=smash64ds', 'NDS_NET_LAB_LOBBY=1', 'NDS_NET_LAB_SWEEP=1') + $S64PlayFlags
     root = @('TARGET=smash64ds')
     gate = $gate

@@ -702,8 +702,8 @@ def build_vs(main_text, mutation=None, with_compact=True, cancel_mutation=None):
 PACK_FIXTURE = r'''
 #define NDS_PREVIEW_PACK_MAX_SECTIONS 4u
 #define NDS_PREVIEW_PACK_NULL 0xffffffffu
-#define NDS_P2_SHELL_ARGMAX_ROSTER 0
-#define NDS_P2_COMPACT_BATTLE_FIGHTERS 0
+#define NDS_SHELL_ARGMAX_ROSTER 0
+#define NDS_COMPACT_BATTLE_FIGHTERS 0
 
 typedef struct NDSPreviewPackSection {
     u32 asset_id; u32 data_offset; u32 data_bytes; u32 source_bytes;

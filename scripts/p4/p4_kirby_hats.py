@@ -260,7 +260,7 @@ def source_hat_mobj_counts() -> dict:
             rel, hashlib.sha256(data).hexdigest(), fid))
 
     main = load(KIRBY_MAIN_O2R)
-    model = load(str(O.P2_O2R_ASSETS["kirby"][0]).replace("\\", "/"))
+    model = load(str(O.OWNER_O2R_ASSETS["kirby"][0]).replace("\\", "/"))
     counts = {}
     for part in range(15):
         for d, detail in enumerate(DETAILS):
@@ -403,21 +403,21 @@ def synthesize(hat: HatSource, tex_where: dict, tex_file: int, vanilla: bytes,
 class GeneratorState:
     """The owner generator's module state a hat build patches, restored after."""
 
-    NAMES = ("P2_O2R_ASSETS", "P2_MODEL_PART_ROOT_VARIANTS", "KIRBY_COPY_HAT_MODEL_PART_IDS",
+    NAMES = ("OWNER_O2R_ASSETS", "P2_MODEL_PART_ROOT_VARIANTS", "KIRBY_COPY_HAT_MODEL_PART_IDS",
              "KIRBY_TRIO_CONTEXTS", "KIRBY_TRIO_EXTRA_JOINT_HEADS",
              "build_kirby_trio_faithful_specs")
 
     def __init__(self):
         self.saved = {n: getattr(O, n) for n in self.NAMES}
-        self.saved["P2_O2R_ASSETS"] = dict(O.P2_O2R_ASSETS)
+        self.saved["OWNER_O2R_ASSETS"] = dict(O.OWNER_O2R_ASSETS)
         self.saved["P2_MODEL_PART_ROOT_VARIANTS"] = {
             k: dict(v) for k, v in O.P2_MODEL_PART_ROOT_VARIANTS.items()}
 
     def restore(self):
         for n, v in self.saved.items():
-            if n == "P2_O2R_ASSETS":
-                O.P2_O2R_ASSETS.clear()
-                O.P2_O2R_ASSETS.update(v)
+            if n == "OWNER_O2R_ASSETS":
+                O.OWNER_O2R_ASSETS.clear()
+                O.OWNER_O2R_ASSETS.update(v)
             elif n == "P2_MODEL_PART_ROOT_VARIANTS":
                 O.P2_MODEL_PART_ROOT_VARIANTS.clear()
                 O.P2_MODEL_PART_ROOT_VARIANTS.update({k: dict(d) for k, d in v.items()})
@@ -428,7 +428,7 @@ class GeneratorState:
     def patch(self, payload_path: Path, base: int, offsets: dict):
         rel = payload_path.resolve().relative_to(REPO.resolve())
         sha = hashlib.sha256(payload_path.read_bytes()).hexdigest()
-        O.P2_O2R_ASSETS["kirby"] = (rel, KIRBY_MODEL_FILE, sha)
+        O.OWNER_O2R_ASSETS["kirby"] = (rel, KIRBY_MODEL_FILE, sha)
         for detail in DETAILS:
             specs = list(O.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail])
             specs[base - 1] = (specs[base - 1][0], offsets[detail])
@@ -559,7 +559,7 @@ def main() -> int:
 
     state = GeneratorState()
     mobj_counts = source_hat_mobj_counts()
-    vanilla_path = REPO / O.P2_O2R_ASSETS["kirby"][0]
+    vanilla_path = REPO / O.OWNER_O2R_ASSETS["kirby"][0]
     vanilla = vanilla_path.read_bytes()
     source_heads = tuple(O.KIRBY_TRIO_SECTION_HEADS)
     resident = {}

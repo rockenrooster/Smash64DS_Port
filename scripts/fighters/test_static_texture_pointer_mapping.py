@@ -44,7 +44,7 @@ static s32 ndsRelocGetLoadedAssetView(u32 id, const void **base, u32 *size) {
     *size = 128;
     return TRUE;
 }
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 static const void *ndsRelocNativeAssetAddress(const void *base, u32 offset) {
     if (offset >= 0x900 && offset < 0x940)
         return (const u8 *)base + offset - 0x900 + 16;
@@ -59,7 +59,7 @@ int main(void) {
     NDSBattlePlayableStaticTextureRecord r = {1,2,16,32,{8,8,16,32,48},8,8};
     assert(ndsRendererHardwareBuildBattleStaticTextureKey(&r,&key));
     assert(key.image == 0x10010 && key.tlut_image == 0x20020 && key.texel1_image == 0x10030);
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* Source offsets exceed physical size and all map nonidentically. */
     r.image_offset=r.key_words[2]=0x900;
     r.tlut_offset=r.key_words[3]=0x910;
@@ -97,7 +97,7 @@ int main(void) {
         exe = tmp_path / f"static_pointer_{compact}.exe"
         result = subprocess.run([
             compiler, "-std=c11", "-Wall", "-Werror",
-            f"-DNDS_P2_MENU_SHELL={compact}", str(path), "-o", str(exe),
+            f"-DNDS_MENU_SHELL={compact}", str(path), "-o", str(exe),
         ], capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         result = subprocess.run([str(exe)], capture_output=True, text=True)

@@ -646,7 +646,7 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += c_array_u16("kNdsBattleHudScorePalette", score_palettes)
     # The 1P team row's palettes have no reader outside the 1P build.
-    lines += ["", "#if NDS_P2_1P_GAME"]
+    lines += ["", "#if NDS_1P_GAME"]
     lines += c_array_u16("kNdsBattleHudZakoStockPalette", zako_palettes)
     lines += c_array_u16("kNdsBattleHudYoshiTeamPalette", yoshi_team_palettes)
     lines += c_array_u8("kNdsBattleHudYoshiTeamLook", yoshi_team_looks)

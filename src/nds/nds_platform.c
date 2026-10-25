@@ -188,7 +188,7 @@ static u32 sBattleFpsHudPrintedGx3dFaults = 0xffffffffu;
 volatile u32 gNdsGx3dUnderflowFrames;
 volatile u32 gNdsGx3dRamOverflowFrames;
 volatile u32 gNdsGx3dRdlinesMin = 46u;
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 static u32 sMenuFpsHudScreen = 0xffffffffu;
 static u32 sMenuFpsHudEnterCount = 0xffffffffu;
 static u32 sMenuFpsHudLastVBlank;
@@ -334,7 +334,7 @@ volatile u32 gNdsBattlePlayableHudFpsX10;
 volatile u32 gNdsBattlePlayableHudFpsSampleCount;
 volatile u32 gNdsBattlePlayableHudFpsFrameWindow;
 volatile u32 gNdsBattlePlayableHudFpsTickWindow;
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 volatile u32 gNdsMenuFpsHudRefreshCount __attribute__((used));
 #endif
 volatile u32 gNdsBattleTextHudRenderCount;
@@ -703,7 +703,7 @@ u32 ndsPlatformReadInput(void)
 
     scanKeys();
     held = keysHeld();
-#if (NDS_P2_MENU_SHELL && NDS_P2_MENU_WALK)
+#if (NDS_MENU_SHELL && NDS_MENU_WALK)
     /* P2-1g. The scripted walk's ONE non-shell button: START on the Results
      * screen, which is the imported scene's own exit and the only input in the
      * loop that no shell handler can synthesise. It is ORed in BEFORE the
@@ -2743,7 +2743,7 @@ static void ndsPlatformPublishBattleFpsHudGroup(void)
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP);
 }
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 /* The menu shell already owns the cadence measurement. This HUD only turns its
  * published counters into two readable lower-screen rows: no per-frame ring,
  * sorting, or second presentation recorder. FPS is the recent presented-frame
@@ -3311,7 +3311,7 @@ void ndsPlatformClearBattleTextHud(void)
 
 void ndsPlatformRenderDebugHud(void)
 {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     if (gNdsMenuShellScreen < NDS_MENU_SHELL_SCREEN_COUNT)
     {
         ndsPlatformRenderMenuFpsHud();
@@ -3399,7 +3399,7 @@ static void ndsPlatformPostSwapCommit(void)
     ndsIFCommonNativeOamCommit();
     ndsResultsOamCommit();
     ndsSource2DCommit();
-#if NDS_P2_UI_KIT
+#if NDS_UI_KIT
     /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
      * OAM and the later publisher wins; they are never live in the same scene,
      * so this ordering only decides which one pays for the oamUpdate. */
@@ -3861,13 +3861,13 @@ void ndsPlatformEndFrame(void)
         gNdsVramBankDMissedExits++;
         ndsFtrLeanAdmitBattleExit();
     }
-#if defined(NDS_P2_1P_GAME) && NDS_P2_1P_GAME && \
-    defined(NDS_P2_MENU_WALK) && NDS_P2_MENU_WALK && !NDS_TICK_HUD
+#if defined(NDS_1P_GAME) && NDS_1P_GAME && \
+    defined(NDS_MENU_WALK) && NDS_MENU_WALK && !NDS_TICK_HUD
     /* P2-2p8 Phase 1 slice 3 lab (the 1P campaign walk ROM, no tick HUD):
      * the campaign probe reads the bank D words through GDB, which sees
      * memory, not the D-cache -- clean them every frame so no read is a
      * stale line. Slice 7: keyed on that ROM's own contract
-     * (scripts/menus/probe-p2-campaign.ps1 requires NDS_P2_1P_GAME=1 and the
+     * (scripts/menus/probe-p2-campaign.ps1 requires NDS_1P_GAME=1 and the
      * walk), since the lab-only NDS_FTR_LEAN_ADMIT_LAB is gone -- admission 2
      * is the default. The VS walk ROMs (shell, shell loop) stay without it. */
     DC_FlushRange((const void *)&gNdsVramBankDTakes, sizeof(u32));

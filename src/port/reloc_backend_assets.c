@@ -180,13 +180,13 @@
 #define NDS_RELOC_ASSET_GR_PUPUPU_MAP 0xffu
 #define NDS_RELOC_ASSET_GR_INISHIE_MAP 0x104u
 #define NDS_RELOC_ASSET_GR_HYRULE_MAP 0x109u
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* P2-6 step 7 (boss). Final Destination's runtime map (Last): map file
  * 266 = 0x10a (GRLastMap) plus its geometry/display bank 114 = 0x72
  * (ExternDataBank114 = StageLastFile2). A bank name carries the relocData
  * file number in decimal and the asset id is that number in hex, the same
  * derivation as every id here. The 1P arenas ride the 1P Game flag, so
- * there is no NDS_P2_STAGE_LAST. */
+ * there is no NDS_STAGE_LAST. */
 #define NDS_RELOC_ASSET_GR_LAST_MAP 0x10au
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_114 0x72u
 /* The wallpaper sprite container the map header references (96 = 0x60,
@@ -581,7 +581,7 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* llGRLastMapMapHeader = 0x0 (symbols file :4200): Last carries no VS-style
  * header at 0x14, so it stays out of sNdsRelocGroundMapAssets below, whose
  * normalizer is hardcoded to that offset. */
@@ -589,7 +589,7 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #endif
 #define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
 #define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 /* ftdata.c `FTData dFTLuigiData` field 24 is 0x00000580 -- the same field that
  * gives Mario 0x428 and Fox 0x46c -- and 221_LuigiMain.c agrees twice over
  * ("Pre-attributes data (352 words, 0x0580 bytes)", and its last pre-attribute
@@ -597,11 +597,11 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_LUIGI_MAIN_ATTRIBUTES 0x580u
 #define NDS_RELOC_ASSET_LUIGI_MAIN 0xddu
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 #define NDS_RELOC_SYMBOL_DONKEY_MAIN_ATTRIBUTES 0x4a4u
 #define NDS_RELOC_ASSET_DONKEY_MAIN 0xd5u
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* 236_CaptainMain.c:87 -- "Pre-attributes data (290 words, 0x0488 bytes)",
  * the same shape that gives Donkey 0x4a4 at 213_DonkeyMain.c:88. */
 #define NDS_RELOC_SYMBOL_CAPTAIN_MAIN_ATTRIBUTES 0x488u
@@ -615,7 +615,7 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0x0c of SamusMain; Charge Shot's starts at byte 0 of SamusSpecial1. */
 #define NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES 0x0cu
 #define NDS_RELOC_ASSET_SAMUS_SPECIAL1 0xdau
-#if NDS_P2_LINK
+#if NDS_LINK
 /* dFTLinkData field 24 is 0x708; 225_LinkMain.c's source FTAttributes starts
  * there. llLinkMainFileID is 0xe1 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_LINK_MAIN_ATTRIBUTES 0x708u
@@ -653,13 +653,13 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_ASSET_KIRBY_MAIN 0xe5u
 #define NDS_RELOC_ASSET_KIRBY_MAIN_MOTION 0xe4u
 #define NDS_RELOC_SYMBOL_KIRBY_MAIN_CUTTER_WEAPON_ATTRIBUTES 0x8u
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
 /* fighter_production_manifest.json: dFTGDonkeyData field 24 puts his FTAttributes at
  * 0x3c8; llGDonkeyMainFileID is 0xd7 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_GDONKEY_MAIN_ATTRIBUTES 0x3c8u
 #define NDS_RELOC_ASSET_GDONKEY_MAIN 0xd7u
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 /* fighter_production_manifest.json: dFTMMarioData field 24 puts his FTAttributes at
  * 0x2a8; llMMarioMainFileID is 0xce in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES 0x2a8u
@@ -667,73 +667,73 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_ASSET_MMARIO_MAIN_MOTION 0xcdu
 #define NDS_RELOC_ASSET_MMARIO_MODEL 0x12cu
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
 /* fighter_production_manifest.json: dFTNMarioData field 24 puts his FTAttributes at
  * 0x298; llNMarioMainFileID is 0xcf in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NMARIO_MAIN_ATTRIBUTES 0x298u
 #endif
 #define NDS_RELOC_ASSET_NMARIO_MAIN 0xcfu
-#if NDS_P2_NFOX
+#if NDS_NFOX
 /* fighter_production_manifest.json: dFTNFoxData field 24 puts his FTAttributes at
  * 0x2a4; llNFoxMainFileID is 0xd3 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NFOX_MAIN_ATTRIBUTES 0x2a4u
 #endif
 #define NDS_RELOC_ASSET_NFOX_MAIN 0xd3u
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
 /* fighter_production_manifest.json: dFTNDonkeyData field 24 puts his FTAttributes at
  * 0x298; llNDonkeyMainFileID is 0xd6 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NDONKEY_MAIN_ATTRIBUTES 0x298u
 #endif
 #define NDS_RELOC_ASSET_NDONKEY_MAIN 0xd6u
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
 /* fighter_production_manifest.json: dFTNSamusData field 24 puts his FTAttributes at
  * 0x3bc; llNSamusMainFileID is 0xdb in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NSAMUS_MAIN_ATTRIBUTES 0x3bcu
 #endif
 #define NDS_RELOC_ASSET_NSAMUS_MAIN 0xdbu
-#if NDS_P2_NLUIGI
+#if NDS_NLUIGI
 /* fighter_production_manifest.json: dFTNLuigiData field 24 puts his FTAttributes at
  * 0x298; llNLuigiMainFileID is 0xdf in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NLUIGI_MAIN_ATTRIBUTES 0x298u
 #endif
 #define NDS_RELOC_ASSET_NLUIGI_MAIN 0xdfu
-#if NDS_P2_NLINK
+#if NDS_NLINK
 /* fighter_production_manifest.json: dFTNLinkData field 24 puts his FTAttributes at
  * 0x2d8; llNLinkMainFileID is 0xe3 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NLINK_MAIN_ATTRIBUTES 0x2d8u
 #endif
 #define NDS_RELOC_ASSET_NLINK_MAIN 0xe3u
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
 /* fighter_production_manifest.json: dFTNYoshiData field 24 puts his FTAttributes at
  * 0x2b8; llNYoshiMainFileID is 0xf8 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NYOSHI_MAIN_ATTRIBUTES 0x2b8u
 #endif
 #define NDS_RELOC_ASSET_NYOSHI_MAIN 0xf8u
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
 /* fighter_production_manifest.json: dFTNCaptainData field 24 puts his FTAttributes at
  * 0x29c; llNCaptainMainFileID is 0xed in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NCAPTAIN_MAIN_ATTRIBUTES 0x29cu
 #endif
 #define NDS_RELOC_ASSET_NCAPTAIN_MAIN 0xedu
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
 /* fighter_production_manifest.json: dFTNKirbyData field 24 puts his FTAttributes at
  * 0x2c0; llNKirbyMainFileID is 0xe7 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NKIRBY_MAIN_ATTRIBUTES 0x2c0u
 #endif
 #define NDS_RELOC_ASSET_NKIRBY_MAIN 0xe7u
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
 /* fighter_production_manifest.json: dFTNPikachuData field 24 puts his FTAttributes at
  * 0x2a8; llNPikachuMainFileID is 0xf5 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NPIKACHU_MAIN_ATTRIBUTES 0x2a8u
 #endif
 #define NDS_RELOC_ASSET_NPIKACHU_MAIN 0xf5u
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
 /* fighter_production_manifest.json: dFTNPurinData field 24 puts his FTAttributes at
  * 0x2a0; llNPurinMainFileID is 0xea in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NPURIN_MAIN_ATTRIBUTES 0x2a0u
 #endif
 #define NDS_RELOC_ASSET_NPURIN_MAIN 0xeau
-#if NDS_P2_NNESS
+#if NDS_NNESS
 /* fighter_production_manifest.json: dFTNNessData field 24 puts his FTAttributes at
  * 0x2f0; llNNessMainFileID is 0xf1 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES 0x2f0u

@@ -69,7 +69,7 @@ static void ndsP4KirbyCopyInitCopyVarsPower(GObj *fighter_gobj);
 
 void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
 {
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     /* A Kirby taking a copy also takes or drops Metal Mario's metal
      * (nds_p4.c ndsKirbyMetalTake), whether or not the copy_id moves. */
     FTStruct *fp = ftGetStruct(fighter_gobj);

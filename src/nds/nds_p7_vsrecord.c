@@ -58,7 +58,7 @@ void ndsP7VsRecordLoad(NDSP7VsRecordData *d)
         }
         else if (sel == NDS_P7_SEL_METAL)
         {
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
             shown = ndsP7FighterUnlocked(sel);
 #else
             shown = FALSE;

@@ -176,7 +176,7 @@ static void ndsMenuFillSinkDrainRuntime(void)
     sNdsMenuFillDrainMark = end;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* The textbox frame never reaches a DL head: it is a static DL on a DObj
  * the recorder does not execute. Coordinates still come from the source
  * words, not a table; the count is the DL's own length
@@ -207,7 +207,7 @@ static void ndsMenuFillSinkEndFrame(void)
         return;
     }
     ndsMenuFillSinkDrainRuntime();
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (gSCManagerSceneData.scene_curr == nSCKindStaffroll)
     {
         ndsMenuFillSinkScanStatic(dSCStaffrollTextBoxDisplayList, 9u);

@@ -367,7 +367,7 @@ static void ndsMenuShellRun(u32 screen)
     /* The keypad's current state is the baseline, so a button still held from
      * the previous screen cannot read as a fresh tap on this one. */
     sMenuHeldPrev = ndsPlatformReadInput();
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
     /* Every screen gets a full dwell BEFORE its first scripted input, not just
      * between inputs. Without it the title's START lands on the title's first
      * frame, which leaves no cadence window and nothing to capture. The step
@@ -907,7 +907,7 @@ void mnBackupClearStartScene(void)
  * seven menu files, calls ftManagerSetupFilesAllKind for all TWELVE fighters
  * and allocates four figatree heaps out of the scene arena (mnplayersvs.c:4750)
  * -- everything the RSP/RDP scene graph this build does not have would need.
- * That definition is compiled out at NDS_P2_MENU_SHELL and this is the one that
+ * That definition is compiled out at NDS_MENU_SHELL and this is the one that
  * runs: the source's own taskman declaration for this scene, with the arena
  * repointed at the shared taskman arena so every registered scene rewinds the
  * SAME memory and the high-waters stay comparable, and `func_start = NULL`
@@ -938,7 +938,7 @@ void mnPlayersVSStartScene(void)
  * sized to the largest of the nine stage map files, and builds the wallpaper,
  * plaque, icon, name, cursor and 3D-preview object graph plus eight cameras
  * (mnmaps.c:1591) -- all of it for the RSP/RDP pipeline this build does not
- * have. That definition is compiled out at NDS_P2_MENU_SHELL and this is the
+ * have. That definition is compiled out at NDS_MENU_SHELL and this is the
  * one that runs: the source's own taskman declaration for this scene, with the
  * arena repointed at the shared taskman arena so every registered scene
  * rewinds the SAME memory and the high-waters stay comparable, and

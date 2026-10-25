@@ -554,7 +554,7 @@ static u32 sNdsNativeFighterDenseNormalsLow[
     sizeof(sNdsNativeFighterDenseVerticesLow) /
         sizeof(sNdsNativeFighterDenseVerticesLow[0])];
 #endif
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 #if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 /* P2-3: Luigi owns independent generated geometry, so its one-time normal
  * bake cannot alias Mario/Fox's dense-ID namespace. Keep both detail tables in
@@ -567,7 +567,7 @@ static u32 sNdsNativeLuigiFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 #if !NDS_NATIVE_OWNER_IMAGE_DONKEY
 /* Donkey is another independent dense-ID namespace.  As with Luigi, these are
  * one-time CPU-built/read-only tables in cached main RAM, never DMA endpoints;
@@ -580,7 +580,7 @@ static u32 sNdsNativeDonkeyFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 #if !NDS_NATIVE_OWNER_IMAGE_CAPTAIN
 /* Every P2-3 owner has an independent dense-ID namespace. Falcon used to
  * alias Mario/Fox's normal cache because his first owner landing never added
@@ -594,7 +594,7 @@ static u32 sNdsNativeCaptainFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
 #if !NDS_NATIVE_OWNER_IMAGE_LINK
 /* P2-3f49: the shipping build reads these words from the NitroFS owner
  * image instead; the arrays survive only for the VERIFY proof build. */
@@ -604,79 +604,79 @@ static u32 sNdsNativeLinkFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 static u32 sNdsNativeMMarioFighterDenseNormals[
     NDS_NATIVE_IMAGE_MMARIO_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeMMarioFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_MMARIO_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
 static u32 sNdsNativeNMarioFighterDenseNormals[
     NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNMarioFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
 static u32 sNdsNativeNFoxFighterDenseNormals[
     NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNFoxFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
 static u32 sNdsNativeNDonkeyFighterDenseNormals[
     NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNDonkeyFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
 static u32 sNdsNativeNSamusFighterDenseNormals[
     NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNSamusFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
 static u32 sNdsNativeNLinkFighterDenseNormals[
     NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNLinkFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
 static u32 sNdsNativeNYoshiFighterDenseNormals[
     NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNYoshiFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
 static u32 sNdsNativeNCaptainFighterDenseNormals[
     NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNCaptainFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
 static u32 sNdsNativeNKirbyFighterDenseNormals[
     NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNKirbyFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
 static u32 sNdsNativeNPikachuFighterDenseNormals[
     NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNPikachuFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
 static u32 sNdsNativeNPurinFighterDenseNormals[
     NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNPurinFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
 static u32 sNdsNativeNNessFighterDenseNormals[
     NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNNessFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_VERTICES_COUNT];
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 static u32 sNdsNativeBossFighterDenseNormals[
     NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeBossFighterDenseNormalsLow[
@@ -686,79 +686,79 @@ static u32 sNdsNativeBossFighterDenseNormalsLow[
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 #if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 static u8 sNdsNativeLuigiFighterDenseNormalsBuilt;
 static u8 sNdsNativeLuigiFighterDenseNormalsBuiltLow;
 #endif
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 #if !NDS_NATIVE_OWNER_IMAGE_DONKEY
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuilt;
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuiltLow;
 #endif
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 #if !NDS_NATIVE_OWNER_IMAGE_CAPTAIN
 static u8 sNdsNativeCaptainFighterDenseNormalsBuilt;
 static u8 sNdsNativeCaptainFighterDenseNormalsBuiltLow;
 #endif
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
 #if !NDS_NATIVE_OWNER_IMAGE_LINK
 static u8 sNdsNativeLinkFighterDenseNormalsBuilt;
 static u8 sNdsNativeLinkFighterDenseNormalsBuiltLow;
 #endif
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
 static u8 sNdsNativeMMarioFighterDenseNormalsBuilt;
 static u8 sNdsNativeMMarioFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
 static u8 sNdsNativeNMarioFighterDenseNormalsBuilt;
 static u8 sNdsNativeNMarioFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
 static u8 sNdsNativeNFoxFighterDenseNormalsBuilt;
 static u8 sNdsNativeNFoxFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
 static u8 sNdsNativeNDonkeyFighterDenseNormalsBuilt;
 static u8 sNdsNativeNDonkeyFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
 static u8 sNdsNativeNSamusFighterDenseNormalsBuilt;
 static u8 sNdsNativeNSamusFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
 static u8 sNdsNativeNLinkFighterDenseNormalsBuilt;
 static u8 sNdsNativeNLinkFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
 static u8 sNdsNativeNYoshiFighterDenseNormalsBuilt;
 static u8 sNdsNativeNYoshiFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
 static u8 sNdsNativeNCaptainFighterDenseNormalsBuilt;
 static u8 sNdsNativeNCaptainFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
 static u8 sNdsNativeNKirbyFighterDenseNormalsBuilt;
 static u8 sNdsNativeNKirbyFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
 static u8 sNdsNativeNPikachuFighterDenseNormalsBuilt;
 static u8 sNdsNativeNPikachuFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
 static u8 sNdsNativeNPurinFighterDenseNormalsBuilt;
 static u8 sNdsNativeNPurinFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
 static u8 sNdsNativeNNessFighterDenseNormalsBuilt;
 static u8 sNdsNativeNNessFighterDenseNormalsBuiltLow;
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #if !NDS_NATIVE_OWNER_IMAGE_BOSS
 static u8 sNdsNativeBossFighterDenseNormalsBuilt;
 static u8 sNdsNativeBossFighterDenseNormalsBuiltLow;
@@ -805,7 +805,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         sNdsNativeFighterActiveDenseNormalsBuilt = &sNdsNativeImageDenseNormalsReady;
         return owner->tables->dense_normals != NULL;
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (slot == 2u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_LUIGI
@@ -833,7 +833,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (slot == 3u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_DONKEY
@@ -861,7 +861,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (slot == 4u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
@@ -907,7 +907,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeImageDenseNormalsReady;
         return TRUE;
     }
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (slot == 12u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_MMARIO
@@ -934,7 +934,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NMARIO
+#if NDS_NMARIO
     if (slot == 13u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NMARIO
@@ -961,7 +961,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NFOX
+#if NDS_NFOX
     if (slot == 14u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NFOX
@@ -999,7 +999,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeImageDenseNormalsReady;
         return TRUE;
     }
-#if NDS_P2_NDONKEY
+#if NDS_NDONKEY
     if (slot == 15u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
@@ -1026,7 +1026,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NSAMUS
+#if NDS_NSAMUS
     if (slot == 16u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NSAMUS
@@ -1053,7 +1053,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NLINK
+#if NDS_NLINK
     if (slot == 17u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NLINK
@@ -1080,7 +1080,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NYOSHI
+#if NDS_NYOSHI
     if (slot == 18u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NYOSHI
@@ -1107,7 +1107,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NCAPTAIN
+#if NDS_NCAPTAIN
     if (slot == 19u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN
@@ -1134,7 +1134,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NKIRBY
+#if NDS_NKIRBY
     if (slot == 20u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NKIRBY
@@ -1161,7 +1161,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NPIKACHU
+#if NDS_NPIKACHU
     if (slot == 21u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NPIKACHU
@@ -1188,7 +1188,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NPURIN
+#if NDS_NPURIN
     if (slot == 22u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NPURIN
@@ -1215,7 +1215,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_NNESS
+#if NDS_NNESS
     if (slot == 23u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_NNESS
@@ -1242,7 +1242,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (slot == 24u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_BOSS
@@ -1305,7 +1305,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             &sNdsNativeImageDenseNormalsReady;
         return TRUE;
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (slot == 6u)
     {
 #if NDS_NATIVE_OWNER_IMAGE_LINK

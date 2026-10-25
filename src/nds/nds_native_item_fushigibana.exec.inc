@@ -4,7 +4,7 @@
  * geometry are immutable and generated; CURRENT_IMAGE is the only live MObj
  * effect and is applied between the source's tile-size and load-block words.
  * The exact material contract is checked here as well as by the adapter. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemFushigibana(
     const void *actor_base_ptr, u32 actor_bytes,

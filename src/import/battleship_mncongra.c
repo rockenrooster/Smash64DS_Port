@@ -49,7 +49,7 @@
  * rendering is still owed (source-derived, no invented bitmap).
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -148,4 +148,4 @@ void mnCongraStartScene(void)
     }
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

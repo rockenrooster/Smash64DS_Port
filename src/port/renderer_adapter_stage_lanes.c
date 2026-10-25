@@ -185,7 +185,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     union
     {
         NDSRendererNativeMaterial common;
-#if NDS_P2_LINK
+#if NDS_LINK
         NDSRendererNativeMaterial link_special2;
         NDSRendererNativeMaterial link_spin[9];
 #endif
@@ -292,7 +292,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             candidate = TRUE;
         }
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     /* dFTLuigiData points its Special2 slot at llMarioSpecial2FileID exactly
      * like Mario, but ftManager owns a separate destination pointer for each
      * fighter kind.  In a Luigi-vs-Fox match gFTMarioFileSpecial2 is therefore
@@ -339,7 +339,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             break;
         }
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     /* BattleShip dEFManagerDonkeyEntryTaruEffectDesc uses DonkeySpecial2 and
      * gcDrawDObjTreeForGObj. Its DObjDesc at 0x07c8 contains one drawable child
      * whose exact source display-list root is 0x0620. Keep the source tree and
@@ -482,7 +482,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             }
         }
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     /* BattleShip's Link entry wave/beam and attached grounded Spin EFFECT each
      * own a live animated DObj in LinkSpecial2. The collision weapon is a
      * different owner (LinkModel below); do not conflate its MatAnim payload
@@ -559,7 +559,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     /* Falcon Kick/Punch are ordinary source EFDesc GObjs, not entry-car
      * geometry. Keep their live attachment/animation/MObj state and admit only
      * the exact immutable source roots generated for this package. */
@@ -656,7 +656,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         return FALSE;
     }
 
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (((owner_asset_id == 350u) && (root_offset == 0x0a30u)) ||
         ((owner_asset_id == 333u) && (root_offset == 0x0760u)))
     {
@@ -746,7 +746,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         native_texture_variant = (u32)texture_id_curr;
     }
 
-#if NDS_P2_LINK
+#if NDS_LINK
     if (owner_asset_id == 353u)
     {
         MObj *mobj = dobj->mobj;
@@ -1059,7 +1059,7 @@ static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,
     if (root == 1u)
     {
         if (dobj->mobj != NULL || loaded->data_size < 0x13a0u) return FALSE;
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
         palette = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_PIKACHU_SHOCK_PALETTE);
         image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_PIKACHU_SHOCK_IMAGE);
 #else
@@ -1388,7 +1388,7 @@ enum
     nNDSStageDLItemHeart,
     nNDSStageDLItemFFlower,
     nNDSStageDLItemTomato,
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     nNDSStageDLItemMarumine,
     nNDSStageDLItemGLucky,
     nNDSStageDLItemPorygon,
@@ -1450,7 +1450,7 @@ static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount
     [nNDSStageDLItemTomato] = { ndsRendererSubmitNativeItemTomato, NULL,
         &gNdsItemTomatoDrawCount, &gNdsItemTomatoSubmitFailCount,
         nITKindTomato },
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     [nNDSStageDLItemMarumine] = { ndsRendererSubmitNativeYamabukiMarumine,
         NULL, &gNdsYamabukiMarumineDrawCount,
         &gNdsYamabukiMarumineSubmitFailCount, nITKindMarumine },
@@ -1675,7 +1675,7 @@ static inline sb32 ndsItemReplayRouteOk(u32 route_kind)
     {
         return FALSE;
     }
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     if ((route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine)) ||
         (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky)) ||
         (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemPorygon)))
@@ -1776,17 +1776,17 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     NDSRelocLoadedFile *loaded = route->loaded;
     GObj *owner = dobj->parent_gobj;
     u32 route_kind = NDS_SDL_ROUTE_NONE;
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     NDSRendererNativeMaterial bumper_material;
 #endif
     /* The Fire Flower's or the N Bumper's live snapshot (the Starman's
      * first; item_route_material1 its second). */
     NDSRendererNativeMaterial item_route_material;
     NDSRendererNativeMaterial item_route_material1;
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     const u8 *laser_tex_base = NULL;
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     const u8 *inishie_pal_base = NULL;
 #endif
     NDSRendererNativeMaterial pkthunder_material;
@@ -1869,7 +1869,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     case NDS_SDL_ROUTE_SECTOR_LASER:
     {
         /* The texture file, found from the pointer the list carries and
@@ -1966,7 +1966,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     case NDS_SDL_ROUTE_INISHIE_PAKKUN:
     {
         const NDSRelocLoadedFile *pal;
@@ -2046,7 +2046,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     case NDS_SDL_ROUTE_BAKED_ROOM:
         if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
             (ndsNativeBakedRootIsRoom(
@@ -2056,7 +2056,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
         break;
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     case NDS_SDL_ROUTE_CASTLE_BUMPER:
     {
         ITStruct *ip;
@@ -2219,7 +2219,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
         break;
     }
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     case NDS_SDL_ROUTE_HITOKAGE:
     case NDS_SDL_ROUTE_FUSHIGIBANA:
     {
@@ -2373,7 +2373,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         NDS_DIAG(gNdsStageDLFastLaneHits++);
         return TRUE;
     }
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     /* P2-6 (2026-10-02): the same exit for a bumper quad wholly outside the
      * view (see ndsNativeCastleBumperOffscreen). */
     if ((route_kind == NDS_SDL_ROUTE_CASTLE_BUMPER) &&
@@ -2434,7 +2434,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             NDS_DIAG(gNdsChargeShotSubmitFailCount++);
         }
     }
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     else if (route_kind == NDS_SDL_ROUTE_SECTOR_LASER)
     {
         handled = ndsRendererSubmitNativeSectorArwingLaser(
@@ -2451,7 +2451,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
     }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     else if (route_kind == NDS_SDL_ROUTE_INISHIE_PAKKUN)
     {
         ndsStageDLFastItemSeeds(render_stats);
@@ -2603,7 +2603,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         /* Settled either way, as the body settles it. */
         handled = TRUE;
     }
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     else if (route_kind == NDS_SDL_ROUTE_CASTLE_BUMPER)
     {
         ndsStageDLFastItemSeeds(render_stats);
@@ -2714,7 +2714,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             NDS_DIAG(gNdsItemStarSubmitFailCount++);
         }
     }
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     else if ((route_kind == NDS_SDL_ROUTE_HITOKAGE) ||
              (route_kind == NDS_SDL_ROUTE_FUSHIGIBANA))
     {

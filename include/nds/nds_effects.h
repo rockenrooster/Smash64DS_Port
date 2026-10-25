@@ -422,14 +422,14 @@ extern volatile u32 gNdsEffectRendererDObjFieldMask;
  * later Phase-2 owners append new slots in source-order migration batches. */
 /* 2 and 3 were Lakitu and Bronto Burt (baked effect roots since 2026-10-12);
  * the numbers stay so the dispatch counters keep their indices. */
-#define NDS_P2_NDL_KIND_GR_YOSTER_CLOUD 4u
-#define NDS_P2_NDL_KIND_GR_TARUCANN     5u
-#define NDS_P2_NDL_KIND_WP_FIREBALL      6u
-#define NDS_P2_NDL_KIND_WP_BLASTER       7u
-#define NDS_P2_NDL_KIND_IT_LINK_BOMB      8u
-#define NDS_P2_NDL_KIND_COUNT            9u
-extern volatile u32 gNdsNdlDispatch[NDS_P2_NDL_KIND_COUNT];
-extern volatile u32 gNdsNdlFallback[NDS_P2_NDL_KIND_COUNT];
+#define NDS_NDL_KIND_GR_YOSTER_CLOUD 4u
+#define NDS_NDL_KIND_GR_TARUCANN     5u
+#define NDS_NDL_KIND_WP_FIREBALL      6u
+#define NDS_NDL_KIND_WP_BLASTER       7u
+#define NDS_NDL_KIND_IT_LINK_BOMB      8u
+#define NDS_NDL_KIND_COUNT            9u
+extern volatile u32 gNdsNdlDispatch[NDS_NDL_KIND_COUNT];
+extern volatile u32 gNdsNdlFallback[NDS_NDL_KIND_COUNT];
 extern volatile u32 gNdsNdlProcsSkipped;
 extern volatile u32 gNdsNdlBindCount;
 extern volatile u32 gNdsNdlNegativeBindCount;

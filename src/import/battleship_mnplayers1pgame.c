@@ -60,7 +60,7 @@
 
 #include "nds_build_config.h"
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -74,7 +74,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
 #include <nds/nds_menu_shell.h>
 #endif
 #include <reloc_data.h>
@@ -212,7 +212,7 @@ static void ndsMNPlayers1PGameDraw(void)
 {
     GObj *fighter = sMNPlayers1PGameSlot.player;
 
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     GObj *cursor = sMNPlayers1PGameSlot.cursor;
     GObj *puck = sMNPlayers1PGameSlot.puck;
     SObj *cursor_sobj = (cursor != NULL) ? SObjGetStruct(cursor) : NULL;
@@ -250,7 +250,7 @@ extern void mnPlayersVSStartScene(void);
 
 void mnPlayers1PGameStartScene(void)
 {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P7 C1 (2026-10-19): with Remix contents the 1P select is the native
      * VS screen in its one-card mode (nds_menu_shell_css.c sCssOneP), so the
      * scene starts as that screen's does (nds_menu_shell_router.c
@@ -265,14 +265,14 @@ void mnPlayers1PGameStartScene(void)
      * when non-NULL. Reentry would eject the torn-down GObj, so null it. */
     sMNPlayers1PGameTimeGObj = NULL;
     ndsBaseMNPlayers1PGameStartScene();
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     ndsMenuShellOnePlayerCssExit();
 #endif
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)sMNPlayers1PGameManPlayer);
     ndsMNPlayers1PPreviewRetire();
 }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* LAB (campaign walk, nds_menu_shell_core.c): the cursor, so the walk steers
  * the puck to a portrait by position -- one pump tic moves it 4 or 8 px, so
  * counted stick tics overshoot the far columns -- and the four unlockables
@@ -296,4 +296,4 @@ void ndsMNPlayers1PGameWalkUnlockAll(void)
 }
 #endif
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

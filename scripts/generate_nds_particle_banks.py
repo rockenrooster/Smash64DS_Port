@@ -157,9 +157,9 @@ YOSTER_MEASURED_LIVE_SCRIPTS = frozenset((0,))
 YOSTER_MEASURED_LIVE_TEXTURES = frozenset((0,))
 # Same gate as the SSS kit (scripts/menus/generate_mn_ui_kit.py): the default
 # bake is the verified Dream Land pack, and the Yoster rows only exist when the
-# Makefile bakes with NDS_P2_STAGE_YOSTER=1. Flag-off outputs are byte-identical
+# Makefile bakes with NDS_STAGE_YOSTER=1. Flag-off outputs are byte-identical
 # to the old ones, which --check enforces.
-YOSTER_BAKE_ENABLED = os.environ.get("NDS_P2_STAGE_YOSTER") == "1"
+YOSTER_BAKE_ENABLED = os.environ.get("NDS_STAGE_YOSTER") == "1"
 
 # The item particle bank: Lizardon's/Hitokage's/F-Flower's flame (script 0)
 # and smoke (script 2). decomp it/itmanager.c:150 registers it FIRST, so a
@@ -678,7 +678,7 @@ QUAD_HEAL_SPARKLE_CELL_MAX = 8
 #
 # RUN THE GENERATOR THE WAY THE MAKEFILE DOES BEFORE READING ITS REPORT.
 # A bare `python scripts/generate_nds_particle_banks.py` bakes with
-# YOSTER_BAKE_ENABLED false, because that reads NDS_P2_STAGE_YOSTER from the
+# YOSTER_BAKE_ENABLED false, because that reads NDS_STAGE_YOSTER from the
 # environment and the Makefile is what exports it. The committed
 # NDS_PARTICLE_BANKS.generated.json is a flag-ON bake, so diffing a bare run
 # against it shows the entire `yoster` bank disappearing and texture 192 being
@@ -3652,7 +3652,7 @@ typedef struct NDSHyruleNativeTexture
     u8 ds_format, frames;
     u32 data_offset, palette_offset, frame_bytes;
 }} NDSHyruleNativeTexture;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 extern u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES];
 extern const u32 gNdsHyruleScriptOffsets[NDS_HYRULE_SCRIPT_COUNT];
 extern const NDSHyruleNativeTexture gNdsHyruleNativeTextures[NDS_HYRULE_NATIVE_TEXTURE_COUNT];
@@ -3667,7 +3667,7 @@ def render_hyrule_inc(bank: dict) -> str:
             "width", "height", "palette_entries", "ds_format", "frames",
             "data_offset", "palette_offset", "frame_bytes")) + " },"
         for row in bank["textures"])
-    return f"""#if NDS_P2_STAGE_HYRULE
+    return f"""#if NDS_STAGE_HYRULE
 /* Generated source bytecode; normalized once in place, like the other banks. */
 u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES] __attribute__((aligned(4))) = {{
 {_hex_rows(bank['script_payload'])}
@@ -4451,7 +4451,7 @@ def render_inc(pack: dict) -> str:
             f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
             for index, row in enumerate(yoster["texture_rows"])
         )
-        yoster_inc_section = f"""#if NDS_P2_STAGE_YOSTER
+        yoster_inc_section = f"""#if NDS_STAGE_YOSTER
 /* Yoster Island's cloud-vapor bank (decomp gr/grcommon/gryoster.c,
  * grYosterCloudVaporMakeEffect names script 0). Same big-endian-in-place
  * contract as the two banks above. Quad rows for this bank live in

@@ -336,7 +336,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
               f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables"),
              images._image_type(owner, detail), "base",
              f"NDS_NATIVE_IMAGE_{owner.upper()}_{detail.upper()}")
-            for owner in images.P2_IMAGE_OWNERS for detail in images.DETAILS
+            for owner in images.NATIVE_IMAGE_OWNERS for detail in images.DETAILS
         }
         expected.update({
             (f"sNds{owner}1SkeletonTables", f"NDSNative{owner}_Skeleton1HighImage",

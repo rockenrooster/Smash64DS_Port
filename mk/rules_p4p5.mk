@@ -232,7 +232,7 @@ NDS_COMPACT_GROUND_MAP_FILES := \
 	reloc_stages/GRInishieMap
 # The 1P arenas and boards follow the same flag (2026-10-01): each still
 # loaded a 158,928-byte wallpaper container into every 1P battle.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_COMPACT_GROUND_MAP_FILES += \
 	reloc_stages/GRYosterSmallMap reloc_stages/GRMetalMap \
 	reloc_stages/GRZakoMap reloc_stages/GRLastMap \

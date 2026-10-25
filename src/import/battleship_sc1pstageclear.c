@@ -16,7 +16,7 @@
  * name (the battleship_sc1pbonusstage.c / battleship_scvsbattle.c seam),
  * so a later measured DS arena rebudget has a seam and the diff stays
  * reviewable. The adapter is a verbatim pass-through; no behaviour invented
- * here. Gated on NDS_P2_1P_GAME like the ladder tables and the runtime.
+ * here. Gated on NDS_1P_GAME like the ladder tables and the runtime.
  *
  * Ownership transfer: the 58-row dSC1PStageClearBonusData was a verbatim
  * transcription in src/import/battleship_sc1pstageclear_tables.c; once this
@@ -37,7 +37,7 @@
  * gSCManagerSceneData.bonus_get_mask[3] / spgame_score /
  * bonus_tasks_complete plus battle state. The gSC1PGameBonus* writers the
  * inventory names all defer to the strong owner under this flag:
- * Tomato/Heart (battleship_ftcommon_get.c:41-44 #if !NDS_P2_1P_GAME),
+ * Tomato/Heart (battleship_ftcommon_get.c:41-44 #if !NDS_1P_GAME),
  * MewCatcher (battleship_item_map_core.c:168 same gate), Star/GiantImpact
  * (reloc_backend_compat_shims.c:396 same gate), ShieldBreaker (weak in
  * battleship_ftcommon_shieldbreakfly.c:28, strong ub8 in the included
@@ -94,7 +94,7 @@
  *   src/port/title_backend.c:457 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <string.h>
@@ -179,4 +179,4 @@ void sc1PStageClearStartScene(void)
     ndsBaseSC1PStageClearStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

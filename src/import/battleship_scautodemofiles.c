@@ -9,7 +9,7 @@
  * the port's ll*FileID tokens (reloc_data.h); dGMCommonFileIDs/gGMCommonFiles
  * come from include/gm/generic.h. Gated with its sibling. */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <ssb_types.h>
 #include <gm/generic.h>
@@ -18,4 +18,4 @@
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scautodemofiles.c"
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

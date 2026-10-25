@@ -53,12 +53,12 @@ u8 ndsMatchConfigClampPublishedHandicap(u8 handicap)
 }
 
 
-#if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI) || (!NDS_P2_DONKEY) || (!NDS_P2_CAPTAIN)
-#error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1 NDS_P2_SAMUS=1"
+#if NDS_FOUR_CPU_ROSTER && (!NDS_LUIGI) || (!NDS_DONKEY) || (!NDS_CAPTAIN)
+#error "NDS_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_LUIGI=1 NDS_DONKEY=1 NDS_CAPTAIN=1 NDS_SAMUS=1"
 #endif
-#if NDS_P2_FOUR_CPU_ROSTER
+#if NDS_FOUR_CPU_ROSTER
 /* The roster arm's four kinds come from the build (Makefile
- * NDS_P2_FOUR_CPU_KIND0..3, BattleShip fttypes.h ordinals) so a fighter row
+ * NDS_FOUR_CPU_KIND0..3, BattleShip fttypes.h ordinals) so a fighter row
  * can measure itself under the stress config without editing this file. A
  * kind whose source closure is not admitted cannot be instantiated. */
 /* Each clause is its own parenthesised term. The four P2-3 roster-close
@@ -66,32 +66,32 @@ u8 ndsMatchConfigClampPublishedHandicap(u8 handicap)
  * never closed before its `||`, so Yoshi, Ness, Purin and Kirby shared
  * one term and the #if below could accept a kind whose admission flag is
  * off. It balanced, so it compiled. */
-#define NDS_P2_KIND_ADMITTED(k) \
-    ((k) == 0 || (k) == 1 || ((k) == 4 && NDS_P2_LUIGI) || \
-     ((k) == 2 && NDS_P2_DONKEY) || ((k) == 7 && NDS_P2_CAPTAIN) || \
-     ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
-     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI) || \
-     ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
-     ((k) == 8 && NDS_P2_KIRBY) || \
-     ((k) == 26 && NDS_P2_GDONKEY) || \
-     ((k) == 13 && NDS_P2_MMARIO) || \
-     ((k) == 14 && NDS_P2_NMARIO) || \
-     ((k) == 15 && NDS_P2_NFOX) || \
-     ((k) == 16 && NDS_P2_NDONKEY) || \
-     ((k) == 17 && NDS_P2_NSAMUS) || \
-     ((k) == 18 && NDS_P2_NLUIGI) || \
-     ((k) == 19 && NDS_P2_NLINK) || \
-     ((k) == 20 && NDS_P2_NYOSHI) || \
-     ((k) == 21 && NDS_P2_NCAPTAIN) || \
-     ((k) == 22 && NDS_P2_NKIRBY) || \
-     ((k) == 23 && NDS_P2_NPIKACHU) || \
-     ((k) == 24 && NDS_P2_NPURIN) || \
-     ((k) == 25 && NDS_P2_NNESS))
-#if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
-    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
-    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \
-    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND3)
-#error "NDS_P2_FOUR_CPU_KIND0..3 names a fighter whose NDS_P2_<X> admission flag is off"
+#define NDS_KIND_ADMITTED(k) \
+    ((k) == 0 || (k) == 1 || ((k) == 4 && NDS_LUIGI) || \
+     ((k) == 2 && NDS_DONKEY) || ((k) == 7 && NDS_CAPTAIN) || \
+     ((k) == 3 && NDS_SAMUS) || ((k) == 5 && NDS_LINK) || \
+     ((k) == 9 && NDS_PIKACHU) || ((k) == 6 && NDS_YOSHI) || \
+     ((k) == 11 && NDS_NESS) || ((k) == 10 && NDS_PURIN) || \
+     ((k) == 8 && NDS_KIRBY) || \
+     ((k) == 26 && NDS_GDONKEY) || \
+     ((k) == 13 && NDS_MMARIO) || \
+     ((k) == 14 && NDS_NMARIO) || \
+     ((k) == 15 && NDS_NFOX) || \
+     ((k) == 16 && NDS_NDONKEY) || \
+     ((k) == 17 && NDS_NSAMUS) || \
+     ((k) == 18 && NDS_NLUIGI) || \
+     ((k) == 19 && NDS_NLINK) || \
+     ((k) == 20 && NDS_NYOSHI) || \
+     ((k) == 21 && NDS_NCAPTAIN) || \
+     ((k) == 22 && NDS_NKIRBY) || \
+     ((k) == 23 && NDS_NPIKACHU) || \
+     ((k) == 24 && NDS_NPURIN) || \
+     ((k) == 25 && NDS_NNESS))
+#if !NDS_KIND_ADMITTED(NDS_FOUR_CPU_KIND0) || \
+    !NDS_KIND_ADMITTED(NDS_FOUR_CPU_KIND1) || \
+    !NDS_KIND_ADMITTED(NDS_FOUR_CPU_KIND2) || \
+    !NDS_KIND_ADMITTED(NDS_FOUR_CPU_KIND3)
+#error "NDS_FOUR_CPU_KIND0..3 names a fighter whose NDS_<X> admission flag is off"
 #endif
 #endif
 
@@ -213,7 +213,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #else
     cfg->fighters[1].level = 3;
 #endif
-#if NDS_P2_FOUR_CPU_STRESS
+#if NDS_FOUR_CPU_STRESS
     /* P2-2 standing gate: four source VSBattle instances, not four renderer
      * owners. The content set is still only Mario/Fox, so mirrors deliberately
      * occupy P3/P4 and exercise every instance-indexed fighter/render path.
@@ -278,7 +278,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         cfg->item_appearance_rate = (u8)gNdsLabItemRate;
     }
 #endif
-#if NDS_P2_FOUR_CPU_ROSTER
+#if NDS_FOUR_CPU_ROSTER
     /* THE STRESS ARM FOLLOWS THE LANDED ROSTER, which is what PROJECT_GOAL's
      * P2 gate actually asks for: "the measured hardest fighter set", a measured
      * argmax over landed content rather than a guess frozen when the content
@@ -292,18 +292,18 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      *
      * All four are distinct, so common costume 0 is source-legal for every
      * slot and no duplicate-costume rule is involved. */
-    cfg->fighters[0].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND0;
+    cfg->fighters[0].fkind = (FTKind)NDS_FOUR_CPU_KIND0;
     cfg->fighters[0].costume =
-        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND0, 0);
-    cfg->fighters[1].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND1;
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_FOUR_CPU_KIND0, 0);
+    cfg->fighters[1].fkind = (FTKind)NDS_FOUR_CPU_KIND1;
     cfg->fighters[1].costume =
-        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND1, 0);
-    cfg->fighters[2].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND2;
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_FOUR_CPU_KIND1, 0);
+    cfg->fighters[2].fkind = (FTKind)NDS_FOUR_CPU_KIND2;
     cfg->fighters[2].costume =
-        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND2, 0);
-    cfg->fighters[3].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND3;
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_FOUR_CPU_KIND2, 0);
+    cfg->fighters[3].fkind = (FTKind)NDS_FOUR_CPU_KIND3;
     cfg->fighters[3].costume =
-        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_FOUR_CPU_KIND3, 0);
 #if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
     /* LAB ONLY: boot-poked roster, one nFTKind byte a slot (0xFF keeps
      * the preset's), and its common costume (gNdsLabFourCpuCostumes). */
@@ -395,14 +395,14 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* decomp sc/sctypes.h:33-43 verbatim layout: the per-port 1P setup the ladder
  * seeds (copy_kind at sc1pgame.c:1219) and the included creation loop
  * (sc1pgame.c:2159) and wave hook (:1399) copy to FTDesc.copy_kind. Declared
  * here as a layout mirror -- not a second owner -- so the 1P-only apply block
  * below can commit the descriptor's copy_kind exactly where the source writes
  * it, without this VS-owned TU including the 1P import. VS builds
- * (NDS_P2_1P_GAME=0) never declare the symbol, so they cannot reference it. */
+ * (NDS_1P_GAME=0) never declare the symbol, so they cannot reference it. */
 typedef struct NdsSC1PGamePlayerSetupMirror {
     s32 mapobj_kind;
     void *figatree;
@@ -609,7 +609,7 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         {
             player->stock_count = slot->stock_count;
             player->is_spgame_enemy = slot->is_spgame_enemy;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
             /* 1P only: the opening Kirby copy power, exactly where the source
              * writes it (sSC1PGamePlayerSetups[player].copy_kind,
              * sc1pgame.c:1219). The included creation loop (:2159) and wave

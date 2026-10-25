@@ -209,7 +209,7 @@ static void ndsMenuShellCssUpdateStatus(void)
      * than transcribed-and-dead. */
 }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* THE WALK'S CANONICAL SNAPSHOT (2026-09-04 rung-7 catch). The CSS cursor moves
  * in PIXELS (4 px a held frame), not cells, so the tour's travel distances are
  * roster-independent -- but its A presses are NOT: A over a portrait DROPS the
@@ -832,7 +832,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         return;
     }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
     /* The roster tour owns the screen while it runs, which also swallows the
      * walk's START tap -- see the tour's own comment. Everything below is the
      * player's input path and has nothing to drive. */
@@ -1082,7 +1082,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         u32 lit;
         /* The walk's START placed its fighter this frame (below). */
         u32 walk_placed = FALSE;
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
         /* Walk-only canonical snapshot: wander first, restore, then run the
          * ordinary ready/START path below on the restored state. See the
          * snapshot's own comment for why this is roster-independent.
@@ -1317,7 +1317,7 @@ static void ndsMenuShellCssInit(void)
 {
     u32 i;
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
     /* Per entry, not per boot: a second visit tours again, and the masks are
      * cumulative so a kind that drew on either visit reads as drawn. */
     ndsMenuShellCssWalkTourReset();
@@ -1495,7 +1495,7 @@ static void ndsMenuShellCssInit(void)
     ndsMenuShellCssVramUnderlayReset();
 }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* nds_menu_shell_core.c's walk: the 1P select takes its own script. */
 static u32 ndsMenuShellCssWalkOneP(void)
 {

@@ -17,8 +17,8 @@
  * - reached from title idle via mnTitleProceedDemoNext default arm
  *   (mntitle.c:481-483: scene_curr = nSCKindExplain).
  *
- * Gated on NDS_P2_1P_GAME: Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05: only NDS_P2_1P_GAME at Makefile:700, gate block at
+ * Gated on NDS_1P_GAME: Makefile has no NDS_MODES_META flag
+ * (verified 2026-09-05: only NDS_1P_GAME at Makefile:700, gate block at
  * :4042), so rides campaign flag like P2-6 step 5 bonus-stage TU until P2-7
  * mints own gate.
  *
@@ -54,7 +54,7 @@
  *   mpCollisionGetPlayerMapObjPosition (src/port/
  *   reloc_backend_compat_shims.c:17652; decl battleship_gmcamera.c:59),
  *   itManagerMakeItemSetupCommon (include/it/item.h:1009, defined by
- *   battleship_item_link_core.c behind NDS_P2_ITEM_CORE -- same cross-gate
+ *   battleship_item_link_core.c behind NDS_ITEM_CORE -- same cross-gate
  *   shape as training TU riding item core; recorded, not shimmed),
  *   ovl63_BSS_END (DECLARE_OVL in include/sc/scene.h:588-604).
  * - Collisions needing reported gating (not renamed away, behaviour must win):
@@ -62,7 +62,7 @@
  *   src/port/title_backend.c:490 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -127,4 +127,4 @@ void scExplainStartScene(void)
     ndsBaseSCExplainStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

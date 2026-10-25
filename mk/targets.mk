@@ -59,8 +59,8 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # gameplay, not menu automation. Restore the source effect capacity too; a
 # four-way burst measured through P1's reduced 12-entry pool would be a different
 # game-state policy, not merely a tighter memory budget.
-override NDS_P2_FOUR_CPU_STRESS := 1
-override NDS_P2_COMPACT_BATTLE_FIGHTERS := 1
+override NDS_FOUR_CPU_STRESS := 1
+override NDS_COMPACT_BATTLE_FIGHTERS := 1
 override NDS_R2_EFFECT_POOL := 38
 # P2-2p8 Phase 0 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md A9): the gate
 # measures the game, not the instrument. The on-screen tick-HUD block cost
@@ -81,9 +81,9 @@ override NDS_TICK_HUD_SPANS_DEFAULT := 0
 ifneq ($(origin NDS_TICK_HUD_WINDOW),command line)
 NDS_TICK_HUD_WINDOW := 32
 endif
-ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
+ifeq ($(NDS_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
-# 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
+# 1 on this target (see its declaration above). `NDS_FOUR_CPU_ROSTER=0`
 # rebuilds the Mario/Fox mirror roster and is the control every A/B against a
 # pre-2026-08-25 figure has to use.
 #
@@ -134,16 +134,16 @@ ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # Samus/Fox/Captain/Donkey. Luigi remains admitted because native-owner slots are
 # a dense ABI (Donkey and Captain build on the already-qualified Luigi slot), but
 # neither Luigi nor Mario is instantiated by the direct battle descriptor.
-override NDS_P2_LUIGI := 1
-override NDS_P2_DONKEY := 1
-override NDS_P2_CAPTAIN := 1
-override NDS_P2_SAMUS := 1
+override NDS_LUIGI := 1
+override NDS_DONKEY := 1
+override NDS_CAPTAIN := 1
+override NDS_SAMUS := 1
 # P2-2 capacity discriminator (2026-09-10 semantic-pack census): the resolved
 # lower endpoint peaks at Donkey/Samus/Link/Kirby. Keep the older landed owner
 # admissions above compiled into this shipping-shaped stress build, but
 # instantiate the exact four kinds whose resident set the capacity row judges.
-override NDS_P2_LINK := 1
-override NDS_P2_KIRBY := 1
+override NDS_LINK := 1
+override NDS_KIRBY := 1
 # The four kinds are pinned because the capacity row judges this exact set. They
 # are overridable ONLY through NDS_LAB_FOURCPU_KINDS, and only to answer a
 # question the capacity argmax does not: whether the PERFORMANCE gap is
@@ -154,21 +154,21 @@ override NDS_P2_KIRBY := 1
 #
 # Format: four space-separated BattleShip fttypes.h ordinals, e.g.
 # `NDS_LAB_FOURCPU_KINDS="7 4 2 8"` for Captain/Luigi/Donkey/Kirby. Only kinds
-# whose NDS_P2_<NAME> admission is 1 above can be instantiated -- this target
+# whose NDS_<NAME> admission is 1 above can be instantiated -- this target
 # admits Captain, Donkey, Kirby, Link, Luigi and Samus -- and nds_match_config.c
 # refuses any other. Empty (the default) keeps the pinned capacity roster, so a
 # normal build and the registry gate are byte-unchanged.
 NDS_LAB_FOURCPU_KINDS ?=
 ifeq ($(strip $(NDS_LAB_FOURCPU_KINDS)),)
-override NDS_P2_FOUR_CPU_KIND0 := 2
-override NDS_P2_FOUR_CPU_KIND1 := 3
-override NDS_P2_FOUR_CPU_KIND2 := 5
-override NDS_P2_FOUR_CPU_KIND3 := 8
+override NDS_FOUR_CPU_KIND0 := 2
+override NDS_FOUR_CPU_KIND1 := 3
+override NDS_FOUR_CPU_KIND2 := 5
+override NDS_FOUR_CPU_KIND3 := 8
 else
-override NDS_P2_FOUR_CPU_KIND0 := $(word 1,$(NDS_LAB_FOURCPU_KINDS))
-override NDS_P2_FOUR_CPU_KIND1 := $(word 2,$(NDS_LAB_FOURCPU_KINDS))
-override NDS_P2_FOUR_CPU_KIND2 := $(word 3,$(NDS_LAB_FOURCPU_KINDS))
-override NDS_P2_FOUR_CPU_KIND3 := $(word 4,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_FOUR_CPU_KIND0 := $(word 1,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_FOUR_CPU_KIND1 := $(word 2,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_FOUR_CPU_KIND2 := $(word 3,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_FOUR_CPU_KIND3 := $(word 4,$(NDS_LAB_FOURCPU_KINDS))
 endif
 endif
 endif
@@ -176,8 +176,8 @@ endif
 # P2-1d VS shell lab target: the playable menu flow, in the SHIPPING battle
 # configuration.
 #
-# It is the proof block with three flags added -- NDS_P2_UI_KIT,
-# NDS_P2_MENU_SHELL and NDS_P2_MENU_WALK -- and nothing removed, which is the
+# It is the proof block with three flags added -- NDS_UI_KIT,
+# NDS_MENU_SHELL and NDS_MENU_WALK -- and nothing removed, which is the
 # whole point. P2-1c's kit target could use `normal` because it drew a surface
 # and touched no battle; this row's flow ENDS IN THE MATCH, so the match it
 # reaches has to be the canonical one or the run proves nothing about entering
@@ -185,7 +185,7 @@ endif
 # texture pack, and every gameplay flag the Boundary arm carries; the shell
 # flag moves only the BOOT SCENE, from the battle to the splash.
 #
-# NDS_P2_MENU_WALK := 1 drives the screens' own input handlers through one
+# NDS_MENU_WALK := 1 drives the screens' own input handlers through one
 # scripted pass with a dwell on each screen, so a single run is both the
 # cadence measurement and the capture window for every screenshot. The battle
 # it enters then runs for real at NDS_HARNESS_FAST_LOGIC := 0.
@@ -194,7 +194,7 @@ endif
 # figure from it is a Boundary figure.
 #
 # P2-1d/1e/1f EACH ADDED A NAME, NOT A BLOCK -- the character select and the
-# stage select are more screens inside NDS_P2_MENU_SHELL and wanted exactly
+# stage select are more screens inside NDS_MENU_SHELL and wanted exactly
 # these flags, so all three selected this one block and the only measurable
 # difference between them was the ROM's filename.
 #
@@ -204,9 +204,9 @@ endif
 # three identical ROMs is current. `smash64ds-p2-shell-hwtri` is the shipping-
 # configuration shell arm -- the cadence, screenshot and realtime-through-menus
 # surface the phase closes on -- and the loop block below carries the other.
-NDS_P2_MENU_SHELL_TARGETS := \
+NDS_MENU_SHELL_TARGETS := \
 	smash64ds-p2-shell-hwtri
-ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_TARGETS)),)
+ifneq ($(filter $(TARGET),$(NDS_MENU_SHELL_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
@@ -222,29 +222,29 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_P2_UI_KIT := 1
-override NDS_P2_MENU_SHELL := 1
-# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
-$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
+override NDS_UI_KIT := 1
+override NDS_MENU_SHELL := 1
+# The roster ladder; it is defined once, near NDS_SHELL_ROSTER.
+$(eval $(NDS_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play
 # under the scripted lap with stage identity asserted; the item core derives
 # itself from them, so the items come with them.
-override NDS_P2_STAGE_YOSTER := 1
-override NDS_P2_STAGE_CASTLE := 1
-override NDS_P2_STAGE_JUNGLE := 1
-override NDS_P2_STAGE_ZEBES := 1
-override NDS_P2_STAGE_HYRULE := 1
-override NDS_P2_STAGE_YAMABUKI := 1
-override NDS_P2_STAGE_INISHIE := 1
-override NDS_P2_STAGE_SECTOR := 1
+override NDS_STAGE_YOSTER := 1
+override NDS_STAGE_CASTLE := 1
+override NDS_STAGE_JUNGLE := 1
+override NDS_STAGE_ZEBES := 1
+override NDS_STAGE_HYRULE := 1
+override NDS_STAGE_YAMABUKI := 1
+override NDS_STAGE_INISHIE := 1
+override NDS_STAGE_SECTOR := 1
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
 ## the source depth; the P1 direct-boot/perf targets keep their measured cap.
 override NDS_R2_EFFECT_POOL := 38
-override NDS_P2_MENU_WALK := 1
+override NDS_MENU_WALK := 1
 # P2-1M gate catch (2026-08-19): the P1 demo ladder is direct-boot demo
 # behaviour. In the shell game the CHARACTER SELECT decides Fox's level, so
 # the ladder must not ride any shell configuration; the gcrunall pin derives
@@ -253,17 +253,17 @@ override NDS_DEMO_FOX_CPU_LADDER := 0
 endif
 # P2-1L item (10) FREE-PLAY lab target: the shipping-configuration shell
 # above, minus the one flag that makes that ROM scripted. It is a full copy
-# of the NDS_P2_MENU_SHELL_TARGETS block rather than a delta on it, on
+# of the NDS_MENU_SHELL_TARGETS block rather than a delta on it, on
 # purpose -- P2-1b's own comment (above) already ruled out appending a name
 # to a shared filter list, and the loop-verifier block below is the
 # precedent for "a distinct shell variant gets its own full block".
 #
-# NDS_P2_MENU_WALK IS NOT OVERRIDDEN, so it stays the Makefile default (0)
+# NDS_MENU_WALK IS NOT OVERRIDDEN, so it stays the Makefile default (0)
 # -- and 0 is not merely inert, it is ABSENT. Every walk site is
-# `#if NDS_P2_MENU_WALK`: the dwell scripts (kNdsMenuWalk*), the tap
+# `#if NDS_MENU_WALK`: the dwell scripts (kNdsMenuWalk*), the tap
 # injector (ndsMenuShellWalkTap, nds_menu_shell.c:485), and the Results
 # auto-START (ndsMenuShellWalkWantsResultsStart, :580, and its
-# NDS_P2_MENU_SHELL && NDS_P2_MENU_WALK call site in
+# NDS_MENU_SHELL && NDS_MENU_WALK call site in
 # nds_platform.c:503) all fail to exist in this translation unit rather than
 # merely reading zero. What is left in `ndsMenuShellReadTaps` is
 # `ndsPlatformReadInput()` calling `scanKeys()`/`keysHeld()` -- the same live
@@ -278,14 +278,14 @@ endif
 # one flag block, two output names. `smash64ds` hardcodes its output to the
 # project root like every published name; the lab twin stays in builds/ for
 # side-by-side testing without touching the published artifact. The gate's
-# battle arm runs this configuration plus NDS_P2_MENU_WALK (unattended pass),
+# battle arm runs this configuration plus NDS_MENU_WALK (unattended pass),
 # so the published ROM is verifier-covered per the publish law. No tick
 # figure from the free-play name is a Boundary figure; the gate measures its
 # own walk arm.
-NDS_P2_MENU_SHELL_FREEPLAY_TARGETS := \
+NDS_MENU_SHELL_FREEPLAY_TARGETS := \
 	smash64ds-p2-shell-freeplay-hwtri \
 	smash64ds
-ifneq ($(filter $(TARGET),$(NDS_P2_MENU_SHELL_FREEPLAY_TARGETS)),)
+ifneq ($(filter $(TARGET),$(NDS_MENU_SHELL_FREEPLAY_TARGETS)),)
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
@@ -307,33 +307,33 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_P2_UI_KIT := 1
-override NDS_P2_MENU_SHELL := 1
+override NDS_UI_KIT := 1
+override NDS_MENU_SHELL := 1
 # The published owner ROM is the all-content build. Keep the 1P campaign
 # inseparable from the free-play shell so `make` cannot publish a VS-complete
 # ROM that silently omits 1P Game, its campaign-only opponents, bonus boards,
 # Final Destination/Master Hand, stage-clear/continue scenes, or campaign BGM.
-override NDS_P2_1P_GAME := 1
+override NDS_1P_GAME := 1
 # The all-content shell must use the source-exact compact battle packs. Raw
 # Main/Model residency exhausts the taskman arena after Ness before Fox's
 # 116,752-byte Main allocation; the compact path is the existing full-roster
 # battle representation and preserves the same fighter content.
-override NDS_P2_COMPACT_BATTLE_FIGHTERS := 1
-# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
-$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
+override NDS_COMPACT_BATTLE_FIGHTERS := 1
+# The roster ladder; it is defined once, near NDS_SHELL_ROSTER.
+$(eval $(NDS_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play
 # under the scripted lap with stage identity asserted; the item core derives
 # itself from them, so the items come with them.
-override NDS_P2_STAGE_YOSTER := 1
-override NDS_P2_STAGE_CASTLE := 1
-override NDS_P2_STAGE_JUNGLE := 1
-override NDS_P2_STAGE_ZEBES := 1
-override NDS_P2_STAGE_HYRULE := 1
-override NDS_P2_STAGE_YAMABUKI := 1
-override NDS_P2_STAGE_INISHIE := 1
-override NDS_P2_STAGE_SECTOR := 1
+override NDS_STAGE_YOSTER := 1
+override NDS_STAGE_CASTLE := 1
+override NDS_STAGE_JUNGLE := 1
+override NDS_STAGE_ZEBES := 1
+override NDS_STAGE_HYRULE := 1
+override NDS_STAGE_YAMABUKI := 1
+override NDS_STAGE_INISHIE := 1
+override NDS_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -363,15 +363,15 @@ endif
 # VS START and the stage select's confirm are the shell's own transitions, and
 # battle -> Results is the source's (scvsbattle.c:560).
 #
-# NDS_P2_MENU_WALK := 20 is the phase-close gate written into the ROM, and
+# NDS_MENU_WALK := 20 is the phase-close gate written into the ROM, and
 # `gNdsMenuShellWalkBudget` makes it a SEED rather than a pin -- a smoke run at
 # three laps pokes that variable and costs no build.
 #
 # NEVER PUBLISHED.
-NDS_P2_MENU_WALK_TARGETS := \
+NDS_MENU_WALK_TARGETS := \
 	smash64ds-p2-shell-loop-hwtri
-ifneq ($(filter $(TARGET),$(NDS_P2_MENU_WALK_TARGETS)),)
-override NDS_P2_MENU_WALK := 20
+ifneq ($(filter $(TARGET),$(NDS_MENU_WALK_TARGETS)),)
+override NDS_MENU_WALK := 20
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 1
@@ -387,23 +387,23 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_P2_UI_KIT := 1
-override NDS_P2_MENU_SHELL := 1
-# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
-$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
+override NDS_UI_KIT := 1
+override NDS_MENU_SHELL := 1
+# The roster ladder; it is defined once, near NDS_SHELL_ROSTER.
+$(eval $(NDS_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play
 # under the scripted lap with stage identity asserted; the item core derives
 # itself from them, so the items come with them.
-override NDS_P2_STAGE_YOSTER := 1
-override NDS_P2_STAGE_CASTLE := 1
-override NDS_P2_STAGE_JUNGLE := 1
-override NDS_P2_STAGE_ZEBES := 1
-override NDS_P2_STAGE_HYRULE := 1
-override NDS_P2_STAGE_YAMABUKI := 1
-override NDS_P2_STAGE_INISHIE := 1
-override NDS_P2_STAGE_SECTOR := 1
+override NDS_STAGE_YOSTER := 1
+override NDS_STAGE_CASTLE := 1
+override NDS_STAGE_JUNGLE := 1
+override NDS_STAGE_ZEBES := 1
+override NDS_STAGE_HYRULE := 1
+override NDS_STAGE_YAMABUKI := 1
+override NDS_STAGE_INISHIE := 1
+override NDS_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
 # NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree

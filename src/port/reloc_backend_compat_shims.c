@@ -144,7 +144,7 @@ void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj, GObj *capture_g
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
 void ndsBaseFTCommonThrownUpdateDamageStats(FTStruct *this_fp);
 void ndsBaseFTCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj);
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 void ndsBaseFTCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonCaptureShoulderedSetStatus(GObj *fighter_gobj);
 #endif
@@ -385,9 +385,9 @@ f32 dMPCollisionMaterialFrictions[16] = {
     4.0F, 4.0F, 4.0F, 4.0F
 };
 
-/* decomp sc/sc1pmode/sc1pgame.c:716,723; with NDS_P2_1P_GAME the included
+/* decomp sc/sc1pmode/sc1pgame.c:716,723; with NDS_1P_GAME the included
  * sc1pgame.c (battleship_sc1pgame_runtime.c) owns them. */
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 u8 gSC1PGameBonusStarCount;
 u8 gSC1PGameBonusGiantImpact;
 #endif
@@ -1768,7 +1768,7 @@ sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
     return TRUE;
 }
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 volatile u32 gNdsDonkeyChargePresentationOverrideCount;
 volatile s32 gNdsDonkeyChargePresentationRequestedID = -1;
 volatile s32 gNdsDonkeyChargePresentationAppliedID = -1;
@@ -1796,12 +1796,12 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
          (fp->fkind == nFTKindGDonkey)) &&
         (colanim_id == nGMColAnimFighterFoxSpecialHi))
     {
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
         NDS_DIAG(gNdsDonkeyChargePresentationOverrideCount++);
         gNdsDonkeyChargePresentationRequestedID = colanim_id;
 #endif
         colanim_id = nGMColAnimFighterCommonSpecialNCharge;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
         gNdsDonkeyChargePresentationAppliedID = colanim_id;
 #endif
     }
@@ -2575,14 +2575,14 @@ typedef struct NDSFtPartsFlatWalk
  * (src/import/battleship_gmcollision.c), the fixed ring, the stub joint --
  * bumps this counter first, so a subtree cleared since its last value holds
  * no latch and the clear is skipped: the same state, without the walk. Only
- * where every such writer is wrapped (NDS_P2_JOINT_RESIDENT with
- * NDS_P2_HURTBOX_REJECT). Same-ROM A/B word gNdsFtPartsCleanSkip. */
+ * where every such writer is wrapped (NDS_JOINT_RESIDENT with
+ * NDS_HURTBOX_REJECT). Same-ROM A/B word gNdsFtPartsCleanSkip. */
 volatile u32 gNdsFtPartsLatchWrites;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 volatile u32 gNdsLabFtPartsCleanSkipViolations __attribute__((used));
 volatile u32 gNdsLabFtPartsCleanVerify __attribute__((used, section(".data"))) = 0u;
 #endif
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 1u;
 #else
 volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 0u;
@@ -2858,10 +2858,10 @@ ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
     }
 }
 
-/* src/port/nds_p2_hurtbox_reject.c: its cached fixed worlds live exactly as
+/* src/port/nds_hurtbox_reject.c: its cached fixed worlds live exactly as
  * long as the FTParts latches these functions clear. */
-extern volatile u32 gNdsP2HurtboxLatchEpoch;
-#define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() (gNdsP2HurtboxLatchEpoch++)
+extern volatile u32 gNdsHurtboxLatchEpoch;
+#define NDS_HURTBOX_LATCH_EPOCH_BUMP() (gNdsHurtboxLatchEpoch++)
 
 /* ITCM (2026-09-27 census: ~0.6K ticks/frame non-memory stall at 88 B). */
 void __attribute__((noinline, optimize("Os"))) __attribute__((section(".itcm")))
@@ -2871,7 +2871,7 @@ ftParamsUpdateFighterPartsTransform(DObj *joint)
     FTStruct *fp;
     u32 joint_id;
 
-    NDS_P2_HURTBOX_LATCH_EPOCH_BUMP();
+    NDS_HURTBOX_LATCH_EPOCH_BUMP();
     if (joint == NULL)
     {
         return;
@@ -2916,7 +2916,7 @@ ftParamsUpdateFighterPartsTransform(DObj *joint)
 
 void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
 {
-    NDS_P2_HURTBOX_LATCH_EPOCH_BUMP();
+    NDS_HURTBOX_LATCH_EPOCH_BUMP();
     if (joint != NULL)
     {
         ndsFTParamsInvalidateRootParts(joint, TRUE);

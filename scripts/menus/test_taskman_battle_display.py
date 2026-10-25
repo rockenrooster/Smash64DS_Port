@@ -36,7 +36,7 @@ typedef uint32_t u32;
 typedef struct { u32 w0, w1; } Gfx;
 typedef struct { void *arena_start; size_t arena_size;
                  size_t dl_buffer0_size, dl_buffer1_size; } SceneSetup;
-#define NDS_P2_MENU_SHELL 1
+#define NDS_MENU_SHELL 1
 typedef struct { SceneSetup scene_setup; int budgeted; } SYTaskmanSetup;
 typedef struct { u32 flags; } NdsSceneDesc;
 enum { FALSE = 0, TRUE = 1, NDS_SCENE_FLAG_ARENA_RESET = 1,

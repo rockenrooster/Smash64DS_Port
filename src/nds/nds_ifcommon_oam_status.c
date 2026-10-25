@@ -1220,13 +1220,13 @@ _Static_assert(NDS_IFCOMMON_END_BANK_IMAGE_BYTES ==
                    NDS_IFCOMMON_END_BANK_BYTES,
                "the loader's end-bank scratch must match the bank");
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 static void ndsIFCommonTrainingFrameBegin(void);
 #endif
 
 void ndsIFCommonNativeOamBeginFrame(void)
 {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     ndsIFCommonTrainingFrameBegin();
 #endif
 #if NDS_SHIP_TELEMETRY

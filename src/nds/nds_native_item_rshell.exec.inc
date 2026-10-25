@@ -1,7 +1,7 @@
 /* Red Shell executor. TEXTUAL INCLUDE ONLY.
  * The Red Shell uses the exact same file-86 DD/root/material tables as the
  * Green Shell, so its generated packet aliases the Green Shell packet data. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemRShell(
     const void *file_base_ptr, u32 file_bytes,

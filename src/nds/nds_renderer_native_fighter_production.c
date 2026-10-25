@@ -632,7 +632,7 @@ static s32 ndsRendererValidateNativeRun(
  * model-part root miss from a malformed generated span/material contract.
  *
  * These six words are compiled into EVERY configuration on purpose. They were
- * gated on NDS_TICK_HUD || NDS_P2_NESS, which meant the shipping and profile0
+ * gated on NDS_TICK_HUD || NDS_NESS, which meant the shipping and profile0
  * ROMs — the ones the native-only repair queue actually runs — carried no way
  * to say WHY an owner declined, and a gdb script naming them aborted on the
  * missing symbol instead of printing the answer (2026-09-08, the Results

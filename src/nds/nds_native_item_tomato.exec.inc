@@ -22,7 +22,7 @@
  *
  * The adapter has already COMPARED both relocated SETTIMG words against the
  * loaded file's own base, so nothing is re-derived here. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_tomato[1];

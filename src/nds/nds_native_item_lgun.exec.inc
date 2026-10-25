@@ -1,7 +1,7 @@
 /* Ray Gun / LGun executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x3DB0 contains no 0xDE. Its three image/geometry phases are
  * immutable and are submitted from generated DS-native arrays. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemLGun(
     const void *file_base_ptr, u32 file_bytes,

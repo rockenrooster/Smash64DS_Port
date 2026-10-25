@@ -79,7 +79,7 @@ void syTaskmanStartTask(SYTaskmanSetup *s) {
 '''
 ENTRY_MAIN = r'''
 int main(void) {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     void (*routes[])(void) = {mnModeSelectStartScene, mnVSOptionsStartScene, mnVSItemSwitchStartScene};
     /* Re-entry and source setup immutability, not a memory-leak measurement. */
     for (unsigned lap = 0; lap < 4; ++lap) {
@@ -253,7 +253,7 @@ typedef int32_t s32;
 #define GMCOMMON_PLAYERS_MAX 4u
 #define nSC1PGameStageCommonEnd 8u
 #define nIFPlayerTagKindHeart 5u
-#define NDS_P2_1P_GAME 0
+#define NDS_1P_GAME 0
 typedef struct {
     u8 fkind, pkind, costume, shade, team, handicap, level;
     u8 stock_count, is_spgame_enemy, copy_kind, p4_content;
@@ -458,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
     css = read_split(args.repo / "src/nds/nds_menu_shell_css.c")
     match_config = (args.repo / "src/port/nds_match_config.c").read_text(encoding="utf-8")
     stub_start = backend.index("NDS_SCENE_STUB(mnUnusedFightersStartScene)")
-    stub_end = backend.index("#if !NDS_P2_1P_GAME", stub_start)
+    stub_end = backend.index("#if !NDS_1P_GAME", stub_start)
     stubs = backend[stub_start:stub_end]  # Keeps the actual shell-off guard.
     names = ["ndsMenuShellStartNative2DScene", "mnModeSelectStartScene",
              "mnVSOptionsStartScene", "mnVSItemSwitchStartScene"]
@@ -482,7 +482,7 @@ def main(argv: list[str] | None = None) -> int:
             css_random is None or vsoptions_surface is None or css_draw_arrows is None or
             css_touch_arrows is None):
         raise ValueError("Expected menu function definitions not found; inspect the new source layout.")
-    entry = ENTRY_PREAMBLE + "\n#if NDS_P2_MENU_SHELL\n" + "\n".join(bodies) + "\n#endif\n" + stubs + ENTRY_MAIN
+    entry = ENTRY_PREAMBLE + "\n#if NDS_MENU_SHELL\n" + "\n".join(bodies) + "\n#endif\n" + stubs + ENTRY_MAIN
     row_code = ROW_PREAMBLE + rows + ROW_MAIN
     handicap_code = (HANDICAP_PREAMBLE + handicap_set + handicap_confirm +
                      handicap_save + HANDICAP_MAIN)
@@ -566,8 +566,8 @@ int main(void) {
     with tempfile.TemporaryDirectory(prefix="smash-menu-test-") as temp:
         path = Path(temp)
         for label, code, defines, cases in (
-            ("shell-on-entry", entry, ["-DNDS_P2_MENU_SHELL=1", "-DNDS_P2_1P_GAME=0"], [None]),
-            ("shell-off-stubs", entry, ["-DNDS_P2_MENU_SHELL=0", "-DNDS_P2_1P_GAME=0"], [None]),
+            ("shell-on-entry", entry, ["-DNDS_MENU_SHELL=1", "-DNDS_1P_GAME=0"], [None]),
+            ("shell-off-stubs", entry, ["-DNDS_MENU_SHELL=0", "-DNDS_1P_GAME=0"], [None]),
             ("row-budget", row_code, [], list(range(8))),
             ("handicap-rules", handicap_code, [], [None]),
             ("damage-repeat-policy", damage_code, [], [None]),

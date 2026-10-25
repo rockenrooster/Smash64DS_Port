@@ -10,12 +10,12 @@ Makefile writes with one ``echo '#define NDS_... $(NDS_...)'`` line per flag
 never defines is silently off: ``#if NDS_X`` reads 0 and ``#ifdef NDS_X``
 reads false, and the code-first mode (no compile until the final pass) never
 sees the ``-Wundef`` warning.  Until 2026-09-05 nothing defined the five 1P
-arenas' ``NDS_P2_STAGE_<VENUE>`` guards, so their renderer capture tables were
+arenas' ``NDS_STAGE_<VENUE>`` guards, so their renderer capture tables were
 compiled out of every configuration although the Makefile said they rode
-``NDS_P2_1P_GAME``; this checker exists so that cannot recur.  The opposite
+``NDS_1P_GAME``; this checker exists so that cannot recur.  The opposite
 trap is an echo whose Makefile variable is never assigned: the header then
 carries ``#define NDS_X`` with an EMPTY value, and the first ``#if NDS_X`` is
-a hard "#if with no expression" error (Makefile, the NDS_P2_STAGE_YOSTER
+a hard "#if with no expression" error (Makefile, the NDS_STAGE_YOSTER
 note) -- reported here as EMPTY, before a source tests it.
 
 Tested:  every ``NDS_*`` token on a ``#if`` / ``#ifdef`` / ``#ifndef`` /
@@ -44,7 +44,7 @@ Usage:
     python scripts/check_build_flag_census.py            # holes, EMPTY, allowed
     python scripts/check_build_flag_census.py --strict   # exit 1 on a hole/EMPTY
     python scripts/check_build_flag_census.py --all      # + dead flags, all sites
-    python scripts/check_build_flag_census.py --macro NDS_P2_STAGE_METAL
+    python scripts/check_build_flag_census.py --macro NDS_STAGE_METAL
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ MAKE_ASSIGN_RE = re.compile(r"^(?:override\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?
 MAKE_EVAL_ASSIGN_RE = re.compile(r"\$\(eval\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:?+]?=")
 DASH_D_RE = re.compile(r"(?<![\w-])-D([A-Za-z_][A-Za-z0-9_]*)")
 # Python generator emits: literal names only.  A templated name such as
-# ``NDS_P2_{PU}`` must not become a wildcard -- that would hide exactly the
+# ``NDS_{PU}`` must not become a wildcard -- that would hide exactly the
 # kind of hole this checker exists for.
 PY_DEFINE_RE = re.compile(r"#define\s+(NDS_[A-Za-z0-9_]+)\b(?!\{)")
 

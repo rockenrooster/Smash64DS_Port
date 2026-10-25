@@ -2,7 +2,7 @@
  * File 86 root 0x5EC0 has one exact word-12 call,
  * 0xDE000000 0x0E000000. Its source MObj flags 0x0005 produce exactly
  * PALETTE_IMAGE | PALETTE_TLUT | CURRENT_IMAGE; anything broader declines. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemGShell(
     const void *file_base_ptr, u32 file_bytes,

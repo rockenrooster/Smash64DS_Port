@@ -1,7 +1,7 @@
 /* Star Rod executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x49B0 branches at word 11 to relocated 0x4A18; the generator
  * resolves and bakes that callee. Root 0x4AA0 is the second bake-only DObj. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemStarRod(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,

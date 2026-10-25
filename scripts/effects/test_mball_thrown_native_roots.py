@@ -184,15 +184,15 @@ def entry_seam_facts(text):
     return {
         "pikachu_call": kinds.get("Pikachu", False),
         "purin_call": kinds.get("Purin", False),
-        # A silent `#if NDS_P2_ITEM_CORE` around the call is what produced the
+        # A silent `#if NDS_ITEM_CORE` around the call is what produced the
         # missing effect. The dependency must be declared, not conditional:
-        # `#if !NDS_P2_ITEM_CORE` + `#error` (an UNDEFINED macro trips it too),
+        # `#if !NDS_ITEM_CORE` + `#error` (an UNDEFINED macro trips it too),
         # or a _Static_assert if someone prefers that form.
         "declared_dependency": bool(re.search(
-            r"#if\s*!\s*NDS_P2_ITEM_CORE\s*\n\s*#error", code)) or
-            ("_Static_assert(NDS_P2_ITEM_CORE" in code),
+            r"#if\s*!\s*NDS_ITEM_CORE\s*\n\s*#error", code)) or
+            ("_Static_assert(NDS_ITEM_CORE" in code),
         "conditional_call": bool(re.search(
-            r"#if\s+NDS_P2_ITEM_CORE\s*\n\s*\(void\)"
+            r"#if\s+NDS_ITEM_CORE\s*\n\s*\(void\)"
             r"ndsEFManagerMBallThrownMakeEffectChecked", code)),
     }
 
@@ -268,9 +268,9 @@ def evaluate(defines, thrown, attrs, roots, admission, seam):
                      "(same source case label as Pikachu)")
     if seam["conditional_call"]:
         fails.append("the ball call is back behind a silent "
-                     "`#if NDS_P2_ITEM_CORE`; declare the dependency instead")
+                     "`#if NDS_ITEM_CORE`; declare the dependency instead")
     if not seam["declared_dependency"]:
-        fails.append("the Pikachu/Purin -> NDS_P2_ITEM_CORE dependency is no "
+        fails.append("the Pikachu/Purin -> NDS_ITEM_CORE dependency is no "
                      "longer declared at the entry seam")
     return fails
 

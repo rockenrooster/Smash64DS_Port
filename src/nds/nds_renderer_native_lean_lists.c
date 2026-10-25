@@ -1792,7 +1792,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u)) ||
         ((run_unlit != FALSE) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u)) ||
-#if NDS_P2_LINK
+#if NDS_LINK
         /* G_TEXTURE_GEN_LINEAR only selects the texgen mapping (the polygon
          * team's Link, Captain and Ness parts); without G_TEXTURE_GEN the RSP
          * ignores it. */
@@ -2888,7 +2888,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
             }
         }
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     es->texgen_map = ndsFtrLeanBuildTexgenMap(packet);
 #else
     es->texgen_map = NDS_FTR_LEAN_TEXGEN_MAP_NONE;
@@ -2904,7 +2904,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         u32 floor = packet->word_count;
         u32 word_capacity = ndsFtrLeanWordCapacity();
 
-#if NDS_P2_LINK
+#if NDS_LINK
         if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
         {
             floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;

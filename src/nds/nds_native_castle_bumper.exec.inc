@@ -14,7 +14,7 @@
  * entries over one resident image and no second image is ever baked.  Swap
  * those two calls and both palettes key to ONE entry: the three-tick hit
  * flash silently stops appearing and nothing counts it. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_STAGE_CASTLE
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_castle_bumper[1];
@@ -126,7 +126,7 @@ sb32 ndsRendererSubmitNativeCastleBumper(
     }
     /* Direct source offsets, the same way the Pakkun owner addresses its own
      * frames. The compact-preview translation seam exists only under
-     * NDS_P2_1P_GAME, and Peach's Castle is a VS stage; if a campaign build
+     * NDS_1P_GAME, and Peach's Castle is a VS stage; if a campaign build
      * ever creates this item, that seam has to be taken here as well. */
     image = actor_base + NDS_NATIVE_CASTLE_BUMPER_IMAGE_OFFSET;
     palette0 = actor_base + NDS_NATIVE_CASTLE_BUMPER_PALETTE0_OFFSET;

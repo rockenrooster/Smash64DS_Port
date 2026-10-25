@@ -6,7 +6,7 @@
  * its capture geometry are mechanically equivalent to the source, and exposes
  * ndsGRJungleSetupInitAll for the shared grCommonSetupInitAll gate (which
  * stays in the Pupupu wrapper; this TU must NOT redefine grCommonSetupInitAll
- * or grMainSetupMakeGround). Only built when NDS_P2_STAGE_JUNGLE=1.
+ * or grMainSetupMakeGround). Only built when NDS_STAGE_JUNGLE=1.
  *
  * WHAT MAKES THIS STAGE DIFFERENT FROM THE FIRST TWO. Dream Land's wind
  * pushes a fighter's velocity, Yoshi's Island's clouds are collision, and
@@ -25,7 +25,7 @@
  * Mushroom Kingdom use ftMainCheckAddGroundHazard, which is a different entry
  * point.
  */
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -116,4 +116,4 @@ void *ndsGRJungleTaruCannGObj(void)
     return (void *)gGRCommonStruct.jungle.tarucann_gobj;
 }
 
-#endif /* NDS_P2_STAGE_JUNGLE */
+#endif /* NDS_STAGE_JUNGLE */

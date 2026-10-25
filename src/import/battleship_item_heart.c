@@ -8,7 +8,7 @@
  * battleship_item_gbumper.c owns GBumper's (local token, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  */
 
 #include <it/item.h>

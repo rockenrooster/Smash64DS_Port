@@ -729,7 +729,7 @@ static inline int ndsR2CfxRowScales(const NDSR2CfxMtx *src, int32_t s2_q26[3],
         /* Only the two outputs below read the root. With the hardware unit
          * bound (NDS_R2_CFX_ISQRT64 -> ndsR2HwMathCfxIsqrt64) the root is
          * volatile register traffic the compiler cannot drop, so a caller that
-         * asks for s2 alone (the hurtbox reject's ndsP2HbInvSMin) paid three
+         * asks for s2 alone (the hurtbox reject's ndsHbInvSMin) paid three
          * square roots it never read. */
         if ((s_q12 == NULL) && (inv_s_q26 == NULL))
         {

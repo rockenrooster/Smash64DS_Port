@@ -512,7 +512,7 @@ ndsRendererNativeApplyStateDelta(
         }
         ndsRendererRecordSetImage(
             stats, delta->w0,
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_1P_GAME || NDS_MENU_SHELL || NDS_COMPACT_BATTLE_FIGHTERS
             (u32)(uintptr_t)ndsRelocNativeAssetAddress(asset_base, delta->w1));
 #else
             (u32)(uintptr_t)(asset_base + delta->w1));

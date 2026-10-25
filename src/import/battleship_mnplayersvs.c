@@ -213,7 +213,7 @@ static u32 ndsCssPreviewKindContent(s32 kind)
  * from his select pack (reloc_preview_pack.c). */
 static sb32 ndsCssPreviewKindIsMMario(s32 kind)
 {
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     return (kind == nFTKindMMario) ? TRUE : FALSE;
 #else
     (void)kind;
@@ -829,17 +829,17 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindMario, NDS_NATIVE_IMAGE_SLOT_MARIOFOX)
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindFox, NDS_NATIVE_IMAGE_SLOT_MARIOFOX)
 #endif
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLuigi, NDS_NATIVE_IMAGE_SLOT_LUIGI)
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindDonkey, NDS_NATIVE_IMAGE_SLOT_DONKEY)
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindCaptain, NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
 #endif
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindSamus, NDS_NATIVE_IMAGE_SLOT_SAMUS)
-#if NDS_P2_LINK
+#if NDS_LINK
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLink, NDS_NATIVE_IMAGE_SLOT_LINK)
 #endif
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindPikachu, NDS_NATIVE_IMAGE_SLOT_PIKACHU)
@@ -852,7 +852,7 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
                              NDS_NATIVE_IMAGE_SLOT_##N_)
     NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_SLOT)
 #undef NDS_CSS_P4_OWNER_IMAGE_SLOT
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindMMario, NDS_NATIVE_IMAGE_SLOT_MMARIO)
 #endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
@@ -1114,21 +1114,21 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeMarioFoxHighImage);
     }
 #endif
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (fkind == nFTKindLuigi)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeLuigiLowImage) :
                                         (u32)sizeof(NDSNativeLuigiHighImage);
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (fkind == nFTKindDonkey)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeDonkeyLowImage) :
                                         (u32)sizeof(NDSNativeDonkeyHighImage);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (fkind == nFTKindCaptain)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeCaptainLowImage) :
@@ -1140,7 +1140,7 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeSamusLowImage) :
                                         (u32)sizeof(NDSNativeSamusHighImage);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (fkind == nFTKindLink)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeLinkLowImage) :
@@ -1181,7 +1181,7 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
     }
     NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_BYTES)
 #undef NDS_CSS_P4_OWNER_IMAGE_BYTES
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (fkind == nFTKindMMario)
     {
         return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeMMarioLowImage) :
@@ -2983,13 +2983,13 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         return;
     }
     if ((fkind != nFTKindMario) && (fkind != nFTKindFox)
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
         && (fkind != nFTKindLuigi)
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
         && (fkind != nFTKindDonkey)
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
         && (fkind != nFTKindCaptain)
 #endif
         && (fkind != nFTKindSamus)
@@ -2998,7 +2998,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
  * chain behind it was already there and reachable (setup :510-512, resident
  * prepare :354-356, his native owner slot and image row, ftmanager residency
  * at battleship_ftmanager.c:135-140). Owner playtest, 2026-09-04. */
-#if NDS_P2_LINK
+#if NDS_LINK
         && (fkind != nFTKindLink)
 #endif
         && (fkind != nFTKindPikachu)
@@ -3950,7 +3950,7 @@ void ndsMNPlayersVSRunReadyTransitionProbe(void)
     }
 }
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 /* P2-1e defines the real character-select scene in src/nds/nds_menu_shell.c.
  * This one runs the ORIGINAL mnPlayersVSFuncStart, which loads seven menu
  * files, sets up all twelve fighters and allocates four figatree heaps out of

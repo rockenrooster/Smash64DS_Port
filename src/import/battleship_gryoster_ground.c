@@ -5,9 +5,9 @@
  * are mechanically equivalent to the source, and exposes ndsGRYosterSetupInitAll
  * for the shared grCommonSetupInitAll gate (which stays in the Pupupu wrapper;
  * this TU must NOT redefine grCommonSetupInitAll or grMainSetupMakeGround).
- * Only built when NDS_P2_STAGE_YOSTER=1; the flag-off tree never sees it.
+ * Only built when NDS_STAGE_YOSTER=1; the flag-off tree never sees it.
  */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -124,4 +124,4 @@ void *ndsGRYosterCloudGObj(u32 index)
     return (void *)gGRCommonStruct.yoster.clouds[index].gobj;
 }
 
-#endif /* NDS_P2_STAGE_YOSTER */
+#endif /* NDS_STAGE_YOSTER */

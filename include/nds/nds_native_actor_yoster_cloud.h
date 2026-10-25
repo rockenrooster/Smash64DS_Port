@@ -45,7 +45,7 @@
 /* Hierarchy slot entry (renderer_adapter_matrix.c, patch-only) and the
  * route's commit wrapper (reloc_backend_movement.c, patch-only). The
  * imported Yoster TU owns the per-cloud GObj pointers; both live behind
- * NDS_P2_STAGE_YOSTER. See builds/resume-20260905/yoster-clouds.patch.
+ * NDS_STAGE_YOSTER. See builds/resume-20260905/yoster-clouds.patch.
  */
 sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root, void *cobj,
     u32 initial_geometry_mode, NDSRendererStats *stats);

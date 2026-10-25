@@ -3,7 +3,7 @@
  * Mirrors the seven stage wrappers beside it: this translation unit imports
  * decomp gr/grcommon/grsector.c verbatim and exposes ndsGRSectorSetupInitAll
  * for the shared grCommonSetupInitAll gate. Only built when
- * NDS_P2_STAGE_SECTOR=1.
+ * NDS_STAGE_SECTOR=1.
  *
  * THIS IS THE MOST EXPENSIVE STAGE IN THE GAME. grsector.c is 1,131 lines --
  * 1.9 times Mushroom Kingdom and 4.5 times Congo Jungle -- with roughly
@@ -27,7 +27,7 @@
  * if a laser cannot be made the source's own NULL handling applies, the same
  * way every other stage's absent item degrades.
  */
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -222,4 +222,4 @@ DObj *ndsGRSectorPlatformDObj(void)
     return gMPCollisionYakumonoDObjs->dobjs[1];
 }
 
-#endif /* NDS_P2_STAGE_SECTOR */
+#endif /* NDS_STAGE_SECTOR */

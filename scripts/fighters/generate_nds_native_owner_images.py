@@ -68,19 +68,19 @@ def _owner_title(owner_name: str) -> str:
 # The owners whose tables this tool moves out of the ARM9 image: the P2-3
 # owners, then "mariofox", Mario's and Fox's one shared table set (the frozen
 # combined export, byte for byte; P8 R7). Last, so no other slot moves.
-P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
+NATIVE_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
                    "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss",
                    "mariofox")
 DETAILS = ("high", "low")
-IMAGE_OWNERS = P2_IMAGE_OWNERS + skeletons.IMAGE_OWNERS
+IMAGE_OWNERS = NATIVE_IMAGE_OWNERS + skeletons.IMAGE_OWNERS
 
 # The build flag that decides whether an owner's image exists. It is
-# NDS_P2_<OWNER> for every owner but one: `boss` has no NDS_P2_BOSS -- it ships
+# NDS_<OWNER> for every owner but one: `boss` has no NDS_BOSS -- it ships
 # with the 1P game -- and emitting the mechanical name produced `#if
-# NDS_P2_BOSS`, which -Wundef reports and the preprocessor evaluates as 0, so
+# NDS_BOSS`, which -Wundef reports and the preprocessor evaluates as 0, so
 # the boss image silently stopped resolving. Anything not listed here takes the
 # mechanical name.
-IMAGE_OWNER_GUARDS = {"boss": "NDS_P2_1P_GAME", "mariofox": "1"}
+IMAGE_OWNER_GUARDS = {"boss": "NDS_1P_GAME", "mariofox": "1"}
 
 
 def _owner_guard(owner_name: str) -> str:
@@ -88,7 +88,7 @@ def _owner_guard(owner_name: str) -> str:
         owner_name = owner_name.split("_skeleton")[0]
         if owner_name in ("mario", "fox"):
             return "1"
-    return IMAGE_OWNER_GUARDS.get(owner_name, f"NDS_P2_{owner_name.upper()}")
+    return IMAGE_OWNER_GUARDS.get(owner_name, f"NDS_{owner_name.upper()}")
 
 # Image ABI tag: first word of every image, checked by the runtime
 # (`src/nds/nds_renderer_assets.c`) before binding any member. v3 adds
@@ -663,14 +663,14 @@ def render_header(
         "#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROWS(X) \\",
     ] + [
         f"    NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X) \\"
-        for name in P2_IMAGE_OWNERS
+        for name in NATIVE_IMAGE_OWNERS
         if ((name, "high") in contexts) and ((name, "low") in contexts)
     ] + [
         "    /* end */",
         "",
     ] + [
         line
-        for name in P2_IMAGE_OWNERS
+        for name in NATIVE_IMAGE_OWNERS
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
             f"#if {_owner_guard(name)} && !NDS_NATIVE_OWNER_IMAGE_{name.upper()}",
@@ -848,7 +848,7 @@ def main() -> int:
     repo_root = Path(args.repo_root).resolve()
 
     contexts: dict[tuple[str, str], dict[str, object]] = {}
-    for owner_name in P2_IMAGE_OWNERS:
+    for owner_name in NATIVE_IMAGE_OWNERS:
         for detail in DETAILS:
             contexts[(owner_name, detail)] = (
                 owners.build_mariofox_runtime_context(repo_root, detail)
@@ -869,7 +869,7 @@ def main() -> int:
     # an array is either duplicated (paying arena for nothing) or absent from
     # both places (a dangling table pointer in a draw path), so the two views
     # are compared before anything is written.
-    sample = contexts[(P2_IMAGE_OWNERS[0], DETAILS[0])]
+    sample = contexts[(NATIVE_IMAGE_OWNERS[0], DETAILS[0])]
     described = {
         _array_stem(name) for _ctype, name, _values, _guard
         in _member_values(sample)

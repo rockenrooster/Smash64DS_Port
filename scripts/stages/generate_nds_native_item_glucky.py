@@ -54,7 +54,7 @@ GENERAL except the constants block (asset ids, offsets, VERTS, OPS,
 TEXT_PINS, EXPECTED_* tables, TLUT/image span pins), the anim-joint pin
 (GLucky carries an AnimJoint like Marumine; joint-less siblings assert NULL
 instead), the `(flags & 0xE0000000)` gate (GLucky has is_item_dobjs SET, so
-the gate pins 0x40000000 rather than 0) and the `NDS_P2_ITEM_CORE`
+the gate pins 0x40000000 rather than 0) and the `NDS_ITEM_CORE`
 executor gate.
 """
 

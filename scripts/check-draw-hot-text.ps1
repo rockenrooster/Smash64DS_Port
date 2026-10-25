@@ -60,7 +60,7 @@ foreach ($line in (& $Nm -S -n $Elf)) {
         }
     }
 }
-if ($nmRows.ContainsKey('gNdsP2StageProgDraws')) {
+if ($nmRows.ContainsKey('gNdsStageProgDraws')) {
     # Compiled stage submission has no replay leaf in the Task32 section.
     $expected = @($expected | Where-Object {
         $_[0] -ne 'ndsRendererCommitNativeStageSegment'

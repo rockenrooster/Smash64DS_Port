@@ -2,7 +2,7 @@
  * common letters, the pause cells and Training's menu. A slice of
  * nds_ifcommon_oam.c. */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* The 1P bonus boards' task row (sc1PBonusStageMakeTargetSprites /
  * MakePlatformSprites, sc1pbonusstage.c): one SObj per remaining target or
  * platform, all the same 16x16 CI4 SC1PStageClear3 sprite, SP_TEXSHUF |
@@ -900,7 +900,7 @@ static s32 ndsIFCommonEmitPause(struct GObj *gobj)
     return TRUE;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* ---- Training (P7 C4, 2026-10-19) ---------------------------------------
  * sc1ptrainingmode.c's displays and menu: the stat labels and values
  * (DAMAGE, COMBO, ENEMY, SPEED) and, with the menu open, its labels, options,
@@ -1006,7 +1006,7 @@ static s32 ndsIFCommonTrainingBegin(void)
     sNdsIFCommonAnnounceActive = FALSE;
     sNdsIFCommonPausePaletteCount = 0u;
     sNdsIFCommonTrainingPaletteCount = 0u;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     sNdsIFCommonTaskBitmap = NULL;
 #endif
     return TRUE;
@@ -1690,7 +1690,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     {
         return ndsIFCommonEmitPause(gobj);
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (ndsIFCommonIsBonusTaskGObj(gobj) != FALSE)
     {
         return ndsIFCommonEmitBonusTasks(gobj);
@@ -1701,7 +1701,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     {
         return ndsIFCommonEmitCommonLetters(gobj);
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if (ndsIFCommonIsTrainingGObj(gobj) != FALSE)
     {
         return ndsIFCommonEmitTraining(gobj);

@@ -2488,7 +2488,7 @@ static s32 ndsS2DSceneIsTenant(u32 scene)
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
     /* The bonus practice character selects present natively through the 1P
      * select's owner (nds_menu_shell_onep.c), whose baked screen is not
      * bounded by this presenter's 64 KB OBJ bank. Only a shell-off build,

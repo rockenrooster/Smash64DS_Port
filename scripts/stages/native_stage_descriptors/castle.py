@@ -120,7 +120,7 @@ typedefs are emitted only by the primary (Dream Land) include; this file
 carries an ``#ifndef``/``#error`` guard that fails the build if it is
 included first. ``NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE`` is
 deliberately NOT namespaced -- the build sets it with -D for all packets.
-Compiled only when ``NDS_P2_STAGE_CASTLE=1``; always generated.
+Compiled only when ``NDS_STAGE_CASTLE=1``; always generated.
 
 Checker coverage: ``check_nds_native_stage.py --stage castle`` verifies
 double-generation determinism, the descriptor structural contract

@@ -29,7 +29,7 @@
  *   + Anims3_1 AnimJoint): declared by include/reloc_data.h
  *   NDS_MENU_RELOC_SYMBOLS with the real ids from
  *   tools/reloc_data_symbols.us.txt:290,4200-4221 (FileID 0x10a, FileHead
- *   0x4D48, ...), staged behind NDS_P2_1P_GAME (map plus ExternDataBank114;
+ *   0x4D48, ...), staged behind NDS_1P_GAME (map plus ExternDataBank114;
  *   file 96 StageLastBackground stays with the native packet, whose header
  *   field is unused on this target).
  * - Engine (gcMakeGObjSPAfter, gcAddGObjProcess, gcMakeCameraGObj, gGCCommonLinks,
@@ -38,7 +38,7 @@
  *   compat_stubs.c:141 weak (resolves by override, no edit).
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -151,4 +151,4 @@ void ndsGcPlayAnimAllFixedCubic(GObj *gobj);
 
 #undef gcPlayAnimAll
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

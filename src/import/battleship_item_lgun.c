@@ -14,7 +14,7 @@
  * itLGunWeaponAmmoMakeWeapon / itLGunMakeAmmo -- the item-owns-a-weapon
  * pattern the Poke Ball Pokemon reuse later.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITLGUN_* now rides on <it/item.h>). The TU-local externs below cover only
  * header-unpublished imports whose definitions are proven in the linked ROM

@@ -11,7 +11,7 @@
  * Unified-owner rule (stated in battleship_sc1pgame_runtime.c, followed
  * here): the include OWNS every symbol it defines under its source name --
  * no renamed private copies. The only rename is the scene entry, imported as
- * ndsBase* and re-exported under its source name. Gated on NDS_P2_1P_GAME
+ * ndsBase* and re-exported under its source name. Gated on NDS_1P_GAME
  * like the rest of the P2-6 step 8 tail.
  *
  * Reloc files (dMVEndingFileIDs mvending.c:87): MVCommon + MVEnding 0x4c.
@@ -49,7 +49,7 @@
  *   src/port/title_backend.c:463 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -380,4 +380,4 @@ void mvEndingStartScene(void)
     ndsMVEndingDropRoomTable();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

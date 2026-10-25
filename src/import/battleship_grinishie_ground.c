@@ -3,7 +3,7 @@
  * Mirrors the six stage wrappers beside it: this translation unit imports
  * decomp gr/grcommon/grinishie.c verbatim and exposes ndsGRInishieSetupInitAll
  * for the shared grCommonSetupInitAll gate. Only built when
- * NDS_P2_STAGE_INISHIE=1.
+ * NDS_STAGE_INISHIE=1.
  *
  * THIS IS THE MOST BESPOKE STAGE IN THE GAME BAR SECTOR Z, with three
  * independent systems rather than one hazard:
@@ -35,7 +35,7 @@
  * stage setup: malformed POW data suppresses only the POW subsystem while the
  * scales and Piranha Plants still initialize.
  */
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -164,4 +164,4 @@ void *ndsGRInishieScalePlatformGObj(u32 index)
     return (void *)gGRCommonStruct.inishie.scale[index].platform_dobj->parent_gobj;
 }
 
-#endif /* NDS_P2_STAGE_INISHIE */
+#endif /* NDS_STAGE_INISHIE */

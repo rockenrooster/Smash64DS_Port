@@ -221,7 +221,7 @@ void ftDonkeyThrowFFProcUpdate(GObj *fighter_gobj);
 void ftDonkeyThrowFFProcMap(GObj *fighter_gobj);
 void ftDonkeyThrowAirFFProcMap(GObj *fighter_gobj);
 /* BattleShip ftsamusstatus.h callbacks. Samus's descriptor table is promoted
- * wholesale under NDS_P2_SAMUS; keep only the names that table references at
+ * wholesale under NDS_SAMUS; keep only the names that table references at
  * this ABI seam and leave set-status/internal helpers in battleship_samus.c. */
 void ftSamusSpecialNStartProcUpdate(GObj *fighter_gobj);
 void ftSamusSpecialNStartProcInterrupt(GObj *fighter_gobj);
@@ -244,7 +244,7 @@ void ftSamusSpecialAirLwProcUpdate(GObj *fighter_gobj);
 void ftSamusSpecialAirLwProcPhysics(GObj *fighter_gobj);
 void ftSamusSpecialAirLwProcMap(GObj *fighter_gobj);
 /* BattleShip ftlinkstatus.h callbacks. Link's source descriptor table is
- * promoted wholesale under NDS_P2_LINK; internal setters/article helpers stay
+ * promoted wholesale under NDS_LINK; internal setters/article helpers stay
  * in the Link implementation TUs. */
 void ftLinkSpecialHiProcUpdate(GObj *fighter_gobj);
 void ftLinkSpecialHiProcPhysics(GObj *fighter_gobj);
@@ -265,7 +265,7 @@ void ftLinkSpecialLwProcMap(GObj *fighter_gobj);
 void ftLinkSpecialAirLwProcUpdate(GObj *fighter_gobj);
 void ftLinkSpecialAirLwProcMap(GObj *fighter_gobj);
 /* BattleShip ftpikachustatus.h callbacks. Pikachu's source descriptor table is
- * promoted wholesale under NDS_P2_PIKACHU; only the names that table
+ * promoted wholesale under NDS_PIKACHU; only the names that table
  * references belong here, and every set-status/zip/thunder helper stays in
  * src/import/battleship_pikachu.c. */
 void ftPikachuSpecialNProcMap(GObj *fighter_gobj);
@@ -304,7 +304,7 @@ void ftPikachuSpecialAirHiEndProcUpdate(GObj *fighter_gobj);
 void ftPikachuSpecialAirHiEndProcPhysics(GObj *fighter_gobj);
 void ftPikachuSpecialAirHiEndProcMap(GObj *fighter_gobj);
 /* BattleShip ftkirbystatus.h callbacks. Kirby's source descriptor table is
- * promoted wholesale under NDS_P2_KIRBY; only the names that table references
+ * promoted wholesale under NDS_KIRBY; only the names that table references
  * belong here (admit_fighter.py). */
 void ftKirbyThrowFProcUpdate(GObj *fighter_gobj);
 void ftKirbyThrowFProcMap(GObj *fighter_gobj);
@@ -418,7 +418,7 @@ void ftKirbyCopyYoshiSpecialAirNCatchProcMap(GObj *fighter_gobj);
 void ftKirbyCopyYoshiSpecialAirNReleaseProcUpdate(GObj *fighter_gobj);
 void ftKirbyCopyYoshiSpecialAirNReleaseProcMap(GObj *fighter_gobj);
 /* BattleShip ftpurinstatus.h callbacks. Purin's source descriptor table is
- * promoted wholesale under NDS_P2_PURIN; only the names that table references
+ * promoted wholesale under NDS_PURIN; only the names that table references
  * belong here (admit_fighter.py). */
 void ftPurinSpecialNProcMap(GObj *fighter_gobj);
 void ftPurinSpecialAirNProcPhysics(GObj *fighter_gobj);
@@ -429,7 +429,7 @@ void ftPurinSpecialAirHiProcMap(GObj *fighter_gobj);
 void ftPurinSpecialLwProcMap(GObj *fighter_gobj);
 void ftPurinSpecialAirLwProcMap(GObj *fighter_gobj);
 /* BattleShip ftnessstatus.h callbacks. Ness's source descriptor table is
- * promoted wholesale under NDS_P2_NESS; only the names that table references
+ * promoted wholesale under NDS_NESS; only the names that table references
  * belong here (admit_fighter.py). */
 void ftNessAppearStartProcUpdate(GObj *fighter_gobj);
 void ftNessAppearWaitProcUpdate(GObj *fighter_gobj);
@@ -474,7 +474,7 @@ void ftNessSpecialAirLwHitProcMap(GObj *fighter_gobj);
 void ftNessSpecialAirLwEndProcUpdate(GObj *fighter_gobj);
 void ftNessSpecialAirLwEndProcMap(GObj *fighter_gobj);
 /* BattleShip ftyoshistatus.h callbacks. Yoshi's source descriptor table is
- * promoted wholesale under NDS_P2_YOSHI; only the names that table
+ * promoted wholesale under NDS_YOSHI; only the names that table
  * references belong here, and every set-status/egg/catch helper stays in
  * src/import/battleship_yoshi.c. */
 void ftYoshiSpecialHiProcUpdate(GObj *fighter_gobj);

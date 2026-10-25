@@ -14,7 +14,7 @@ MPAllBounds gMPCollisionBounds;
 u32 gMPCollisionBGMCurrent;
 u32 gMPCollisionBGMDefault;
 uintptr_t lLBRelocTableAddr;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* Boss camera script: StageLastFile2 blob 0x4f54 + 0x10b4 + two pointers.
  * sc1pgame.c passes &D_NF as a reloc symbol token, so store its offset here. */
 intptr_t D_NF_00006010 = 0x6010;

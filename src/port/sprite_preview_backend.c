@@ -598,13 +598,13 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         ndsSObjRecordSpriteFailure(NULL, sobj, NDS_NATIVE_FAILURE_BAD_ASSET);
         return FALSE;
     }
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
     /* A compact ground map carries the wallpaper's Sprite and Bitmap table
      * itself: name the source container bitmap they stand for, which is the
      * key kNDSNativeWallpapers is written against. */
     (void)ndsRelocCompactGroundMapWallpaperKey(&asset_id, &bitmap_offset);
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* P7 C4: Training's backdrop stands in for the stage's own (the static
      * wallpaper keeps the map's Sprite for its placement). */
     if ((gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode) &&
@@ -949,7 +949,7 @@ static u32 ndsMenuFillSinkSceneGated(void);
 static void ndsMenuFillSinkEndFrame(void);
 static u32 ndsMenuFillSinkDrawSObj(SObj *sobj);
 
-#if NDS_P2_MENU_SHELL && NDS_P2_1P_GAME
+#if NDS_MENU_SHELL && NDS_1P_GAME
 extern u32 ndsMenuShellOnePlayerCssOwnsSource2D(void);
 
 /* BattleShip's 1P character-select object graph is still authoritative for
@@ -986,7 +986,7 @@ static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
  * scenes had recorded one SPRITE / NO_PROGRAM failure. */
 static u32 ndsMenuFillSinkMovieNativeOwner(void)
 {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* The scene being run, not scene_curr: the staff roll's own draw sets
      * scene_curr to the next scene (scstaffroll.c:2239) and keeps drawing,
      * blacked out, for its roll-end wait -- under scene_curr those last

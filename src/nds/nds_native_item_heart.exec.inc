@@ -1,6 +1,6 @@
 /* Heart Container executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x0FF8 has no 0xDE; both material/geometry phases are baked. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemHeart(
     const void *file_base_ptr, u32 file_bytes,

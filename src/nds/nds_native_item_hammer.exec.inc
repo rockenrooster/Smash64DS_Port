@@ -1,7 +1,7 @@
 /* Hammer executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x25F0 has no 0xDE opcode; its TLUT, image, state, and both
  * geometry phases are immutable source data and bake into this owner. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemHammer(
     const void *file_base_ptr, u32 file_bytes,

@@ -6,7 +6,7 @@
  * loader (TLUT into file 107 0x35f8, both CI4 images into file 155 itself),
  * so nothing is re-derived here.  There is no display-list scan or execution
  * on this path. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_STAGE_INISHIE
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_powblock[2];

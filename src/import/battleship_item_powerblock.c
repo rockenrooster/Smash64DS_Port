@@ -10,7 +10,7 @@
  * battleship_item_gbumper.c owns GBumper's (local tokens, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (the 0x44 main matrix kind is the source's literal, kept verbatim).
  * Symbols the port headers do not publish yet (nSYAudioFGMInishiePowerBlock;

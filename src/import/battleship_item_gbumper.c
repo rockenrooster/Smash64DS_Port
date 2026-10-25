@@ -9,7 +9,7 @@
  * way battleship_link_bomb.c:50-52 owns Link's (local token, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  */
 
 #include <it/item.h>

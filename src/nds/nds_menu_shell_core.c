@@ -6,8 +6,8 @@
  * generated/mn_ui_kit.generated.inc. A slice of nds_menu_shell.c. */
 
 
-#if !NDS_P2_UI_KIT
-#error "NDS_P2_MENU_SHELL draws with the P2-1c kit (NDS_P2_UI_KIT=1)"
+#if !NDS_UI_KIT
+#error "NDS_MENU_SHELL draws with the P2-1c kit (NDS_UI_KIT=1)"
 #endif
 
 #include <nds/arm9/video.h>
@@ -177,8 +177,8 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkLoops;
  * repository's own measurement law prefers one dual-route binary over two
  * linked ROMs for exactly this reason. Poke it before the first lap closes. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkBudget =
-#if NDS_P2_MENU_WALK
-    (u32)NDS_P2_MENU_WALK;
+#if NDS_MENU_WALK
+    (u32)NDS_MENU_WALK;
 #else
     0u;
 #endif
@@ -266,7 +266,7 @@ static u32 sMenuFramePreviewAcquirePayloadReadAtStart;
 /* P2-1h. Which half of the title's blink cycle the backdrop currently shows,
  * so the surface is toggled on the EDGE and a still title costs nothing. */
 static u32 sMenuTitleBlinkPhase;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* P2-7 item 6. Attract idle counter, in the source counter's domain (seed
  * 169, trigger 650/1190; mntitle.c:356/:712-723). Defined here, ahead of
  * ndsMenuShellPopulateTitle's per-entry seed, because this shell compiles
@@ -427,7 +427,7 @@ static u32 sMenuChangeWait;
  * from it, and the walk is compiled before that section. */
 static u32 sSssEnterCount;
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* Scripted input, lab only. It drives the SCREENS' OWN handlers, not the scene
  * manager: every step below is a button the player could press, so a walk that
  * reaches the battle is proof the handlers reached it, not proof that a hop
@@ -503,7 +503,7 @@ static const NdsMenuWalkStep kNdsMenuWalkVsOptionsProof[] = {
     { (u16)NDS_INPUT_DOWN, 1u },
     { (u16)NDS_INPUT_DOWN, 1u },
     { (u16)NDS_INPUT_A, 1u }
-}; /* P2-6/P2-7/menu-rules route select, lab only (NDS_P2_MENU_WALK).
+}; /* P2-6/P2-7/menu-rules route select, lab only (NDS_MENU_WALK).
  *
  * 0 (default) is the VS tour this file has always driven. 1 steers
  * Title -> ModeSelect -> 1PMode and arms the source-menu driver below, which
@@ -514,7 +514,7 @@ static const NdsMenuWalkStep kNdsMenuWalkVsOptionsProof[] = {
  * 3 uses the normal Title and ModeSelect VS path, then enters VS OPTIONS from
  * source row 3, dwells there via kNdsMenuWalkVsOptions and backs out with B.
  * GDB-writable before the first lap closes (same contract as
- * gNdsMenuShellWalkBudget); 0 in every translation unit where NDS_P2_MENU_WALK
+ * gNdsMenuShellWalkBudget); 0 in every translation unit where NDS_MENU_WALK
  * is 0, so published and shipping configurations carry no walk code at all. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkRoute = 0u;
 static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
@@ -594,7 +594,7 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_UP, 30u },
     { (u16)NDS_INPUT_RIGHT, 9u },
     { (u16)NDS_INPUT_A, 1u },
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     /* P2-3 production proof. Luigi is portrait column 0 in the source table.
      * Move the held 1P token from Mario to Luigi, drop it, and give the source
      * selected-fighter process more than the 30-tic regrab delay to complete
@@ -628,7 +628,7 @@ static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { (u16)NDS_INPUT_RIGHT, 10u },
 #endif
     { (u16)NDS_INPUT_A, 1u },
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     { (u16)NDS_INPUT_LEFT, 20u },
 #else
     { (u16)NDS_INPUT_LEFT, 10u },
@@ -1041,7 +1041,7 @@ u32 ndsMenuShellWalkWantsResultsStart(void)
             ((gNdsMenuShellWalkResultsHoldFrames & 15u) < 12u)) ? 1u : 0u;
 }
 
-/* P2-6 campaign walk, source-menu leg. Lab only (NDS_P2_MENU_WALK).
+/* P2-6 campaign walk, source-menu leg. Lab only (NDS_MENU_WALK).
  *
  * The shell walk injects into the seven native screens through
  * ndsMenuShellReadTaps, but the 1P route passes through two IMPORTED source
@@ -1101,7 +1101,7 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PRightHolds = 24u;
  * unlockables first. Any other value keeps the stick holds above (the bonus
  * selects always do). */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PPortrait = 0xffu;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 s32 ndsMNPlayers1PGameWalkCursor(s32 *x, s32 *y);
 void ndsMNPlayers1PGameWalkUnlockAll(void);
 #endif
@@ -1194,7 +1194,7 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
          * schedule); START 42 tics later, past the 60-tic gate and the
          * 30-tic recall lockout. */
         const u32 select_tic = ((moves + 2u) > 53u) ? (moves + 2u) : 53u;
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         static u32 sWalk1PSettled;
         static u32 sWalk1PSelectTic;
         const u32 portrait = gNdsMenuShellWalk1PPortrait;
@@ -1276,7 +1276,7 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
     ndsControllerPlaybackSetPad(0u, buttons, stick_x, stick_y);
     sWalk1PTic++;
 }
-#endif /* NDS_P2_MENU_WALK */
+#endif /* NDS_MENU_WALK */
 
 static u32 ndsMenuShellReadTaps(u32 *out_held)
 {
@@ -1284,7 +1284,7 @@ static u32 ndsMenuShellReadTaps(u32 *out_held)
     u32 taps = held & ~sMenuHeldPrev;
 
     sMenuHeldPrev = held;
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
     {
         u32 tap = 0u;
         u32 injected = ndsMenuShellWalkTap(sMenuScreen, &tap);
@@ -1453,7 +1453,7 @@ static void ndsMenuShellHideRows(void)
 
 static void ndsMenuShellPopulateTitle(void)
 {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* Once per title entry, mirroring mnTitleInitVars' :356 seed. */
     sMenuTitleIdleTics = 169u;
 #endif
@@ -1504,7 +1504,7 @@ static u32 ndsMenuShellTitleTic(void)
     return ndsPlatformVBlankCount() - sMenuTitleVBlankBase;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* P2-7 item 6. Attract idle, transcribed from mntitle.c:260-337 (:302-335 the
  * pick) and :452-487 (mnTitleProceedDemoNext) + :712-723 (the trigger).
  *
@@ -1742,7 +1742,7 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
         ndsUiKitSfx(NDS_UI_KIT_SFX_START);
         ndsMenuShellGoto((u32)nSCKindModeSelect);
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* P2-7 item 6. mntitle.c:712-723: idle 650 tics (1190 once
      * is_extend_demo_wait is set) calls mnTitleProceedDemoNext. Any input
      * re-seeds the counter (:544 arm); the A/START arm above already left,

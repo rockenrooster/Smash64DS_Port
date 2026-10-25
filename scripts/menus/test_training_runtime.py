@@ -12,7 +12,7 @@ Quarter = 1 run / 3 skip), and that the CP menu order maps onto the dummy
 behavior table in order.
 Port part: text-level pins that the wrappers are whole-TU textual includes
 with pass-through adapters, carry no duplicate shims (port headers own the
-enums/structs/audio IDs), the title_backend stubs yield under NDS_P2_1P_GAME,
+enums/structs/audio IDs), the title_backend stubs yield under NDS_1P_GAME,
 the harness routes both training scenes, and the wallpaper/sprite reloc rows
 exist.
 """
@@ -161,10 +161,10 @@ class TrainingRuntimeTest(unittest.TestCase):
         for name in ("mnPlayers1PTrainingStartScene",
                      "sc1PTrainingModeStartScene"):
             at = backend.index(f"NDS_SCENE_STUB({name})")
-            gate = backend.rfind("#if !NDS_P2_1P_GAME", 0, at)
+            gate = backend.rfind("#if !NDS_1P_GAME", 0, at)
             self.assertNotEqual(gate, -1, name)
             self.assertNotIn("#endif", backend[gate:at].replace(
-                "#if !NDS_P2_1P_GAME", "", 1))
+                "#if !NDS_1P_GAME", "", 1))
         harness = (ROOT / "src/port/taskman_seam_harness.c").read_text()
         self.assertIn("case nSCKindPlayers1PTraining:", harness)
         self.assertIn("(gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode)",

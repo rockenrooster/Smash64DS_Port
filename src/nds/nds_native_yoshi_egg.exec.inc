@@ -3,8 +3,8 @@
  * YoshiModel root 0xA860 is shared by the Up-B EggThrow weapon and the
  * shield/intro egg effects.  The root owns its CI4 palette/image/geometry and
  * has no MObj, so only the source DObj transform remains live. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
-#if NDS_P2_YOSHI_BUG_PROOF
+#if NDS_RENDERER_HW_TRIANGLES && NDS_YOSHI
+#if NDS_YOSHI_BUG_PROOF
 volatile u32 gNdsYoshiBugProofSharedEggDrawCount;
 #endif
 
@@ -167,7 +167,7 @@ sb32 ndsRendererSubmitNativeYoshiEgg(
         }
         stats->hardware_vertex_count += NDS_NATIVE_YOSHI_EGG_CORNER_COUNT;
         sNdsRendererHardwareSubmitted = TRUE;
-#if NDS_P2_YOSHI_BUG_PROOF
+#if NDS_YOSHI_BUG_PROOF
         gNdsYoshiBugProofSharedEggDrawCount++;
 #endif
     }

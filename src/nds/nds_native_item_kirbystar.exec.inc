@@ -23,7 +23,7 @@
  * ignoring it.  Do not bake this geometry a second time for the Star Rod --
  * NDS_NATIVE_ITEM_STARROD_* is the Star Rod ITEM (0x49b0/0x4a18/0x4aa0), a
  * different tree that happens to live in the same file. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 /* Defined beside the rest of the Kirby star closure in
  * src/import/battleship_efmanager.c, not in the renderer preamble, so a probe

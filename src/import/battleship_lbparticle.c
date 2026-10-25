@@ -267,7 +267,7 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * measured smaller pools.
  * Results still uses the Wanted seam below, which currently resolves back to
  * source sizing before its own func_start. */
-#if NDS_P2_MENU_SHELL || NDS_P2_FOUR_CPU_STRESS
+#if NDS_MENU_SHELL || NDS_FOUR_CPU_STRESS
 #define NDS_R2_PARTICLE_POOL_STRUCTS 112
 #define NDS_R2_PARTICLE_POOL_GENERATORS 24
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 80
@@ -435,7 +435,7 @@ void efParticleInitAll(void)
     gNdsParticleYoshiScriptsPacked = 0u;
     gNdsParticleBankKirbyID = 0xffu;
     gNdsParticleKirbyScriptsPacked = 0u;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     gNdsParticleBankHyruleID = 0xffu;
     gNdsHyruleScriptsPacked = 0u;
 #endif
@@ -466,10 +466,10 @@ extern s32 particles_unk1_scb_ROM_START;
  * (ftdata.c:4076, ftdata.c:5272). */
 extern s32 particles_unk2_scb_ROM_START;
 extern s32 particles_unk0_scb_ROM_START;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 extern intptr_t lGRHyruleParticleScriptBankLo;
 #endif
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 /* P2-4 Yoster vapor bank marker. Declared in include/reloc_data.h
  * (decomp gr/grcommon/gryoster.h:9-12) and defined in
  * src/import/battleship_gryoster_ground.c; only its address is ever used, and
@@ -1284,7 +1284,7 @@ volatile u32 gNdsParticleYoshiScriptsPacked;
 /* Kirby's inhale-wind bank (particles_unk0); same sentinel contract. */
 volatile u32 gNdsParticleBankKirbyID = 0xffu;
 volatile u32 gNdsParticleKirbyScriptsPacked;
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 /* P2-4 Yoster. 0 means the vapor bank registered empty and the cloud
  * evaporate effect is silent; the gameplay (timers, collision, sink) is the
  * source's and never consults this. */
@@ -2163,7 +2163,7 @@ static sb32 ndsParticleLoadFighterBank(s32 bank_id, u8 *bank, u32 bank_bytes,
     return TRUE;
 }
 
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 /* P2-4 Yoster Island's cloud-vapor bank. Same shape as ndsParticleLoadPupupuBank
  * above and deliberately a separate function for the same reason: the two differ
  * in the symbols they read and in nothing else. One script (script 0,
@@ -2348,7 +2348,7 @@ static sb32 ndsParticleLoadItemBank(s32 bank_id)
     return (packed != 0u) ? TRUE : FALSE;
 }
 
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 volatile u32 gNdsParticleBankHyruleID = 0xffu;
 volatile u32 gNdsHyruleScriptsPacked;
 volatile u32 gNdsHyruleNativeDrawCount;
@@ -2531,7 +2531,7 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     else if (scripts_lo == (uintptr_t)&lGRYosterParticleScriptBankLo)
     {
         /* P2-4 Yoster vapor. Registered by symbol for the same reason as
@@ -2565,7 +2565,7 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     else if (scripts_lo == (uintptr_t)&lGRHyruleParticleScriptBankLo)
     {
         if (ndsParticleLoadHyruleBank(bank_id) == FALSE)
@@ -4403,7 +4403,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             u32 texture_width;
             u32 texture_height;
             sb32 whispy_native = FALSE;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
             sb32 hyrule_native = FALSE;
 #endif
             u32 id;
@@ -4489,7 +4489,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     id += NDS_PARTICLE_QUAD_KIRBY_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
                 /* The cloud vapor's texture 0 is Yoster's own (row 192), not
                  * common texture 0, which it drew until 2026-10-04. */
                 if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
@@ -4587,7 +4587,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                             (u8)(pc->frame_id + 1u);
                     }
                 }
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
                 if (((u32)(pc->bank_id & 7) < (u32)sEFParticleBanksNum) &&
                     (sEFParticleScriptBanks[pc->bank_id & 7] ==
                      (uintptr_t)&lGRHyruleParticleScriptBankLo))
@@ -4610,7 +4610,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             }
             if ((row == NULL)
                 && (whispy_native == FALSE)
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
                 && (hyrule_native == FALSE)
 #endif
                 )
@@ -4762,7 +4762,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             if (submit_result != FALSE)
             {
                 emitted++;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
                 if (hyrule_native != FALSE)
                 {
                     NDS_DIAG(gNdsHyruleNativeDrawCount++);

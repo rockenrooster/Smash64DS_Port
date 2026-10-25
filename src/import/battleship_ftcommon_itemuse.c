@@ -16,7 +16,7 @@
  * ProcUpdate is the trigger and no fighter seam sits in the way. Only the
  * three a FIGHTER fires were mute.
  *
- * Gated on NDS_P2_ITEM_CORE: with no items there is nothing to shoot, and the
+ * Gated on NDS_ITEM_CORE: with no items there is nothing to shoot, and the
  * weak stubs remain the right answer. The stubs it replaces are weak, so a
  * strong definition here wins the link; the two SetStatus shims are not, and
  * are fenced by the same condition in reloc_backend_compat_shims.c.

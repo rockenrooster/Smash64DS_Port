@@ -628,7 +628,7 @@ void grPupupuInitAll(void);
 void grPupupuProcUpdate(GObj *ground_gobj);
 void ndsGRPupupuRunSafeUpdateProbe(void);
 /* P2-4 Yoster, defined by src/import/battleship_gryoster_ground.c behind
- * NDS_P2_STAGE_YOSTER via decomp gr/grcommon/gryoster.c verbatim. */
+ * NDS_STAGE_YOSTER via decomp gr/grcommon/gryoster.c verbatim. */
 GObj *grYosterMakeGround(void);
 void grYosterInitAll(void);
 void grYosterProcUpdate(GObj *ground_gobj);
@@ -637,13 +637,13 @@ void grYosterUpdateCloudSolid(s32 cloud_id);
 void grYosterUpdateCloudEvaporate(s32 cloud_id);
 void grYosterUpdateCloudAnim(s32 cloud_id);
 void ndsGRYosterSetupInitAll(void);
-/* P2-4 stage 2: Peach's Castle, landed behind NDS_P2_STAGE_CASTLE via decomp
+/* P2-4 stage 2: Peach's Castle, landed behind NDS_STAGE_CASTLE via decomp
  * gr/grcommon/grcastle.c verbatim. grCastleMakeGround is declared with the
  * other stage makers above; these are the rest of that translation unit. */
 void grCastleInitAll(void);
 void grCastleBumperProcUpdate(GObj *ground_gobj);
 void ndsGRCastleSetupInitAll(void);
-/* P2-4 stage 3: Congo Jungle, landed behind NDS_P2_STAGE_JUNGLE via decomp
+/* P2-4 stage 3: Congo Jungle, landed behind NDS_STAGE_JUNGLE via decomp
  * gr/grcommon/grjungle.c verbatim. grJungleMakeGround is declared with the
  * other stage makers above; these are the rest of that translation unit,
  * including the two the fighter-side cannon status calls back into. */
@@ -654,30 +654,30 @@ void grJungleTaruCannGetPosition(Vec3f *pos);
 f32 grJungleTaruCannGetRotate(void);
 void grJungleTaruCannProcUpdate(GObj *ground_gobj);
 void ndsGRJungleSetupInitAll(void);
-/* P2-4 stage 4: Planet Zebes, landed behind NDS_P2_STAGE_ZEBES via decomp
+/* P2-4 stage 4: Planet Zebes, landed behind NDS_STAGE_ZEBES via decomp
  * gr/grcommon/grzebes.c verbatim. */
 sb32 grZebesAcidCheckGetDamageKind(GObj *ground_gobj, GObj *fighter_gobj,
                                    GRAttackColl **gr_attack_coll,
                                    s32 *kind);
 void grZebesProcUpdate(GObj *ground_gobj);
 void ndsGRZebesSetupInitAll(void);
-/* P2-4 stage 5: Hyrule Castle, landed behind NDS_P2_STAGE_HYRULE via decomp
+/* P2-4 stage 5: Hyrule Castle, landed behind NDS_STAGE_HYRULE via decomp
  * gr/grcommon/grhyrule.c verbatim. */
 void grHyruleTwisterProcUpdate(GObj *ground_gobj);
 void ndsGRHyruleSetupInitAll(void);
-/* P2-4 stage 6: Saffron City, landed behind NDS_P2_STAGE_YAMABUKI via decomp
+/* P2-4 stage 6: Saffron City, landed behind NDS_STAGE_YAMABUKI via decomp
  * gr/grcommon/gryamabuki.c verbatim. */
 void grYamabukiGateSetClosedWait(void);
 void grYamabukiGateProcUpdate(GObj *ground_gobj);
 void ndsGRYamabukiSetupInitAll(void);
-/* P2-4 stage 7: Mushroom Kingdom, landed behind NDS_P2_STAGE_INISHIE via
+/* P2-4 stage 7: Mushroom Kingdom, landed behind NDS_STAGE_INISHIE via
  * decomp gr/grcommon/grinishie.c verbatim. */
 sb32 grInishiePowerBlockCheckGetDamageKind(GObj *ground_gobj,
                                           GObj *fighter_gobj,
                                           GRAttackColl **gr_attack_coll,
                                           s32 *kind);
 void ndsGRInishieSetupInitAll(void);
-/* P2-4 stage 8: Sector Z, landed behind NDS_P2_STAGE_SECTOR via decomp
+/* P2-4 stage 8: Sector Z, landed behind NDS_STAGE_SECTOR via decomp
  * gr/grcommon/grsector.c verbatim. */
 void ndsGRSectorSetupInitAll(void);
 void grInishieMakeScale(void);

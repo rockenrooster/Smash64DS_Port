@@ -227,7 +227,7 @@ def test_source_roster_copy_closure():
     source = (ROOT / "src/port/nds_kirby_hat_residency.c").read_text()
     fixture = COMMON + r'''
 #include <setjmp.h>
-#define NDS_P2_KIRBY 1
+#define NDS_KIRBY 1
 enum { GMCOMMON_PLAYERS_MAX = 4, nFTPlayerKindNot = 2, nFTKindKirby = 8,
        nFTKindEnumCount = 27 };
 typedef struct { int16_t copy_id, copy_modelpart_id; float scale; int damage; } FTKirbyCopy;

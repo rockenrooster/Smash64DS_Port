@@ -1742,7 +1742,7 @@ void gmRumbleStopRumbleID(s32 player, s32 rumble_id)
     (void)rumble_id;
 }
 
-#if !NDS_P2_1P_GAME
+#if !NDS_1P_GAME
 void ftBossCommonUpdateDamageStats(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -1908,12 +1908,12 @@ void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
     }
 }
 
-#if !NDS_P2_DONKEY
+#if !NDS_DONKEY
 /* Compile seam for builds without Donkey Kong, where `battleship_donkey.c` --
  * and therefore the source `ftDonkeyThrowFDamageSetStatus` -- is not compiled.
  * Nothing can reach it there: ftCommonDamageUpdateCatchResist only takes this
  * arm for a Donkey Kong holding a fighter or a heavy item.  With
- * NDS_P2_DONKEY=1 the source setter is linked and battleship_ftcommon_damage.c
+ * NDS_DONKEY=1 the source setter is linked and battleship_ftcommon_damage.c
  * calls it directly (P2-3r10). */
 void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
 {
@@ -2142,14 +2142,14 @@ void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
 
 void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
 {
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     ndsBaseFTCommonCaptureShoulderedSetStatus(fighter_gobj);
 #else
     (void)fighter_gobj;
 #endif
 }
 
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
 {
     if (ndsP4ShoulderedInterrupt(fighter_gobj) != FALSE)
@@ -2160,7 +2160,7 @@ void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
 }
 #endif
 
-#if !NDS_P2_DONKEY
+#if !NDS_DONKEY
 void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -2671,7 +2671,7 @@ void ftCommonTaruCannProcPhysics(GObj *fighter_gobj)
     fighter_root->translate.vec.f = tarucann_root->translate.vec.f;
 }
 
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 volatile u32 gNdsTaruCannCaptureCount __attribute__((used));
 volatile u32 gNdsTaruCannFireInputCount __attribute__((used));
 volatile u32 gNdsTaruCannFireAutoCount __attribute__((used));
@@ -2708,7 +2708,7 @@ void ftCommonTaruCannSetStatus(GObj *fighter_gobj, GObj *tarucann_gobj)
 
     ftMainSetStatus(fighter_gobj, nFTCommonStatusTaruCann, 0.0F, 0.0F,
                     FTSTATUS_PRESERVE_NONE);
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     NDS_DIAG(gNdsTaruCannCaptureCount++);
 #endif
     ftMainPlayAnimEventsAll(fighter_gobj);

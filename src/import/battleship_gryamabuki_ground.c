@@ -4,7 +4,7 @@
  * decomp gr/grcommon/gryamabuki.c verbatim, so the gate's open/close cycle and
  * its Pokemon spawner are mechanically equivalent to the source, and exposes
  * ndsGRYamabukiSetupInitAll for the shared grCommonSetupInitAll gate. Only
- * built when NDS_P2_STAGE_YAMABUKI=1.
+ * built when NDS_STAGE_YAMABUKI=1.
  *
  * TWO SEAMS, NEITHER OF THEM NEW. The gate is a moving yakumono --
  * mpCollisionSetYakumonoPosID (gryamabuki.c:222) with a hard-coded slot 3 --
@@ -30,7 +30,7 @@
  * was never installed. Separate them with gNdsGcAddAnimJointAllRefusedCount
  * (battleship_sys_objanim.c) and gGRCommonStruct.yamabuki.gate_status.
  */
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -104,4 +104,4 @@ void *ndsGRYamabukiGateGObj(void)
     return (void *)gGRCommonStruct.yamabuki.gate_gobj;
 }
 
-#endif /* NDS_P2_STAGE_YAMABUKI */
+#endif /* NDS_STAGE_YAMABUKI */

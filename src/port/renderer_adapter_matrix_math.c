@@ -1031,7 +1031,7 @@ static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
     return TRUE;
 }
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* The 0x52 matrix from the resident fixed-point fighter world (owner ruling
  * D13): the float builder's guards, then its non-root, non-animlock branch in
  * fixed point straight to the Q20.12 the GX takes. No FTParts latch is written
@@ -1057,7 +1057,7 @@ static sb32 ndsRendererAdapterBuildItemAttachResident(
     }
     fp = ftGetStruct(attach_dobj->parent_gobj);
     if ((fp == NULL) ||
-        (ndsP2JointItemAttach(
+        (ndsJointItemAttach(
              attach_dobj,
              (fp->shuffle_tics != 0u) ?
                  &dFTDisplayMainShufflePositions[fp->is_shuffle_electric]
@@ -1119,7 +1119,7 @@ static void ndsRendererAdapterGetDObjVectorTracks(
     }
 }
 
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 /* BattleShip grsector.c:230-274 (func_ovl2_80106730). The argument order is
  * intentionally the source order: vec1 becomes matrix row 2, vec2 row 0 and
  * vec3 row 1. Both grSectorArwingLaser3DFuncMatrix (:304, :306-314) and the
@@ -1450,7 +1450,7 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         u32 lab_attach = cpuGetTiming();
 #endif
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
         const sb32 resident =
             ndsRendererAdapterBuildItemAttachResident(dobj, out);
 #else
@@ -1472,7 +1472,7 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         }
         break;
     }
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     case NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND:
     {
         Vec3f vec1 = { -1.0F, 0.0F, 0.0F };

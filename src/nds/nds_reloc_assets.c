@@ -254,7 +254,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x68, 0x68, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank104" },
     { 0x98, 0x98, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank152" },
     /* P2-4s1 Yoster closure (Makefile:4186-4190; IDs reloc_data.h:527,535). */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     { 0x107, 0x107, NDS_NITRO_RELOC_STAGES "GRYosterMap" },
     { 0x1005d, 0x5d, NDS_NITRO_RELOC_STAGES "StageYoshi" },
     { 0x6e, 0x6e, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank110" },
@@ -264,21 +264,21 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     /* P2-4s2 Castle. The wallpaper its map header references,
      * MVOpeningRoomWallpaper, is asset 90 and already rowed unconditionally
      * above, so only the map and its two banks are new. */
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     { 0x103, 0x103, NDS_NITRO_RELOC_STAGES "GRCastleMap" },
     { 0x6a, 0x6a, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank106" },
     { 0x9c, 0x9c, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank156" },
 #endif
     /* P2-4s3 Congo Jungle. Its map declares exactly these three, checked
      * against the O2R header rather than assumed. */
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     { 0x105, 0x105, NDS_NITRO_RELOC_STAGES "GRJungleMap" },
     { 0x1005c, 0x5c, NDS_NITRO_RELOC_STAGES "StageJungle" },
     { 0x6c, 0x6c, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank108" },
     { 0x9e, 0x9e, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank158" },
 #endif
     /* P2-4s4 Planet Zebes, closure checked against the map header. */
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     { 0x101, 0x101, NDS_NITRO_RELOC_STAGES "GRZebesMap" },
     { 0x10059, 0x59, NDS_NITRO_RELOC_STAGES "StageZebes" },
     { 0x69, 0x69, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank105" },
@@ -286,12 +286,12 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #endif
     /* P2-4s6 Saffron City: the only stage map so far with two Misc banks. */
     /* P2-4s7 Mushroom Kingdom and P2-4s8 Sector Z. */
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     { 0x1005b, 0x5b, NDS_NITRO_RELOC_STAGES "StageHyruleWallpaper" },
     { 0x6b, 0x6b, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank107" },
     { 0x9b, 0x9b, NDS_NITRO_RELOC_EXTERN_DATA "MiscDataBank155" },
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     { 0x106, 0x106, NDS_NITRO_RELOC_STAGES "GRSectorMap" },
     { 0x10063, 0x63, NDS_NITRO_RELOC_STAGES "StageSector" },
     { 0x6d, 0x6d, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank109" },
@@ -299,10 +299,10 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #endif
     /* P2-6 step 7 (boss). Final Destination's runtime map (Last), its
      * geometry bank and the wallpaper container its header references; the
-     * 1P arenas ride NDS_P2_1P_GAME. The native packet draws the wallpaper;
+     * 1P arenas ride NDS_1P_GAME. The native packet draws the wallpaper;
      * file 96 is staged because the extern-tree loader refuses the map when
      * any dependency in its extern table is unrowed. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     { 0x10a, 0x10a, NDS_NITRO_RELOC_STAGES "GRLastMap" },
     { 0x72, 0x72, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank114" },
     /* THE O2R WALLPAPER CONTAINERS ARE MISLABELLED, CONSISTENTLY. The o2r
@@ -391,7 +391,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0xfd, 0xfd, NDS_NITRO_RELOC_EXTERN_DATA "MiscData253" },
     { 0xe6, 0xe6, NDS_NITRO_RELOC_EXTERN_DATA "MiscData230" },
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     { 0x108, 0x108, NDS_NITRO_RELOC_STAGES "GRYamabukiMap" },
     { 0x1005e, 0x5e, NDS_NITRO_RELOC_STAGES "StagePokemon" },
     { 0x70, 0x70, NDS_NITRO_RELOC_EXTERN_DATA "ExternDataBank112" },
@@ -432,38 +432,38 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
      * hand-maintained asset manifest here. */
-#define NDS_P2_FIGHTER_ASSET_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
-#define NDS_P2_FIGHTER_DEPENDENCY_ENTRY(id_, path_) { id_, id_, path_ },
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#define NDS_FIGHTER_ASSET_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
+#define NDS_FIGHTER_DEPENDENCY_ENTRY(id_, path_) { id_, id_, path_ },
+#if NDS_LUIGI
+    NDS_LUIGI_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#if NDS_DONKEY
+    NDS_DONKEY_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-    NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#if NDS_P2_LINK
-    NDS_P2_LINK_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+    NDS_SAMUS_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+#if NDS_LINK
+    NDS_LINK_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_LINK_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
 #endif
-    NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-    NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
-    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
-#undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
-#undef NDS_P2_FIGHTER_ASSET_ENTRY
+    NDS_PIKACHU_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+    NDS_YOSHI_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+    NDS_NESS_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_NESS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+    NDS_PURIN_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_PURIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+    NDS_KIRBY_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_ENTRY)
+    NDS_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_ENTRY)
+#undef NDS_FIGHTER_DEPENDENCY_ENTRY
+#undef NDS_FIGHTER_ASSET_ENTRY
     /* R02/R03/K06 -- THE PATH HALF OF THE RESULTS DEMO POSES, AND IT WAS THE
      * MISSING HALF. `NDS_*_DEMO_ANIM_ASSET_ROWS` carries three fields, and
      * until now only two of them were ever consumed: `sNdsRelocDemoAnimTokens`
@@ -487,25 +487,25 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
      * must stay in step, which check_results_demo_motion_closure.py asserts. */
 #define NDS_RELOC_DEMO_ANIM_PATH_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
     NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_LUIGI
+    NDS_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_DONKEY
+    NDS_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-    NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#if NDS_P2_LINK
-    NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+    NDS_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_LINK
+    NDS_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
-    NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-    NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-    NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-    NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-    NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
-#if NDS_P2_1P_GAME
+    NDS_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+    NDS_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+    NDS_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+    NDS_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+    NDS_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_1P_GAME
     /* The 1P scenes' poses: the same pair of tables, the same lockstep. */
     NDS_1P_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
@@ -772,42 +772,42 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
  * stems" made a fighter's animations depend on which OTHER fighter flags were
  * in the build. Rows may overlap between fighters; they agree, because the
  * path is a property of the asset id, not of who asks for it. */
-typedef struct NDSP2FighterAnimSegment {
+typedef struct NDSFighterAnimSegment {
     u32 first;
     u32 last;
     const char *stem;
     u32 zero_id;
-} NDSP2FighterAnimSegment;
+} NDSFighterAnimSegment;
 
-#define NDS_P2_ANIM_SEGMENT_ROW(first, last, stem, zero_id) \
+#define NDS_ANIM_SEGMENT_ROW(first, last, stem, zero_id) \
     { (first), (last), (stem), (zero_id) },
 
-static const NDSP2FighterAnimSegment sNdsP2FighterAnimSegments[] = {
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+static const NDSFighterAnimSegment sNdsFighterAnimSegments[] = {
+#if NDS_LUIGI
+    NDS_LUIGI_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#if NDS_DONKEY
+    NDS_DONKEY_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 #endif
-    NDS_P2_SAMUS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-#if NDS_P2_LINK
-    NDS_P2_LINK_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+    NDS_SAMUS_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
+#if NDS_LINK
+    NDS_LINK_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 #endif
-    NDS_P2_PIKACHU_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-    NDS_P2_YOSHI_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-    NDS_P2_NESS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-    NDS_P2_PURIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
-    NDS_P2_KIRBY_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+    NDS_PIKACHU_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
+    NDS_YOSHI_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
+    NDS_NESS_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
+    NDS_PURIN_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
+    NDS_KIRBY_ANIM_SEGMENTS(NDS_ANIM_SEGMENT_ROW)
 };
 
 static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
 {
     static NDSRelocAssetEntry entry;
     static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
-    const NDSP2FighterAnimSegment *segment = NULL;
+    const NDSFighterAnimSegment *segment = NULL;
     size_t i;
     int written;
 
@@ -815,13 +815,13 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
     {
         return &entry;
     }
-    for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
-                 sizeof(sNdsP2FighterAnimSegments[0])); i++)
+    for (i = 0u; i < (sizeof(sNdsFighterAnimSegments) /
+                 sizeof(sNdsFighterAnimSegments[0])); i++)
     {
-        if ((asset_id >= sNdsP2FighterAnimSegments[i].first) &&
-            (asset_id <= sNdsP2FighterAnimSegments[i].last))
+        if ((asset_id >= sNdsFighterAnimSegments[i].first) &&
+            (asset_id <= sNdsFighterAnimSegments[i].last))
         {
-            segment = &sNdsP2FighterAnimSegments[i];
+            segment = &sNdsFighterAnimSegments[i];
             break;
         }
     }
@@ -1035,11 +1035,11 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
     }
     else
     {
-        for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
-                          sizeof(sNdsP2FighterAnimSegments[0])); i++)
+        for (i = 0u; i < (sizeof(sNdsFighterAnimSegments) /
+                          sizeof(sNdsFighterAnimSegments[0])); i++)
         {
-            const NDSP2FighterAnimSegment *segment =
-                &sNdsP2FighterAnimSegments[i];
+            const NDSFighterAnimSegment *segment =
+                &sNdsFighterAnimSegments[i];
             u32 candidate = segment->zero_id + number;
 
             if ((strlen(segment->stem) == digits) &&

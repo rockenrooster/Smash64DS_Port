@@ -19,8 +19,8 @@
  *   preview; locked newcomers are gated on fighter_mask
  *   (mnCharactersCheckHaveFighterKind :2328-2345).
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05; only NDS_P2_1P_GAME gates the P2-6/P2-7 imports), so
+ * Gated on NDS_1P_GAME: the Makefile has no NDS_MODES_META flag
+ * (verified 2026-09-05; only NDS_1P_GAME gates the P2-6/P2-7 imports), so
  * this rides the campaign flag like the item-5 SoundTest TU until P2-7 mints
  * its own gate.
  *
@@ -56,7 +56,7 @@
  *   src/port/title_backend.c:414 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -105,4 +105,4 @@ void mnCharactersStartScene(void)
     ndsBaseMNCharactersStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

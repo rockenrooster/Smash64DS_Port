@@ -25,7 +25,7 @@
  * buffer (:50) and setup (FuncStart :328-358). Unlike the bonus stage,
  * nothing splits off.
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
+ * Gated on NDS_1P_GAME: the Makefile has no NDS_MODES_META flag
  * (verified 2026-09-05, same gate as battleship_mnoption.c /
  * battleship_mnbackupclear.c / battleship_mnsoundtest.c), so this rides the
  * campaign flag until P2-7 mints its own gate.
@@ -69,7 +69,7 @@
  *   src/port/title_backend.c:419 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <stdio.h>
@@ -312,4 +312,4 @@ void ndsP7ShowMessages(const u8 *rows, u32 count)
     }
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

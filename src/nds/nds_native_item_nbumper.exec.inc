@@ -1,6 +1,6 @@
 /* Bumper / NBumper executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x7558 has one word-10 segment-0xE palette hook. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemNBumper(
     const void *file_base_ptr, u32 file_bytes,

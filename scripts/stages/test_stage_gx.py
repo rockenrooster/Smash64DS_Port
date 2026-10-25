@@ -335,7 +335,7 @@ static struct { sb32 hw_segment_active; } sNdsNativeStageOwnerExecution;
 static u32 storage[100], *sNdsStageGxWords = storage;
 static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
 static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
-static u32 sNdsFighterPacketDmaPending, gNdsP2StageProgDmas;
+static u32 sNdsFighterPacketDmaPending, gNdsStageProgDmas;
 static u32 sNdsRendererHardwareBoundTextureName, sNdsRendererHardwareMatrixLoaded, sNdsRendererHardwareTriangleBatchOpen;
 static void *sNdsRendererHardwareActiveTextureEntry, *sNdsR2GxLastProjection;
 static u32 regs[3], GFX_FIFO, spans[8][2], waits, alphas;
@@ -350,8 +350,8 @@ static void mark(char c) { assert(order_len + 1 < sizeof order); order[order_len
 #define NDS_FIGHTER_PACKET_DMA_WAIT() do { if (sNdsFighterPacketDmaPending) { waits++; mark('W'); } sNdsFighterPacketDmaPending=0; } while (0)
 static void DC_FlushRange(const u32 *p, u32 bytes) {
     assert(!sNdsFighterPacketDmaPending); /* never two transfers at once */
-    spans[gNdsP2StageProgDmas][0] = (u32)(p-storage);
-    spans[gNdsP2StageProgDmas][1] = bytes/4;
+    spans[gNdsStageProgDmas][0] = (u32)(p-storage);
+    spans[gNdsStageProgDmas][1] = bytes/4;
     mark('D');
 }
 static void ndsRendererHardwareInvalidateGXState(u32 mask) { assert(mask==7); }
@@ -391,22 +391,22 @@ int main(void) {
     NDSStageGxRun a = {.first_word=0,.word_count=10};
     NDSStageGxRun b = {.first_word=10,.word_count=20};
     ndsStageGxAppend(&a,&p); ndsStageGxAppend(&b,&p); /* Contiguous, one state: one span. */
-    assert(gNdsP2StageProgDmas==0 && sNdsStageGxWordCount==30 && !strcmp(order,"EBS"));
+    assert(gNdsStageProgDmas==0 && sNdsStageGxWordCount==30 && !strcmp(order,"EBS"));
     a.first_word=40; /* A hidden run leaves a gap: do not submit its words. */
     glGlobalData.activeTexture = glGlobalData.activePalette = 5;
     ndsStageGxAppend(&a,&p);
     /* The next span's state goes out before the flush arms the DMA (P2-2p8). */
-    assert(gNdsP2StageProgDmas==1 && spans[0][0]==0 && spans[0][1]==30 && waits==0);
+    assert(gNdsStageProgDmas==1 && spans[0][0]==0 && spans[0][1]==30 && waits==0);
     assert(sNdsStageGxDmaFirst==0 && sNdsStageGxDmaEnd==30 && !strcmp(order,"EBSSDEB"));
     /* libnds forgets the names the packet's registers replaced. */
     assert(glGlobalData.activeTexture==0 && glGlobalData.activePalette==0);
     a.first_word=50; p.alpha_ref=7; ndsStageGxAppend(&a,&p); /* Contiguous, an alpha edge. */
-    assert(gNdsP2StageProgDmas==2 && spans[1][0]==40 && spans[1][1]==10 && waits==1);
+    assert(gNdsStageProgDmas==2 && spans[1][0]==40 && spans[1][1]==10 && waits==1);
     assert(!strcmp(order,"EBSSDEBSWDEB"));
     ndsStageGxFlush(); /* Segment/cold-clip boundary must drain the queued span. */
-    assert(gNdsP2StageProgDmas==3 && spans[2][0]==50 && spans[2][1]==10 && waits==2);
+    assert(gNdsStageProgDmas==3 && spans[2][0]==50 && spans[2][1]==10 && waits==2);
     assert(sNdsFighterPacketDmaPending && !sNdsStageGxWordCount && alphas==3);
-    ndsStageGxFlush(); assert(gNdsP2StageProgDmas==3); /* Nothing queued, nothing sent. */
+    ndsStageGxFlush(); assert(gNdsStageProgDmas==3); /* Nothing queued, nothing sent. */
     /* An open Task 36 segment ends only after the previous span's DMA. */
     sNdsNativeStageOwnerExecution.hw_segment_active = TRUE;
     a.first_word=60; ndsStageGxAppend(&a,&p);

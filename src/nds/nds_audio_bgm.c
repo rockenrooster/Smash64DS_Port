@@ -23,31 +23,31 @@
 #define NDS_AUDIO_BGM_PATH_RESULTS NDS_NITRO_AUDIO "bgm_results_ima.bin"
 #define NDS_AUDIO_BGM_PATH_MODE_SELECT NDS_NITRO_AUDIO "bgm_mode_select_ima.bin"
 #define NDS_AUDIO_BGM_PATH_BATTLE_SELECT NDS_NITRO_AUDIO "bgm_battle_select_ima.bin"
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #define NDS_AUDIO_BGM_PATH_YOSTER NDS_NITRO_AUDIO "bgm_yoster_ima.bin"
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 #define NDS_AUDIO_BGM_PATH_CASTLE NDS_NITRO_AUDIO "bgm_castle_ima.bin"
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
 #define NDS_AUDIO_BGM_PATH_ZEBES NDS_NITRO_AUDIO "bgm_zebes_ima.bin"
 #endif
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 #define NDS_AUDIO_BGM_PATH_HYRULE NDS_NITRO_AUDIO "bgm_hyrule_ima.bin"
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
 #define NDS_AUDIO_BGM_PATH_YAMABUKI NDS_NITRO_AUDIO "bgm_yamabuki_ima.bin"
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 #define NDS_AUDIO_BGM_PATH_INISHIE NDS_NITRO_AUDIO "bgm_inishie_ima.bin"
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #define NDS_AUDIO_BGM_PATH_SECTOR NDS_NITRO_AUDIO "bgm_sector_ima.bin"
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #define NDS_AUDIO_BGM_PATH_JUNGLE NDS_NITRO_AUDIO "bgm_jungle_ima.bin"
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 #define NDS_AUDIO_BGM_PATH_INISHIE_HURRY NDS_NITRO_AUDIO "bgm_inishie_hurry_ima.bin"
 #endif
 #define NDS_AUDIO_BGM_PATH_WIN_DEFAULT NDS_NITRO_AUDIO "bgm_win_default_ima.bin"
@@ -59,67 +59,67 @@
 #define NDS_AUDIO_BGM_PATH_WIN_FZERO NDS_NITRO_AUDIO "bgm_win_fzero_ima.bin"
 #define NDS_AUDIO_BGM_PATH_WIN_PMONSTERS NDS_NITRO_AUDIO "bgm_win_pmonsters_ima.bin"
 #define NDS_AUDIO_BGM_PATH_WIN_ZELDA NDS_NITRO_AUDIO "bgm_win_zelda_ima.bin"
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_BOSS_STAGE NDS_NITRO_AUDIO "bgm_boss_stage_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_BOSS_ENTRY NDS_NITRO_AUDIO "bgm_boss_entry_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_LAST NDS_NITRO_AUDIO "bgm_last_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_BONUS_STAGE NDS_NITRO_AUDIO "bgm_bonus_stage_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_STAGE_CLEAR NDS_NITRO_AUDIO "bgm_stage_clear_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_BONUS_STAGE_CLEAR NDS_NITRO_AUDIO "bgm_bonus_stage_clear_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_GAME_CLEAR NDS_NITRO_AUDIO "bgm_game_clear_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_BONUS_STAGE_FAILURE NDS_NITRO_AUDIO "bgm_bonus_stage_failure_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_GAME_END_CHOICE NDS_NITRO_AUDIO "bgm_game_end_choice_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_GAME_OVER NDS_NITRO_AUDIO "bgm_game_over_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_OPENING NDS_NITRO_AUDIO "bgm_opening_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_EXPLAIN NDS_NITRO_AUDIO "bgm_explain_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_INTRO NDS_NITRO_AUDIO "bgm_intro_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_ZAKO NDS_NITRO_AUDIO "bgm_zako_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_METAL NDS_NITRO_AUDIO "bgm_metal_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_ENDING NDS_NITRO_AUDIO "bgm_ending_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_STAFFROLL NDS_NITRO_AUDIO "bgm_staffroll_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_MESSAGE NDS_NITRO_AUDIO "bgm_message_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_CHALLENGER NDS_NITRO_AUDIO "bgm_challenger_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_TRAINING_MODE NDS_NITRO_AUDIO "bgm_training_mode_ima.bin"
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 #define NDS_AUDIO_BGM_PATH_DATA NDS_NITRO_AUDIO "bgm_data_ima.bin"
 #endif
 #define NDS_AUDIO_BGM_PATH_HAMMER NDS_NITRO_AUDIO "bgm_hammer_ima.bin"
@@ -224,7 +224,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD,
         TRUE
     }
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     /* P2-4 Yoster BGM, rendered 2026-09-03 from music sequence 8. Its loop
      * starts at packet 10 rather than packet 1 because this track's channels
      * disagree on a period and the renderer takes the majority; pins are in
@@ -242,7 +242,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     /* P2-4 Castle BGM, rendered 2026-09-03 from music sequence 6. */
     ,
     {
@@ -257,7 +257,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     ,
     {
         nSYAudioBGMZebes,
@@ -271,7 +271,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     ,
     {
         nSYAudioBGMHyrule,
@@ -285,7 +285,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     ,
     {
         nSYAudioBGMYamabuki,
@@ -299,7 +299,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     /* P2-4 Mushroom Kingdom BGM, music sequence 2: the same IMA packet stream
      * as every other track (owner, docs/BUGS.md Audio), trellis-encoded by
      * the renderer; pins in include/nds/nds_audio_bgm.h. */
@@ -316,7 +316,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     /* P2-4 Sector BGM. Pins in include/nds/nds_audio_bgm.h. */
     ,
     {
@@ -331,7 +331,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     /* P2-4 Jungle BGM. Pins in include/nds/nds_audio_bgm.h. */
     ,
     {
@@ -346,7 +346,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     /* nSYAudioBGMInishieHurry (sequence 3), the <=30-second swap; the same
      * trellis-encoded IMA packet stream as sequence 2. Pins in
      * nds_audio_bgm.h. */
@@ -480,7 +480,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         0u,
         FALSE
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMBossStage (sequence 23), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -495,7 +495,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMBossEntry (sequence 24), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -510,7 +510,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMLast (sequence 25), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -525,7 +525,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PBonusStage (sequence 26), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -540,7 +540,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PStageClear (sequence 27), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -555,7 +555,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PBonusStageClear (sequence 28), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -570,7 +570,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PGameClear (sequence 29), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -585,7 +585,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PBonusStageFailure (sequence 30), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -600,7 +600,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PGameEndChoice (sequence 31), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -615,7 +615,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PGameOver (sequence 32), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -630,7 +630,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMOpening (sequence 33), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -645,7 +645,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMExplain (sequence 34), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -660,7 +660,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PIntro (sequence 35), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -675,7 +675,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMZako (sequence 36), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -690,7 +690,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMMetal (sequence 37), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -705,7 +705,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMEnding (sequence 38), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -720,7 +720,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMStaffroll (sequence 39), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -735,7 +735,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMMessage (sequence 40), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -750,7 +750,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGM1PChallenger (sequence 41), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -765,7 +765,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         FALSE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMTrainingMode (sequence 42), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -780,7 +780,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* nSYAudioBGMData (sequence 43), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
     {
@@ -872,10 +872,10 @@ volatile u32 gNdsAudioBgmWinFoxPlayCount;
 volatile u32 gNdsAudioBgmResultsPlayCount;
 volatile u32 gNdsAudioBgmModeSelectPlayCount;
 volatile u32 gNdsAudioBgmBattleSelectPlayCount;
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 volatile u32 gNdsAudioBgmYosterPlayCount;
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 volatile u32 gNdsAudioBgmCastlePlayCount;
 #endif
 volatile u32 gNdsAudioBgmNaturalStopCount;
@@ -1168,10 +1168,10 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmWinMarioPlayCount = 0u;
     gNdsAudioBgmWinFoxPlayCount = 0u;
     gNdsAudioBgmResultsPlayCount = 0u;
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     gNdsAudioBgmYosterPlayCount = 0u;
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     gNdsAudioBgmCastlePlayCount = 0u;
 #endif
     gNdsAudioBgmNaturalStopCount = 0u;
@@ -1234,10 +1234,10 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMResults: gNdsAudioBgmResultsPlayCount++; break;
     case nSYAudioBGMModeSelect: gNdsAudioBgmModeSelectPlayCount++; break;
     case nSYAudioBGMBattleSelect: gNdsAudioBgmBattleSelectPlayCount++; break;
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     case nSYAudioBGMYoster: gNdsAudioBgmYosterPlayCount++; break;
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     case nSYAudioBGMCastle: gNdsAudioBgmCastlePlayCount++; break;
 #endif
     }

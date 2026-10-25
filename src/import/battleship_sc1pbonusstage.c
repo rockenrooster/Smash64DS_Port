@@ -9,7 +9,7 @@
  * dSC1PBonusStageTargetDescs by gkind, the platform procs index the
  * platform/bumper descs, and UpdateTargetCount drives the task HUD).
  *
- * Gated on NDS_P2_1P_GAME like the ladder tables. Provides the two symbols
+ * Gated on NDS_1P_GAME like the ladder tables. Provides the two symbols
  * src/import/battleship_item_target.c needs:
  * decomp sc1pbonusstage.c:318 gSC1PBonusStageItemFile (singular -- the task
  * brief's plural gSC1PBonusStageItemFiles exists nowhere in decomp or src;
@@ -45,7 +45,7 @@
  *   src/port/title_backend.c:439 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <nds/nds_frontend_overlay.h>
 #include <nds/nds_p7.h>
@@ -289,7 +289,7 @@ void sc1PBonusStageStartScene(void)
     }
 }
 
-#if NDS_P2_MENU_WALK
+#if NDS_MENU_WALK
 /* Campaign walk only (route 1, ndsCampaignDrivePlayback): the walk's player
  * has no target or platform seeking, so the walk completes the tasks through
  * the source's own handlers. One live target takes its damage proc and is
@@ -342,4 +342,4 @@ void ndsCampaignWalkBoardOnePlatform(void)
 }
 #endif
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

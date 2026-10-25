@@ -2,8 +2,8 @@
  * includes it; the stage DL submit (renderer_adapter_stage_submits.inc)
  * calls it. */
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
-#if NDS_P2_YOSHI_BUG_PROOF
+#if NDS_RENDERER_HW_TRIANGLES && NDS_YOSHI
+#if NDS_YOSHI_BUG_PROOF
 volatile u32 gNdsYoshiBugProofEggLayDrawCount;
 #endif
 
@@ -36,7 +36,7 @@ sb32 ndsRendererSubmitNativeYoshiEggLay(
     drawn = ndsRendererNativeTexturedQuad(vertices, sNdsNativeYoshiEggLayTriIndices,
         config, stats, &state);
     if (drawn < 0) return FALSE;
-#if NDS_P2_YOSHI_BUG_PROOF
+#if NDS_YOSHI_BUG_PROOF
     if (drawn > 0) gNdsYoshiBugProofEggLayDrawCount++;
 #endif
     ndsNativeYoshiEggLayFinish(stats);

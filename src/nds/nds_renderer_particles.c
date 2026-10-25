@@ -993,7 +993,7 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareParticleAtlas(void)
 
     if (sNdsRendererParticleAtlasPrepared != 0u)
     {
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
         if (gNdsParticleBankHyruleID != 0xffu)
         {
             return ndsRendererHardwarePrepareHyruleTextures();
@@ -1066,7 +1066,7 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareParticleAtlas(void)
     {
         goto fail;
     }
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     if ((gNdsParticleBankHyruleID != 0xffu) &&
         (ndsRendererHardwarePrepareHyruleTextures() == FALSE))
     {
@@ -1320,7 +1320,7 @@ NDS_RENDERER_COLD void ndsRendererHardwareDiscardParticleAtlas(void)
     memset(&sNdsRendererWhispyNativeBinding[
                NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
            sizeof(sNdsRendererWhispyNativeBinding[0]));
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
     /* The atlas tail owns these names, so every atlas discard drops them for
      * the same reason whispy and fox glow release above: glResetTextures (and
      * the prepare failure path) must not find them still held. Idempotent --

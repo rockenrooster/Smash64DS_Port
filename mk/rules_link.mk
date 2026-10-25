@@ -156,7 +156,7 @@ $(OUTPUT).nds: | native-only-rom-check
 # exact resident callback/entry pairs, and keep this gate before packaging.
 .PHONY: frontend-overlay-rom-check
 frontend-overlay-rom-check: $(OUTPUT).elf
-	@python "$(PROJECT_ROOT)/scripts/check_frontend_overlay.py" "$(OUTPUT).elf" $(if $(filter 1,$(NDS_P2_MENU_SHELL)),--required,) --allowlist "$(PROJECT_ROOT)/scripts/frontend_overlay_allowlist.json" --json "$(CURDIR)/frontend-overlay-check.json" > "$(CURDIR)/frontend-overlay-check.log" || { cat "$(CURDIR)/frontend-overlay-check.log"; exit 1; }
+	@python "$(PROJECT_ROOT)/scripts/check_frontend_overlay.py" "$(OUTPUT).elf" $(if $(filter 1,$(NDS_MENU_SHELL)),--required,) --allowlist "$(PROJECT_ROOT)/scripts/frontend_overlay_allowlist.json" --json "$(CURDIR)/frontend-overlay-check.json" > "$(CURDIR)/frontend-overlay-check.log" || { cat "$(CURDIR)/frontend-overlay-check.log"; exit 1; }
 	@echo FRONTEND_OVERLAY_PASS: $(notdir $(OUTPUT).elf)
 $(OUTPUT).nds: | frontend-overlay-rom-check
 
@@ -207,7 +207,7 @@ $(OUTPUT).elf: $(OFILES) \
 	$(NDS_NATIVE_STAGE_BONUS2_PURIN_INC) \
 	$(NDS_NATIVE_STAGE_BONUS2_NESS_INC) \
 	$(NDS_BATTLE_HUD_INC) \
-	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
+	$(if $(filter 1,$(NDS_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC)) \
 	$(NDS_NATIVE_ACTOR_YOSTER_PACKET) \
 	$(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) \
@@ -243,7 +243,7 @@ $(NITROFS_DIR)/wallpapers/%.bin: $(PROJECT_ROOT)/assets/wallpapers/%.bin
 # P2-6. The 1P intro's fighter stills, baked from this renderer by the lab
 # ROM NDS_1P_INTRO_BAKE=1 (scripts/menus/bake_1p_intro_stills.ps1, packed by
 # scripts/menus/pack_1p_intro_stills.py). Campaign builds only.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_1P_INTRO_STILLS := $(wildcard $(PROJECT_ROOT)/assets/intro/*.s1i)
 $(OUTPUT).nds: $(patsubst $(PROJECT_ROOT)/assets/intro/%,$(NITROFS_DIR)/intro/%,$(NDS_1P_INTRO_STILLS))
 $(NITROFS_DIR)/intro/%.s1i: $(PROJECT_ROOT)/assets/intro/%.s1i
@@ -346,7 +346,7 @@ $(NDS_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 		if test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_libgcc_i2f_golden"; \
 		fi; \
-		if test "$(NDS_P2_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+		if test "$(NDS_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_ui2f=__nds_p2_libgcc_ui2f_golden --redefine-sym __floatunsisf=__nds_p2_libgcc_floatunsisf_golden --redefine-sym __aeabi_l2f=__nds_p2_libgcc_l2f_golden --redefine-sym __floatdisf=__nds_p2_libgcc_floatdisf_golden --redefine-sym __floatsisf=__nds_p2_libgcc_floatsisf_golden"; \
 		fi; \
 		rename_filter="--rename-section .text=.itcm,alloc,load,readonly,code,contents"; \
@@ -468,7 +468,7 @@ endif
 nds_r2_collision_fixed.o: CFLAGS += -marm
 # Same reason: 64-bit products throughout (the fixed chain from
 # nds_r2_collision_fixed.h), which Thumb would turn into __aeabi_lmul calls.
-nds_p2_hurtbox_reject.o: CFLAGS += -marm
+nds_hurtbox_reject.o: CFLAGS += -marm
 # Same rule, same reason: src/port/nds_r2_sim_mac_fixed.c holds the shadow
 # bodies of the warm-MAC exchange-rate instrument, and its whole content is
 # 64-bit integer products. A Thumb build of it would price __aeabi_lmul at 4.49

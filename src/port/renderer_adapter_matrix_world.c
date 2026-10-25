@@ -706,7 +706,7 @@ static void ndsRendererAdapterResetSceneCaches(void)
 {
     ndsRendererHardwareResetSourceCaches();
     ndsRendererResetNativeStageValidationCache();
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     gNdsSectorArwingBasisDecline = 0u;
 #endif
     ndsFighterDrawPlanInvalidate();

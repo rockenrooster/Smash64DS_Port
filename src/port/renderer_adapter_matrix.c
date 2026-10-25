@@ -3,7 +3,7 @@
  * reloc_backend_renderer_dl.c; its slices follow it there: matrix_math,
  * matrix_world, matrix_owner. */
 #include <sys/matrix.h>
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #include <sys/interp.h>
 #include <sys/objanim.h>
 #include <sys/vector.h>
@@ -20,11 +20,11 @@
 #include <nds/nds_fixed_convert.h>
 #include <nds/nds_fox_gun.h>
 #include <nds/nds_ifcommon_oam.h>
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 #endif
 /* YOSTER-CLOUDS: adapter slot beside SubmitNativeTaruCann. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 #include <nds/nds_native_actor_yoster_cloud.h>
 #endif
 #include <ft/ftdata_file_slots.h>
@@ -404,7 +404,7 @@ static const DObj *sNdsRendererAdapterCustom4ARollDObj;
 volatile u32 gNdsRendererAdapterCustom45SoloCount __attribute__((used));
 volatile u32 gNdsSectorArwingBasisDecline __attribute__((used));
 
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 extern void lbCommonCross3D(Vec3f *a, Vec3f *b, Vec3f *out);
 extern void guMtxF2L(f32 mf[4][4], Mtx *m);
 extern f32 ndsGRSectorArwingTargetX(void);
@@ -415,10 +415,10 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site);
 
 extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
 extern Vec2f dFTDisplayMainShufflePositions[][4];
-#if NDS_P2_JOINT_RESIDENT
-/* src/port/nds_p2_hurtbox_reject.c: fighter joint worlds resident in fixed
+#if NDS_JOINT_RESIDENT
+/* src/port/nds_hurtbox_reject.c: fighter joint worlds resident in fixed
  * point for the latch epoch (owner ruling D13). */
-int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
+int ndsJointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
 #endif
 
 #if defined(__arm__)
@@ -803,7 +803,7 @@ static const NDSRendererAdapterNativeStageCaptureSegment
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER,      3u, 17u, 3u,  4u, 3u }
     };
 
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_STAGE_YOSTER) && (NDS_STAGE_YOSTER == 1)
 /* Yoshi's Island: only the four shared display layers (gryoster.c:260-268
  * makes just the ground GObj; grdisplay.c:10-43 draws layer N under
  * grDisplayLayerNPriProcDisplay at link 4/6/13/17). Live DObj counts 18/5/2/3
@@ -838,7 +838,7 @@ static const NDSRendererAdapterNativeStageDescriptor
  * All seven values are copied from
  * scripts/stages/native_stage_descriptors/yoster.py's adapter_* fields, which
  * check_nds_native_stage.py asserts against the generated packet. */
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_STAGE_YOSTER) && (NDS_STAGE_YOSTER == 1)
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageYoster = {
         4u,
@@ -854,7 +854,7 @@ static const NDSRendererAdapterNativeStageDescriptor
     };
 #endif
 
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_STAGE_JUNGLE) && (NDS_STAGE_JUNGLE == 1)
 /* Binary DObj sentinels give live layer counts 18/4/3/9. Source map 261
  * selects the four primary callbacks; only layer1 has joint animation. */
 static const NDSRendererAdapterNativeStageCaptureSegment
@@ -875,7 +875,7 @@ static const NDSRendererAdapterNativeStageDescriptor
     };
 #endif
 
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_STAGE_CASTLE) && (NDS_STAGE_CASTLE == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureCastle[4] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u, 6u, 0u },
@@ -904,7 +904,7 @@ static const NDSRendererAdapterNativeStageDescriptor
  * or -- worse -- admitted another stage's identity. Resolving to NULL makes an
  * unbaked kind decline at the seam that knows it cannot draw, which is what
  * the acceleration review's "mandatory fallback is absent" asks for. */
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_STAGE_SECTOR) && (NDS_STAGE_SECTOR == 1)
 /* Sector Z: two DLLink layers on the shared display GObjs 0 and 1, links
    4/6, Sec callbacks; live DObj counts 12/11 (sector.py). */
 static const NDSRendererAdapterNativeStageCaptureSegment
@@ -922,7 +922,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_STAGE_HYRULE) && (NDS_STAGE_HYRULE == 1)
 /* Hyrule Castle: layers 0, 1 and 3 on display GObjs 0, 1 and 3, links 4/6/17;
    only layer 0 is a DLLink (Sec) layer, layers 1 and 3 draw single dv lists
    through the Pri callbacks (hyrule.py callback_partition); live DObj counts
@@ -943,7 +943,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_STAGE_INISHIE) && (NDS_STAGE_INISHIE == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureInishie[7] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
@@ -967,7 +967,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_STAGE_ZEBES) && (NDS_STAGE_ZEBES == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureZebes[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  28u, 1u, 1u },
@@ -983,7 +983,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         0u
     };
 #endif
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_STAGE_YAMABUKI) && (NDS_STAGE_YAMABUKI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureYamabuki[4] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   7u, 0u, 0u },
@@ -1001,7 +1001,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_STAGE_PUPUPUSMALL) && (NDS_STAGE_PUPUPUSMALL == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCapturePupupuSmall[3] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 0u },
@@ -1018,7 +1018,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_STAGE_YOSTERSMALL) && (NDS_STAGE_YOSTERSMALL == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureYosterSmall[4] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  14u, 0u, 0u },
@@ -1036,7 +1036,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_STAGE_METAL) && (NDS_STAGE_METAL == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureMetal[4] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   2u, 0u, 0u },
@@ -1054,7 +1054,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_STAGE_ZAKO) && (NDS_STAGE_ZAKO == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureZako[1] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   2u, 1u, 0u }
@@ -1069,7 +1069,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         0u
     };
 #endif
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#if defined(NDS_STAGE_LAST) && (NDS_STAGE_LAST == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureLast[1] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   5u, 1u, 0u }
@@ -1084,7 +1084,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         0u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS3) && (NDS_P2_STAGE_BONUS3 == 1)
+#if defined(NDS_STAGE_BONUS3) && (NDS_STAGE_BONUS3 == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus3[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  11u, 0u, 0u },
@@ -1100,7 +1100,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_MARIO) && (NDS_P2_STAGE_BONUS1_MARIO == 1)
+#if defined(NDS_STAGE_BONUS1_MARIO) && (NDS_STAGE_BONUS1_MARIO == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Mario[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
@@ -1116,7 +1116,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_FOX) && (NDS_P2_STAGE_BONUS1_FOX == 1)
+#if defined(NDS_STAGE_BONUS1_FOX) && (NDS_STAGE_BONUS1_FOX == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Fox[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
@@ -1132,7 +1132,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_DONKEY) && (NDS_P2_STAGE_BONUS1_DONKEY == 1)
+#if defined(NDS_STAGE_BONUS1_DONKEY) && (NDS_STAGE_BONUS1_DONKEY == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Donkey[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
@@ -1148,7 +1148,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_SAMUS) && (NDS_P2_STAGE_BONUS1_SAMUS == 1)
+#if defined(NDS_STAGE_BONUS1_SAMUS) && (NDS_STAGE_BONUS1_SAMUS == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Samus[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1164,7 +1164,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_LUIGI) && (NDS_P2_STAGE_BONUS1_LUIGI == 1)
+#if defined(NDS_STAGE_BONUS1_LUIGI) && (NDS_STAGE_BONUS1_LUIGI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Luigi[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1180,7 +1180,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_LINK) && (NDS_P2_STAGE_BONUS1_LINK == 1)
+#if defined(NDS_STAGE_BONUS1_LINK) && (NDS_STAGE_BONUS1_LINK == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Link[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
@@ -1196,7 +1196,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_YOSHI) && (NDS_P2_STAGE_BONUS1_YOSHI == 1)
+#if defined(NDS_STAGE_BONUS1_YOSHI) && (NDS_STAGE_BONUS1_YOSHI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Yoshi[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
@@ -1212,7 +1212,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_CAPTAIN) && (NDS_P2_STAGE_BONUS1_CAPTAIN == 1)
+#if defined(NDS_STAGE_BONUS1_CAPTAIN) && (NDS_STAGE_BONUS1_CAPTAIN == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Captain[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
@@ -1228,7 +1228,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_KIRBY) && (NDS_P2_STAGE_BONUS1_KIRBY == 1)
+#if defined(NDS_STAGE_BONUS1_KIRBY) && (NDS_STAGE_BONUS1_KIRBY == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Kirby[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
@@ -1244,7 +1244,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_PIKACHU) && (NDS_P2_STAGE_BONUS1_PIKACHU == 1)
+#if defined(NDS_STAGE_BONUS1_PIKACHU) && (NDS_STAGE_BONUS1_PIKACHU == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Pikachu[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
@@ -1260,7 +1260,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_PURIN) && (NDS_P2_STAGE_BONUS1_PURIN == 1)
+#if defined(NDS_STAGE_BONUS1_PURIN) && (NDS_STAGE_BONUS1_PURIN == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Purin[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1276,7 +1276,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_NESS) && (NDS_P2_STAGE_BONUS1_NESS == 1)
+#if defined(NDS_STAGE_BONUS1_NESS) && (NDS_STAGE_BONUS1_NESS == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus1Ness[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1292,7 +1292,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_MARIO) && (NDS_P2_STAGE_BONUS2_MARIO == 1)
+#if defined(NDS_STAGE_BONUS2_MARIO) && (NDS_STAGE_BONUS2_MARIO == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Mario[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1308,7 +1308,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_FOX) && (NDS_P2_STAGE_BONUS2_FOX == 1)
+#if defined(NDS_STAGE_BONUS2_FOX) && (NDS_STAGE_BONUS2_FOX == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Fox[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1324,7 +1324,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_DONKEY) && (NDS_P2_STAGE_BONUS2_DONKEY == 1)
+#if defined(NDS_STAGE_BONUS2_DONKEY) && (NDS_STAGE_BONUS2_DONKEY == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Donkey[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
@@ -1340,7 +1340,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_SAMUS) && (NDS_P2_STAGE_BONUS2_SAMUS == 1)
+#if defined(NDS_STAGE_BONUS2_SAMUS) && (NDS_STAGE_BONUS2_SAMUS == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Samus[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   3u, 0u, 1u },
@@ -1356,7 +1356,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_LUIGI) && (NDS_P2_STAGE_BONUS2_LUIGI == 1)
+#if defined(NDS_STAGE_BONUS2_LUIGI) && (NDS_STAGE_BONUS2_LUIGI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Luigi[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
@@ -1372,7 +1372,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_LINK) && (NDS_P2_STAGE_BONUS2_LINK == 1)
+#if defined(NDS_STAGE_BONUS2_LINK) && (NDS_STAGE_BONUS2_LINK == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Link[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  12u, 0u, 1u },
@@ -1388,7 +1388,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_YOSHI) && (NDS_P2_STAGE_BONUS2_YOSHI == 1)
+#if defined(NDS_STAGE_BONUS2_YOSHI) && (NDS_STAGE_BONUS2_YOSHI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Yoshi[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
@@ -1404,7 +1404,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_CAPTAIN) && (NDS_P2_STAGE_BONUS2_CAPTAIN == 1)
+#if defined(NDS_STAGE_BONUS2_CAPTAIN) && (NDS_STAGE_BONUS2_CAPTAIN == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Captain[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
@@ -1420,7 +1420,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_KIRBY) && (NDS_P2_STAGE_BONUS2_KIRBY == 1)
+#if defined(NDS_STAGE_BONUS2_KIRBY) && (NDS_STAGE_BONUS2_KIRBY == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Kirby[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
@@ -1436,7 +1436,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_PIKACHU) && (NDS_P2_STAGE_BONUS2_PIKACHU == 1)
+#if defined(NDS_STAGE_BONUS2_PIKACHU) && (NDS_STAGE_BONUS2_PIKACHU == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Pikachu[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
@@ -1452,7 +1452,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_PURIN) && (NDS_P2_STAGE_BONUS2_PURIN == 1)
+#if defined(NDS_STAGE_BONUS2_PURIN) && (NDS_STAGE_BONUS2_PURIN == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Purin[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
@@ -1468,7 +1468,7 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_NESS) && (NDS_P2_STAGE_BONUS2_NESS == 1)
+#if defined(NDS_STAGE_BONUS2_NESS) && (NDS_STAGE_BONUS2_NESS == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureBonus2Ness[2] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   7u, 0u, 1u },
@@ -1498,195 +1498,195 @@ static const NDSRendererAdapterNativeStageDescriptor
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
         NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT] = {
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_STAGE_CASTLE) && (NDS_STAGE_CASTLE == 1)
         &sNdsRendererAdapterNativeStageCastle,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_STAGE_SECTOR) && (NDS_STAGE_SECTOR == 1)
         &sNdsRendererAdapterNativeStageSector,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_STAGE_JUNGLE) && (NDS_STAGE_JUNGLE == 1)
         &sNdsRendererAdapterNativeStageJungle,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_STAGE_ZEBES) && (NDS_STAGE_ZEBES == 1)
         &sNdsRendererAdapterNativeStageZebes,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_STAGE_HYRULE) && (NDS_STAGE_HYRULE == 1)
         &sNdsRendererAdapterNativeStageHyrule,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_STAGE_YOSTER) && (NDS_STAGE_YOSTER == 1)
         &sNdsRendererAdapterNativeStageYoster,
 #else
         NULL,
 #endif
         &sNdsRendererAdapterNativeStageDreamLand,
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_STAGE_YAMABUKI) && (NDS_STAGE_YAMABUKI == 1)
         &sNdsRendererAdapterNativeStageYamabuki,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_STAGE_INISHIE) && (NDS_STAGE_INISHIE == 1)
         &sNdsRendererAdapterNativeStageInishie,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_STAGE_PUPUPUSMALL) && (NDS_STAGE_PUPUPUSMALL == 1)
         &sNdsRendererAdapterNativeStagePupupuSmall,
 #else
         NULL,
 #endif
         NULL,
         NULL,
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_STAGE_YOSTERSMALL) && (NDS_STAGE_YOSTERSMALL == 1)
         &sNdsRendererAdapterNativeStageYosterSmall,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_STAGE_METAL) && (NDS_STAGE_METAL == 1)
         &sNdsRendererAdapterNativeStageMetal,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_STAGE_ZAKO) && (NDS_STAGE_ZAKO == 1)
         &sNdsRendererAdapterNativeStageZako,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS3) && (NDS_P2_STAGE_BONUS3 == 1)
+#if defined(NDS_STAGE_BONUS3) && (NDS_STAGE_BONUS3 == 1)
         &sNdsRendererAdapterNativeStageBonus3,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#if defined(NDS_STAGE_LAST) && (NDS_STAGE_LAST == 1)
         &sNdsRendererAdapterNativeStageLast,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_MARIO) && (NDS_P2_STAGE_BONUS1_MARIO == 1)
+#if defined(NDS_STAGE_BONUS1_MARIO) && (NDS_STAGE_BONUS1_MARIO == 1)
         &sNdsRendererAdapterNativeStageBonus1Mario,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_FOX) && (NDS_P2_STAGE_BONUS1_FOX == 1)
+#if defined(NDS_STAGE_BONUS1_FOX) && (NDS_STAGE_BONUS1_FOX == 1)
         &sNdsRendererAdapterNativeStageBonus1Fox,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_DONKEY) && (NDS_P2_STAGE_BONUS1_DONKEY == 1)
+#if defined(NDS_STAGE_BONUS1_DONKEY) && (NDS_STAGE_BONUS1_DONKEY == 1)
         &sNdsRendererAdapterNativeStageBonus1Donkey,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_SAMUS) && (NDS_P2_STAGE_BONUS1_SAMUS == 1)
+#if defined(NDS_STAGE_BONUS1_SAMUS) && (NDS_STAGE_BONUS1_SAMUS == 1)
         &sNdsRendererAdapterNativeStageBonus1Samus,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_LUIGI) && (NDS_P2_STAGE_BONUS1_LUIGI == 1)
+#if defined(NDS_STAGE_BONUS1_LUIGI) && (NDS_STAGE_BONUS1_LUIGI == 1)
         &sNdsRendererAdapterNativeStageBonus1Luigi,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_LINK) && (NDS_P2_STAGE_BONUS1_LINK == 1)
+#if defined(NDS_STAGE_BONUS1_LINK) && (NDS_STAGE_BONUS1_LINK == 1)
         &sNdsRendererAdapterNativeStageBonus1Link,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_YOSHI) && (NDS_P2_STAGE_BONUS1_YOSHI == 1)
+#if defined(NDS_STAGE_BONUS1_YOSHI) && (NDS_STAGE_BONUS1_YOSHI == 1)
         &sNdsRendererAdapterNativeStageBonus1Yoshi,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_CAPTAIN) && (NDS_P2_STAGE_BONUS1_CAPTAIN == 1)
+#if defined(NDS_STAGE_BONUS1_CAPTAIN) && (NDS_STAGE_BONUS1_CAPTAIN == 1)
         &sNdsRendererAdapterNativeStageBonus1Captain,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_KIRBY) && (NDS_P2_STAGE_BONUS1_KIRBY == 1)
+#if defined(NDS_STAGE_BONUS1_KIRBY) && (NDS_STAGE_BONUS1_KIRBY == 1)
         &sNdsRendererAdapterNativeStageBonus1Kirby,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_PIKACHU) && (NDS_P2_STAGE_BONUS1_PIKACHU == 1)
+#if defined(NDS_STAGE_BONUS1_PIKACHU) && (NDS_STAGE_BONUS1_PIKACHU == 1)
         &sNdsRendererAdapterNativeStageBonus1Pikachu,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_PURIN) && (NDS_P2_STAGE_BONUS1_PURIN == 1)
+#if defined(NDS_STAGE_BONUS1_PURIN) && (NDS_STAGE_BONUS1_PURIN == 1)
         &sNdsRendererAdapterNativeStageBonus1Purin,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS1_NESS) && (NDS_P2_STAGE_BONUS1_NESS == 1)
+#if defined(NDS_STAGE_BONUS1_NESS) && (NDS_STAGE_BONUS1_NESS == 1)
         &sNdsRendererAdapterNativeStageBonus1Ness,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_MARIO) && (NDS_P2_STAGE_BONUS2_MARIO == 1)
+#if defined(NDS_STAGE_BONUS2_MARIO) && (NDS_STAGE_BONUS2_MARIO == 1)
         &sNdsRendererAdapterNativeStageBonus2Mario,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_FOX) && (NDS_P2_STAGE_BONUS2_FOX == 1)
+#if defined(NDS_STAGE_BONUS2_FOX) && (NDS_STAGE_BONUS2_FOX == 1)
         &sNdsRendererAdapterNativeStageBonus2Fox,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_DONKEY) && (NDS_P2_STAGE_BONUS2_DONKEY == 1)
+#if defined(NDS_STAGE_BONUS2_DONKEY) && (NDS_STAGE_BONUS2_DONKEY == 1)
         &sNdsRendererAdapterNativeStageBonus2Donkey,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_SAMUS) && (NDS_P2_STAGE_BONUS2_SAMUS == 1)
+#if defined(NDS_STAGE_BONUS2_SAMUS) && (NDS_STAGE_BONUS2_SAMUS == 1)
         &sNdsRendererAdapterNativeStageBonus2Samus,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_LUIGI) && (NDS_P2_STAGE_BONUS2_LUIGI == 1)
+#if defined(NDS_STAGE_BONUS2_LUIGI) && (NDS_STAGE_BONUS2_LUIGI == 1)
         &sNdsRendererAdapterNativeStageBonus2Luigi,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_LINK) && (NDS_P2_STAGE_BONUS2_LINK == 1)
+#if defined(NDS_STAGE_BONUS2_LINK) && (NDS_STAGE_BONUS2_LINK == 1)
         &sNdsRendererAdapterNativeStageBonus2Link,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_YOSHI) && (NDS_P2_STAGE_BONUS2_YOSHI == 1)
+#if defined(NDS_STAGE_BONUS2_YOSHI) && (NDS_STAGE_BONUS2_YOSHI == 1)
         &sNdsRendererAdapterNativeStageBonus2Yoshi,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_CAPTAIN) && (NDS_P2_STAGE_BONUS2_CAPTAIN == 1)
+#if defined(NDS_STAGE_BONUS2_CAPTAIN) && (NDS_STAGE_BONUS2_CAPTAIN == 1)
         &sNdsRendererAdapterNativeStageBonus2Captain,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_KIRBY) && (NDS_P2_STAGE_BONUS2_KIRBY == 1)
+#if defined(NDS_STAGE_BONUS2_KIRBY) && (NDS_STAGE_BONUS2_KIRBY == 1)
         &sNdsRendererAdapterNativeStageBonus2Kirby,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_PIKACHU) && (NDS_P2_STAGE_BONUS2_PIKACHU == 1)
+#if defined(NDS_STAGE_BONUS2_PIKACHU) && (NDS_STAGE_BONUS2_PIKACHU == 1)
         &sNdsRendererAdapterNativeStageBonus2Pikachu,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_PURIN) && (NDS_P2_STAGE_BONUS2_PURIN == 1)
+#if defined(NDS_STAGE_BONUS2_PURIN) && (NDS_STAGE_BONUS2_PURIN == 1)
         &sNdsRendererAdapterNativeStageBonus2Purin,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_BONUS2_NESS) && (NDS_P2_STAGE_BONUS2_NESS == 1)
+#if defined(NDS_STAGE_BONUS2_NESS) && (NDS_STAGE_BONUS2_NESS == 1)
         &sNdsRendererAdapterNativeStageBonus2Ness,
 #else
         NULL,
@@ -1827,7 +1827,7 @@ s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index)
     return TRUE;
 }
 
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
 /* Out of line: the flag must not grow the hot stage-prep function whose
  * revalidation loop this is inlined into. */
 static __attribute__((noinline))
@@ -1839,7 +1839,7 @@ u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
     const NDSRendererAdapterNativeStageDescriptor *desc =
         ndsRendererAdapterNativeStageDescriptor();
 
-#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS
     /* The pinned size of a ground map is its source size; a compact map (T1,
      * reloc_backend_assets.c) is that plus its wallpaper stub. The rows and the
      * P1 golden pin stay the source sizes. */

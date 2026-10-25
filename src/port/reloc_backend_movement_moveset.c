@@ -600,7 +600,7 @@ static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
             }
         }
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     {
         FTStruct *donkey = fp[gNdsFighterDonkeySpecialsSlot];
 
@@ -745,7 +745,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
 {
     FTStruct *mario;
     FTStruct *fox;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     FTStruct *donkey;
 #endif
     FTStruct *samus;
@@ -766,7 +766,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
     {
         fox = NULL;
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     donkey = fp[gNdsFighterDonkeySpecialsSlot];
     if (ndsFighterNaturalIsDonkey(donkey) == FALSE)
     {
@@ -804,7 +804,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
         {
             gNdsFighterSpecialsMarioAirHiFrames++;
         }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
         else if ((mario->fkind == nFTKindLuigi) &&
                  (mario->status_id == nFTLuigiStatusSpecialHi))
         {
@@ -842,7 +842,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
         {
             gNdsFighterSpecialsMarioAirLwFrames++;
         }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
         else if ((mario->fkind == nFTKindLuigi) &&
                  (mario->status_id == nFTLuigiStatusSpecialLw))
         {
@@ -902,7 +902,7 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
             gNdsFighterSpecialsFoxHiWaitFrames++;
         }
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (donkey != NULL)
     {
         u32 stored_charge = (u32)donkey->passive_vars.donkey.charge_level;
@@ -1158,7 +1158,7 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
             return ndsFighterNaturalSpecialsStartNext(fp);
         }
         break;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     case nNDSNaturalSpecialsPhaseDonkeyNCharge:
         if ((gNdsFighterDonkeySpecialsNStorePressFrames > 0u) &&
             (gNdsFighterDonkeySpecialsNStoredChargeMax >=
@@ -1853,7 +1853,7 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 {
     u32 mario_slot = gNdsFighterSpecialsMarioSlot;
     u32 fox_slot = gNdsFighterSpecialsFoxSlot;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     u32 donkey_slot = gNdsFighterDonkeySpecialsSlot;
 #endif
     u32 samus_slot = gNdsFighterSamusSpecialsSlot;
@@ -1948,7 +1948,7 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
             }
         }
         break;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     case nNDSNaturalSpecialsPhaseDonkeyNCharge:
         if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
             (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))

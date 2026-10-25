@@ -42,7 +42,7 @@
  *   src/port/title_backend.c:435 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -211,4 +211,4 @@ void mnPlayers1PGameContinueStartScene(void)
     ndsBaseMNPlayers1PGameContinueStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

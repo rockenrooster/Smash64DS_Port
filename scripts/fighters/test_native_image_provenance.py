@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_image_dedup_distinguishes_owner_local_and_foreign_same_offset():
     commands = [(0, 0xfd, 0xfd100000, 0x12340008)]
-    local_asset = native.P2_O2R_ASSETS["kirby"][1]
+    local_asset = native.OWNER_O2R_ASSETS["kirby"][1]
     local = native._decode_control("kirby", 0, commands, {
         0: native.stage_manifest.PointerRef(local_asset, 32)})[0]
     foreign = native._decode_control("kirby", 0, commands, {

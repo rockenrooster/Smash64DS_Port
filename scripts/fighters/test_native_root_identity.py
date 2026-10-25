@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.mark.parametrize("owner", ("yoshi", "nyoshi", "npikachu", "boss", "link", "pikachu"))
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_emitted_identity_matches_original_model(owner, detail):
-    source = (ROOT / native.P2_O2R_ASSETS[owner][0]).read_bytes()
+    source = (ROOT / native.OWNER_O2R_ASSETS[owner][0]).read_bytes()
     externs = struct.unpack_from("<I", source, 0x48)[0]
     size_offset = 0x4C + externs * 2
     size = struct.unpack_from("<I", source, size_offset)[0]

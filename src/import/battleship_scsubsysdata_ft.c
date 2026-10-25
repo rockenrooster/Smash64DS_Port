@@ -143,17 +143,17 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #define ftAnimSetValAfter(flags) _FT_ANIM_CMD(10, flags, 0)
 #include "../../decomp/BattleShip-main/decomp/src/relocData/359_FTMarioAnimSelected.c"
 #include "../../decomp/BattleShip-main/decomp/src/relocData/372_FTFoxAnimSelected.c"
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 #include "../../decomp/BattleShip-main/decomp/src/relocData/462_FTLuigiAnimSelected.c"
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 /* PlayersVS maps Donkey to Demo Win1 exactly like Luigi.  File 381 is the
  * source Selected clip; despite its historical AObjEvent32 pointer typedef the
  * generated payload is the same u16 FIGATREE command stream normalized by the
  * compile-time command encoders above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/381_FTDonkeyAnimSelected.c"
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* File 429 is Falcon's source Selected clip, the same u16 FIGATREE command
  * stream the encoders above normalize for Mario/Fox/Luigi/Donkey. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/429_FTCaptainAnimSelected.c"
@@ -163,7 +163,7 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * table as AObjEvent32* for historical type reasons while every referenced
  * joint payload is the same u16 AObjEvent16 stream normalized above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/395_FTSamusAnimSelected.c"
-#if NDS_P2_LINK
+#if NDS_LINK
 /* PlayersVS maps Link to Demo Win1 -> submotion 1 -> file 404 Selected.  Keep
  * the source clip on the same resident path as every other landed CSS fighter;
  * llFTLinkAnimSelectedFileID is intentionally only a token/address in this
@@ -228,20 +228,20 @@ static const void *ndsBattleShipCSSSelectedToken(const void *file_id)
     {
     case 359u: return &llFTMarioAnimSelectedFileID;
     case 372u: return &llFTFoxAnimSelectedFileID;
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     case 381u: return &llFTDonkeyAnimSelectedFileID;
 #endif
     case 395u: return &llFTSamusAnimSelectedFileID;
-#if NDS_P2_LINK
+#if NDS_LINK
     case 404u: return &llFTLinkAnimSelectedFileID;
 #endif
     case 418u: return &llFTKirbyAnimSelectedFileID;
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     case 429u: return &llFTCaptainAnimSelectedFileID;
 #endif
     case 437u: return &llFTNessAnimSelectedFileID;
     case 444u: return &llFTYoshiAnimSelectedFileID;
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     case 462u: return &llFTLuigiAnimSelectedFileID;
 #endif
     case 470u: return &llFTPurinAnimSelectedFileID;
@@ -261,19 +261,19 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
     {
         return sizeof(dFTFoxAnimSelected_joints);
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     if (file_id == &llFTLuigiAnimSelectedFileID)
     {
         return sizeof(dFTLuigiAnimSelected_joints);
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (file_id == &llFTDonkeyAnimSelectedFileID)
     {
         return sizeof(dFTDonkeyAnimSelected_joints);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (file_id == &llFTCaptainAnimSelectedFileID)
     {
         return sizeof(dFTCaptainAnimSelected_joints);
@@ -283,7 +283,7 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
     {
         return sizeof(dFTSamusAnimSelected_joints);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (file_id == &llFTLinkAnimSelectedFileID)
     {
         return sizeof(dFTLinkAnimSelected_joints);
@@ -328,21 +328,21 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
         source = dFTFoxAnimSelected_joints;
         size = sizeof(dFTFoxAnimSelected_joints);
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     else if (file_id == &llFTLuigiAnimSelectedFileID)
     {
         source = dFTLuigiAnimSelected_joints;
         size = sizeof(dFTLuigiAnimSelected_joints);
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     else if (file_id == &llFTDonkeyAnimSelectedFileID)
     {
         source = dFTDonkeyAnimSelected_joints;
         size = sizeof(dFTDonkeyAnimSelected_joints);
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     else if (file_id == &llFTCaptainAnimSelectedFileID)
     {
         source = dFTCaptainAnimSelected_joints;
@@ -354,7 +354,7 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
         source = dFTSamusAnimSelected_joints;
         size = sizeof(dFTSamusAnimSelected_joints);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     else if (file_id == &llFTLinkAnimSelectedFileID)
     {
         source = dFTLinkAnimSelected_joints;
@@ -441,17 +441,17 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
 
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTMarioAnimSelected_joints);
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTFoxAnimSelected_joints);
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLuigiAnimSelected_joints);
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTDonkeyAnimSelected_joints);
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTCaptainAnimSelected_joints);
 #endif
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTSamusAnimSelected_joints);
-#if NDS_P2_LINK
+#if NDS_LINK
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLinkAnimSelected_joints);
 #endif
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPikachuAnimSelected_joints);
@@ -490,7 +490,7 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     for (i = 0u; i < ARRAY_COUNT(dFTLuigiAnimSelected_joints); i++)
     {
         if ((const void *)dFTLuigiAnimSelected_joints[i] == ptr)
@@ -499,7 +499,7 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
         }
     }
 #endif
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     for (i = 0u; i < ARRAY_COUNT(dFTDonkeyAnimSelected_joints); i++)
     {
         if ((const void *)dFTDonkeyAnimSelected_joints[i] == ptr)
@@ -508,7 +508,7 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
         }
     }
 #endif
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     for (i = 0u; i < ARRAY_COUNT(dFTCaptainAnimSelected_joints); i++)
     {
         if ((const void *)dFTCaptainAnimSelected_joints[i] == ptr)
@@ -524,7 +524,7 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
             return TRUE;
         }
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     for (i = 0u; i < ARRAY_COUNT(dFTLinkAnimSelected_joints); i++)
     {
         if ((const void *)dFTLinkAnimSelected_joints[i] == ptr)

@@ -174,7 +174,7 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bit
  * line fills a frame, the kernel's six lookups a joint most of them. */
 #define NDS_FTR_LEAN_SIN_HALF 0x400u
 /* Not static: the fighter joint worlds' fixed local builder
- * (src/port/nds_p2_hurtbox_reject.c) reads it too, once filled. */
+ * (src/port/nds_hurtbox_reject.c) reads it too, once filled. */
 u16 gNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
     NDS_FTR_LEAN_SIN_SECTION __attribute__((aligned(32)));
 #if NDS_FTR_LEAN_LAB

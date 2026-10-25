@@ -17,7 +17,7 @@
  * render_stats (renderer_adapter_stage.c, sNdsRendererAdapterItemEnvColor)
  * before this call, so the body setup must not touch env.  The fuse list
  * carries its own prim/env words and overrides it, exactly as the source does. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_RENDERER_HW_TRIANGLES && NDS_LINK
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
  * the fixed texture re-resolved through the full resolver every draw. One

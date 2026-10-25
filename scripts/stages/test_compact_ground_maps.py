@@ -315,19 +315,19 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         cls.assets = read_split(ASSETS_C) + "\n" + read_split(RESOLVE_C)
 
     def test_default_flag_targets(self):
-        m = re.search(r"(?m)^NDS_P2_COMPACT_GROUND_MAPS \?= \\\r?\n\t"
+        m = re.search(r"(?m)^NDS_COMPACT_GROUND_MAPS \?= \\\r?\n\t"
                       r"\$\(if \$\(filter ([^,]*),\$\(TARGET\)\),1,0\)",
                       self.make)
         self.assertIsNotNone(m, "flag default line")
         self.assertEqual(sorted(m.group(1).split()), sorted(P2_TARGETS))
         self.assertNotIn(P1_TARGET, m.group(1).split())
         self.assertNotRegex(self.make,
-                            r"(?m)^\s*override\s+NDS_P2_COMPACT_GROUND_MAPS",
+                            r"(?m)^\s*override\s+NDS_COMPACT_GROUND_MAPS",
                             "the flag must stay overridable for A/B")
 
     def test_config_header_echo(self):
-        self.assertIn("echo '#define NDS_P2_COMPACT_GROUND_MAPS "
-                      "$(NDS_P2_COMPACT_GROUND_MAPS)'; \\", self.make)
+        self.assertIn("echo '#define NDS_COMPACT_GROUND_MAPS "
+                      "$(NDS_COMPACT_GROUND_MAPS)'; \\", self.make)
 
     def test_staging_rules(self):
         files = re.findall(r"(?m)^NDS_COMPACT_GROUND_MAP_FILES [:+]= \\\r?\n"
@@ -380,7 +380,7 @@ class MakefileAndSourceContractTests(unittest.TestCase):
         self.assertIsNotNone(table)
         rows = re.findall(r"\{ (NDS_RELOC_ASSET_\w+), (NDS_RELOC_ASSET_\w+), "
                           r"(0x[0-9a-fA-F]+)u \}", table.group(1))
-        # The VS maps, then the 1P maps (NDS_P2_1P_GAME), in cgm.MAPS order.
+        # The VS maps, then the 1P maps (NDS_1P_GAME), in cgm.MAPS order.
         self.assertEqual(len(rows), len(cgm.MAPS))
         for spec, (map_name, wall_name, header) in zip(cgm.MAPS, rows):
             with self.subTest(stage=spec.label):
@@ -390,8 +390,8 @@ class MakefileAndSourceContractTests(unittest.TestCase):
 
     def test_every_use_is_behind_the_flag(self):
         """The P1 build compiles none of this: each seam sits in a
-        `#if defined(NDS_P2_COMPACT_GROUND_MAPS) && ...` region."""
-        flag = "#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS"
+        `#if defined(NDS_COMPACT_GROUND_MAPS) && ...` region."""
+        flag = "#if defined(NDS_COMPACT_GROUND_MAPS) && NDS_COMPACT_GROUND_MAPS"
         for path in (ASSETS_C, RESOLVE_C, MATRIX_C, SPRITE_C, SHIMS_C):
             stack = []
             for number, line in enumerate(
@@ -482,7 +482,7 @@ def extract_function(source: str, name: str) -> str:
 def extract_flag_block(source: str, marker: str) -> str:
     lines = source.splitlines()
     for i, line in enumerate(lines):
-        if line.startswith("#if defined(NDS_P2_COMPACT_GROUND_MAPS)") and \
+        if line.startswith("#if defined(NDS_COMPACT_GROUND_MAPS)") and \
                 i + 1 < len(lines) and lines[i + 1].startswith(marker):
             depth = 0
             for j in range(i, len(lines)):
@@ -510,8 +510,8 @@ HARNESS = r'''
 #define FALSE 0
 #endif
 #define ARRAY_COUNT(a) (sizeof(a) / sizeof((a)[0]))
-#define NDS_P2_COMPACT_GROUND_MAPS 1
-#define NDS_P2_1P_GAME 1
+#define NDS_COMPACT_GROUND_MAPS 1
+#define NDS_1P_GAME 1
 
 @@ASSET_DEFINES@@
 #define NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE 0x26c88u

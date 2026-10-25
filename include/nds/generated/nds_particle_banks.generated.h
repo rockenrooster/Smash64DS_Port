@@ -391,7 +391,7 @@ typedef struct NDSHyruleNativeTexture
     u8 ds_format, frames;
     u32 data_offset, palette_offset, frame_bytes;
 } NDSHyruleNativeTexture;
-#if NDS_P2_STAGE_HYRULE
+#if NDS_STAGE_HYRULE
 extern u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES];
 extern const u32 gNdsHyruleScriptOffsets[NDS_HYRULE_SCRIPT_COUNT];
 extern const NDSHyruleNativeTexture gNdsHyruleNativeTextures[NDS_HYRULE_NATIVE_TEXTURE_COUNT];

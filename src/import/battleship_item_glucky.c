@@ -9,7 +9,7 @@
  * battleship_item_gbumper.c owns GBumper's (local token, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITGLUCKY_* rides on <it/item.h>). ITEM_TOGGLE_MASK_KIND is decomp
  * it/itdef.h:73, transcribed verbatim under guard because no port header

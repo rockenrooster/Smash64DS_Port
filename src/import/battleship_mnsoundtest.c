@@ -22,7 +22,7 @@
  * Available in the VS shell and campaign through the source-menu pump.
  * Its normal entry remains the campaign-gated DATA menu.
  *
- * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mndata.c:
+ * Gated on NDS_MENU_SHELL || NDS_1P_GAME like battleship_mndata.c:
  * the shell compiles the source as ndsBaseMNSoundTestStartScene either way
  * and re-exports it as mnSoundTestStartScene only with the shell off, so
  * the native Sound Test screen's own mnSoundTestStartScene
@@ -54,7 +54,7 @@
  *   src/port/title_backend.c:429 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -86,11 +86,11 @@ extern void mnSoundTestFuncLights(Gfx **dls);
 
 #undef mnSoundTestStartScene
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 void mnSoundTestStartScene(void)
 {
     ndsBaseMNSoundTestStartScene();
 }
 #endif
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

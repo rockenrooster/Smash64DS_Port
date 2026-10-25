@@ -6,7 +6,7 @@
  * The adapter proves the same contract before calling this executor, and the
  * executor repeats it so a broader material can never silently lose source
  * presentation. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemHitokage(
     const void *actor_base_ptr, u32 actor_bytes,

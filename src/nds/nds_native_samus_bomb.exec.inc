@@ -2,7 +2,7 @@
  * the stage DL submit (renderer_adapter_stage_submits.inc) calls
  * ndsRendererSubmitNativeSamusBomb. */
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_RENDERER_HW_TRIANGLES && NDS_SAMUS
 volatile u32 gNdsSamusBombNativeDraws;
 
 s32 ndsRendererSubmitNativeSamusBomb(const NDSRendererNativeMaterial *material,

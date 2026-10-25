@@ -27,7 +27,7 @@
  * DS arena in place of the source overlay-address subtraction.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -64,4 +64,4 @@ void mnScreenAdjustStartScene(void)
     ndsBaseMNScreenAdjustStartScene();
 }
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

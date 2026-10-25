@@ -7,7 +7,7 @@
  * src/import/battleship_sc1pgame_runtime.c): grBonus3InitHeaders,
  * grBonus3MakeBumpers, grBonus3TaruBombProcUpdate, grBonus3TaruBombMakeActor,
  * grBonus3FinishProcUpdate, grBonus3FinishMakeActor, grBonus3MakeGround. No
- * rename, no wrapper, no second owner. Only built when NDS_P2_1P_GAME=1; the
+ * rename, no wrapper, no second owner. Only built when NDS_1P_GAME=1; the
  * flag-off tree never sees it, and the flag-off stub it replaces is gated out
  * in src/import/battleship_grpupupu_ground.c (the grBonus3MakeGround stub
  * there is the only port stand-in for these names; the prototype at the top
@@ -108,7 +108,7 @@
  *   nSYAudioFGMBonusComplete (gm/gmsound.h:723,496); syDebugPrintf
  *   (sys/debug.h:5); scManagerRunPrintGObjStatus (sc/scene.h:947).
  */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -169,4 +169,4 @@ void gcPlayAnimAll(GObj *gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/gr/grbonus/grbonus3.c"
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

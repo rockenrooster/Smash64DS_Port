@@ -822,7 +822,7 @@ void ndsMNVSResultsSetLoadScene(void)
             1u : (gNdsDemoFoxCpuLevel + 1u);
     }
 #endif
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P2-1f: THE SOURCE'S OWN DESTINATION, once there is a menu to return to.
      * `mnVSResultsFuncRun`'s exit block sets `scene_curr = nSCKindPlayersVS`
      * (mnvsresults.c:3312) whenever no unlock message is pending -- the
@@ -858,7 +858,7 @@ void ndsMNVSResultsSetLoadScene(void)
     gNdsVSResultsRematchCount++;
     /* The source already selected PlayersVS or Message above. Preserve the
      * latter so earned Item Switch/Inishie unlocks reach mnMessageApplyUnlock. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     ndsSceneManagerRequest((u32)gSCManagerSceneData.scene_curr,
                            (u32)nSCKindVSResults);
 #else

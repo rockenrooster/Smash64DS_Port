@@ -32,11 +32,11 @@ $sceneConfig = Join-Path $buildDir 'nds_scene_harness_config.h'
 
 if (-not $NoBuild) {
     & make -C $root "TARGET=$target" "BUILD=$Build" `
-        'NDS_P2_LUIGI=1' 'NDS_P2_DONKEY=1' 'NDS_P2_CAPTAIN=1' `
-        'NDS_P2_SAMUS=1' 'NDS_P2_LINK=1' 'NDS_P2_PROOF_FIGHTER0=5' `
-        'NDS_P2_SAMUS_STATE_TOUR=0' 'NDS_P2_SAMUS_TUMBLE_TOUR=0' `
-        'NDS_P2_SAMUS_DAMAGEFLY_TOUR=0' 'NDS_P2_SAMUS_ATTACK_TOUR=0' `
-        'NDS_P2_LINK_BOMB_TOUR=1' `
+        'NDS_LUIGI=1' 'NDS_DONKEY=1' 'NDS_CAPTAIN=1' `
+        'NDS_SAMUS=1' 'NDS_LINK=1' 'NDS_PROOF_FIGHTER0=5' `
+        'NDS_SAMUS_STATE_TOUR=0' 'NDS_SAMUS_TUMBLE_TOUR=0' `
+        'NDS_SAMUS_DAMAGEFLY_TOUR=0' 'NDS_SAMUS_ATTACK_TOUR=0' `
+        'NDS_LINK_BOMB_TOUR=1' `
         'NDS_HARNESS_FAST_PRESENT_ON_REQUEST=1'
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
@@ -52,9 +52,9 @@ foreach ($definition in @(
     '#define NDS_DEV_LIVE_INPUT_PREVIEW 0',
     '#define NDS_HARNESS_FAST_LOGIC 1',
     '#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST 1',
-    '#define NDS_P2_LINK 1',
-    '#define NDS_P2_PROOF_FIGHTER0 5',
-    '#define NDS_P2_LINK_BOMB_TOUR 1',
+    '#define NDS_LINK 1',
+    '#define NDS_PROOF_FIGHTER0 5',
+    '#define NDS_LINK_BOMB_TOUR 1',
     '#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET 1',
     '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE 1'
 )) {

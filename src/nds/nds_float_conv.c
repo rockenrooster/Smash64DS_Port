@@ -10,7 +10,7 @@
  * and halfway case, 0 mismatches (artifacts/performance/
  * 2026-09-27_p2-2p8-fast-mem/, section 37). __floatsisf forwards to the Task
  * 16 __aeabi_i2f, the same function under its libgcc name. The Makefile
- * renames the member's own copies (NDS_P2_FLOAT_CONV) and places it in main
+ * renames the member's own copies (NDS_FLOAT_CONV) and places it in main
  * RAM. ARM state: CLZ is an ARM instruction, and a Thumb-1 __builtin_clz would
  * be a libgcc call. */
 #include <stdint.h>

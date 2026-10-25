@@ -12,7 +12,7 @@
  * private copies. Core + status table live in battleship_ftboss.c.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <ft/fighter.h>
 #include <gm/generic.h>
@@ -42,4 +42,4 @@ extern Vec3f *syVectorScale3D(Vec3f *dst, f32 scale);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossokuhikouki2.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossokuhikouki3.c"
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

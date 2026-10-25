@@ -192,7 +192,7 @@ def emit(desc, stage):
     sizes = list(desc.adapter_asset_sizes) + [0] * (4 - len(desc.adapter_asset_sizes))
     out = []
     out.append(f"/* ---- renderer_adapter_matrix.c: capture + descriptor for {name} (gkind {GKIND[stage]}) ---- */")
-    out.append(f"#if defined(NDS_P2_STAGE_{MAC}) && (NDS_P2_STAGE_{MAC} == 1)")
+    out.append(f"#if defined(NDS_STAGE_{MAC}) && (NDS_STAGE_{MAC} == 1)")
     out.append("static const NDSRendererAdapterNativeStageCaptureSegment")
     out.append(f"    sNdsRendererAdapterNativeStageCapture{name}[{len(rows)}] = {{")
     for i, r in enumerate(rows):
@@ -213,7 +213,7 @@ def emit(desc, stage):
     out.append("")
     census = desc.expected_counts.get("submit_classes")
     out.append(f"/* ---- nds_native_stage_select.inc: packet row for {name} ---- */")
-    out.append(f"#if defined(NDS_P2_STAGE_{MAC}) && (NDS_P2_STAGE_{MAC} == 1) && (NDS_NATIVE_STAGE_LINKED_{MAC} == 1)")
+    out.append(f"#if defined(NDS_STAGE_{MAC}) && (NDS_STAGE_{MAC} == 1) && (NDS_NATIVE_STAGE_LINKED_{MAC} == 1)")
     P, M = symbol_prefix(desc), macro_prefix(desc)
     out.append(f"_Static_assert({M}SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&")
     out.append(f"               {M}RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&")

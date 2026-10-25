@@ -9,7 +9,7 @@
  * uintptr_t tokens the same way battleship_item_gbumper.c owns GBumper's
  * (local tokens, no generator involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
  * Symbols the port headers do not publish yet (the syUtils and syVector
  * entry points, efManagerDustLightMakeEffect, and ITEM_TOGGLE_MASK_KIND

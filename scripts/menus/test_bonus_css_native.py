@@ -529,9 +529,9 @@ class BonusCssNativeTest(unittest.TestCase):
             self.assertIn(scene, sink)
         tenant = function((ROOT / "src/nds/nds_source2d.c").read_text(),
                           "ndsS2DSceneIsTenant")
-        guarded = tenant[tenant.index("#if !NDS_P2_MENU_SHELL"):
+        guarded = tenant[tenant.index("#if !NDS_MENU_SHELL"):
                          tenant.index("#endif", tenant.index(
-                             "#if !NDS_P2_MENU_SHELL"))]
+                             "#if !NDS_MENU_SHELL"))]
         self.assertIn("nSCKind1PBonus1Players", guarded)
         self.assertIn("nSCKind1PBonus2Players", guarded)
 

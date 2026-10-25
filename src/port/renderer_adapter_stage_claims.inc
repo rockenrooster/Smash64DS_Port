@@ -7,7 +7,7 @@
  * (renderer_adapter_stage_submit.c): its text reads and writes that
  * function's locals, so it is not a file of its own. */
 
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     /* File 155 root 0x0B40 is not a scale-platform root.  BattleShip's
      * GRInishieMap points the scale map_nodes at 0x05F0; 0x0B40 is the
      * Pakkun ITAttributes DObjDesc child.  Item GObjs are outside the
@@ -182,7 +182,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     /* File 153 root 0x1c50 is the ArwingLaser weapon list, and it is the ONLY
      * thing in the game data that can arrive here with this asset and root.
      * Whole-image pointer census: the only two pointers to 153:0x1c50 are
@@ -264,7 +264,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     /* File 86 root 0x7558 is the bumper quad.  TWO item kinds reach it with
      * IDENTICAL evidence: 251_ITCommonData.c:934 (NBumper) and :1843
      * (GBumper) carry the same DObjDesc and the same p_mobjsubs, and file 86
@@ -464,7 +464,7 @@
                 (purin_sing_material.effects == NDS_NATIVE_PURIN_SING_MATERIAL_EFFECTS))
             {
                 purin_sing_root_index = i;
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
                 purin_sing_image = ndsRelocNativeAssetAddress(loaded->data, images[i]);
 #else
                 purin_sing_image = (const u8 *)loaded->data + images[i];
@@ -486,7 +486,7 @@
         (dobj->parent_gobj->id == nGCCommonKindEffect) &&
         (dobj->mobj != NULL) && (dobj->mobj->next == NULL))
     {
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
         const void *expected_palette = ndsRelocNativeAssetAddress(
             loaded->data, NDS_NATIVE_YOSHI_ENTRYEGG_PALETTE_OFFSET);
         const void *expected_vertex = ndsRelocNativeAssetAddress(
@@ -556,7 +556,7 @@
         (dobj->parent_gobj != NULL) &&
         (dobj->parent_gobj->id == nGCCommonKindEffect) && (dobj->mobj == NULL))
     {
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
         const void *expected_palette = ndsRelocNativeAssetAddress(
             loaded->data, NDS_NATIVE_YOSHI_EGGLAY_PALETTE_OFFSET);
         const void *expected_image = ndsRelocNativeAssetAddress(
@@ -919,7 +919,7 @@
             }
         }
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     /* Link's Bomb, file 353 roots 0x16f8 (DL head 0, body) and 0x17e8 (DL
      * head 1, fuse glow).  ONE OBJECT, TWO LISTS: LinkMain's ITAttributes at
      * 0x40 -- llLinkMainBombItemAttributes, named beside nITKindLinkBomb at
@@ -1072,7 +1072,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     /* Saffron City's Marumine (Electrode), file 159 root 0x06a0.  ONE OBJECT,
      * ONE LIST: GRYamabukiMap's ITAttributes at 0x104 --
      * llGRYamabukiMapMarumineItemAttributes, named beside nITKindMarumine at
@@ -1190,7 +1190,7 @@
         }
     }
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     /* GLucky and Porygon are the two bake-everything Saffron siblings.  Their
      * thirty-word roots contain no 0xDE call, their MObj is NULL, and both the
      * TLUT and image are immutable file-159 fixups.  Keep the same step-9

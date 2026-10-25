@@ -135,7 +135,7 @@ void ndsMNPlayersClearPreviewFighterFiles(s32 fkind);
 const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
                                              u32 offset);
 
-#if NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_COMPACT_BATTLE_FIGHTERS
 /* FPC1 VSBattle packs leave non-Model Main externs NULL until the source
  * status/special closure has been made resident.  Restore those generated
  * source slots before fighter construction. */

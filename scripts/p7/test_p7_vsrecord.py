@@ -43,7 +43,7 @@ typedef unsigned long long u64; typedef int s32; typedef signed char s8; typedef
 typedef unsigned char ub8;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_MMARIO 1
+#define NDS_MMARIO 1
 #define NDS_P4 1
 #define NDS_P4_CONTENT_LIMIT 21
 #define LBBACKUP_MASK_FIGHTER(kind) (1u << (kind))

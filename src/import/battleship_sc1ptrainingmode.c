@@ -30,8 +30,8 @@
  *   180 (:433-457, scdef.h:92,466-473); damage 3-digit + combo 2-digit
  *   (:790,:874, scdef.h:77-82); Reset/Exit via A-button reload (:461-489).
  *
- * Gated on NDS_P2_1P_GAME: the Makefile defines no NDS_P2_TRAINING flag
- * (verified 2026-09-05: only NDS_P2_1P_GAME at Makefile:700), so this rides
+ * Gated on NDS_1P_GAME: the Makefile defines no NDS_TRAINING flag
+ * (verified 2026-09-05: only NDS_1P_GAME at Makefile:700), so this rides
  * the campaign flag like the P2-6 step 5 bonus-stage TU and the P2-7 item 5
  * menu imports until P2-7 mints its own gate.
  *
@@ -47,7 +47,7 @@
  * - nSYAudioBGMTrainingMode (= 42) and nSYAudioFGMTrainingSel2 (= 162):
  *   port-PROVIDED, include/gm/gmsound.h:66,484. No value macros here.
  * - itManagerMakeItemSetupCommon (:403, port include/it/item.h:1009):
- *   provided by battleship_item_link_core.c behind NDS_P2_ITEM_CORE,
+ *   provided by battleship_item_link_core.c behind NDS_ITEM_CORE,
  *   which the campaign's required fighter flags enable in the Makefile.
  * - ll* rows: NONE unresolved. dSC1PTrainingModeWallpaperDescs (:79-84)
  *   needs the 3 training wallpaper FileID/Sprite pairs (port
@@ -61,10 +61,10 @@
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): sc1PTrainingModeStartScene (adapter below) vs
  *   src/port/title_backend.c:489 NDS_SCENE_STUB, already gated
- *   #if !NDS_P2_1P_GAME, so this TU wins exactly when the flag is on.
+ *   #if !NDS_1P_GAME, so this TU wins exactly when the flag is on.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -287,4 +287,4 @@ void sc1PTrainingModeStartScene(void)
     ndsIFCommonTrainingEnd();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

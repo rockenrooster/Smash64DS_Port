@@ -5,7 +5,7 @@
  * the sliding platform are mechanically equivalent to the source, and exposes
  * ndsGRCastleSetupInitAll for the shared grCommonSetupInitAll gate (which
  * stays in the Pupupu wrapper; this TU must NOT redefine grCommonSetupInitAll
- * or grMainSetupMakeGround). Only built when NDS_P2_STAGE_CASTLE=1; the
+ * or grMainSetupMakeGround). Only built when NDS_STAGE_CASTLE=1; the
  * flag-off tree never sees it.
  *
  * grcastle.c is the smallest stage translation unit in the game -- 66 lines,
@@ -30,7 +30,7 @@
  * the bumper starts working the moment the item core lands, with no change
  * here.
  */
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
 
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -109,4 +109,4 @@ void ndsGRCastleSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
-#endif /* NDS_P2_STAGE_CASTLE */
+#endif /* NDS_STAGE_CASTLE */

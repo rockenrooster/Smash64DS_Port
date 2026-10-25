@@ -9,7 +9,7 @@
  * battleship_item_gbumper.c owns GBumper's (local tokens, no generator
  * involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
  * Symbols the port headers do not publish yet (ITKABIGON_ and ITMONSTER_
  * tuning is present in include/it/item.h; itGetMonsterAnimNode, the SFX/

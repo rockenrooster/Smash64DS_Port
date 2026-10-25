@@ -1924,7 +1924,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * owner is visually/source-qualified: Mario is owner slot 0, and profile
      * owner ids are one-based so DK's native slot is DONKEY-1. */
     if ((flat_worlds != FALSE) || (((slot == 0u)
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
          || (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
 #endif
          ) &&
@@ -1944,7 +1944,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed, &compose_seed);
         sNdsRendererAdapterNativeOwnerWorkspace.gx_seed_is_identity =
             (u8)((seed_is_identity != FALSE) ? 1u : 0u);
-#if NDS_P2_LINK
+#if NDS_LINK
         /* P2-3f31. Link's source model contains a regular G_TEXTURE_GEN epoch.
          * Keep GX as the hierarchy executor, but mirror the exact same forward
          * compose on ARM9 so Fast3D's LookAt transform has the finished current
@@ -2321,7 +2321,7 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
  * The barrel needs two local matrices, not the fighter owner's full material,
  * topology and animation scratch. It is consumed synchronously by its native
  * draw below and owns no scene pointers between calls. */
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 typedef struct NDSRendererAdapterNativeActorWorkspace
 {
     DObj *hierarchy_joints[2];
@@ -2533,7 +2533,7 @@ sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root_ptr, void *cobj,
  * ndsRendererAdapterBuildDObjLocalMatrix so kind48 stays a live recalc,
  * and the three prim alphas are the drawables' live MObj anim state
  * (mobj->sub.primcolor.s.a, the field objdisplay.c submits). */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
 typedef struct NDSRendererAdapterNativeYosterCloudWorkspace
 {
     DObj *hierarchy_joints[7];

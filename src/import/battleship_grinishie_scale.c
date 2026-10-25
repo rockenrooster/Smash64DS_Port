@@ -39,7 +39,7 @@
  * the full Mushroom Kingdom import defines them too. When that stage is
  * compiled it owns them; this file keeps them only for the older scale-only
  * configuration, which is the one that has no grinishie.c in the link. */
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 /* Owned by the full stage import; this file only reads them. */
 extern u16 dGRInishieScaleMapObjKinds[];
 extern u8 dGRInishieScaleLineGroups[];
@@ -58,7 +58,7 @@ enum grInishieScaleStatus
     nGRInishieScaleStatusRetract
 };
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleUpdateFighterStatsGA(void)
 {
     GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
@@ -92,7 +92,7 @@ void grInishieScaleUpdateFighterStatsGA(void)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 f32 grInishieScaleGetPressure(s32 line_id)
 {
     GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
@@ -126,7 +126,7 @@ f32 grInishieScaleGetPressure(s32 line_id)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleUpdateWait(void)
 {
     DObj *l_dobj;
@@ -245,7 +245,7 @@ void grInishieScaleUpdateWait(void)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleUpdateFall(void)
 {
     f32 deadzone;
@@ -279,7 +279,7 @@ void grInishieScaleUpdateFall(void)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleUpdateStep(void)
 {
     gGRCommonStruct.inishie.splat_wait--;
@@ -303,7 +303,7 @@ void grInishieScaleUpdateStep(void)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleUpdateRetract(void)
 {
     DObj *l_dobj;
@@ -366,7 +366,7 @@ void grInishieScaleUpdateRetract(void)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 void grInishieScaleProcUpdate(GObj *ground_gobj)
 {
     (void)ground_gobj;
@@ -398,7 +398,7 @@ void grInishieScaleProcUpdate(GObj *ground_gobj)
 }
 #endif
 
-#if !NDS_P2_STAGE_INISHIE
+#if !NDS_STAGE_INISHIE
 /* Retired source-scale ground setup. The implementation lives host-only;
  * this stub reports the retired presentation path as a native failure. */
 void grInishieMakeScale(void)

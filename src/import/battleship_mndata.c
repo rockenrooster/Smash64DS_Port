@@ -21,12 +21,12 @@
  * - FuncStart replays the ModeSelect BGM when returning from one of its own
  *   children (:808-816).
  *
- * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mnoption.c:
+ * Gated on NDS_MENU_SHELL || NDS_1P_GAME like battleship_mnoption.c:
  * the shell compiles the source as ndsBaseMNDataStartScene either way and
  * re-exports it as mnDataStartScene only with the shell off, so the native
  * DATA screen's own mnDataStartScene (src/nds/nds_menu_shell_router.c) wins
  * when the shell is on -- the exact Option arrangement. The Makefile has no
- * NDS_P2_MODES_META flag (verified 2026-09-05; only NDS_P2_1P_GAME gates the
+ * NDS_MODES_META flag (verified 2026-09-05; only NDS_1P_GAME gates the
  * P2-6/P2-7 imports), so this rides the campaign flag like the item-5
  * SoundTest TU until P2-7 mints its own gate.
  *
@@ -60,7 +60,7 @@
  *   src/port/title_backend.c:416 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+#if NDS_MENU_SHELL || NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -87,11 +87,11 @@ void ndsBaseMNDataStartScene(void);
 
 #undef mnDataStartScene
 
-#if !NDS_P2_MENU_SHELL
+#if !NDS_MENU_SHELL
 void mnDataStartScene(void)
 {
     ndsBaseMNDataStartScene();
 }
 #endif
 
-#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
+#endif /* NDS_MENU_SHELL || NDS_1P_GAME */

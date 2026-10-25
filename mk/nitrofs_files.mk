@@ -23,12 +23,12 @@ NDS_STAGE_SCOUT_RELOC_FILES := \
 	reloc_stages/StageCastle \
 	reloc_extern_data/ExternDataBank113
 
-# P2-4 first stage: Yoshi's Island (Yoster), opt-in behind NDS_P2_STAGE_YOSTER.
+# P2-4 first stage: Yoshi's Island (Yoster), opt-in behind NDS_STAGE_YOSTER.
 # Payload mirrors the Pupupu set above: map header (263), wallpaper sprite
 # container (StageYoshi, file 0x5d), geometry/display (ExternDataBank111 =
 # StageYosterFile2) and map nodes (MiscDataBank154 = StageYosterFile3).
 # The flag itself is defaulted with the other admission flags near :722.
-ifeq ($(NDS_P2_STAGE_YOSTER),1)
+ifeq ($(NDS_STAGE_YOSTER),1)
 NDS_YOSTER_STAGE_RELOC_FILES := \
 	reloc_stages/GRYosterMap \
 	reloc_stages/StageYoshi \
@@ -39,7 +39,7 @@ else
 NDS_YOSTER_STAGE_RELOC_FILES :=
 endif
 
-# P2-4 stage 2: Peach's Castle (Castle), opt-in behind NDS_P2_STAGE_CASTLE.
+# P2-4 stage 2: Peach's Castle (Castle), opt-in behind NDS_STAGE_CASTLE.
 # Payload mirrors the two sets above. A bank name carries the relocData file
 # number in decimal and the asset id is that number in hex, which is how each
 # of these was derived rather than guessed: map header 259 = 0x103
@@ -53,7 +53,7 @@ endif
 # 156 = 0x9c (MiscDataBank156 = StageCastleFile3). The sprite list
 # reloc_stages/StageCastle (95 = 0x5f) is already staged unconditionally
 # above.
-ifeq ($(NDS_P2_STAGE_CASTLE),1)
+ifeq ($(NDS_STAGE_CASTLE),1)
 NDS_CASTLE_STAGE_RELOC_FILES := \
 	reloc_stages/GRCastleMap \
 	reloc_extern_data/ExternDataBank106 \
@@ -62,14 +62,14 @@ else
 NDS_CASTLE_STAGE_RELOC_FILES :=
 endif
 
-# P2-4 stage 3: Congo Jungle (Jungle), opt-in behind NDS_P2_STAGE_JUNGLE.
+# P2-4 stage 3: Congo Jungle (Jungle), opt-in behind NDS_STAGE_JUNGLE.
 # Derived by the same bank-number rule and then CHECKED against the map
 # header's own extern list rather than assumed: GRJungleMap (261 = 0x105)
 # declares exactly 0x5c, 0x6c and 0x9e, which are StageJungle (92),
 # ExternDataBank108 (StageJungleFile2, geometry and display) and
 # MiscDataBank158 (StageJungleFile3, map nodes and the cannon animations).
 # All three declare no externs of their own, so the closure is complete.
-ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+ifeq ($(NDS_STAGE_JUNGLE),1)
 NDS_JUNGLE_STAGE_RELOC_FILES := \
 	reloc_stages/GRJungleMap \
 	reloc_stages/StageJungle \
@@ -83,7 +83,7 @@ endif
 # GRZebesMap (257 = 0x101) declares exactly 0x59, 0x69 and 0x9d -- StageZebes
 # (89), ExternDataBank105 (StageZebesFile2) and MiscDataBank157
 # (StageZebesFile3) -- and none of the three declares an extern of its own.
-ifeq ($(NDS_P2_STAGE_ZEBES),1)
+ifeq ($(NDS_STAGE_ZEBES),1)
 NDS_ZEBES_STAGE_RELOC_FILES := \
 	reloc_stages/GRZebesMap \
 	reloc_stages/StageZebes \
@@ -96,7 +96,7 @@ endif
 # P2-4 stage 6: Saffron City. GRYamabukiMap (264 = 0x108) declares four:
 # StagePokemon (94), ExternDataBank112, MiscDataBank159 and MiscDataBank160.
 # It is the only stage so far whose map needs two Misc banks.
-ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+ifeq ($(NDS_STAGE_YAMABUKI),1)
 NDS_YAMABUKI_STAGE_RELOC_FILES := \
 	reloc_stages/GRYamabukiMap \
 	reloc_stages/StagePokemon \
@@ -110,7 +110,7 @@ endif
 # P2-4 stage 7: Mushroom Kingdom. GRInishieMap (260 = 0x104) declares three:
 # StageHyruleWallpaper (91), ExternDataBank107 and MiscDataBank155. The map
 # itself is already rowed unconditionally.
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 NDS_INISHIE_STAGE_RELOC_FILES := \
 	reloc_stages/GRInishieMap \
 	reloc_stages/StageHyruleWallpaper \
@@ -122,7 +122,7 @@ endif
 
 # P2-4 stage 8: Sector Z. GRSectorMap (262 = 0x106) declares three:
 # StageSector (99), ExternDataBank109 and MiscDataBank153.
-ifeq ($(NDS_P2_STAGE_SECTOR),1)
+ifeq ($(NDS_STAGE_SECTOR),1)
 NDS_SECTOR_STAGE_RELOC_FILES := \
 	reloc_stages/GRSectorMap \
 	reloc_stages/StageSector \
@@ -133,7 +133,7 @@ NDS_SECTOR_STAGE_RELOC_FILES :=
 endif
 
 # P2-6 step 7 (boss): Final Destination's runtime map (Last), behind
-# NDS_P2_1P_GAME. Derived by the same bank-number rule as the stages above:
+# NDS_1P_GAME. Derived by the same bank-number rule as the stages above:
 # a bank name carries the relocData file number in decimal and the asset id
 # is that number in hex -- map 266 = 0x10a (GRLastMap) and geometry/display
 # 114 = 0x72 (ExternDataBank114 = StageLastFile2). The map's extern table also
@@ -142,7 +142,7 @@ endif
 # wallpaper names are a consistent mislabelling, see nds_reloc_assets.c): the
 # native packet draws the wallpaper, but the
 # extern-tree loader refuses a parent with an unrowed dependency, so it is
-# staged to satisfy the fixup. No new NDS_P2_STAGE_LAST flag: the 1P arenas
+# staged to satisfy the fixup. No new NDS_STAGE_LAST flag: the 1P arenas
 # ride the 1P Game flag. The list also carries Meta Crystal (GRMetalMap 269 =
 # 0x10d, StageMetalFile2 117 = 0x75, wallpaper 98 = 0x62 held by the container
 # named StageLastWallpaper),
@@ -153,7 +153,7 @@ endif
 # staged since P1) and Duel Zone (GRZakoMap 268 = 0x10c, StageBattlefieldFile2
 # 116 = 0x74, wallpaper 97 = 0x61 held by the container named
 # StageInishieWallpaper).
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_LAST_STAGE_RELOC_FILES := \
 	reloc_stages/GRLastMap \
 	reloc_extern_data/ExternDataBank114 \
@@ -179,7 +179,7 @@ endif
 # 253 (llITBonus1ObjectHeaderFileID; its one extern is 150) and Kirby's copy
 # table 230.
 # Same bank-number rule as above; reloc_backend_assets.c carries the ids.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_BONUS_RELOC_FILES := \
 	reloc_stages/StageMetalWallpaper \
 	reloc_extern_data/ExternDataBank120 \
@@ -571,78 +571,78 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 # is generated from BattleShip FTData + generated relocData names + O2R headers;
 # no fighter file inventory belongs in this Makefile from this point forward.
 include $(PROJECT_ROOT)/scripts/fighters/fighter_production_files.mk
-NDS_P2_FIGHTER_RELOC_FILES :=
-ifeq ($(NDS_P2_LUIGI),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LUIGI_FIGHTER_RELOC_FILES)
+NDS_FIGHTER_RELOC_FILES :=
+ifeq ($(NDS_LUIGI),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_LUIGI_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_DONKEY),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_DONKEY_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_DONKEY),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_DONKEY_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_CAPTAIN),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_CAPTAIN_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_CAPTAIN),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_CAPTAIN_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_SAMUS),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_SAMUS_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_SAMUS),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_SAMUS_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_LINK),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LINK_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_LINK),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_LINK_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_PIKACHU),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_PIKACHU_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_PIKACHU),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_PIKACHU_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_YOSHI),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_YOSHI_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_YOSHI),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_YOSHI_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NESS),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NESS_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NESS),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NESS_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_PURIN),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_PURIN_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_PURIN),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_PURIN_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_KIRBY),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_KIRBY_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_KIRBY),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_KIRBY_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_GDONKEY),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_GDONKEY_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_GDONKEY),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_GDONKEY_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_MMARIO),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_MMARIO_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_MMARIO),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_MMARIO_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NMARIO),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NMARIO_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NMARIO),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NMARIO_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NFOX),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NFOX_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NFOX),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NFOX_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NDONKEY),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NDONKEY_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NDONKEY),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NDONKEY_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NSAMUS),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NSAMUS_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NSAMUS),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NSAMUS_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NLUIGI),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NLUIGI_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NLUIGI),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NLUIGI_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NLINK),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NLINK_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NLINK),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NLINK_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NYOSHI),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NYOSHI_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NYOSHI),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NYOSHI_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NCAPTAIN),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NCAPTAIN_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NCAPTAIN),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NCAPTAIN_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NKIRBY),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NKIRBY_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NKIRBY),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NKIRBY_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NPIKACHU),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NPIKACHU_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NPIKACHU),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NPIKACHU_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NPURIN),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NPURIN_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NPURIN),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NPURIN_FIGHTER_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NNESS),1)
-NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NNESS_FIGHTER_RELOC_FILES)
+ifeq ($(NDS_NNESS),1)
+NDS_FIGHTER_RELOC_FILES += $(NDS_NNESS_FIGHTER_RELOC_FILES)
 endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
@@ -700,16 +700,16 @@ NDS_FTANIM_STREAM_SPLINE_FILES := \
 	reloc_animations/FTSamusAnim060 \
 	reloc_animations/FTSamusAnim061
 NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL := $(NDS_MARIOFOX_FIGHTER_RELOC_FILES)
-NDS_P2_FIGHTER_RELOC_FILES_FULL := $(NDS_P2_FIGHTER_RELOC_FILES)
+NDS_FIGHTER_RELOC_FILES_FULL := $(NDS_FIGHTER_RELOC_FILES)
 NDS_FTANIM_STREAM_REPLACED_RELOC_FILES := $(filter \
 	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL) \
-	$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
+	$(NDS_FIGHTER_RELOC_FILES_FULL))
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := $(filter-out \
 	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL)) \
 	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL))
-NDS_P2_FIGHTER_RELOC_FILES := $(filter-out \
-	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_P2_FIGHTER_RELOC_FILES_FULL)) \
-	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
+NDS_FIGHTER_RELOC_FILES := $(filter-out \
+	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_FIGHTER_RELOC_FILES_FULL)) \
+	$(filter $(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),$(NDS_FIGHTER_RELOC_FILES_FULL))
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \
@@ -857,40 +857,40 @@ NDS_VS_RESULTS_RELOC_FILES := \
 # Luigi's DemoLose too); every other list is roster-gated so a build without a
 # fighter does not pack his poses.
 NDS_VS_RESULTS_RELOC_FILES += $(NDS_MARIOFOX_DEMO_RELOC_FILES)
-ifeq ($(NDS_P2_LUIGI),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_LUIGI_DEMO_RELOC_FILES)
+ifeq ($(NDS_LUIGI),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_LUIGI_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_DONKEY),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_DONKEY_DEMO_RELOC_FILES)
+ifeq ($(NDS_DONKEY),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_DONKEY_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_CAPTAIN),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_CAPTAIN_DEMO_RELOC_FILES)
+ifeq ($(NDS_CAPTAIN),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_CAPTAIN_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_SAMUS),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_SAMUS_DEMO_RELOC_FILES)
+ifeq ($(NDS_SAMUS),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_SAMUS_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_LINK),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_LINK_DEMO_RELOC_FILES)
+ifeq ($(NDS_LINK),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_LINK_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_PIKACHU),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_PIKACHU_DEMO_RELOC_FILES)
+ifeq ($(NDS_PIKACHU),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_PIKACHU_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_YOSHI),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_YOSHI_DEMO_RELOC_FILES)
+ifeq ($(NDS_YOSHI),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_YOSHI_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_NESS),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_NESS_DEMO_RELOC_FILES)
+ifeq ($(NDS_NESS),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_NESS_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_PURIN),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_PURIN_DEMO_RELOC_FILES)
+ifeq ($(NDS_PURIN),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_PURIN_DEMO_RELOC_FILES)
 endif
-ifeq ($(NDS_P2_KIRBY),1)
-NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_KIRBY_DEMO_RELOC_FILES)
+ifeq ($(NDS_KIRBY),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_KIRBY_DEMO_RELOC_FILES)
 endif
 # P2-6: the 1P scenes' demo poses -- the intro's IntroL/IntroR (team
 # formations included) and the figure's dolls -- from the same generated table
 # as their runtime token rows (NDS_1P_DEMO_ANIM_ASSET_ROWS).
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_VS_RESULTS_RELOC_FILES += $(NDS_1P_DEMO_RELOC_FILES)
 endif
 
@@ -932,7 +932,7 @@ NDS_AUDIO_DERIVED_FILES := \
 # Sequence 8 is nSYAudioBGMYoster (gm/gmsound.h:31-40, sequential from 0).
 # Nested inside the BGM-import gate like every other derived BGM so flag-off
 # output is identical.
-ifeq ($(NDS_P2_STAGE_YOSTER),1)
+ifeq ($(NDS_STAGE_YOSTER),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_yoster_ima.bin
 endif
@@ -940,25 +940,25 @@ endif
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 6 \
 #          --output assets/audio/bgm_castle_ima.bin
 # Sequence 6 is nSYAudioBGMCastle (gm/gmsound.h:31-37).
-ifeq ($(NDS_P2_STAGE_CASTLE),1)
+ifeq ($(NDS_STAGE_CASTLE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_castle_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 1 \
 #          --output assets/audio/bgm_zebes_ima.bin
-ifeq ($(NDS_P2_STAGE_ZEBES),1)
+ifeq ($(NDS_STAGE_ZEBES),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_zebes_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 9 \
 #          --output assets/audio/bgm_hyrule_ima.bin
-ifeq ($(NDS_P2_STAGE_HYRULE),1)
+ifeq ($(NDS_STAGE_HYRULE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_hyrule_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 7 \
 #          --output assets/audio/bgm_yamabuki_ima.bin
-ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+ifeq ($(NDS_STAGE_YAMABUKI),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_yamabuki_ima.bin
 endif
@@ -967,7 +967,7 @@ endif
 # The renderer picks its step-index Viterbi encoder for sequences 2 and 3 by
 # itself (TRELLIS_IMA_SEQUENCES); no flag. 2026-09-22: IMA again after the
 # PCM16 stream of 2026-09-07, on the owner's "ALL BGM should be IMA-ADPCM".
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_inishie_ima.bin
 endif
@@ -980,14 +980,14 @@ endif
 # when the intro is short. The six accepted tracks all render one period.
 # Not a unit bug: bytes and samples convert consistently at :286-287, :334
 # and :625, and the two channels agree on the period to within 80 ticks.
-ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+ifeq ($(NDS_STAGE_JUNGLE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_jungle_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 4 \
 #          --output assets/audio/bgm_sector_ima.bin
 # Same two-period shape as Jungle above, loop start at 53.62%.
-ifeq ($(NDS_P2_STAGE_SECTOR),1)
+ifeq ($(NDS_STAGE_SECTOR),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_sector_ima.bin
 endif
@@ -996,14 +996,14 @@ endif
 # same 16,392-byte ring as every track. Reproduce with:
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 3 \
 #          --output assets/audio/bgm_inishie_hurry_ima.bin
-ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_inishie_hurry_ima.bin
 endif
 # 2026-09-05: reproduce each with
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
 #          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
-ifeq ($(NDS_P2_ITEM_CORE),1)
+ifeq ($(NDS_ITEM_CORE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_hammer_ima.bin \
 	audio/bgm_star_ima.bin
@@ -1011,7 +1011,7 @@ endif
 # 2026-09-05: reproduce each with
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
 #          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_boss_stage_ima.bin \
 	audio/bgm_boss_entry_ima.bin \
@@ -1109,7 +1109,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_BONUS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_ITEM_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -1133,11 +1133,11 @@ endif
 endif
 
 # P2-1c's UI pack ships only with the runtime that reads it. Empty by default,
-# so a ROM built without NDS_P2_UI_KIT does not carry 24,384 bytes nothing
+# so a ROM built without NDS_UI_KIT does not carry 24,384 bytes nothing
 # opens -- which is what makes the published ROMs byte-identical across this
 # row.
 export NDS_NITROFS_MN_UI_KIT_FILES :=
-ifeq ($(NDS_P2_UI_KIT),1)
+ifeq ($(NDS_UI_KIT),1)
 NDS_NITROFS_MN_UI_KIT_FILES := $(NITROFS_DIR)/menus/mn_ui_kit.bin
 # P2-1h's backdrop art rides the same flag and the same reason: without the kit
 # there is no reader, and 177,900 bytes of ROM nothing opens is what keeps the
@@ -1173,7 +1173,7 @@ NDS_NITROFS_PARTICLE_FILES := \
 	$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin
-ifeq ($(NDS_P2_STAGE_HYRULE),1)
+ifeq ($(NDS_STAGE_HYRULE),1)
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grhyrule_native.ds.bin
 endif

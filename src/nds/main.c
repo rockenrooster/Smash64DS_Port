@@ -77,12 +77,12 @@ static void ndsLabUncacheSinTableIfRequested(void)
 {
 }
 
-/* P2-2p8 (NDS_P2_ARM9_WRAM): ARM9 takes all 32 KB of shared WRAM
+/* P2-2p8 (NDS_ARM9_WRAM): ARM9 takes all 32 KB of shared WRAM
  * (WRAMCNT = 0). ARM7's image lives in its private WRAM
  * (linker/nds_arm7_ds7_arm9wram.ld), so the switch never moves ARM7 code.
  * Region 3 maps it for ARM9 data, cached and write-buffered: a line fill
  * crosses the 32-bit WRAM bus instead of 16-bit main RAM. */
-static void ndsP2Arm9WramInit(void)
+static void ndsArm9WramInit(void)
 {
     *(volatile u8 *)0x04000247 = 0u;
     armMpuSetRegion(3, armMpuDefineRegion(NDS_ARM9_WRAM_BASE, CP15_PU_32K));
@@ -98,7 +98,7 @@ int main(void)
     char debug_message[64];
     int os_test;
 
-    ndsP2Arm9WramInit();
+    ndsArm9WramInit();
     ndsLabDisableDataCacheIfRequested();
     ndsLabUncacheSinTableIfRequested();
     ndsPlatformInit();

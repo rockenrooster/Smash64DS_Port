@@ -178,11 +178,11 @@
  * loop_start_byte, ASSET_BYTES is bytes, the two SHA256_LO pins are the low
  * 32 bits of source_pcm_sha256 and sha256, and the last three are
  * packet_count, loop_packet_index and loop_record_offset. The asset was
- * rendered and staged behind NDS_P2_STAGE_SECTOR, but the track table in
+ * rendered and staged behind NDS_STAGE_SECTOR, but the track table in
  * nds_audio_bgm.c never carried a row for it, so ndsAudioBgmFindTrack missed
  * and the stage played silent through gNdsAudioBgmUnsupportedTrackCount.
  * Owner playtest, 2026-09-04. Loop start at 53.62% of the stream. */
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
 #define NDS_AUDIO_BGM_SECTOR_STREAM_BYTES 4944528u
 #define NDS_AUDIO_BGM_SECTOR_LOOP_START_BYTES 2651328u
 #define NDS_AUDIO_BGM_SECTOR_STREAM_SHA256_LO 0x0aa83296u
@@ -198,11 +198,11 @@
  * loop_start_byte, ASSET_BYTES is bytes, the two SHA256_LO pins are the low
  * 32 bits of source_pcm_sha256 and sha256, and the last three are
  * packet_count, loop_packet_index and loop_record_offset. The asset was
- * rendered and staged behind NDS_P2_STAGE_JUNGLE, but the track table in
+ * rendered and staged behind NDS_STAGE_JUNGLE, but the track table in
  * nds_audio_bgm.c never carried a row for it, so ndsAudioBgmFindTrack missed
  * and the stage played silent through gNdsAudioBgmUnsupportedTrackCount.
  * Owner playtest, 2026-09-04. Loop start at 50.06% of the stream. */
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
 #define NDS_AUDIO_BGM_JUNGLE_STREAM_BYTES 13862166u
 #define NDS_AUDIO_BGM_JUNGLE_LOOP_START_BYTES 6941908u
 #define NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0xcaf359e8u
@@ -212,7 +212,7 @@
 #define NDS_AUDIO_BGM_JUNGLE_LOOP_PACKET 212u
 #define NDS_AUDIO_BGM_JUNGLE_LOOP_RECORD 1738064u
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
 /* nSYAudioBGMInishieHurry, S1_music_sbk sequence 3, the <=30-second
  * Mushroom Kingdom source swap (if/ifcommon.c:2500). Same IMA path and
  * Viterbi encode as sequence 2, from the source PCM the PCM16 asset
@@ -301,7 +301,7 @@
 #define NDS_AUDIO_BGM_WIN_ZELDA_ASSET_BYTES 74440u
 #define NDS_AUDIO_BGM_WIN_ZELDA_ASSET_SHA256_LO 0xca30a28bu
 #define NDS_AUDIO_BGM_WIN_ZELDA_PACKET_COUNT 10u
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMBossStage, rendered 2026-09-05 from S1_music_sbk sequence 23 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_boss_stage_ima.json
  * verbatim (one-shot, no loop). */
@@ -311,7 +311,7 @@
 #define NDS_AUDIO_BGM_BOSS_STAGE_ASSET_SHA256_LO 0xa63f9bffu
 #define NDS_AUDIO_BGM_BOSS_STAGE_PACKET_COUNT 11u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMBossEntry, rendered 2026-09-05 from S1_music_sbk sequence 24 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_boss_entry_ima.json
  * verbatim (one-shot, no loop). */
@@ -321,7 +321,7 @@
 #define NDS_AUDIO_BGM_BOSS_ENTRY_ASSET_SHA256_LO 0x514b1d73u
 #define NDS_AUDIO_BGM_BOSS_ENTRY_PACKET_COUNT 22u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMLast, rendered 2026-09-05 from S1_music_sbk sequence 25 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_last_ima.json
  * verbatim. */
@@ -334,7 +334,7 @@
 #define NDS_AUDIO_BGM_LAST_LOOP_PACKET 6u
 #define NDS_AUDIO_BGM_LAST_LOOP_RECORD 45720u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PBonusStage, rendered 2026-09-05 from S1_music_sbk sequence 26 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_bonus_stage_ima.json
  * verbatim. */
@@ -347,7 +347,7 @@
 #define NDS_AUDIO_BGM_BONUS_STAGE_LOOP_PACKET 7u
 #define NDS_AUDIO_BGM_BONUS_STAGE_LOOP_RECORD 50260u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PStageClear, rendered 2026-09-05 from S1_music_sbk sequence 27 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_stage_clear_ima.json
  * verbatim (one-shot, no loop). */
@@ -357,7 +357,7 @@
 #define NDS_AUDIO_BGM_STAGE_CLEAR_ASSET_SHA256_LO 0x54619e7du
 #define NDS_AUDIO_BGM_STAGE_CLEAR_PACKET_COUNT 7u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PBonusStageClear, rendered 2026-09-05 from S1_music_sbk sequence 28 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_bonus_stage_clear_ima.json
  * verbatim (one-shot, no loop). */
@@ -367,7 +367,7 @@
 #define NDS_AUDIO_BGM_BONUS_STAGE_CLEAR_ASSET_SHA256_LO 0x7a44f81eu
 #define NDS_AUDIO_BGM_BONUS_STAGE_CLEAR_PACKET_COUNT 6u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PGameClear, rendered 2026-09-05 from S1_music_sbk sequence 29 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_game_clear_ima.json
  * verbatim. */
@@ -380,7 +380,7 @@
 #define NDS_AUDIO_BGM_GAME_CLEAR_LOOP_PACKET 2u
 #define NDS_AUDIO_BGM_GAME_CLEAR_LOOP_RECORD 10768u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PBonusStageFailure, rendered 2026-09-05 from S1_music_sbk sequence 30 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_bonus_stage_failure_ima.json
  * verbatim (one-shot, no loop). */
@@ -390,7 +390,7 @@
 #define NDS_AUDIO_BGM_BONUS_STAGE_FAILURE_ASSET_SHA256_LO 0xf4286072u
 #define NDS_AUDIO_BGM_BONUS_STAGE_FAILURE_PACKET_COUNT 7u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PGameEndChoice, rendered 2026-09-05 from S1_music_sbk sequence 31 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_game_end_choice_ima.json
  * verbatim (one-shot, no loop). */
@@ -400,7 +400,7 @@
 #define NDS_AUDIO_BGM_GAME_END_CHOICE_ASSET_SHA256_LO 0x8bc263f9u
 #define NDS_AUDIO_BGM_GAME_END_CHOICE_PACKET_COUNT 11u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PGameOver, rendered 2026-09-05 from S1_music_sbk sequence 32 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_game_over_ima.json
  * verbatim (one-shot, no loop). */
@@ -410,7 +410,7 @@
 #define NDS_AUDIO_BGM_GAME_OVER_ASSET_SHA256_LO 0xb6fd0015u
 #define NDS_AUDIO_BGM_GAME_OVER_PACKET_COUNT 11u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMOpening, rendered 2026-09-05 from S1_music_sbk sequence 33 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_opening_ima.json
  * verbatim (one-shot, no loop). */
@@ -420,7 +420,7 @@
 #define NDS_AUDIO_BGM_OPENING_ASSET_SHA256_LO 0x67df7c6eu
 #define NDS_AUDIO_BGM_OPENING_PACKET_COUNT 106u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMExplain, rendered 2026-09-05 from S1_music_sbk sequence 34 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_explain_ima.json
  * verbatim. */
@@ -433,7 +433,7 @@
 #define NDS_AUDIO_BGM_EXPLAIN_LOOP_PACKET 43u
 #define NDS_AUDIO_BGM_EXPLAIN_LOOP_RECORD 345276u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PIntro, rendered 2026-09-05 from S1_music_sbk sequence 35 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_intro_ima.json
  * verbatim (one-shot, no loop). */
@@ -443,7 +443,7 @@
 #define NDS_AUDIO_BGM_INTRO_ASSET_SHA256_LO 0x72c9cf32u
 #define NDS_AUDIO_BGM_INTRO_PACKET_COUNT 7u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMZako, rendered 2026-09-05 from S1_music_sbk sequence 36 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_zako_ima.json
  * verbatim. */
@@ -456,7 +456,7 @@
 #define NDS_AUDIO_BGM_ZAKO_LOOP_PACKET 3u
 #define NDS_AUDIO_BGM_ZAKO_LOOP_RECORD 19112u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMMetal, rendered 2026-09-05 from S1_music_sbk sequence 37 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_metal_ima.json
  * verbatim. */
@@ -469,7 +469,7 @@
 #define NDS_AUDIO_BGM_METAL_LOOP_PACKET 2u
 #define NDS_AUDIO_BGM_METAL_LOOP_RECORD 13256u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMEnding, rendered 2026-09-05 from S1_music_sbk sequence 38 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_ending_ima.json
  * verbatim (one-shot, no loop). */
@@ -479,7 +479,7 @@
 #define NDS_AUDIO_BGM_ENDING_ASSET_SHA256_LO 0xedad79fcu
 #define NDS_AUDIO_BGM_ENDING_PACKET_COUNT 17u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMStaffroll, rendered 2026-09-05 from S1_music_sbk sequence 39 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_staffroll_ima.json
  * verbatim. */
@@ -492,7 +492,7 @@
 #define NDS_AUDIO_BGM_STAFFROLL_LOOP_PACKET 16u
 #define NDS_AUDIO_BGM_STAFFROLL_LOOP_RECORD 128144u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMMessage, rendered 2026-09-05 from S1_music_sbk sequence 40 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_message_ima.json
  * verbatim (one-shot, no loop). */
@@ -502,7 +502,7 @@
 #define NDS_AUDIO_BGM_MESSAGE_ASSET_SHA256_LO 0x70efaa52u
 #define NDS_AUDIO_BGM_MESSAGE_PACKET_COUNT 16u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGM1PChallenger, rendered 2026-09-05 from S1_music_sbk sequence 41 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_challenger_ima.json
  * verbatim (one-shot, no loop). */
@@ -512,7 +512,7 @@
 #define NDS_AUDIO_BGM_CHALLENGER_ASSET_SHA256_LO 0x778237c1u
 #define NDS_AUDIO_BGM_CHALLENGER_PACKET_COUNT 6u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMTrainingMode, rendered 2026-09-05 from S1_music_sbk sequence 42 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_training_mode_ima.json
  * verbatim. */
@@ -525,7 +525,7 @@
 #define NDS_AUDIO_BGM_TRAINING_MODE_LOOP_PACKET 303u
 #define NDS_AUDIO_BGM_TRAINING_MODE_LOOP_RECORD 2480928u
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 /* nSYAudioBGMData, rendered 2026-09-05 from S1_music_sbk sequence 43 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_data_ima.json
  * verbatim. */

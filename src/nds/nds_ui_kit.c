@@ -3,7 +3,7 @@
 
 #include "nds_build_config.h"
 
-#if NDS_P2_UI_KIT
+#if NDS_UI_KIT
 
 #include <nds.h>
 #include <string.h>
@@ -2553,4 +2553,4 @@ void ndsUiKitCommit(void)
     sNdsUiKitDirty = FALSE;
 }
 
-#endif /* NDS_P2_UI_KIT */
+#endif /* NDS_UI_KIT */

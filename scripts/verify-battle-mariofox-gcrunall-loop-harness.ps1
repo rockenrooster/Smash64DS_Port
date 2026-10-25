@@ -220,16 +220,16 @@ if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
 }
 $p2ProofAdmissionFlags = switch ($P2ProofFighter0Kind) {
-    4 { @('NDS_P2_LUIGI=1') }
-    2 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1') }
-    7 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1') }
-    3 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1') }
-    5 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1') }
-    9 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1') }
-    6 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1') }
-    11 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1') }
-    10 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1') }
-    8 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1', 'NDS_P2_KIRBY=1') }
+    4 { @('NDS_LUIGI=1') }
+    2 { @('NDS_LUIGI=1', 'NDS_DONKEY=1') }
+    7 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1') }
+    3 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1') }
+    5 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1') }
+    9 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1', 'NDS_PIKACHU=1') }
+    6 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1', 'NDS_PIKACHU=1', 'NDS_YOSHI=1') }
+    11 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1', 'NDS_PIKACHU=1', 'NDS_YOSHI=1', 'NDS_NESS=1') }
+    10 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1', 'NDS_PIKACHU=1', 'NDS_YOSHI=1', 'NDS_NESS=1', 'NDS_PURIN=1') }
+    8 { @('NDS_LUIGI=1', 'NDS_DONKEY=1', 'NDS_CAPTAIN=1', 'NDS_SAMUS=1', 'NDS_LINK=1', 'NDS_PIKACHU=1', 'NDS_YOSHI=1', 'NDS_NESS=1', 'NDS_PURIN=1', 'NDS_KIRBY=1') }
     default { @() }
 }
 $isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 3, 4, 5, 8, 10, 11)
@@ -1169,7 +1169,7 @@ $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 $makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
 $makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$effectiveTask32DrawHotTextMode"
 if ($P2ProofFighter0Kind -ge 0) {
-    $makeArgs += "NDS_P2_PROOF_FIGHTER0=$P2ProofFighter0Kind"
+    $makeArgs += "NDS_PROOF_FIGHTER0=$P2ProofFighter0Kind"
     # Native owner slots are a compact ABI, not sparse fighter-kind IDs. Keep
     # every earlier admitted owner enabled so selecting a late roster fighter
     # cannot silently renumber the tables the runtime consumes.
@@ -1254,7 +1254,7 @@ Assert-Condition (
     $bg0BuildConfigText
 if ($P2ProofFighter0Kind -ge 0) {
     Assert-Condition ($bg0BuildConfigText -match
-        "(?m)^#define NDS_P2_PROOF_FIGHTER0 $P2ProofFighter0Kind$") `
+        "(?m)^#define NDS_PROOF_FIGHTER0 $P2ProofFighter0Kind$") `
         'Built P2 fighter-0 proof selector does not match the requested fighter.' `
         $bg0BuildConfigText
     foreach ($flag in $p2ProofAdmissionFlags) {
@@ -1763,7 +1763,7 @@ try {
                             } else { '0' }
                         $coarseBenchmarkCommands += ('printf "STAGE_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererTask36HardwareComposedDObjCount, gNdsRendererTask36CameraLoadCount, gNdsRendererTask36WorldMultCount, {0}, {1}, {2}, gNdsRendererStageHwAdapterRejectReason, gNdsRendererTask36RendererRejectReason, gNdsRendererTask36PrepareRunRejectReason, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3PostArmFailureCount' -f $stageHwMismatchExpression, $stageHwDynamicLoExpression, $stageHwDynamicHiExpression)
                         if ($StageHwComposeMode -eq 2) {
-                            $coarseBenchmarkCommands += 'printf "STAGE_GX=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsP2StageProgDraws, gNdsP2StageProgWords, gNdsP2StageProgLoads, gNdsP2StageProgBytes, gNdsP2StageProgDeclines, gNdsP2StageProgReason, gNdsP2StageProgNearRuns, gNdsP2StageProgDmas'
+                            $coarseBenchmarkCommands += 'printf "STAGE_GX=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsStageProgDraws, gNdsStageProgWords, gNdsStageProgLoads, gNdsStageProgBytes, gNdsStageProgDeclines, gNdsStageProgReason, gNdsStageProgNearRuns, gNdsStageProgDmas'
                         }
                         if ($effectiveStageSteadyMode -eq 1) {
                             # Task 44 item 3 admission ledger. Admit + revalidate
@@ -2522,7 +2522,7 @@ try {
             $hardwareCommands += 'printf "P2_FIGHTER_PROD_LAST=%u,%u,%u,%u\n", $p2_prod_last_frame, $p2_prod_last_hw, $p2_prod_last_fast, $p2_prod_last_owner'
             $hardwareCommands += 'printf "P2_FIGHTER_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_generic, $p2_generic_enabled, $p2_generic_plan, $p2_generic_detailed, $p2_generic_oracle, $p2_generic_selected, $p2_generic_animlock, $p2_generic_shuffle, $p2_generic_low'
             if ($P2ProofFighter0Kind -eq 11) {
-                $hardwareCommands += 'printf "P2_NESS_ODD=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsP2NessOddDrawCount, gNdsP2NessOddFrame, gNdsP2NessOddTriangles, gNdsP2NessOddSelected, gNdsP2NessOddStatus, gNdsP2NessOddMotion, gNdsP2NessOddCamera, gNdsP2NessOddDetail, gNdsP2NessOddPacketPredicted, gNdsP2NessOddProductionAttempted, gNdsP2NessPositiveDrawCount, gNdsP2NessProductionPositiveDrawCount, gNdsP2NessNonProductionPositiveDrawCount, gNdsP2NessNonProductionTriangles, gNdsP2NessZeroProductionDrawCount'
+                $hardwareCommands += 'printf "P2_NESS_ODD=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsNessOddDrawCount, gNdsNessOddFrame, gNdsNessOddTriangles, gNdsNessOddSelected, gNdsNessOddStatus, gNdsNessOddMotion, gNdsNessOddCamera, gNdsNessOddDetail, gNdsNessOddPacketPredicted, gNdsNessOddProductionAttempted, gNdsNessPositiveDrawCount, gNdsNessProductionPositiveDrawCount, gNdsNessNonProductionPositiveDrawCount, gNdsNessNonProductionTriangles, gNdsNessZeroProductionDrawCount'
             }
             if ($P2ProofFighter0Kind -eq 5) {
                 # P2-3f31: Link's larger dynamic texture working set can re-key

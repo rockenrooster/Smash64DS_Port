@@ -12,7 +12,7 @@
  * were no-op or counter shims, so "is the Hammer held?" always answered no
  * and "become Hammer" did nothing.
  *
- * Gated on NDS_P2_ITEM_CORE: with no items there is nothing to hold, and the
+ * Gated on NDS_ITEM_CORE: with no items there is nothing to hold, and the
  * weak stubs remain the right answer. The stubs this replaces are weak, so a
  * strong definition here wins the link; the SetStatus/CheckHold/UpdateStats
  * shims are not, and are fenced by the same condition in
@@ -43,7 +43,7 @@ extern void itHammerCommonSetColAnim(GObj *item_gobj);
 extern sb32 ftCommonWaitCheckInputSuccess(GObj *fighter_gobj);
 
 /* The drop-through helpers ftcommonhammerfall.c calls. The canonical common
- * names exist only under NDS_P2_DONKEY (battleship_ftcommon_pass.c); the
+ * names exist only under NDS_DONKEY (battleship_ftcommon_pass.c); the
  * ndsBase bodies are unconditional, so route to them the way that TU's own
  * include block does. */
 extern void ndsBaseFTCommonPassSetStatusParam(GObj *fighter_gobj,

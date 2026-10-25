@@ -1354,18 +1354,18 @@ static size_t ndsR2AnimCachePayloadBytes(u32 asset_id, sb32 *stream_ready,
  * been acquired into one of CSS's four resident blocks. */
 extern FTMotionDesc dFTMarioSubMotionDescs[];
 extern FTMotionDesc dFTFoxSubMotionDescs[];
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 extern FTMotionDesc dFTDonkeySubMotionDescs[];
 #endif
 extern FTMotionDesc dFTSamusSubMotionDescs[];
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
 extern FTMotionDesc dFTLuigiSubMotionDescs[];
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
 extern FTMotionDesc dFTLinkSubMotionDescs[];
 #endif
 extern FTMotionDesc dFTYoshiSubMotionDescs[];
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 extern FTMotionDesc dFTCaptainSubMotionDescs[];
 #endif
 extern FTMotionDesc dFTKirbySubMotionDescs[];
@@ -1377,18 +1377,18 @@ static const FTMotionDesc * const
 sNdsR2CssInitialMotionDescs[nFTKindPlayableEnd + 1] = {
     [nFTKindMario] = dFTMarioSubMotionDescs,
     [nFTKindFox] = dFTFoxSubMotionDescs,
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     [nFTKindDonkey] = dFTDonkeySubMotionDescs,
 #endif
     [nFTKindSamus] = dFTSamusSubMotionDescs,
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     [nFTKindLuigi] = dFTLuigiSubMotionDescs,
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
     [nFTKindLink] = dFTLinkSubMotionDescs,
 #endif
     [nFTKindYoshi] = dFTYoshiSubMotionDescs,
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     [nFTKindCaptain] = dFTCaptainSubMotionDescs,
 #endif
     [nFTKindKirby] = dFTKirbySubMotionDescs,

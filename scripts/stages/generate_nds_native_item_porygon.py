@@ -56,7 +56,7 @@ TEXT_PINS, EXPECTED_* tables, TLUT/image span pins), the anim-joint pin
 NULL instead), the `(flags & 0xE0000000)` gate (Porygon has is_item_dobjs
 SET, so the gate pins 0x40000000 rather than 0), the SETTILESIZE/LOADBLOCK
 pins (Porygon's measured S span and load word differ; pinned verbatim) and
-the `NDS_P2_ITEM_CORE` executor gate.
+the `NDS_ITEM_CORE` executor gate.
 """
 
 from __future__ import annotations

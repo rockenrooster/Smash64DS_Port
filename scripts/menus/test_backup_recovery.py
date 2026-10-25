@@ -249,7 +249,7 @@ class BackupRecoveryTest(unittest.TestCase):
             # Every build is a scene-harness build (the shipping ROM runs the
             # game as harness 163), so every one saves under the diagnostic
             # names; the walk and four-CPU flags still open the dev unlocks.
-            flags = ("NDS_P2_MENU_WALK", "NDS_P2_FOUR_CPU_STRESS")
+            flags = ("NDS_MENU_WALK", "NDS_FOUR_CPU_STRESS")
             source.write_text(host_source())
             for active in (None, *flags):
                 with self.subTest(configuration=active or "ship"):

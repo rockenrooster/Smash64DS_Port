@@ -25,7 +25,7 @@ class RosterAdmissionTests(unittest.TestCase):
     def test_each_flag_admits_only_its_source_kind(self):
         source = (ROOT / 'src/port/nds_match_config.c').read_text()
         macro = re.search(
-            r'^#define NDS_P2_KIND_ADMITTED\(k\).*?(?=^#if)',
+            r'^#define NDS_KIND_ADMITTED\(k\).*?(?=^#if)',
             source, re.MULTILINE | re.DOTALL).group(0)
         cc = shutil.which('arm-none-eabi-gcc') or shutil.which('gcc')
         if cc is None:
@@ -37,11 +37,11 @@ class RosterAdmissionTests(unittest.TestCase):
         for enabled in cases:
             with self.subTest(enabled=sorted(enabled)):
                 text = ''.join(
-                    f'#define NDS_P2_{flag} {int(kind in enabled)}\n'
+                    f'#define NDS_{flag} {int(kind in enabled)}\n'
                     for kind, flag in KINDS.items()) + macro
                 for kind in range(-1, 29):
                     expected = int(kind in (0, 1) or kind in enabled)
-                    text += (f'#if !!NDS_P2_KIND_ADMITTED({kind}) != {expected}\n'
+                    text += (f'#if !!NDS_KIND_ADMITTED({kind}) != {expected}\n'
                              f'#error incorrect_admission_{kind}\n#endif\n')
                 result = subprocess.run(
                     [cc, '-E', '-P', '-x', 'c', '-'], input=text,

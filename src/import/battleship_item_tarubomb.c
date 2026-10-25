@@ -13,12 +13,12 @@
  * Until 2026-09-05 no provider existed and nITKindTaruBomb had no maker-table
  * row (battleship_item_link_core.c), so the race spawned nothing.
  *
- * Gated on NDS_P2_1P_GAME (the Makefile lists it beside the bonus Target):
+ * Gated on NDS_1P_GAME (the Makefile lists it beside the bonus Target):
  * the descriptor reads a ground struct only the Bonus3 map populates.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITTARUBOMB_* in include/it/item.h).
  */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <it/item.h>
 #include <gr/ground.h>
@@ -510,4 +510,4 @@ void itTaruBombExplodeMakeEffectGotoSetStatus(GObj *item_gobj)
     itTaruBombExplodeSetStatus(item_gobj);
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

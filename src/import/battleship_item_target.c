@@ -7,7 +7,7 @@
  * (P2-6 steps 5/6, 2026-09-05); the two scene symbols below are referenced
  * verbatim through local externs.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
  */
 

@@ -16,7 +16,7 @@
  * name (the battleship_sc1pbonusstage.c / battleship_scvsbattle.c seam),
  * so a later measured DS arena rebudget has a seam and the diff stays
  * reviewable. The adapter is a verbatim pass-through; no behaviour invented
- * here. Gated on NDS_P2_1P_GAME like the ladder tables and the runtime.
+ * here. Gated on NDS_1P_GAME like the ladder tables and the runtime.
  *
  * Reloc files (dSC1PIntroFileIDs :18):
  * - SC1PIntro 0xb: STAGED (llSC1PIntroFileID in
@@ -104,7 +104,7 @@
  *   src/port/title_backend.c:471 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -1278,4 +1278,4 @@ void sc1PIntroStartScene(void)
     ndsBaseSC1PIntroStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

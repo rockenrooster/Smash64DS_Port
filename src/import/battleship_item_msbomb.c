@@ -12,7 +12,7 @@
  * itGetAttackEvent seam (include/it/item.h:426-428), the same call shape
  * battleship_link_bomb.c:617 uses.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  */
 
 #include <it/item.h>

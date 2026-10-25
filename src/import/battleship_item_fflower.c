@@ -17,7 +17,7 @@
  * angles are read out of the reloc file through the attribute-row pointer,
  * exactly as the source does.
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal
  * (ITFFLOWER_* now rides on <it/item.h>). gITManagerParticleBankID has no
  * port provider yet; it is referenced verbatim and listed in the task

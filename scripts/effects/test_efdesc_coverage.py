@@ -12,7 +12,7 @@ A plain grep over decomp sources cannot answer this, for two reasons this
 checker does not skip:
 
 1. The resolver lists in src/import/battleship_efmanager.c are sliced by
-   `#if NDS_P2_*` guards. Text presence of X(dEFManager...) means nothing;
+   `#if NDS_<KIND>` guards. Text presence of X(dEFManager...) means nothing;
    only macros active under the build's generated config count. The checker
    evaluates those guards against builds/build-p2-fourcpu-tickhud's
    nds_build_config.h.
@@ -224,7 +224,7 @@ def parse_resolver_coverage(text, config):
     """Descs visited by the resolver under the active config.
 
     Collects X(name) from the NDS_EF_MANAGER_DESCS and
-    NDS_EF_ROSTER_DESCS_* define blocks, honouring the #if NDS_P2_*
+    NDS_EF_ROSTER_DESCS_* define blocks, honouring the #if NDS_<KIND>
     guards around them. A static grep would count inactive rows; this
     does not. Preprocessing runs in C phase order (splice, then strip
     comments), so a block comment inside a define cannot fake its end.
@@ -381,7 +381,7 @@ def read_elf_offsets(read_u32, addr):
 def present_kinds(config):
     kinds = []
     for index in range(4):
-        key = "NDS_P2_FOUR_CPU_KIND%d" % index
+        key = "NDS_FOUR_CPU_KIND%d" % index
         if key in config:
             kinds.append(config[key])
     return kinds
@@ -534,40 +534,40 @@ class ResolverCoverageTests(unittest.TestCase):
         source = (
             "#define NDS_EF_MANAGER_DESCS(X) \\\n"
             "    X(dEFManagerShieldEffectDesc)\n"
-            "#if NDS_P2_SAMUS\n"
+            "#if NDS_SAMUS\n"
             "#define NDS_EF_ROSTER_DESCS_SAMUS(X) \\\n"
             "    X(dEFManagerSamusEntryPointEffectDesc)\n"
             "#else\n"
             "#define NDS_EF_ROSTER_DESCS_SAMUS(X)\n"
             "#endif\n")
-        covered = parse_resolver_coverage(source, {"NDS_P2_SAMUS": 1})
+        covered = parse_resolver_coverage(source, {"NDS_SAMUS": 1})
         self.assertNotIn(GRAPPLE, covered)
         self.assertFalse(check_grapple_invariant(covered))
 
     def test_grapple_row_present_passes_invariant(self):
         source = (
-            "#if NDS_P2_SAMUS\n"
+            "#if NDS_SAMUS\n"
             "#define NDS_EF_ROSTER_DESCS_SAMUS(X) \\\n"
             "    X(dEFManagerSamusEntryPointEffectDesc) \\\n"
             "    X(dEFManagerSamusGrappleBeamEffectDesc)\n"
             "#else\n"
             "#define NDS_EF_ROSTER_DESCS_SAMUS(X)\n"
             "#endif\n")
-        covered = parse_resolver_coverage(source, {"NDS_P2_SAMUS": 1})
+        covered = parse_resolver_coverage(source, {"NDS_SAMUS": 1})
         self.assertTrue(check_grapple_invariant(covered))
 
     def test_inactive_guard_excluded(self):
         source = (
-            "#if NDS_P2_KIRBY\n"
+            "#if NDS_KIRBY\n"
             "#define NDS_EF_ROSTER_DESCS_KIRBY(X) \\\n"
             "    X(dEFManagerVulcanJabEffectDesc)\n"
             "#else\n"
             "#define NDS_EF_ROSTER_DESCS_KIRBY(X)\n"
             "#endif\n")
         self.assertNotIn("dEFManagerVulcanJabEffectDesc",
-                         parse_resolver_coverage(source, {"NDS_P2_KIRBY": 0}))
+                         parse_resolver_coverage(source, {"NDS_KIRBY": 0}))
         self.assertIn("dEFManagerVulcanJabEffectDesc",
-                      parse_resolver_coverage(source, {"NDS_P2_KIRBY": 1}))
+                      parse_resolver_coverage(source, {"NDS_KIRBY": 1}))
 
     def test_particle_only_exempt(self):
         body = ("EFFECT_FLAG_USERDATA,\n0,\n&gEFManagerFiles[0],\n"

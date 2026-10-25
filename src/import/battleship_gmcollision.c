@@ -188,9 +188,9 @@ sb32 ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
 #define gmCollisionCheckWeaponAttackFighterDamageCollide     ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide
 #define gmCollisionCheckItemAttackFighterDamageCollide     ndsBaseGmCollisionCheckItemAttackFighterDamageCollide
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* Owner ruling D13 (2026-10-04): fighter joint worlds stay in fixed point
- * (src/port/nds_p2_hurtbox_reject.c). The decomp body keeps its float walk
+ * (src/port/nds_hurtbox_reject.c). The decomp body keeps its float walk
  * under the ndsBase name for the joints the resident world declines
  * (animation locks, a guard). gmcollision.c never calls it, so the rename
  * moves the definition and captures every call. */
@@ -200,7 +200,7 @@ void ndsBaseGmCollisionGetFighterPartsWorldPosition(DObj *main_dobj,
     ndsBaseGmCollisionGetFighterPartsWorldPosition
 #endif
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* P2-2p8 (2026-10-05): every entry point into this file that can set a
  * fighter FTParts latch (unk_dobjtrans_0x5/6/7, transform_update_mode 1) bumps
  * gNdsFtPartsLatchWrites first, so the per-tick latch clears
@@ -245,19 +245,19 @@ sb32 ndsLatchBaseItemAttackSpecialCollide(ITAttackColl *attack_coll,
 
 /* 2026-10-06: the strong definitions of the three attack-near-fighter tests
  * (bounds once, order-key compares, same answers) are in
- * nds_p2_hurtbox_reject.c. */
+ * nds_hurtbox_reject.c. */
 #pragma weak gmCollisionCheckFighterInFighterRange
 #pragma weak gmCollisionCheckWeaponInFighterRange
 #pragma weak gmCollisionCheckItemInFighterRange
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 /* 2026-10-06 (owner: "hit VFX play at wrong locations"). The hurtbox test
  * decides in fixed point and writes no FTParts latch
- * (src/port/nds_p2_hurtbox_reject.c), but these four read the hurt or shield
+ * (src/port/nds_hurtbox_reject.c), but these four read the hurt or shield
  * joint's parts->mtx_translate straight after a hit, relying on the source
  * test's float walk to have filled it this tick: they placed every hit spark,
  * shock and sword slash halfway between the attack and a stale or empty
- * matrix. The strong definitions in src/port/nds_p2_hurtbox_reject.c take
+ * matrix. The strong definitions in src/port/nds_hurtbox_reject.c take
  * the joint's world through gmCollisionGetFighterPartsWorldPosition -- the
  * world the test itself used, with the float walk as its fallback. */
 #pragma weak gmCollisionGetShieldPosition
@@ -329,10 +329,10 @@ sb32 gmCollisionCheckItemAttackSpecialCollide(ITAttackColl *attack_coll,
 }
 #endif
 
-#if NDS_P2_JOINT_RESIDENT
+#if NDS_JOINT_RESIDENT
 #undef gmCollisionGetFighterPartsWorldPosition
 
-int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec);
+int ndsJointWorldPosition(DObj *joint, Vec3f *vec);
 
 /* Calls that name a joint the fighter never made: counted, the position
  * left as the caller's offset. The source faults on NULL there; a Remix part
@@ -346,7 +346,7 @@ void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
         gNdsCollisionNullJointCount++;
         return;
     }
-    if (ndsP2JointWorldPosition(main_dobj, vec) != 0)
+    if (ndsJointWorldPosition(main_dobj, vec) != 0)
     {
         return;
     }
@@ -358,30 +358,30 @@ void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
 #undef gmCollisionCheckWeaponAttackFighterDamageCollide
 #undef gmCollisionCheckItemAttackFighterDamageCollide
 
-int ndsP2HurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+int ndsHurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                              f32 attack_size, s32 attack_state,
                              const FTDamageColl *damage);
-extern volatile u32 gNdsP2HurtboxRejects;
-extern volatile u32 gNdsP2HurtboxPasses;
+extern volatile u32 gNdsHurtboxRejects;
+extern volatile u32 gNdsHurtboxPasses;
 
 /* The kernel's decision -- a proven miss or, since 2026-10-05, the pair
  * decided in fixed point -- returns TRUE with *hit set; FALSE leaves the pair
  * to the float test. */
-static sb32 ndsP2HurtboxDecideGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
+static sb32 ndsHurtboxDecideGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                    f32 attack_size, s32 attack_state,
                                    const FTDamageColl *damage, sb32 *hit)
 {
-    const int decided = ndsP2HurtboxDecidePoints(pos_curr, pos_prev,
+    const int decided = ndsHurtboxDecidePoints(pos_curr, pos_prev,
                                                  attack_size, attack_state,
                                                  damage);
 
     if (decided >= 0)
     {
-        NDS_DIAG(gNdsP2HurtboxRejects++);
+        NDS_DIAG(gNdsHurtboxRejects++);
         *hit = (decided != 0) ? TRUE : FALSE;
         return TRUE;
     }
-    NDS_DIAG(gNdsP2HurtboxPasses++);
+    NDS_DIAG(gNdsHurtboxPasses++);
     return FALSE;
 }
 
@@ -390,7 +390,7 @@ sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
 {
     sb32 hit = FALSE;
 
-    if (ndsP2HurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
+    if (ndsHurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
                                &attack_coll->attack_pos[attack_id].pos_prev,
                                attack_coll->size, attack_coll->attack_state,
                                damage_coll, &hit) != FALSE)
@@ -407,7 +407,7 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
 {
     sb32 hit = FALSE;
 
-    if (ndsP2HurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
+    if (ndsHurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
                                &attack_coll->attack_pos[attack_id].pos_prev,
                                attack_coll->size, attack_coll->attack_state,
                                damage_coll, &hit) != FALSE)
@@ -432,13 +432,13 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
  * still gmCollisionTestRectangle's, unchanged, in decomp code.
  *
  * Before the base call, not after: the base is where the latches are read. */
-/* P2-2p8 A5 (src/port/nds_p2_hurtbox_reject.c): the pair decided in fixed
+/* P2-2p8 A5 (src/port/nds_hurtbox_reject.c): the pair decided in fixed
  * point, or a proof that the float test below would miss; -1 leaves it to
  * the float tail. */
-int ndsP2HurtboxDecideTest(const FTAttackColl *attack,
+int ndsHurtboxDecideTest(const FTAttackColl *attack,
                            const FTDamageColl *damage);
-extern volatile u32 gNdsP2HurtboxRejects;
-extern volatile u32 gNdsP2HurtboxPasses;
+extern volatile u32 gNdsHurtboxRejects;
+extern volatile u32 gNdsHurtboxPasses;
 
 sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
                                                 FTDamageColl *damage_coll)
@@ -446,16 +446,16 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
     sb32 hit;
     {
         /* The kernel proves a miss or, since 2026-10-05, decides the pair in
-         * fixed point (src/port/nds_p2_hurtbox_reject.c); -1 leaves it to the
+         * fixed point (src/port/nds_hurtbox_reject.c); -1 leaves it to the
          * float tail below. */
-        const int decided = ndsP2HurtboxDecideTest(attack_coll, damage_coll);
+        const int decided = ndsHurtboxDecideTest(attack_coll, damage_coll);
 
         if (decided >= 0)
         {
-            NDS_DIAG(gNdsP2HurtboxRejects++);
+            NDS_DIAG(gNdsHurtboxRejects++);
             return (decided != 0) ? TRUE : FALSE;
         }
-        NDS_DIAG(gNdsP2HurtboxPasses++);
+        NDS_DIAG(gNdsHurtboxPasses++);
     }
 
     NDS_FTPARTS_LATCH_MARK();

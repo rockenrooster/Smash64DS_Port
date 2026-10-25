@@ -44,7 +44,7 @@ if ($VsOptionsProof -and -not $PSBoundParameters.ContainsKey('Hits')) {
 
 # THE VS SHELL'S SHIPPING-CONFIGURATION PROBE, and the phase's cadence
 # instrument. One scripted pass through all six screens and the REAL one-minute
-# match at NDS_HARNESS_FAST_LOGIC=0, out of a ROM built NDS_P2_MENU_SHELL=1 --
+# match at NDS_HARNESS_FAST_LOGIC=0, out of a ROM built NDS_MENU_SHELL=1 --
 # so every tick figure here is a shipping-cadence figure, unlike the loop
 # verifier's fast-logic arm (scripts/verify-p2-shell-loop.ps1), which is the
 # scene-boundary instrument and no cadence surface at all.
@@ -142,7 +142,7 @@ if (-not (Test-Path -LiteralPath $buildConfig -PathType Leaf)) {
     throw "p2-shell probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
 $configText = Get-Content -LiteralPath $buildConfig -Raw
-foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
+foreach ($flag in @('NDS_UI_KIT', 'NDS_MENU_SHELL')) {
     $m = [regex]::Match($configText, ('(?m)^#define\s+' + $flag + '\s+(\d+)u?$'))
     if ((-not $m.Success) -or ($m.Groups[1].Value -eq '0')) {
         # A run against a shell-less ROM would report every counter as
@@ -151,7 +151,7 @@ foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
     }
     Write-Output ("build config: {0}={1}" -f $flag, $m.Groups[1].Value)
 }
-foreach ($flag in @('NDS_P2_MENU_WALK', 'NDS_R2_SCENE_LOOP_WALK',
+foreach ($flag in @('NDS_MENU_WALK', 'NDS_R2_SCENE_LOOP_WALK',
                     'NDS_HARNESS_FAST_LOGIC', 'NDS_DEV_SCENE_HARNESS',
                     'NDS_RENDERER_PROFILE_LEVEL', 'NDS_TICK_HUD',
                     'NDS_DEBUG_HUD', 'NDS_R204_FPSHUD_SHADOW')) {

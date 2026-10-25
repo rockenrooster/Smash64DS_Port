@@ -1,7 +1,7 @@
 /* Bob-omb / BombHei executor. TEXTUAL INCLUDE ONLY.
  * File 86 root 0x3310 has exactly one word-17 segment-0xE call. The source
  * MObj flags 0x0001 make CURRENT_IMAGE the only live material input. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemBombHei(
     const void *file_base_ptr, u32 file_bytes,

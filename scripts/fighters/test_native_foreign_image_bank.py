@@ -22,7 +22,7 @@ def test_private_image_bank_collision_missing_and_scene_lifetime():
 typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32; typedef int32_t s32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_P2_COMPACT_BATTLE_FIGHTERS 1
+#define NDS_COMPACT_BATTLE_FIGHTERS 1
 #define NDS_PREVIEW_PACK_MAX_SECTIONS 4
 #define ARRAY_COUNT(a) (sizeof(a)/sizeof((a)[0]))
 typedef struct { u32 asset_id; void *data; u32 data_size, owner_scene, owner_generation; u8 reserved[2]; } NDSRelocLoadedFile;

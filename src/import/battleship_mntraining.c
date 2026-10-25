@@ -20,13 +20,13 @@
  * - FuncStart announces TrainingMode voice + BattleSelect BGM (:3204-3209);
  *   taskman setup :3216-3267 (ovl28 arena, GCCommonKindPlayerSelect proc).
  *
- * Gated on NDS_P2_1P_GAME: the Makefile defines no NDS_P2_TRAINING flag
- * (verified 2026-09-05: only NDS_P2_1P_GAME at Makefile:700), so this rides
+ * Gated on NDS_1P_GAME: the Makefile defines no NDS_TRAINING flag
+ * (verified 2026-09-05: only NDS_1P_GAME at Makefile:700), so this rides
  * the campaign flag with its scene sibling battleship_sc1ptrainingmode.c
  * until P2-7 mints its own gate.
  *
  * The source 1P Mode submenu reaches nSCKindPlayers1PTraining through the
- * registered source-menu pump when NDS_P2_1P_GAME is enabled.
+ * registered source-menu pump when NDS_1P_GAME is enabled.
  *
  * Shims vs unresolved, checked against port headers (an earlier
  * revision of this comment claimed local shims; there are none -- the port
@@ -55,10 +55,10 @@
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): mnPlayers1PTrainingStartScene (adapter below) vs
  *   src/port/title_backend.c:448 NDS_SCENE_STUB, already gated
- *   #if !NDS_P2_1P_GAME, so this TU wins exactly when the flag is on.
+ *   #if !NDS_1P_GAME, so this TU wins exactly when the flag is on.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -110,7 +110,7 @@ void ndsBaseMNPlayers1PTrainingStartScene(void);
 
 void mnPlayers1PTrainingStartScene(void)
 {
-#if NDS_P2_MENU_SHELL
+#if NDS_MENU_SHELL
     /* P7 C4 (2026-10-18): the training select is the native VS screen in its
      * two-slot mode (nds_menu_shell_css.c sCssTraining), so the scene starts
      * as that screen's does (nds_menu_shell_router.c mnPlayersVSStartScene:
@@ -124,4 +124,4 @@ void mnPlayers1PTrainingStartScene(void)
 #endif
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_1P_GAME */

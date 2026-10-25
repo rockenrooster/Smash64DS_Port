@@ -1357,7 +1357,7 @@ volatile u32 gNdsR2RunUvSkip;
 volatile u32 gNdsR2RunUvBuild;
 #endif
 
-#if NDS_P2_LINK
+#if NDS_LINK
 typedef struct NDSNativeTexgenDirectionQ15
 {
     s32 x;
@@ -1563,7 +1563,7 @@ ndsRendererNativeRebuildProductionRunUv(
     NDSNativeFighterRunUvInputs *uv)
 {
     u32 unique_offset;
-#if NDS_P2_LINK
+#if NDS_LINK
     u32 use_texgen =
         ((stats != NULL) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u)) ?
@@ -1603,7 +1603,7 @@ ndsRendererNativeRebuildProductionRunUv(
             &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
         NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
-#if NDS_P2_LINK
+#if NDS_LINK
         s32 scaled_s;
         s32 scaled_t;
 
@@ -1724,7 +1724,7 @@ ndsRendererNativePrepareProductionRunCore(
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u)) ||
         ((run_unlit != FALSE) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u)) ||
-#if NDS_P2_LINK
+#if NDS_LINK
         /* G_TEXTURE_GEN_LINEAR only selects the texgen mapping (the polygon
          * team's Link, Captain and Ness parts); without G_TEXTURE_GEN the RSP
          * ignores it. */

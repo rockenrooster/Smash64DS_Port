@@ -36,10 +36,10 @@ Assert-DonkeyEntryNative (Test-Path -LiteralPath $config -PathType Leaf) `
     "Donkey entry proof build config is missing: $config"
 $configText = Get-Content -LiteralPath $config -Raw
 foreach ($definition in @(
-    '#define NDS_P2_DONKEY 1',
-    '#define NDS_P2_CAPTAIN 1',
-    '#define NDS_P2_SAMUS 1',
-    '#define NDS_P2_FOUR_CPU_ROSTER 1',
+    '#define NDS_DONKEY 1',
+    '#define NDS_CAPTAIN 1',
+    '#define NDS_SAMUS 1',
+    '#define NDS_FOUR_CPU_ROSTER 1',
     '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE 1'
 )) {
     Assert-DonkeyEntryNative $configText.Contains($definition) `

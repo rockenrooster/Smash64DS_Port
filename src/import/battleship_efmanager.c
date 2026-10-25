@@ -186,7 +186,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
     ndsBaseEFManagerNessPKFlashMakeEffect
 #define efManagerNessPsychicMagnetMakeEffect \
     ndsBaseEFManagerNessPsychicMagnetMakeEffect
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 #define efManagerCaptainFalconPunchMakeEffect \
     ndsBaseEFManagerCaptainFalconPunchMakeEffect
 #define efManagerCaptainFalconKickMakeEffect \
@@ -300,7 +300,7 @@ void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj)
 #undef efManagerNessPKThunderWaveMakeEffect
 #undef efManagerNessPKFlashMakeEffect
 #undef efManagerNessPsychicMagnetMakeEffect
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 #undef efManagerCaptainFalconPunchMakeEffect
 #undef efManagerCaptainFalconKickMakeEffect
 #endif
@@ -1205,7 +1205,7 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
     }
-#if NDS_P2_LUIGI
+#if NDS_LUIGI
     /* ftdata.c lists llMarioSpecial2FileID as Luigi's and Metal Mario's
      * Special2 too: one pipe file, three slots, and the pipe's desc names
      * whichever slot its last maker chose. A slot missing here gave span 0,
@@ -1216,7 +1216,7 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
         return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
     }
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (file_head == &gFTDataMMarioSpecial2)
     {
         return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
@@ -1226,7 +1226,7 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llFoxSpecial3FileID);
     }
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
     if (file_head == &gFTDataDonkeySpecial2)
     {
         /* BattleShip dEFManagerDonkeyEntryTaruEffectDesc owns DonkeySpecial2.
@@ -1246,7 +1246,7 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
          * SamusSpecial1, not an EFDesc. */
         return ndsRelocGetLoadedFileSize(&llSamusSpecial2FileID);
     }
-#if NDS_P2_LINK
+#if NDS_LINK
     if (file_head == &gFTDataLinkSpecial2)
     {
         /* BattleShip's Link entry wave, entry beam, and Spin Attack effect all
@@ -1318,7 +1318,7 @@ static size_t ndsEFManagerFileSpanSource(void **file_head)
         /* Vulcan Jab, the four Final Cutter descs and the entry star (efmanager.c:704,896..986,1226). */
         return ndsRelocGetLoadedFileSize(&llKirbySpecial2FileID);
     }
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
         /* dEFManagerCaptainEntryCarEffectDesc (efmanager.c:1495) and
@@ -1386,7 +1386,7 @@ static sb32 ndsEFManagerMapFileOffset(void *base, size_t span,
     {
         return FALSE;
     }
-#if (NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if (NDS_1P_GAME || NDS_MENU_SHELL) || NDS_COMPACT_BATTLE_FIGHTERS
     {
         const void *mapped = ndsRelocNativeAssetAddress(
             base, (u32)(uintptr_t)source_offset);
@@ -1527,7 +1527,7 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
  * effect desc adds one line here and nothing else -- which is what P2-3f10
  * needed and did not have: Falcon's three descs were resolved by name, so
  * nothing tied them to NDS_EF_DEFERRED_MAX and the table silently overflowed. */
-#if NDS_P2_DONKEY
+#if NDS_DONKEY
 /* P2-3 admits DK's source barrel entry effect at the same seam as the
  * already-qualified Mario/Fox entry descriptors.  The decomp initializer
  * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
@@ -1544,7 +1544,7 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
 #define NDS_EF_ROSTER_DESCS_SAMUS(X) \
     X(dEFManagerSamusEntryPointEffectDesc) \
     X(dEFManagerSamusGrappleBeamEffectDesc)
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
  * in their offset fields, the same as DK's barrel above, so they need the same
  * resolve before efManagerMakeEffect does `base + offset`. The Flyer is the
@@ -1557,7 +1557,7 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
 #else
 #define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
 #endif
-#if NDS_P2_LINK
+#if NDS_LINK
 #define NDS_EF_ROSTER_DESCS_LINK(X) \
     X(dEFManagerLinkEntryWaveEffectDesc) \
     X(dEFManagerLinkEntryBeamEffectDesc) \
@@ -2067,7 +2067,7 @@ GObj *efManagerNessPsychicMagnetMakeEffect(GObj *fighter_gobj)
     return effect_gobj;
 }
 
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
 /* Makers refused because their desc was deferred for a missing file (the
  * source maker would write the bare GObj's absent DObj). */
 __attribute__((used)) volatile u32 gNdsEFDescBareMakeRefusals;
@@ -2338,7 +2338,7 @@ static void ndsEFManagerResolveAllDescOffsets(void)
     gNdsEFDescEffectsSpan[1] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects2FileID);
     gNdsEFDescEffectsSpan[2] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
 
-#if NDS_P2_CAPTAIN
+#if NDS_CAPTAIN
     /* Falcon Punch's source proc_display is the shared
      * lbCommonDObjScaleXProcDisplay, whose port definition is intentionally a
      * no-op because its weapon and effect users own their own DS seam. The

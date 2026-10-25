@@ -2,71 +2,71 @@
 # (fighters, items, stage actors, effects) with their generator rules.
 # Included in place from the Makefile (P8 G); its text is unchanged.
 
-ifeq ($(NDS_P2_DONKEY),1)
+ifeq ($(NDS_DONKEY),1)
 NDS_NATIVE_IMAGE_OWNERS += donkey
 endif
-ifeq ($(NDS_P2_CAPTAIN),1)
+ifeq ($(NDS_CAPTAIN),1)
 NDS_NATIVE_IMAGE_OWNERS += captain
 endif
-ifeq ($(NDS_P2_SAMUS),1)
+ifeq ($(NDS_SAMUS),1)
 NDS_NATIVE_IMAGE_OWNERS += samus
 endif
-ifeq ($(NDS_P2_LINK),1)
+ifeq ($(NDS_LINK),1)
 NDS_NATIVE_IMAGE_OWNERS += link
 endif
-ifeq ($(NDS_P2_PIKACHU),1)
+ifeq ($(NDS_PIKACHU),1)
 NDS_NATIVE_IMAGE_OWNERS += pikachu
 endif
-ifeq ($(NDS_P2_YOSHI),1)
+ifeq ($(NDS_YOSHI),1)
 NDS_NATIVE_IMAGE_OWNERS += yoshi
 endif
-ifeq ($(NDS_P2_NESS),1)
+ifeq ($(NDS_NESS),1)
 NDS_NATIVE_IMAGE_OWNERS += ness
 endif
-ifeq ($(NDS_P2_PURIN),1)
+ifeq ($(NDS_PURIN),1)
 NDS_NATIVE_IMAGE_OWNERS += purin
 endif
-ifeq ($(NDS_P2_KIRBY),1)
+ifeq ($(NDS_KIRBY),1)
 NDS_NATIVE_IMAGE_OWNERS += kirby
 NDS_NATIVE_KIRBY_HAT_STEMS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),kirby_hat_$(id)_high kirby_hat_$(id)_low)
 endif
-ifeq ($(NDS_P2_MMARIO),1)
+ifeq ($(NDS_MMARIO),1)
 NDS_NATIVE_IMAGE_OWNERS += mmario
 endif
-ifeq ($(NDS_P2_NMARIO),1)
+ifeq ($(NDS_NMARIO),1)
 NDS_NATIVE_IMAGE_OWNERS += nmario
 endif
-ifeq ($(NDS_P2_NFOX),1)
+ifeq ($(NDS_NFOX),1)
 NDS_NATIVE_IMAGE_OWNERS += nfox
 endif
-ifeq ($(NDS_P2_NDONKEY),1)
+ifeq ($(NDS_NDONKEY),1)
 NDS_NATIVE_IMAGE_OWNERS += ndonkey
 endif
-ifeq ($(NDS_P2_NSAMUS),1)
+ifeq ($(NDS_NSAMUS),1)
 NDS_NATIVE_IMAGE_OWNERS += nsamus
 endif
-ifeq ($(NDS_P2_NLINK),1)
+ifeq ($(NDS_NLINK),1)
 NDS_NATIVE_IMAGE_OWNERS += nlink
 endif
-ifeq ($(NDS_P2_NYOSHI),1)
+ifeq ($(NDS_NYOSHI),1)
 NDS_NATIVE_IMAGE_OWNERS += nyoshi
 endif
-ifeq ($(NDS_P2_NCAPTAIN),1)
+ifeq ($(NDS_NCAPTAIN),1)
 NDS_NATIVE_IMAGE_OWNERS += ncaptain
 endif
-ifeq ($(NDS_P2_NKIRBY),1)
+ifeq ($(NDS_NKIRBY),1)
 NDS_NATIVE_IMAGE_OWNERS += nkirby
 endif
-ifeq ($(NDS_P2_NPIKACHU),1)
+ifeq ($(NDS_NPIKACHU),1)
 NDS_NATIVE_IMAGE_OWNERS += npikachu
 endif
-ifeq ($(NDS_P2_NPURIN),1)
+ifeq ($(NDS_NPURIN),1)
 NDS_NATIVE_IMAGE_OWNERS += npurin
 endif
-ifeq ($(NDS_P2_NNESS),1)
+ifeq ($(NDS_NNESS),1)
 NDS_NATIVE_IMAGE_OWNERS += nness
 endif
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_NATIVE_IMAGE_OWNERS += boss
 endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
@@ -104,37 +104,37 @@ NDS_SHIELD_POSE_SOURCE_DIR := $(PROJECT_ROOT)/assets/fighters/shield_pose
 NDS_SHIELD_POSE_ALL_IDS := 01 02 03 05 07 08 09 10 11
 NDS_SHIELD_POSE_SOURCE_FILES := $(foreach id,$(NDS_SHIELD_POSE_ALL_IDS),$(NDS_SHIELD_POSE_SOURCE_DIR)/$(id).bin)
 NDS_SHIELD_POSE_IDS :=
-ifneq ($(filter 1,$(NDS_P2_COMPACT_BATTLE_FIGHTERS) $(NDS_P2_DONKEY) $(NDS_P2_SAMUS) $(NDS_P2_LINK) $(NDS_P2_KIRBY) $(NDS_P2_CAPTAIN) $(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_NESS)),)
+ifneq ($(filter 1,$(NDS_COMPACT_BATTLE_FIGHTERS) $(NDS_DONKEY) $(NDS_SAMUS) $(NDS_LINK) $(NDS_KIRBY) $(NDS_CAPTAIN) $(NDS_PIKACHU) $(NDS_PURIN) $(NDS_NESS)),)
 NDS_SHIELD_POSE_IDS += 01
 endif
-ifeq ($(NDS_P2_DONKEY),1)
+ifeq ($(NDS_DONKEY),1)
 NDS_SHIELD_POSE_IDS += 02
 endif
-ifeq ($(NDS_P2_SAMUS),1)
+ifeq ($(NDS_SAMUS),1)
 NDS_SHIELD_POSE_IDS += 03
 endif
-ifeq ($(NDS_P2_LINK),1)
+ifeq ($(NDS_LINK),1)
 NDS_SHIELD_POSE_IDS += 05
 endif
-ifeq ($(NDS_P2_CAPTAIN),1)
+ifeq ($(NDS_CAPTAIN),1)
 NDS_SHIELD_POSE_IDS += 07
 endif
-ifeq ($(NDS_P2_KIRBY),1)
+ifeq ($(NDS_KIRBY),1)
 NDS_SHIELD_POSE_IDS += 08
 endif
-ifeq ($(NDS_P2_PIKACHU),1)
+ifeq ($(NDS_PIKACHU),1)
 NDS_SHIELD_POSE_IDS += 09
 endif
-ifeq ($(NDS_P2_PURIN),1)
+ifeq ($(NDS_PURIN),1)
 NDS_SHIELD_POSE_IDS += 10
 endif
-ifeq ($(NDS_P2_NESS),1)
+ifeq ($(NDS_NESS),1)
 NDS_SHIELD_POSE_IDS += 11
 endif
 # P7 C1: Mario's and Yoshi's packages (the Polygon Team's Mario, Luigi and
 # Yoshi guard with them too).
 NDS_SHIELD_POSE_IDS += 00
-ifeq ($(NDS_P2_YOSHI),1)
+ifeq ($(NDS_YOSHI),1)
 NDS_SHIELD_POSE_IDS += 06
 endif
 NDS_NITROFS_SHIELD_POSE_FILES := $(foreach id,$(NDS_SHIELD_POSE_IDS),$(NITROFS_DIR)/fighters/shield_pose/$(id).bin)
@@ -510,7 +510,7 @@ battleship_mvending.o: $(NDS_NATIVE_ITEM_BAKED_HEADER)
 # P2-6 (2026-10-01): the 1P ending's room roots, same generator, as a NitroFS
 # file the ending loads into its own heap (battleship_mvending.c): no static
 # image carries them.
-ifeq ($(NDS_P2_1P_GAME),1)
+ifeq ($(NDS_1P_GAME),1)
 NDS_NITROFS_ROOM_BAKED := $(NITROFS_DIR)/movies/room_baked.bin
 $(NDS_NITROFS_ROOM_BAKED): $(NDS_NATIVE_ITEM_BAKED_PREREQ)
 	@mkdir -p $(dir $@)
@@ -554,7 +554,7 @@ $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWN
 # per-owner image .c files in one invocation, so all 47 are one grouped target
 # -- the old header-only rule left every image.c without a recipe and a fresh
 # clone failed at native_image_%.o with "no rule to make target". The owner list
-# is P2_IMAGE_OWNERS verbatim (generate_nds_native_owner_images.py:62-63); the
+# is NATIVE_IMAGE_OWNERS verbatim (generate_nds_native_owner_images.py:62-63); the
 # build only compiles/links the config-enabled subset via NDS_NATIVE_IMAGE_OWNERS.
 # THE OWNER IR BELONGS HERE, AND ITS ABSENCE HUNG THE CHARACTER SELECT.
 #

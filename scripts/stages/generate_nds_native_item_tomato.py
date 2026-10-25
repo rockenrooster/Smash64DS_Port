@@ -50,7 +50,7 @@ bake-everything item owners and the template the rest copy: everything in
 `decode`/`render` is GENERAL except the constants block (asset ids, offsets,
 VERTS, OPS, TEXT_PINS, EXPECTED_* tables) and the anim-joints NULL assertion
 (some siblings carry an AnimJoint; those owners pin it instead of asserting
-NULL).  The executor gate `NDS_P2_ITEM_CORE` is item-specific; the sibling
+NULL).  The executor gate `NDS_ITEM_CORE` is item-specific; the sibling
 owners gate on their own TU flag.
 """
 

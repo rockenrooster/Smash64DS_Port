@@ -54,7 +54,7 @@ s32 ndsRendererNativeKirbyTrioHeadSupported(u32 head_mp)
 /* The Mario/Fox-only mirror stress build has no image-backed owner block, but
  * the production preflight still resolves every selected root through these
  * two helpers. Keep the base-owner identity available even when that entire
- * block compiles out; otherwise the documented NDS_P2_FOUR_CPU_ROSTER=0
+ * block compiles out; otherwise the documented NDS_FOUR_CPU_ROSTER=0
  * control fails at compile time before it can validate renderer changes. */
 
 /* --- P2-3r4: image-backed owner tables ------------------------------------
@@ -1195,7 +1195,7 @@ ndsRendererNativeFighterTablesForResolvedRoot(
             }
         }
     }
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
         (owner == &sNdsNativeLinkSpecialNLowOwner) ||
         (owner == &sNdsNativeLinkSpecialNItemHighOwner) ||
@@ -1319,7 +1319,7 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
             }
         }
     }
-#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if NDS_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
         (owner == &sNdsNativeLinkSpecialNLowOwner) ||
         (owner == &sNdsNativeLinkSpecialNItemHighOwner) ||

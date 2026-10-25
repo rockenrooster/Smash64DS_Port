@@ -34,7 +34,7 @@
     X(25u, 37376u, 8448u, 3632u) /* NNess */ \
     X(26u, 79424u, 11568u, 10752u) /* GDonkey */
 
-#define NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS(X) \
+#define NDS_BASE_FIGHTER_ALLOC_SIZE_ROWS(X) \
     X(0xcbu, 54048u) \
     X(0xd1u, 119040u) \
     X(0x1f3u, 1392u) \
@@ -339,7 +339,7 @@
     X(0x31eu, 496u) \
     X(0x31fu, 3264u)
 
-#define NDS_P2_LUIGI_ALLOC_SIZE_ROWS(X) \
+#define NDS_LUIGI_ALLOC_SIZE_ROWS(X) \
     X(0xddu, 57104u) \
     X(0x44fu, 1344u) \
     X(0x450u, 2288u) \
@@ -354,7 +354,7 @@
     X(0x459u, 2656u) \
     X(0x45au, 2608u)
 
-#define NDS_P2_DONKEY_ALLOC_SIZE_ROWS(X) \
+#define NDS_DONKEY_ALLOC_SIZE_ROWS(X) \
     X(0xd5u, 79648u) \
     X(0x320u, 10752u) \
     X(0x321u, 1936u) \
@@ -510,7 +510,7 @@
     X(0x3b7u, 432u) \
     X(0x3b8u, 2304u)
 
-#define NDS_P2_CAPTAIN_ALLOC_SIZE_ROWS(X) \
+#define NDS_CAPTAIN_ALLOC_SIZE_ROWS(X) \
     X(0xecu, 102448u) \
     X(0x5e8u, 10784u) \
     X(0x5e9u, 1648u) \
@@ -665,7 +665,7 @@
     X(0x67eu, 512u) \
     X(0x67fu, 2400u)
 
-#define NDS_P2_SAMUS_ALLOC_SIZE_ROWS(X) \
+#define NDS_SAMUS_ALLOC_SIZE_ROWS(X) \
     X(0xd9u, 85296u) \
     X(0x3b9u, 1088u) \
     X(0x3bau, 1072u) \
@@ -818,7 +818,7 @@
     X(0x44du, 384u) \
     X(0x44eu, 2080u)
 
-#define NDS_P2_LINK_ALLOC_SIZE_ROWS(X) \
+#define NDS_LINK_ALLOC_SIZE_ROWS(X) \
     X(0xe1u, 107248u) \
     X(0x45bu, 1312u) \
     X(0x45cu, 1520u) \
@@ -965,7 +965,7 @@
     X(0x4e9u, 576u) \
     X(0x4eau, 2032u)
 
-#define NDS_P2_PIKACHU_ALLOC_SIZE_ROWS(X) \
+#define NDS_PIKACHU_ALLOC_SIZE_ROWS(X) \
     X(0xf3u, 80528u) \
     X(0x7a5u, 6448u) \
     X(0x7a6u, 1712u) \
@@ -1109,7 +1109,7 @@
     X(0x830u, 496u) \
     X(0x831u, 3728u)
 
-#define NDS_P2_YOSHI_ALLOC_SIZE_ROWS(X) \
+#define NDS_YOSHI_ALLOC_SIZE_ROWS(X) \
     X(0xf7u, 146928u) \
     X(0x717u, 3632u) \
     X(0x718u, 2128u) \
@@ -1254,7 +1254,7 @@
     X(0x7a3u, 496u) \
     X(0x7a4u, 3776u)
 
-#define NDS_P2_NESS_ALLOC_SIZE_ROWS(X) \
+#define NDS_NESS_ALLOC_SIZE_ROWS(X) \
     X(0xefu, 79216u) \
     X(0x680u, 3632u) \
     X(0x681u, 2416u) \
@@ -1408,7 +1408,7 @@
     X(0x715u, 528u) \
     X(0x716u, 3360u)
 
-#define NDS_P2_PURIN_ALLOC_SIZE_ROWS(X) \
+#define NDS_PURIN_ALLOC_SIZE_ROWS(X) \
     X(0xe9u, 72368u) \
     X(0x4efu, 880u) \
     X(0x4ffu, 1088u) \
@@ -1555,7 +1555,7 @@
     X(0x5e6u, 3824u) \
     X(0x5e7u, 368u)
 
-#define NDS_P2_KIRBY_ALLOC_SIZE_ROWS(X) \
+#define NDS_KIRBY_ALLOC_SIZE_ROWS(X) \
     X(0xe5u, 204208u) \
     X(0x4ebu, 1072u) \
     X(0x4ecu, 1632u) \
@@ -1667,7 +1667,7 @@
     X(0x5a2u, 3568u) \
     X(0x5a3u, 480u)
 
-#define NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(X) \
     X(0x6du, 47120u) \
     X(0xa1u, 12160u) \
     X(0xc9u, 2096u) \
@@ -1688,13 +1688,13 @@
     X(0x15au, 3632u) \
     X(0x164u, 1856u)
 
-#define NDS_P2_LUIGI_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_LUIGI_PAYLOAD_SIZE_ROWS(X) \
     X(0xdcu, 6704u) \
     X(0xddu, 2256u) \
     X(0xdeu, 64u) \
     X(0x143u, 32528u)
 
-#define NDS_P2_DONKEY_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_DONKEY_PAYLOAD_SIZE_ROWS(X) \
     X(0xd4u, 7376u) \
     X(0xd5u, 2032u) \
     X(0x13du, 54784u) \
@@ -1702,7 +1702,7 @@
     X(0x13fu, 832u) \
     X(0x163u, 2352u)
 
-#define NDS_P2_CAPTAIN_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_CAPTAIN_PAYLOAD_SIZE_ROWS(X) \
     X(0xebu, 7600u) \
     X(0xecu, 2000u) \
     X(0x14cu, 51344u) \
@@ -1710,7 +1710,7 @@
     X(0x14eu, 10976u) \
     X(0x15eu, 26080u)
 
-#define NDS_P2_SAMUS_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_SAMUS_PAYLOAD_SIZE_ROWS(X) \
     X(0xd8u, 7872u) \
     X(0xd9u, 2400u) \
     X(0xdau, 64u) \
@@ -1719,7 +1719,7 @@
     X(0x142u, 10080u) \
     X(0x15du, 3232u)
 
-#define NDS_P2_LINK_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_LINK_PAYLOAD_SIZE_ROWS(X) \
     X(0xe0u, 7920u) \
     X(0xe1u, 2640u) \
     X(0xe2u, 64u) \
@@ -1729,7 +1729,7 @@
     X(0x147u, 11840u) \
     X(0x161u, 6672u)
 
-#define NDS_P2_PIKACHU_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_PIKACHU_PAYLOAD_SIZE_ROWS(X) \
     X(0xf2u, 5984u) \
     X(0xf3u, 1904u) \
     X(0xf4u, 112u) \
@@ -1738,7 +1738,7 @@
     X(0x157u, 14144u) \
     X(0x15bu, 7008u)
 
-#define NDS_P2_YOSHI_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_YOSHI_PAYLOAD_SIZE_ROWS(X) \
     X(0x56u, 79584u) \
     X(0xf6u, 6080u) \
     X(0xf7u, 2000u) \
@@ -1747,7 +1747,7 @@
     X(0x154u, 7040u) \
     X(0x162u, 1984u)
 
-#define NDS_P2_NESS_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_NESS_PAYLOAD_SIZE_ROWS(X) \
     X(0xeeu, 6064u) \
     X(0xefu, 2320u) \
     X(0xf0u, 128u) \
@@ -1756,34 +1756,34 @@
     X(0x151u, 12496u) \
     X(0x160u, 2832u)
 
-#define NDS_P2_PURIN_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_PURIN_PAYLOAD_SIZE_ROWS(X) \
     X(0xe8u, 6016u) \
     X(0xe9u, 1984u) \
     X(0x14au, 32224u) \
     X(0x14bu, 17936u) \
     X(0x15fu, 12112u)
 
-#define NDS_P2_KIRBY_PAYLOAD_SIZE_ROWS(X) \
+#define NDS_KIRBY_PAYLOAD_SIZE_ROWS(X) \
     X(0xe4u, 9648u) \
     X(0xe5u, 2896u) \
     X(0x148u, 120864u) \
     X(0x149u, 11968u) \
     X(0x15cu, 10512u)
 
-#define NDS_P2_LUIGI_ANIM_FIRST 0x44fu
-#define NDS_P2_LUIGI_ANIM_LAST 0x45au
-#define NDS_P2_LUIGI_ANIM_COUNT 12u
-#define NDS_P2_LUIGI_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_LUIGI_ANIM_SEGMENTS(X) \
+#define NDS_LUIGI_ANIM_FIRST 0x44fu
+#define NDS_LUIGI_ANIM_LAST 0x45au
+#define NDS_LUIGI_ANIM_COUNT 12u
+#define NDS_LUIGI_ANIM_SEGMENT_COUNT 1u
+#define NDS_LUIGI_ANIM_SEGMENTS(X) \
     X(0x44fu, 0x45au, "FTLuigiAnim", 0x44fu)
 
-#define NDS_P2_LUIGI_CORE_ASSET_ROWS(X) \
+#define NDS_LUIGI_CORE_ASSET_ROWS(X) \
     X(llLuigiMainFileID, 0xddu, NDS_NITRO_RELOC_FIGHTERS_MAIN "LuigiMain") \
     X(llLuigiMainMotionFileID, 0xdcu, NDS_NITRO_RELOC_FIGHTERS_MAIN "LuigiMainMotion") \
     X(llLuigiModelFileID, 0x143u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LuigiModel") \
     X(llLuigiSpecial1FileID, 0xdeu, NDS_NITRO_RELOC_FIGHTERS_MAIN "LuigiSpecial1")
 
-#define NDS_P2_LUIGI_ANIM_ASSET_ROWS(X) \
+#define NDS_LUIGI_ANIM_ASSET_ROWS(X) \
     X(llFTLuigiAnimEggLayFileID, 0x44fu, NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim000") \
     X(llFTLuigiAnimDashFileID, 0x450u, NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim001") \
     X(llFTLuigiAnimRunBrakeFileID, 0x451u, NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim002") \
@@ -1797,27 +1797,27 @@
     X(llFTLuigiAnimFSmashMidLowFileID, 0x459u, NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim010") \
     X(llFTLuigiAnimFSmashLowFileID, 0x45au, NDS_NITRO_RELOC_ANIMATIONS "FTLuigiAnim011")
 
-#define NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_LUIGI_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_LUIGI_AOBJ32_ASSET_ROWS(X) \
+#define NDS_LUIGI_AOBJ32_ASSET_ROWS(X) \
     X(llFTMarioAnimAppear1FileID, 0x279u) \
     X(llFTMarioAnimAppear2FileID, 0x27au)
 
-#define NDS_P2_DONKEY_ANIM_FIRST 0x320u
-#define NDS_P2_DONKEY_ANIM_LAST 0x3b8u
-#define NDS_P2_DONKEY_ANIM_COUNT 153u
-#define NDS_P2_DONKEY_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_DONKEY_ANIM_SEGMENTS(X) \
+#define NDS_DONKEY_ANIM_FIRST 0x320u
+#define NDS_DONKEY_ANIM_LAST 0x3b8u
+#define NDS_DONKEY_ANIM_COUNT 153u
+#define NDS_DONKEY_ANIM_SEGMENT_COUNT 1u
+#define NDS_DONKEY_ANIM_SEGMENTS(X) \
     X(0x320u, 0x3b8u, "FTDonkeyAnim", 0x320u)
 
-#define NDS_P2_DONKEY_CORE_ASSET_ROWS(X) \
+#define NDS_DONKEY_CORE_ASSET_ROWS(X) \
     X(llDonkeyMainFileID, 0xd5u, NDS_NITRO_RELOC_FIGHTERS_MAIN "DonkeyMain") \
     X(llDonkeyMainMotionFileID, 0xd4u, NDS_NITRO_RELOC_FIGHTERS_MAIN "DonkeyMainMotion") \
     X(llDonkeyModelFileID, 0x13du, NDS_NITRO_RELOC_FIGHTERS_MAIN "DonkeyModel") \
     X(llDonkeyShieldPoseFileID, 0x13eu, NDS_NITRO_RELOC_FIGHTERS_MAIN "DonkeyShieldPose") \
     X(llDonkeySpecial2FileID, 0x163u, NDS_NITRO_RELOC_FIGHTERS_MAIN "DonkeySpecial2")
 
-#define NDS_P2_DONKEY_ANIM_ASSET_ROWS(X) \
+#define NDS_DONKEY_ANIM_ASSET_ROWS(X) \
     X(llFTDonkeyAnimEggLayFileID, 0x320u, NDS_NITRO_RELOC_ANIMATIONS "FTDonkeyAnim000") \
     X(llFTDonkeyAnimWalk1FileID, 0x321u, NDS_NITRO_RELOC_ANIMATIONS "FTDonkeyAnim001") \
     X(llFTDonkeyAnimWalk2FileID, 0x322u, NDS_NITRO_RELOC_ANIMATIONS "FTDonkeyAnim002") \
@@ -1972,21 +1972,21 @@
     X(llFTDonkeyAnimDamageFileID, 0x3b7u, NDS_NITRO_RELOC_ANIMATIONS "FTDonkeyAnim151") \
     X(llFTDonkeyAnimFireFlowerShootAirFileID, 0x3b8u, NDS_NITRO_RELOC_ANIMATIONS "FTDonkeyAnim152")
 
-#define NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(X) \
+#define NDS_DONKEY_DEPENDENCY_ASSET_ROWS(X) \
     X(0x13fu, NDS_NITRO_RELOC_FIGHTERS_MAIN "DkIcon")
 
-#define NDS_P2_DONKEY_AOBJ32_ASSET_ROWS(X) \
+#define NDS_DONKEY_AOBJ32_ASSET_ROWS(X) \
     X(llFTDonkeyAnimAppear1FileID, 0x3a4u) \
     X(llFTDonkeyAnimAppear2FileID, 0x3a5u)
 
-#define NDS_P2_CAPTAIN_ANIM_FIRST 0x5e8u
-#define NDS_P2_CAPTAIN_ANIM_LAST 0x67fu
-#define NDS_P2_CAPTAIN_ANIM_COUNT 152u
-#define NDS_P2_CAPTAIN_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_CAPTAIN_ANIM_SEGMENTS(X) \
+#define NDS_CAPTAIN_ANIM_FIRST 0x5e8u
+#define NDS_CAPTAIN_ANIM_LAST 0x67fu
+#define NDS_CAPTAIN_ANIM_COUNT 152u
+#define NDS_CAPTAIN_ANIM_SEGMENT_COUNT 1u
+#define NDS_CAPTAIN_ANIM_SEGMENTS(X) \
     X(0x5e8u, 0x67fu, "FTCaptainAnim", 0x5e8u)
 
-#define NDS_P2_CAPTAIN_CORE_ASSET_ROWS(X) \
+#define NDS_CAPTAIN_CORE_ASSET_ROWS(X) \
     X(llCaptainMainFileID, 0xecu, NDS_NITRO_RELOC_FIGHTERS_MAIN "CaptainMain") \
     X(llCaptainMainMotionFileID, 0xebu, NDS_NITRO_RELOC_FIGHTERS_MAIN "CaptainMainMotion") \
     X(llCaptainModelFileID, 0x14cu, NDS_NITRO_RELOC_FIGHTERS_MAIN "CaptainModel") \
@@ -1994,7 +1994,7 @@
     X(llCaptainSpecial2FileID, 0x15eu, NDS_NITRO_RELOC_FIGHTERS_MAIN "CaptainSpecial2") \
     X(llCaptainSpecial3FileID, 0x14du, NDS_NITRO_RELOC_FIGHTERS_MAIN "CaptainSpecial3")
 
-#define NDS_P2_CAPTAIN_ANIM_ASSET_ROWS(X) \
+#define NDS_CAPTAIN_ANIM_ASSET_ROWS(X) \
     X(llFTCaptainAnimEggLayFileID, 0x5e8u, NDS_NITRO_RELOC_ANIMATIONS "FTCaptainAnim000") \
     X(llFTCaptainAnimWalk1FileID, 0x5e9u, NDS_NITRO_RELOC_ANIMATIONS "FTCaptainAnim001") \
     X(llFTCaptainAnimWalk2FileID, 0x5eau, NDS_NITRO_RELOC_ANIMATIONS "FTCaptainAnim002") \
@@ -2148,22 +2148,22 @@
     X(llFTCaptainAnimDamageFileID, 0x67eu, NDS_NITRO_RELOC_ANIMATIONS "FTCaptainAnim150") \
     X(llFTCaptainAnimFireFlowerShootAirFileID, 0x67fu, NDS_NITRO_RELOC_ANIMATIONS "FTCaptainAnim151")
 
-#define NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_CAPTAIN_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_CAPTAIN_AOBJ32_ASSET_ROWS(X) \
+#define NDS_CAPTAIN_AOBJ32_ASSET_ROWS(X) \
     X(llFTCaptainAnimAppearFileID, 0x671u) \
     X(llFTCaptainAnimAppearAirFileID, 0x670u) \
     X(llFTCaptainAnimBlueFalcon2FileID, 0x673u) \
     X(llFTCaptainAnimBlueFalcon1FileID, 0x672u)
 
-#define NDS_P2_SAMUS_ANIM_FIRST 0x3b9u
-#define NDS_P2_SAMUS_ANIM_LAST 0x44eu
-#define NDS_P2_SAMUS_ANIM_COUNT 150u
-#define NDS_P2_SAMUS_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_SAMUS_ANIM_SEGMENTS(X) \
+#define NDS_SAMUS_ANIM_FIRST 0x3b9u
+#define NDS_SAMUS_ANIM_LAST 0x44eu
+#define NDS_SAMUS_ANIM_COUNT 150u
+#define NDS_SAMUS_ANIM_SEGMENT_COUNT 1u
+#define NDS_SAMUS_ANIM_SEGMENTS(X) \
     X(0x3b9u, 0x44eu, "FTSamusAnim", 0x3b9u)
 
-#define NDS_P2_SAMUS_CORE_ASSET_ROWS(X) \
+#define NDS_SAMUS_CORE_ASSET_ROWS(X) \
     X(llSamusMainFileID, 0xd9u, NDS_NITRO_RELOC_FIGHTERS_MAIN "SamusMain") \
     X(llSamusMainMotionFileID, 0xd8u, NDS_NITRO_RELOC_FIGHTERS_MAIN "SamusMainMotion") \
     X(llSamusModelFileID, 0x140u, NDS_NITRO_RELOC_FIGHTERS_MAIN "SamusModel") \
@@ -2172,7 +2172,7 @@
     X(llSamusSpecial2FileID, 0x15du, NDS_NITRO_RELOC_FIGHTERS_MAIN "SamusSpecial2") \
     X(llSamusSpecial3FileID, 0x141u, NDS_NITRO_RELOC_FIGHTERS_MAIN "SamusSpecial3")
 
-#define NDS_P2_SAMUS_ANIM_ASSET_ROWS(X) \
+#define NDS_SAMUS_ANIM_ASSET_ROWS(X) \
     X(llFTSamusAnimEggLayFileID, 0x3b9u, NDS_NITRO_RELOC_ANIMATIONS "FTSamusAnim000") \
     X(llFTSamusAnimWalk1FileID, 0x3bau, NDS_NITRO_RELOC_ANIMATIONS "FTSamusAnim001") \
     X(llFTSamusAnimWalk2FileID, 0x3bbu, NDS_NITRO_RELOC_ANIMATIONS "FTSamusAnim002") \
@@ -2324,20 +2324,20 @@
     X(llFTSamusAnimDamageFileID, 0x44du, NDS_NITRO_RELOC_ANIMATIONS "FTSamusAnim148") \
     X(llFTSamusAnimFireFlowerShootAirFileID, 0x44eu, NDS_NITRO_RELOC_ANIMATIONS "FTSamusAnim149")
 
-#define NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_SAMUS_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_SAMUS_AOBJ32_ASSET_ROWS(X) \
+#define NDS_SAMUS_AOBJ32_ASSET_ROWS(X) \
     X(llFTSamusAnimAppear1FileID, 0x442u) \
     X(llFTSamusAnimAppear2FileID, 0x443u)
 
-#define NDS_P2_LINK_ANIM_FIRST 0x45bu
-#define NDS_P2_LINK_ANIM_LAST 0x4eau
-#define NDS_P2_LINK_ANIM_COUNT 144u
-#define NDS_P2_LINK_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_LINK_ANIM_SEGMENTS(X) \
+#define NDS_LINK_ANIM_FIRST 0x45bu
+#define NDS_LINK_ANIM_LAST 0x4eau
+#define NDS_LINK_ANIM_COUNT 144u
+#define NDS_LINK_ANIM_SEGMENT_COUNT 1u
+#define NDS_LINK_ANIM_SEGMENTS(X) \
     X(0x45bu, 0x4eau, "FTLinkAnim", 0x45bu)
 
-#define NDS_P2_LINK_CORE_ASSET_ROWS(X) \
+#define NDS_LINK_CORE_ASSET_ROWS(X) \
     X(llLinkMainFileID, 0xe1u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LinkMain") \
     X(llLinkMainMotionFileID, 0xe0u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LinkMainMotion") \
     X(llLinkModelFileID, 0x144u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LinkModel") \
@@ -2346,7 +2346,7 @@
     X(llLinkSpecial2FileID, 0x161u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LinkSpecial2") \
     X(llLinkSpecial3FileID, 0x145u, NDS_NITRO_RELOC_FIGHTERS_MAIN "LinkSpecial3")
 
-#define NDS_P2_LINK_ANIM_ASSET_ROWS(X) \
+#define NDS_LINK_ANIM_ASSET_ROWS(X) \
     X(llFTLinkAnimEggLayFileID, 0x45bu, NDS_NITRO_RELOC_ANIMATIONS "FTLinkAnim000") \
     X(llFTLinkAnimWalk1FileID, 0x45cu, NDS_NITRO_RELOC_ANIMATIONS "FTLinkAnim001") \
     X(llFTLinkAnimWalk2FileID, 0x45du, NDS_NITRO_RELOC_ANIMATIONS "FTLinkAnim002") \
@@ -2492,21 +2492,21 @@
     X(llFTLinkAnimDamageFileID, 0x4e9u, NDS_NITRO_RELOC_ANIMATIONS "FTLinkAnim142") \
     X(llFTLinkAnimFireFlowerShootAirFileID, 0x4eau, NDS_NITRO_RELOC_ANIMATIONS "FTLinkAnim143")
 
-#define NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(X) \
+#define NDS_LINK_DEPENDENCY_ASSET_ROWS(X) \
     X(0x146u, NDS_NITRO_RELOC_EXTERN_DATA "MiscData326")
 
-#define NDS_P2_LINK_AOBJ32_ASSET_ROWS(X) \
+#define NDS_LINK_AOBJ32_ASSET_ROWS(X) \
     X(llFTLinkAnimAppear1FileID, 0x4deu) \
     X(llFTLinkAnimAppear2FileID, 0x4dfu)
 
-#define NDS_P2_PIKACHU_ANIM_FIRST 0x7a5u
-#define NDS_P2_PIKACHU_ANIM_LAST 0x831u
-#define NDS_P2_PIKACHU_ANIM_COUNT 141u
-#define NDS_P2_PIKACHU_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_PIKACHU_ANIM_SEGMENTS(X) \
+#define NDS_PIKACHU_ANIM_FIRST 0x7a5u
+#define NDS_PIKACHU_ANIM_LAST 0x831u
+#define NDS_PIKACHU_ANIM_COUNT 141u
+#define NDS_PIKACHU_ANIM_SEGMENT_COUNT 1u
+#define NDS_PIKACHU_ANIM_SEGMENTS(X) \
     X(0x7a5u, 0x831u, "FTPikachuAnim", 0x7a5u)
 
-#define NDS_P2_PIKACHU_CORE_ASSET_ROWS(X) \
+#define NDS_PIKACHU_CORE_ASSET_ROWS(X) \
     X(llPikachuMainFileID, 0xf3u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PikachuMain") \
     X(llPikachuMainMotionFileID, 0xf2u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PikachuMainMotion") \
     X(llPikachuModelFileID, 0x155u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PikachuModel") \
@@ -2515,7 +2515,7 @@
     X(llPikachuSpecial2FileID, 0x15bu, NDS_NITRO_RELOC_FIGHTERS_MAIN "PikachuSpecial2") \
     X(llPikachuSpecial3FileID, 0x156u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PikachuSpecial3")
 
-#define NDS_P2_PIKACHU_ANIM_ASSET_ROWS(X) \
+#define NDS_PIKACHU_ANIM_ASSET_ROWS(X) \
     X(llFTPikachuAnimIdleFileID, 0x7a5u, NDS_NITRO_RELOC_ANIMATIONS "FTPikachuAnim000") \
     X(llFTPikachuAnimWalk1FileID, 0x7a6u, NDS_NITRO_RELOC_ANIMATIONS "FTPikachuAnim001") \
     X(llFTPikachuAnimWalk2FileID, 0x7a7u, NDS_NITRO_RELOC_ANIMATIONS "FTPikachuAnim002") \
@@ -2658,20 +2658,20 @@
     X(llFTPikachuAnimDamageFileID, 0x830u, NDS_NITRO_RELOC_ANIMATIONS "FTPikachuAnim139") \
     X(llFTPikachuAnimFireFlowerShootAirFileID, 0x831u, NDS_NITRO_RELOC_ANIMATIONS "FTPikachuAnim140")
 
-#define NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_PIKACHU_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_PIKACHU_AOBJ32_ASSET_ROWS(X) \
+#define NDS_PIKACHU_AOBJ32_ASSET_ROWS(X) \
     X(llFTPikachuAnimAppear1FileID, 0x821u) \
     X(llFTPikachuAnimAppear2FileID, 0x822u)
 
-#define NDS_P2_YOSHI_ANIM_FIRST 0x717u
-#define NDS_P2_YOSHI_ANIM_LAST 0x7a4u
-#define NDS_P2_YOSHI_ANIM_COUNT 142u
-#define NDS_P2_YOSHI_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_YOSHI_ANIM_SEGMENTS(X) \
+#define NDS_YOSHI_ANIM_FIRST 0x717u
+#define NDS_YOSHI_ANIM_LAST 0x7a4u
+#define NDS_YOSHI_ANIM_COUNT 142u
+#define NDS_YOSHI_ANIM_SEGMENT_COUNT 1u
+#define NDS_YOSHI_ANIM_SEGMENTS(X) \
     X(0x717u, 0x7a4u, "FTYoshiAnim", 0x717u)
 
-#define NDS_P2_YOSHI_CORE_ASSET_ROWS(X) \
+#define NDS_YOSHI_CORE_ASSET_ROWS(X) \
     X(llYoshiMainFileID, 0xf7u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiMain") \
     X(llYoshiMainMotionFileID, 0xf6u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiMainMotion") \
     X(llYoshiModelFileID, 0x152u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiModel") \
@@ -2679,7 +2679,7 @@
     X(llYoshiSpecial2FileID, 0x162u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiSpecial2") \
     X(llYoshiSpecial3FileID, 0x153u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiSpecial3")
 
-#define NDS_P2_YOSHI_ANIM_ASSET_ROWS(X) \
+#define NDS_YOSHI_ANIM_ASSET_ROWS(X) \
     X(llFTYoshiAnimEggLayFileID, 0x717u, NDS_NITRO_RELOC_ANIMATIONS "FTYoshiAnim000") \
     X(llFTYoshiAnimWalk1FileID, 0x718u, NDS_NITRO_RELOC_ANIMATIONS "FTYoshiAnim001") \
     X(llFTYoshiAnimWalk2FileID, 0x719u, NDS_NITRO_RELOC_ANIMATIONS "FTYoshiAnim002") \
@@ -2823,21 +2823,21 @@
     X(llFTYoshiAnimDamageFileID, 0x7a3u, NDS_NITRO_RELOC_ANIMATIONS "FTYoshiAnim140") \
     X(llFTYoshiAnimFireFlowerShootAirFileID, 0x7a4u, NDS_NITRO_RELOC_ANIMATIONS "FTYoshiAnim141")
 
-#define NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(X) \
+#define NDS_YOSHI_DEPENDENCY_ASSET_ROWS(X) \
     X(0x56u, NDS_NITRO_RELOC_EXTERN_DATA "MiscData086")
 
-#define NDS_P2_YOSHI_AOBJ32_ASSET_ROWS(X) \
+#define NDS_YOSHI_AOBJ32_ASSET_ROWS(X) \
     X(llFTYoshiAnimAppear1FileID, 0x7a1u) \
     X(llFTYoshiAnimAppear2FileID, 0x7a2u)
 
-#define NDS_P2_NESS_ANIM_FIRST 0x680u
-#define NDS_P2_NESS_ANIM_LAST 0x716u
-#define NDS_P2_NESS_ANIM_COUNT 151u
-#define NDS_P2_NESS_ANIM_SEGMENT_COUNT 1u
-#define NDS_P2_NESS_ANIM_SEGMENTS(X) \
+#define NDS_NESS_ANIM_FIRST 0x680u
+#define NDS_NESS_ANIM_LAST 0x716u
+#define NDS_NESS_ANIM_COUNT 151u
+#define NDS_NESS_ANIM_SEGMENT_COUNT 1u
+#define NDS_NESS_ANIM_SEGMENTS(X) \
     X(0x680u, 0x716u, "FTNessAnim", 0x680u)
 
-#define NDS_P2_NESS_CORE_ASSET_ROWS(X) \
+#define NDS_NESS_CORE_ASSET_ROWS(X) \
     X(llNessMainFileID, 0xefu, NDS_NITRO_RELOC_FIGHTERS_MAIN "NessMain") \
     X(llNessMainMotionFileID, 0xeeu, NDS_NITRO_RELOC_FIGHTERS_MAIN "NessMainMotion") \
     X(llNessModelFileID, 0x14fu, NDS_NITRO_RELOC_FIGHTERS_MAIN "NessModel") \
@@ -2846,7 +2846,7 @@
     X(llNessSpecial2FileID, 0x160u, NDS_NITRO_RELOC_FIGHTERS_MAIN "NessSpecial2") \
     X(llNessSpecial3FileID, 0x150u, NDS_NITRO_RELOC_FIGHTERS_MAIN "NessSpecial3")
 
-#define NDS_P2_NESS_ANIM_ASSET_ROWS(X) \
+#define NDS_NESS_ANIM_ASSET_ROWS(X) \
     X(llFTNessAnimEggLayFileID, 0x680u, NDS_NITRO_RELOC_ANIMATIONS "FTNessAnim000") \
     X(llFTNessAnimWalk1FileID, 0x681u, NDS_NITRO_RELOC_ANIMATIONS "FTNessAnim001") \
     X(llFTNessAnimWalk2FileID, 0x682u, NDS_NITRO_RELOC_ANIMATIONS "FTNessAnim002") \
@@ -2999,32 +2999,32 @@
     X(llFTNessAnimDamageFileID, 0x715u, NDS_NITRO_RELOC_ANIMATIONS "FTNessAnim149") \
     X(llFTNessAnimFireFlowerShootAirFileID, 0x716u, NDS_NITRO_RELOC_ANIMATIONS "FTNessAnim150")
 
-#define NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_NESS_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_NESS_AOBJ32_ASSET_ROWS(X) \
+#define NDS_NESS_AOBJ32_ASSET_ROWS(X) \
     X(llFTNessAnimAppearStart1FileID, 0x707u) \
     X(llFTNessAnimAppearStart2FileID, 0x708u) \
     X(llFTNessAnimAppear1FileID, 0x709u) \
     X(llFTNessAnimAppear2FileID, 0x70au) \
     X(llFTNessAnimAppearEndFileID, 0x70bu)
 
-#define NDS_P2_PURIN_ANIM_FIRST 0x5a5u
-#define NDS_P2_PURIN_ANIM_LAST 0x5e7u
-#define NDS_P2_PURIN_ANIM_COUNT 144u
-#define NDS_P2_PURIN_ANIM_SEGMENT_COUNT 3u
-#define NDS_P2_PURIN_ANIM_SEGMENTS(X) \
+#define NDS_PURIN_ANIM_FIRST 0x5a5u
+#define NDS_PURIN_ANIM_LAST 0x5e7u
+#define NDS_PURIN_ANIM_COUNT 144u
+#define NDS_PURIN_ANIM_SEGMENT_COUNT 3u
+#define NDS_PURIN_ANIM_SEGMENTS(X) \
     X(0x4efu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
     X(0x5a5u, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u) \
     X(0x5e0u, 0x5e7u, "FTPurinAnim", 0x5e0u)
 
-#define NDS_P2_PURIN_CORE_ASSET_ROWS(X) \
+#define NDS_PURIN_CORE_ASSET_ROWS(X) \
     X(llPurinMainFileID, 0xe9u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PurinMain") \
     X(llPurinMainMotionFileID, 0xe8u, NDS_NITRO_RELOC_FIGHTERS_MAIN "PurinMainMotion") \
     X(llPurinModelFileID, 0x14au, NDS_NITRO_RELOC_FIGHTERS_MAIN "PurinModel") \
     X(llPurinShieldPoseFileID, 0x14bu, NDS_NITRO_RELOC_FIGHTERS_MAIN "PurinShieldPose") \
     X(llPurinSpecial2FileID, 0x15fu, NDS_NITRO_RELOC_FIGHTERS_MAIN "PurinSpecial2")
 
-#define NDS_P2_PURIN_ANIM_ASSET_ROWS(X) \
+#define NDS_PURIN_ANIM_ASSET_ROWS(X) \
     X(llFTKirbyAnimWalkEndFileID, 0x4efu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim004") \
     X(llFTKirbyAnimCrouchIdleFileID, 0x4ffu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim020") \
     X(llFTKirbyAnimCrouchEndFileID, 0x500u, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim021") \
@@ -3170,28 +3170,28 @@
     X(llFTPurinAnimFireFlowerShootFileID, 0x5e6u, NDS_NITRO_RELOC_ANIMATIONS "FTPurinAnim006") \
     X(llFTPurinAnimDamageFileID, 0x5e7u, NDS_NITRO_RELOC_ANIMATIONS "FTPurinAnim007")
 
-#define NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(X)
+#define NDS_PURIN_DEPENDENCY_ASSET_ROWS(X)
 
-#define NDS_P2_PURIN_AOBJ32_ASSET_ROWS(X) \
+#define NDS_PURIN_AOBJ32_ASSET_ROWS(X) \
     X(llFTPurinAnimAppear1FileID, 0x5e1u) \
     X(llFTPurinAnimAppear2FileID, 0x5e2u)
 
-#define NDS_P2_KIRBY_ANIM_FIRST 0x4ebu
-#define NDS_P2_KIRBY_ANIM_LAST 0x5a4u
-#define NDS_P2_KIRBY_ANIM_COUNT 188u
-#define NDS_P2_KIRBY_ANIM_SEGMENT_COUNT 2u
-#define NDS_P2_KIRBY_ANIM_SEGMENTS(X) \
+#define NDS_KIRBY_ANIM_FIRST 0x4ebu
+#define NDS_KIRBY_ANIM_LAST 0x5a4u
+#define NDS_KIRBY_ANIM_COUNT 188u
+#define NDS_KIRBY_ANIM_SEGMENT_COUNT 2u
+#define NDS_KIRBY_ANIM_SEGMENTS(X) \
     X(0x4ebu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
     X(0x5deu, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u)
 
-#define NDS_P2_KIRBY_CORE_ASSET_ROWS(X) \
+#define NDS_KIRBY_CORE_ASSET_ROWS(X) \
     X(llKirbyMainFileID, 0xe5u, NDS_NITRO_RELOC_FIGHTERS_MAIN "KirbyMain") \
     X(llKirbyMainMotionFileID, 0xe4u, NDS_NITRO_RELOC_FIGHTERS_MAIN "KirbyMainMotion") \
     X(llKirbyModelFileID, 0x148u, NDS_NITRO_RELOC_FIGHTERS_MAIN "KirbyModel") \
     X(llKirbyShieldPoseFileID, 0x149u, NDS_NITRO_RELOC_FIGHTERS_MAIN "KirbyShieldPose") \
     X(llKirbySpecial2FileID, 0x15cu, NDS_NITRO_RELOC_FIGHTERS_MAIN "KirbySpecial2")
 
-#define NDS_P2_KIRBY_ANIM_ASSET_ROWS(X) \
+#define NDS_KIRBY_ANIM_ASSET_ROWS(X) \
     X(llFTKirbyAnimEggLayFileID, 0x4ebu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim000") \
     X(llFTKirbyAnimWalk1FileID, 0x4ecu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim001") \
     X(llFTKirbyAnimWalk2FileID, 0x4edu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyAnim002") \
@@ -3381,11 +3381,11 @@
     X(llFTPurinAnimPoundGroundFileID, 0x5deu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyCopyAnim057") \
     X(llFTPurinAnimPoundAirFileID, 0x5dfu, NDS_NITRO_RELOC_ANIMATIONS "FTKirbyCopyAnim058")
 
-#define NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(X) \
+#define NDS_KIRBY_DEPENDENCY_ASSET_ROWS(X) \
     X(0x152u, NDS_NITRO_RELOC_FIGHTERS_MAIN "YoshiModel") \
     X(0x146u, NDS_NITRO_RELOC_EXTERN_DATA "MiscData326")
 
-#define NDS_P2_KIRBY_AOBJ32_ASSET_ROWS(X) \
+#define NDS_KIRBY_AOBJ32_ASSET_ROWS(X) \
     X(llFTKirbyAnimDKStaringGroundFileID, 0x584u) \
     X(llFTKirbyAnimDKStaringAirFileID, 0x585u)
 
@@ -3398,61 +3398,61 @@
     X(llFTFoxAnimWin2FileID, 0x173u, NDS_NITRO_RELOC_SUBMOTIONS "FTFoxSubMotionAppearL") \
     X(llFTFoxAnimClapsFileID, 0x175u, NDS_NITRO_RELOC_SUBMOTIONS "FTFoxSubMotionTaunt")
 
-#define NDS_P2_LUIGI_DEMO_ANIM_COUNT 2u
-#define NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_LUIGI_DEMO_ANIM_COUNT 2u
+#define NDS_LUIGI_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTLuigiAnimWin1FileID, 0x1cfu, NDS_NITRO_RELOC_SUBMOTIONS "FTLuigiSubMotionAppearL") \
     X(llFTLuigiAnimWin2FileID, 0x1d0u, NDS_NITRO_RELOC_SUBMOTIONS "FTLuigiSubMotionAppearAlt1")
 
-#define NDS_P2_DONKEY_DEMO_ANIM_COUNT 3u
-#define NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_DONKEY_DEMO_ANIM_COUNT 3u
+#define NDS_DONKEY_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTDonkeyAnimWin1FileID, 0x17eu, NDS_NITRO_RELOC_SUBMOTIONS "FTDonkeySubMotionAppearL") \
     X(llFTDonkeyAnimWin2FileID, 0x17fu, NDS_NITRO_RELOC_SUBMOTIONS "FTDonkeySubMotionAppearAlt1") \
     X(llFTDonkeyAnimClapsFileID, 0x181u, NDS_NITRO_RELOC_SUBMOTIONS "FTDonkeySubMotionTaunt")
 
-#define NDS_P2_CAPTAIN_DEMO_ANIM_COUNT 3u
-#define NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_CAPTAIN_DEMO_ANIM_COUNT 3u
+#define NDS_CAPTAIN_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTCaptainAnimVictory1FileID, 0x1aeu, NDS_NITRO_RELOC_SUBMOTIONS "FTCaptainSubMotionAppearL") \
     X(llFTCaptainAnimVictory2FileID, 0x1afu, NDS_NITRO_RELOC_SUBMOTIONS "FTCaptainSubMotionAppearAlt1") \
     X(llFTCaptainAnimClapsFileID, 0x1b0u, NDS_NITRO_RELOC_SUBMOTIONS "FTCaptainSubMotionAppearAlt2")
 
-#define NDS_P2_SAMUS_DEMO_ANIM_COUNT 3u
-#define NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_SAMUS_DEMO_ANIM_COUNT 3u
+#define NDS_SAMUS_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTSamusAnimWin3FileID, 0x189u, NDS_NITRO_RELOC_SUBMOTIONS "FTSamusSubMotionAppearR") \
     X(llFTSamusAnimWin1FileID, 0x18au, NDS_NITRO_RELOC_SUBMOTIONS "FTSamusSubMotionAppearL") \
     X(llFTSamusAnimClapsFileID, 0x18cu, NDS_NITRO_RELOC_SUBMOTIONS "FTSamusSubMotionAppearAlt2")
 
-#define NDS_P2_LINK_DEMO_ANIM_COUNT 3u
-#define NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_LINK_DEMO_ANIM_COUNT 3u
+#define NDS_LINK_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTLinkAnimWin1FileID, 0x195u, NDS_NITRO_RELOC_SUBMOTIONS "FTLinkSubMotionAppearL") \
     X(llFTLinkAnimWin2FileID, 0x196u, NDS_NITRO_RELOC_SUBMOTIONS "FTLinkSubMotionAppearAlt1") \
     X(llFTLinkAnimClapsFileID, 0x197u, NDS_NITRO_RELOC_SUBMOTIONS "FTLinkSubMotionAppearAlt2")
 
-#define NDS_P2_PIKACHU_DEMO_ANIM_COUNT 3u
-#define NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_PIKACHU_DEMO_ANIM_COUNT 3u
+#define NDS_PIKACHU_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTPikachuAnimWin1FileID, 0x1ddu, NDS_NITRO_RELOC_SUBMOTIONS "FTPikachuSubMotionAppearL") \
     X(llFTPikachuAnimWin2FileID, 0x1deu, NDS_NITRO_RELOC_SUBMOTIONS "FTPikachuSubMotionAppearAlt1") \
     X(llFTPikachuAnimClapsFileID, 0x1dfu, NDS_NITRO_RELOC_SUBMOTIONS "FTPikachuSubMotionAppearAlt2")
 
-#define NDS_P2_YOSHI_DEMO_ANIM_COUNT 3u
-#define NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_YOSHI_DEMO_ANIM_COUNT 3u
+#define NDS_YOSHI_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTYoshiAnimWin1FileID, 0x1bbu, NDS_NITRO_RELOC_SUBMOTIONS "FTYoshiSubMotionAppearR") \
     X(llFTYoshiAnimWin2FileID, 0x1bdu, NDS_NITRO_RELOC_SUBMOTIONS "FTYoshiSubMotionAppearAlt1") \
     X(llFTYoshiAnimUnknown1FileID, 0x1beu, NDS_NITRO_RELOC_SUBMOTIONS "FTYoshiSubMotionAppearAlt2")
 
-#define NDS_P2_NESS_DEMO_ANIM_COUNT 3u
-#define NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_NESS_DEMO_ANIM_COUNT 3u
+#define NDS_NESS_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTNessAnimWin1FileID, 0x1b4u, NDS_NITRO_RELOC_SUBMOTIONS "FTNessSubMotionAppearR") \
     X(llFTNessAnimWin2FileID, 0x1b6u, NDS_NITRO_RELOC_SUBMOTIONS "FTNessSubMotionAppearAlt1") \
     X(llFTNessAnimClapsFileID, 0x1b7u, NDS_NITRO_RELOC_SUBMOTIONS "FTNessSubMotionAppearAlt2")
 
-#define NDS_P2_PURIN_DEMO_ANIM_COUNT 3u
-#define NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_PURIN_DEMO_ANIM_COUNT 3u
+#define NDS_PURIN_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTLuigiAnimUnknownFileID, 0x1d5u, NDS_NITRO_RELOC_SUBMOTIONS "FTPurinSubMotionAppearR") \
     X(llFTPurinAnimWin1FileID, 0x1d7u, NDS_NITRO_RELOC_SUBMOTIONS "FTPurinSubMotionAppearAlt1") \
     X(llFTPurinAnimWin2FileID, 0x1d8u, NDS_NITRO_RELOC_SUBMOTIONS "FTPurinSubMotionAppearAlt2")
 
-#define NDS_P2_KIRBY_DEMO_ANIM_COUNT 3u
-#define NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(X) \
+#define NDS_KIRBY_DEMO_ANIM_COUNT 3u
+#define NDS_KIRBY_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTKirbyAnimWin1FileID, 0x1a0u, NDS_NITRO_RELOC_SUBMOTIONS "FTKirbySubMotionAppearR") \
     X(llFTKirbyAnimWin2FileID, 0x1a1u, NDS_NITRO_RELOC_SUBMOTIONS "FTKirbySubMotionAppearL") \
     X(llFTKirbyAnimClapsFileID, 0x1a3u, NDS_NITRO_RELOC_SUBMOTIONS "FTKirbySubMotionAppearAlt2")

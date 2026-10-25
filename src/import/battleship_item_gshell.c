@@ -11,7 +11,7 @@
  * battleship_item_harisen.c:31-34 owns Harisen's (local tokens, no
  * generator involvement, no hand-edited generated file).
  *
- * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
+ * Gated on NDS_ITEM_CORE like the core owner; no fighter flag involved.
  */
 
 #include <it/item.h>

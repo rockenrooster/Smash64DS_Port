@@ -440,13 +440,13 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * why every fighter stood in his row-0 pose (Mario `Wait`, Kirby and nine
  * others `EggLay`).
  *
- * These rows are separate from `sNdsP2FighterAnimTokens` for two reasons, both
+ * These rows are separate from `sNdsFighterAnimTokens` for two reasons, both
  * load-bearing. Mario and Fox are the always-compiled base pair and have no
- * `NDS_P2_*` flag, yet three of their demo files are needed (Mario's Claps
+ * `NDS_<KIND>` flag, yet three of their demo files are needed (Mario's Claps
  * serves Luigi's DemoLose too); and their base-pair bridges are contiguous
  * index banks -- `asset_id = BASE + i` -- which cannot carry a sparse id in
  * the 357..498 submotion space. Keeping the demo rows in their own table also
- * keeps `sNdsP2FighterAnimTokens`'s measured numeric early-out bound at its
+ * keeps `sNdsFighterAnimTokens`'s measured numeric early-out bound at its
  * current 0x320 floor instead of dropping it to 0x165, so no range-missing
  * numeric id starts paying a ~1,300-row scan it does not pay today. */
 typedef struct NDSRelocDemoAnimTokenRow
@@ -464,29 +464,29 @@ static const NDSRelocDemoAnimTokenRow sNdsRelocDemoAnimTokens[] =
 #define NDS_RELOC_DEMO_ANIM_TOKEN_ROW(symbol_, id_, path_) \
     { &symbol_, (u16)(id_) },
     NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#if NDS_LUIGI
+    NDS_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#if NDS_DONKEY
+    NDS_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
-    NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-#if NDS_P2_LINK
-    NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#if NDS_LINK
+    NDS_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
-    NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-    NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-    NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-    NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
-    NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+    NDS_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
     /* The 1P scenes' rows: the intro's IntroL/IntroR poses (rows 13/14) and
      * the figure's DollFall/DollRevival (rows 9/10). Unresolved, every intro
      * fighter replayed his DemoNull Wait from the figatree heap and every
      * team member stood on the formation origin. */
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     NDS_1P_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
 #undef NDS_RELOC_DEMO_ANIM_TOKEN_ROW
@@ -567,61 +567,61 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
-#if NDS_P2_LUIGI
-    if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
+#if NDS_LUIGI
+    if ((asset_id >= NDS_LUIGI_ANIM_FIRST) &&
+        (asset_id <= NDS_LUIGI_ANIM_LAST))
     {
         return TRUE;
     }
 #endif
-#if NDS_P2_DONKEY
-    if ((asset_id >= NDS_P2_DONKEY_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_DONKEY_ANIM_LAST))
+#if NDS_DONKEY
+    if ((asset_id >= NDS_DONKEY_ANIM_FIRST) &&
+        (asset_id <= NDS_DONKEY_ANIM_LAST))
     {
         return TRUE;
     }
 #endif
-#if NDS_P2_CAPTAIN
-    if ((asset_id >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_CAPTAIN_ANIM_LAST))
+#if NDS_CAPTAIN
+    if ((asset_id >= NDS_CAPTAIN_ANIM_FIRST) &&
+        (asset_id <= NDS_CAPTAIN_ANIM_LAST))
     {
         return TRUE;
     }
 #endif
-    if ((asset_id >= NDS_P2_SAMUS_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_SAMUS_ANIM_LAST))
+    if ((asset_id >= NDS_SAMUS_ANIM_FIRST) &&
+        (asset_id <= NDS_SAMUS_ANIM_LAST))
     {
         return TRUE;
     }
-#if NDS_P2_LINK
-    if ((asset_id >= NDS_P2_LINK_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_LINK_ANIM_LAST))
+#if NDS_LINK
+    if ((asset_id >= NDS_LINK_ANIM_FIRST) &&
+        (asset_id <= NDS_LINK_ANIM_LAST))
     {
         return TRUE;
     }
 #endif
-    if ((asset_id >= NDS_P2_PIKACHU_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_PIKACHU_ANIM_LAST))
+    if ((asset_id >= NDS_PIKACHU_ANIM_FIRST) &&
+        (asset_id <= NDS_PIKACHU_ANIM_LAST))
     {
         return TRUE;
     }
-    if ((asset_id >= NDS_P2_YOSHI_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_YOSHI_ANIM_LAST))
+    if ((asset_id >= NDS_YOSHI_ANIM_FIRST) &&
+        (asset_id <= NDS_YOSHI_ANIM_LAST))
     {
         return TRUE;
     }
-    if ((asset_id >= NDS_P2_NESS_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_NESS_ANIM_LAST))
+    if ((asset_id >= NDS_NESS_ANIM_FIRST) &&
+        (asset_id <= NDS_NESS_ANIM_LAST))
     {
         return TRUE;
     }
-    if ((asset_id >= NDS_P2_PURIN_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_PURIN_ANIM_LAST))
+    if ((asset_id >= NDS_PURIN_ANIM_FIRST) &&
+        (asset_id <= NDS_PURIN_ANIM_LAST))
     {
         return TRUE;
     }
-    if ((asset_id >= NDS_P2_KIRBY_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_KIRBY_ANIM_LAST))
+    if ((asset_id >= NDS_KIRBY_ANIM_FIRST) &&
+        (asset_id <= NDS_KIRBY_ANIM_LAST))
     {
         return TRUE;
     }
@@ -1045,11 +1045,11 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-typedef struct NDSP2FighterAnimTokenRow
+typedef struct NDSFighterAnimTokenRow
 {
     const void *token;
     u16 asset_id;
-} NDSP2FighterAnimTokenRow;
+} NDSFighterAnimTokenRow;
 
 /* BattleShip's reloc ABI passes &llFT*Anim*FileID. P2-3 aliases that were not
  * named in the historical port symbol table are zero-valued, so their ADDRESS
@@ -1059,53 +1059,53 @@ typedef struct NDSP2FighterAnimTokenRow
  * numeric external-dependency ids take the O(1) range path below. */
 /* Numeric bounds over the table below, measured once on first use. See the
  * early-out in ndsRelocP2FighterAnimAssetIDForToken. */
-static u16 sNdsP2FighterAnimTokenIdMin;
-static u16 sNdsP2FighterAnimTokenIdMax;
-static sb32 sNdsP2FighterAnimTokenBoundsReady;
+static u16 sNdsFighterAnimTokenIdMin;
+static u16 sNdsFighterAnimTokenIdMax;
+static sb32 sNdsFighterAnimTokenBoundsReady;
 
-static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
+static const NDSFighterAnimTokenRow sNdsFighterAnimTokens[] =
 {
-#define NDS_P2_FIGHTER_ANIM_TOKEN_ROW(symbol_, id_, path_) \
+#define NDS_FIGHTER_ANIM_TOKEN_ROW(symbol_, id_, path_) \
     { &symbol_, (u16)(id_) },
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#if NDS_LUIGI
+    NDS_LUIGI_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#if NDS_DONKEY
+    NDS_DONKEY_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
 #endif
-    NDS_P2_SAMUS_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-#if NDS_P2_LINK
-    NDS_P2_LINK_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+    NDS_SAMUS_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+#if NDS_LINK
+    NDS_LINK_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
 #endif
-    NDS_P2_PIKACHU_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-    NDS_P2_YOSHI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-    NDS_P2_NESS_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-    NDS_P2_PURIN_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-    NDS_P2_KIRBY_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
-#undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
+    NDS_PIKACHU_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+    NDS_YOSHI_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+    NDS_NESS_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+    NDS_PURIN_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+    NDS_KIRBY_ANIM_ASSET_ROWS(NDS_FIGHTER_ANIM_TOKEN_ROW)
+#undef NDS_FIGHTER_ANIM_TOKEN_ROW
 };
 
-#define NDS_P2_FIGHTER_ANIM_TOKEN_COUNT \
-    ((u32)(sizeof(sNdsP2FighterAnimTokens) / sizeof(sNdsP2FighterAnimTokens[0])))
-_Static_assert(sizeof(sNdsP2FighterAnimTokens) / sizeof(sNdsP2FighterAnimTokens[0]) <= 0xffffu,
+#define NDS_FIGHTER_ANIM_TOKEN_COUNT \
+    ((u32)(sizeof(sNdsFighterAnimTokens) / sizeof(sNdsFighterAnimTokens[0])))
+_Static_assert(sizeof(sNdsFighterAnimTokens) / sizeof(sNdsFighterAnimTokens[0]) <= 0xffffu,
                "token index rows are u16");
 /* Row indices ordered by (asset id, row) and by (symbol address, row): the
  * row component keeps the first row in table order first among equal keys. */
-static u16 sNdsP2FighterAnimTokenById[NDS_P2_FIGHTER_ANIM_TOKEN_COUNT];
-static u16 sNdsP2FighterAnimTokenByAddress[NDS_P2_FIGHTER_ANIM_TOKEN_COUNT];
-static sb32 sNdsP2FighterAnimTokenIndexReady;
+static u16 sNdsFighterAnimTokenById[NDS_FIGHTER_ANIM_TOKEN_COUNT];
+static u16 sNdsFighterAnimTokenByAddress[NDS_FIGHTER_ANIM_TOKEN_COUNT];
+static sb32 sNdsFighterAnimTokenIndexReady;
 
 static sb32 ndsRelocP2FighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
 {
     u32 ka = by_address ?
-        ndsRelocFileID(sNdsP2FighterAnimTokens[a].token) :
-        (u32)sNdsP2FighterAnimTokens[a].asset_id;
+        ndsRelocFileID(sNdsFighterAnimTokens[a].token) :
+        (u32)sNdsFighterAnimTokens[a].asset_id;
     u32 kb = by_address ?
-        ndsRelocFileID(sNdsP2FighterAnimTokens[b].token) :
-        (u32)sNdsP2FighterAnimTokens[b].asset_id;
+        ndsRelocFileID(sNdsFighterAnimTokens[b].token) :
+        (u32)sNdsFighterAnimTokens[b].asset_id;
 
     return ((ka < kb) || ((ka == kb) && (a < b))) ? TRUE : FALSE;
 }
@@ -1119,7 +1119,7 @@ ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
     u32 g;
     u32 i;
 
-    for (i = 0u; i < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT; i++)
+    for (i = 0u; i < NDS_FIGHTER_ANIM_TOKEN_COUNT; i++)
     {
         order[i] = (u16)i;
     }
@@ -1127,7 +1127,7 @@ ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
     {
         u32 gap = gaps[g];
 
-        for (i = gap; i < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT; i++)
+        for (i = gap; i < NDS_FIGHTER_ANIM_TOKEN_COUNT; i++)
         {
             u16 value = order[i];
             u32 j = i;
@@ -1146,72 +1146,72 @@ ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
 
 static inline void ndsRelocP2FighterAnimTokenIndexBuild(void)
 {
-    if (sNdsP2FighterAnimTokenIndexReady == FALSE)
+    if (sNdsFighterAnimTokenIndexReady == FALSE)
     {
-        ndsRelocP2FighterAnimTokenIndexSort(sNdsP2FighterAnimTokenById, FALSE);
-        ndsRelocP2FighterAnimTokenIndexSort(sNdsP2FighterAnimTokenByAddress,
+        ndsRelocP2FighterAnimTokenIndexSort(sNdsFighterAnimTokenById, FALSE);
+        ndsRelocP2FighterAnimTokenIndexSort(sNdsFighterAnimTokenByAddress,
                                             TRUE);
-        sNdsP2FighterAnimTokenIndexReady = TRUE;
+        sNdsFighterAnimTokenIndexReady = TRUE;
     }
 }
 
 static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI
-    if ((token >= NDS_P2_LUIGI_ANIM_FIRST) &&
-        (token <= NDS_P2_LUIGI_ANIM_LAST))
+#if NDS_LUIGI
+    if ((token >= NDS_LUIGI_ANIM_FIRST) &&
+        (token <= NDS_LUIGI_ANIM_LAST))
     {
         return token;
     }
 #endif
-#if NDS_P2_DONKEY
-    if ((token >= NDS_P2_DONKEY_ANIM_FIRST) &&
-        (token <= NDS_P2_DONKEY_ANIM_LAST))
+#if NDS_DONKEY
+    if ((token >= NDS_DONKEY_ANIM_FIRST) &&
+        (token <= NDS_DONKEY_ANIM_LAST))
     {
         return token;
     }
 #endif
-#if NDS_P2_CAPTAIN
-    if ((token >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
-        (token <= NDS_P2_CAPTAIN_ANIM_LAST))
+#if NDS_CAPTAIN
+    if ((token >= NDS_CAPTAIN_ANIM_FIRST) &&
+        (token <= NDS_CAPTAIN_ANIM_LAST))
     {
         return token;
     }
 #endif
-    if ((token >= NDS_P2_SAMUS_ANIM_FIRST) &&
-        (token <= NDS_P2_SAMUS_ANIM_LAST))
+    if ((token >= NDS_SAMUS_ANIM_FIRST) &&
+        (token <= NDS_SAMUS_ANIM_LAST))
     {
         return token;
     }
-#if NDS_P2_LINK
-    if ((token >= NDS_P2_LINK_ANIM_FIRST) &&
-        (token <= NDS_P2_LINK_ANIM_LAST))
+#if NDS_LINK
+    if ((token >= NDS_LINK_ANIM_FIRST) &&
+        (token <= NDS_LINK_ANIM_LAST))
     {
         return token;
     }
 #endif
-    if ((token >= NDS_P2_PIKACHU_ANIM_FIRST) &&
-        (token <= NDS_P2_PIKACHU_ANIM_LAST))
+    if ((token >= NDS_PIKACHU_ANIM_FIRST) &&
+        (token <= NDS_PIKACHU_ANIM_LAST))
     {
         return token;
     }
-    if ((token >= NDS_P2_YOSHI_ANIM_FIRST) &&
-        (token <= NDS_P2_YOSHI_ANIM_LAST))
+    if ((token >= NDS_YOSHI_ANIM_FIRST) &&
+        (token <= NDS_YOSHI_ANIM_LAST))
     {
         return token;
     }
-    if ((token >= NDS_P2_NESS_ANIM_FIRST) &&
-        (token <= NDS_P2_NESS_ANIM_LAST))
+    if ((token >= NDS_NESS_ANIM_FIRST) &&
+        (token <= NDS_NESS_ANIM_LAST))
     {
         return token;
     }
-    if ((token >= NDS_P2_PURIN_ANIM_FIRST) &&
-        (token <= NDS_P2_PURIN_ANIM_LAST))
+    if ((token >= NDS_PURIN_ANIM_FIRST) &&
+        (token <= NDS_PURIN_ANIM_LAST))
     {
         return token;
     }
-    if ((token >= NDS_P2_KIRBY_ANIM_FIRST) &&
-        (token <= NDS_P2_KIRBY_ANIM_LAST))
+    if ((token >= NDS_KIRBY_ANIM_FIRST) &&
+        (token <= NDS_KIRBY_ANIM_LAST))
     {
         return token;
     }
@@ -1240,32 +1240,32 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
      * FIRST..LAST span. One pass, once. */
     if (token <= 0xffffu)
     {
-        if (sNdsP2FighterAnimTokenBoundsReady == FALSE)
+        if (sNdsFighterAnimTokenBoundsReady == FALSE)
         {
             u32 j;
 
-            sNdsP2FighterAnimTokenIdMin = 0xffffu;
-            sNdsP2FighterAnimTokenIdMax = 0u;
+            sNdsFighterAnimTokenIdMin = 0xffffu;
+            sNdsFighterAnimTokenIdMax = 0u;
             for (j = 0u;
-                 j < (sizeof(sNdsP2FighterAnimTokens) /
-                      sizeof(sNdsP2FighterAnimTokens[0]));
+                 j < (sizeof(sNdsFighterAnimTokens) /
+                      sizeof(sNdsFighterAnimTokens[0]));
                  j++)
             {
-                u16 id = sNdsP2FighterAnimTokens[j].asset_id;
+                u16 id = sNdsFighterAnimTokens[j].asset_id;
 
-                if (id < sNdsP2FighterAnimTokenIdMin)
+                if (id < sNdsFighterAnimTokenIdMin)
                 {
-                    sNdsP2FighterAnimTokenIdMin = id;
+                    sNdsFighterAnimTokenIdMin = id;
                 }
-                if (id > sNdsP2FighterAnimTokenIdMax)
+                if (id > sNdsFighterAnimTokenIdMax)
                 {
-                    sNdsP2FighterAnimTokenIdMax = id;
+                    sNdsFighterAnimTokenIdMax = id;
                 }
             }
-            sNdsP2FighterAnimTokenBoundsReady = TRUE;
+            sNdsFighterAnimTokenBoundsReady = TRUE;
         }
-        if ((token < (u32)sNdsP2FighterAnimTokenIdMin) ||
-            (token > (u32)sNdsP2FighterAnimTokenIdMax))
+        if ((token < (u32)sNdsFighterAnimTokenIdMin) ||
+            (token > (u32)sNdsFighterAnimTokenIdMax))
         {
             return NDS_RELOC_ASSET_INVALID;
         }
@@ -1280,14 +1280,14 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
     if (token <= 0xffffu)
     {
         u32 lo = 0u;
-        u32 hi = NDS_P2_FIGHTER_ANIM_TOKEN_COUNT;
+        u32 hi = NDS_FIGHTER_ANIM_TOKEN_COUNT;
 
         while (lo < hi)
         {
             u32 mid = (lo + hi) >> 1;
 
-            if ((u32)sNdsP2FighterAnimTokens[
-                    sNdsP2FighterAnimTokenById[mid]].asset_id < token)
+            if ((u32)sNdsFighterAnimTokens[
+                    sNdsFighterAnimTokenById[mid]].asset_id < token)
             {
                 lo = mid + 1u;
             }
@@ -1296,9 +1296,9 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
                 hi = mid;
             }
         }
-        if ((lo < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT) &&
-            ((u32)sNdsP2FighterAnimTokens[
-                 sNdsP2FighterAnimTokenById[lo]].asset_id == token))
+        if ((lo < NDS_FIGHTER_ANIM_TOKEN_COUNT) &&
+            ((u32)sNdsFighterAnimTokens[
+                 sNdsFighterAnimTokenById[lo]].asset_id == token))
         {
             return token;
         }
@@ -1306,14 +1306,14 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
     else
     {
         u32 lo = 0u;
-        u32 hi = NDS_P2_FIGHTER_ANIM_TOKEN_COUNT;
+        u32 hi = NDS_FIGHTER_ANIM_TOKEN_COUNT;
 
         while (lo < hi)
         {
             u32 mid = (lo + hi) >> 1;
 
-            if (ndsRelocFileID(sNdsP2FighterAnimTokens[
-                    sNdsP2FighterAnimTokenByAddress[mid]].token) < token)
+            if (ndsRelocFileID(sNdsFighterAnimTokens[
+                    sNdsFighterAnimTokenByAddress[mid]].token) < token)
             {
                 lo = mid + 1u;
             }
@@ -1322,12 +1322,12 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
                 hi = mid;
             }
         }
-        if ((lo < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT) &&
-            (ndsRelocFileID(sNdsP2FighterAnimTokens[
-                 sNdsP2FighterAnimTokenByAddress[lo]].token) == token))
+        if ((lo < NDS_FIGHTER_ANIM_TOKEN_COUNT) &&
+            (ndsRelocFileID(sNdsFighterAnimTokens[
+                 sNdsFighterAnimTokenByAddress[lo]].token) == token))
         {
-            return (u32)sNdsP2FighterAnimTokens[
-                sNdsP2FighterAnimTokenByAddress[lo]].asset_id;
+            return (u32)sNdsFighterAnimTokens[
+                sNdsFighterAnimTokenByAddress[lo]].asset_id;
         }
     }
     return NDS_RELOC_ASSET_INVALID;
@@ -1354,40 +1354,40 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     /* Core P2-3 symbols have real source IDs in the decomp-derived port table,
      * but keep this generated bridge beside the animation table so the
      * admission catalog remains the authority. */
-#define NDS_P2_FIGHTER_TOKEN_ROW(symbol_, id_, path_) \
+#define NDS_FIGHTER_TOKEN_ROW(symbol_, id_, path_) \
     if ((token == ndsRelocFileID(&symbol_)) || (token == (id_))) return (id_);
-#define NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW(id_, path_) \
+#define NDS_FIGHTER_DEPENDENCY_TOKEN_ROW(id_, path_) \
     if (token == (id_)) return (id_);
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#if NDS_LUIGI
+    NDS_LUIGI_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#if NDS_DONKEY
+    NDS_DONKEY_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
-    NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-#if NDS_P2_LINK
-    NDS_P2_LINK_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+    NDS_SAMUS_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#if NDS_LINK
+    NDS_LINK_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_LINK_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
-    NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-    NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
-    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
-#undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
-#undef NDS_P2_FIGHTER_TOKEN_ROW
+    NDS_PIKACHU_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+    NDS_YOSHI_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+    NDS_NESS_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_NESS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+    NDS_PURIN_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_PURIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+    NDS_KIRBY_CORE_ASSET_ROWS(NDS_FIGHTER_TOKEN_ROW)
+    NDS_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#undef NDS_FIGHTER_DEPENDENCY_TOKEN_ROW
+#undef NDS_FIGHTER_TOKEN_ROW
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
     if (token == ndsRelocFileID(&llIFCommonPlayerFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER;
     if (token == ndsRelocFileID(&llIFCommonGameStatusFileID)) return NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS;
@@ -1452,12 +1452,12 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     default:
         break;
     }
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     /* Giant DK's own file is his main; model, motion, specials and icon are
      * Donkey Kong's (GDonkeyMain's extern table), rowed with Donkey. */
     if (token == ndsRelocFileID(&llGDonkeyMainFileID)) return NDS_RELOC_ASSET_GDONKEY_MAIN;
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     if (token == ndsRelocFileID(&llMMarioMainFileID)) return NDS_RELOC_ASSET_MMARIO_MAIN;
     if (token == ndsRelocFileID(&llMMarioMainMotionFileID)) return NDS_RELOC_ASSET_MMARIO_MAIN_MOTION;
     if (token == ndsRelocFileID(&llMMarioModelFileID)) return NDS_RELOC_ASSET_MMARIO_MODEL;
@@ -1570,7 +1570,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == ndsRelocFileID(&llGRHyruleMapFileID)) return NDS_RELOC_ASSET_GR_HYRULE_MAP;
     /* P2-4s1 Yoster: &ll...FileID symbol arms for BattleShip tokens plus
      * numeric arms for extern-table ids, mirroring the Dream Land rows. */
-#if NDS_P2_STAGE_YOSTER
+#if NDS_STAGE_YOSTER
     if ((token == ndsRelocFileID(&llGRYosterMapFileID)) ||
         (token == NDS_RELOC_ASSET_GR_YOSTER_MAP))
     {
@@ -1585,7 +1585,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_111) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_111;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_154) return NDS_RELOC_ASSET_MISC_DATA_BANK_154;
 #endif
-#if NDS_P2_STAGE_CASTLE
+#if NDS_STAGE_CASTLE
     /* P2-4s2 Castle: same two shapes. The wallpaper it borrows from the
      * opening movie is already rowed unconditionally (asset 90), so only the
      * map and its two banks are new here. */
@@ -1608,7 +1608,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
         return NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER;
     }
 #endif
-#if NDS_P2_STAGE_JUNGLE
+#if NDS_STAGE_JUNGLE
     /* P2-4s3 Congo Jungle: both shapes for the map, numeric for the three
      * files it declares. StageJungle has no ll...FileID symbol in the port
      * header, so it is numeric only -- the same shape the Yoster banks use. */
@@ -1621,7 +1621,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_108) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_108;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_158) return NDS_RELOC_ASSET_MISC_DATA_BANK_158;
 #endif
-#if NDS_P2_STAGE_ZEBES
+#if NDS_STAGE_ZEBES
     if ((token == ndsRelocFileID(&llGRZebesMapFileID)) ||
         (token == NDS_RELOC_ASSET_GR_ZEBES_MAP))
     {
@@ -1631,7 +1631,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_105) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_105;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_157) return NDS_RELOC_ASSET_MISC_DATA_BANK_157;
 #endif
-#if NDS_P2_STAGE_YAMABUKI
+#if NDS_STAGE_YAMABUKI
     if ((token == ndsRelocFileID(&llGRYamabukiMapFileID)) ||
         (token == NDS_RELOC_ASSET_GR_YAMABUKI_MAP))
     {
@@ -1642,12 +1642,12 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_159) return NDS_RELOC_ASSET_MISC_DATA_BANK_159;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_160) return NDS_RELOC_ASSET_MISC_DATA_BANK_160;
 #endif
-#if NDS_P2_STAGE_INISHIE
+#if NDS_STAGE_INISHIE
     if (token == 0x5bu) return NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_107) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_107;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_155) return NDS_RELOC_ASSET_MISC_DATA_BANK_155;
 #endif
-#if NDS_P2_STAGE_SECTOR
+#if NDS_STAGE_SECTOR
     if ((token == ndsRelocFileID(&llGRSectorMapFileID)) ||
         (token == NDS_RELOC_ASSET_GR_SECTOR_MAP))
     {
@@ -1657,7 +1657,7 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_153) return NDS_RELOC_ASSET_MISC_DATA_BANK_153;
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* P2-6 step 7 (boss). Both shapes for the map -- the symbol address the
      * boss TU passes plus the numeric id the map's own extern table carries
      * -- numeric for the geometry bank and for the wallpaper container (96),
@@ -2257,7 +2257,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
     case NDS_RELOC_ASSET_GR_PUPUPU_MAP:
     case NDS_RELOC_ASSET_GR_INISHIE_MAP:
     case NDS_RELOC_ASSET_GR_HYRULE_MAP:
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     case NDS_RELOC_ASSET_GR_LAST_MAP:
     case NDS_RELOC_ASSET_EXTERN_DATA_BANK_114:
     case NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER:
@@ -2340,40 +2340,40 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
+#define NDS_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
-#define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
+#define NDS_FIGHTER_DEPENDENCY_TEST(id_, path_) \
     if (asset_id == (id_)) return TRUE;
-#if NDS_P2_LUIGI
-    NDS_P2_LUIGI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#if NDS_LUIGI
+    NDS_LUIGI_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_LUIGI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
 #endif
-#if NDS_P2_DONKEY
-    NDS_P2_DONKEY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#if NDS_DONKEY
+    NDS_DONKEY_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_DONKEY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
 #endif
-#if NDS_P2_CAPTAIN
-    NDS_P2_CAPTAIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#if NDS_CAPTAIN
+    NDS_CAPTAIN_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_CAPTAIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
 #endif
-    NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-#if NDS_P2_LINK
-    NDS_P2_LINK_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+    NDS_SAMUS_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+#if NDS_LINK
+    NDS_LINK_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_LINK_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
 #endif
-    NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-    NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
-    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
-#undef NDS_P2_FIGHTER_DEPENDENCY_TEST
-#undef NDS_P2_FIGHTER_ASSET_TEST
+    NDS_PIKACHU_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+    NDS_YOSHI_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+    NDS_NESS_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_NESS_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+    NDS_PURIN_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_PURIN_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+    NDS_KIRBY_CORE_ASSET_ROWS(NDS_FIGHTER_ASSET_TEST)
+    NDS_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_FIGHTER_DEPENDENCY_TEST)
+#undef NDS_FIGHTER_DEPENDENCY_TEST
+#undef NDS_FIGHTER_ASSET_TEST
     switch (asset_id)
     {
     case NDS_RELOC_ASSET_FT_MANAGER_COMMON:
@@ -2431,10 +2431,10 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
     case NDS_RELOC_ASSET_NFOX_MAIN:
     case NDS_RELOC_ASSET_NMARIO_MODEL:
     case NDS_RELOC_ASSET_NMARIO_MAIN:
-#if NDS_P2_GDONKEY
+#if NDS_GDONKEY
     case NDS_RELOC_ASSET_GDONKEY_MAIN:
 #endif
-#if NDS_P2_MMARIO
+#if NDS_MMARIO
     case NDS_RELOC_ASSET_MMARIO_MAIN:
     case NDS_RELOC_ASSET_MMARIO_MAIN_MOTION:
     case NDS_RELOC_ASSET_MMARIO_MODEL:

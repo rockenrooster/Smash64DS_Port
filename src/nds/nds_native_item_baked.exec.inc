@@ -13,7 +13,7 @@
  * 2026-09-30: the roots a full-match lab census found drawn with no native
  * owner -- PK Fire's pillar, Bob-omb walking left, the placed Bumper, the Ray
  * Gun's shot, Goldeen, Koffing and its smog. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ITEM_CORE
 
 #include <nds/nds_native_baked_types.h>
 
@@ -41,7 +41,7 @@ const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
 
     if (!NDS_NATIVE_BAKED_ASSET_MATCH(asset_id))
     {
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
         /* The room table exists only while the ending runs (it loads
          * it into its own heap). */
         if (NDS_NATIVE_BAKED_ROOM_ASSET_MATCH(asset_id) &&
@@ -217,7 +217,7 @@ sb32 ndsNativeBakedRootOffscreen(const void *handle,
     {
         return FALSE;
     }
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     if ((gNdsNativeBakedRoomRoots != NULL) &&
         (r >= gNdsNativeBakedRoomRoots) &&
         (r < gNdsNativeBakedRoomRoots + gNdsNativeBakedRoomRootCount))
@@ -382,7 +382,7 @@ sb32 ndsRendererSubmitNativeBaked(
     u32 lab_mark = 0u;
 #endif
 
-#if NDS_P2_1P_GAME
+#if NDS_1P_GAME
     /* A room root (the ending's loaded table) indexes the room's own ops
      * and groups. */
     if ((gNdsNativeBakedRoomRoots != NULL) &&
