@@ -108,6 +108,14 @@ endif
 ifneq ($(strip $(DEVKITPRO)),)
 CFLAGS += -ffile-prefix-map=$(DEVKITPRO)=devkitPro
 endif
+# The owner's fast-math experiment (2026-10-25, P8): -ffast-math on every ARM9
+# compile, for a timing comparison and a playtest. It changes float results
+# (the replay digests and the source's binary32 behaviour), so it is never the
+# gate's or the ship's setting.
+NDS_FAST_MATH ?= 0
+ifeq ($(NDS_FAST_MATH),1)
+CFLAGS += -ffast-math
+endif
 ifeq ($(NDS_DEV_SCENE_HARNESS),normal)
 NDS_DEV_SCENE_HARNESS_ID := 0
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable)
