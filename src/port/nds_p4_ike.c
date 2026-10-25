@@ -84,6 +84,15 @@ static const f32 sNdsP4IkeAetherRise[] = { 96.0F, 250.0F, 280.0F, 240.0F, 190.0F
 #define IKE_AETHER_ARMOUR 200.0F
 /* The counter's window holds him as Marth's does (0x48000000). */
 #define IKE_COUNTER_ARMOUR 131072.0F
+/* The counterattack from the hit it counted (owner 2026-10-24: "can we apply
+ * the same counter tweaks to Ike's counter?", Palutena's): 1.2 times its damage
+ * (Ultimate's Ike), at least the script's 10 and at most 50, with the hit's
+ * knockback mirrored -- its set knockback, growth and base as they were; a
+ * stage's hit (no values kept) leaves the script's (motions/counter_hit.ms).
+ * The angle stays the script's 361. */
+#define IKE_COUNTER_MUL 1.2F
+#define IKE_COUNTER_MIN 10
+#define IKE_COUNTER_MAX 50
 
 static s32 *ndsP4IkeVar(FTStruct *fp, s32 k)
 {
@@ -473,6 +482,38 @@ static s32 *ndsP4IkeCounterHit(FTStruct *fp)
     return ndsP4IkeVar(fp, 0);
 }
 
+/* The damage of the hit each player's counter last counted, and its set
+ * knockback, growth and base (status_vars do not outlive the status change
+ * into the counterattack). */
+static s32 sNdsP4IkeCounterTaken[4];
+static s32 sNdsP4IkeCounterKnockback[4][3];
+
+/* The counterattack's hits deal what the counted hit was worth
+ * (IKE_COUNTER_MUL, IKE_COUNTER_MIN, IKE_COUNTER_MAX) with its knockback,
+ * in place of the script's. */
+static void ndsP4IkeCounterDamage(FTStruct *fp)
+{
+    const s32 *knockback = sNdsP4IkeCounterKnockback[fp->player & 3u];
+    s32 damage = (s32)(((f32)sNdsP4IkeCounterTaken[fp->player & 3u] * IKE_COUNTER_MUL) + 0.5F);
+    sb32 mirror = ((knockback[0] | knockback[1] | knockback[2]) != 0) ? TRUE : FALSE;
+    s32 i;
+
+    damage = (damage < IKE_COUNTER_MIN) ? IKE_COUNTER_MIN : ((damage > IKE_COUNTER_MAX) ? IKE_COUNTER_MAX : damage);
+    for (i = 0; i < ARRAY_COUNT(fp->attack_colls); i++)
+    {
+        if (fp->attack_colls[i].attack_state != nGMAttackStateOff)
+        {
+            fp->attack_colls[i].damage = damage;
+            if (mirror != FALSE)
+            {
+                fp->attack_colls[i].knockback_weight = knockback[0];
+                fp->attack_colls[i].knockback_scale = knockback[1];
+                fp->attack_colls[i].knockback_base = knockback[2];
+            }
+        }
+    }
+}
+
 /* Counter update (Marth's): armour while the script holds flag0; a counted
  * hit turns him to face it and strikes back. */
 void ndsP4IkeCounterMain(GObj *fighter_gobj)
@@ -496,16 +537,33 @@ void ndsP4IkeCounterMain(GObj *fighter_gobj)
 }
 
 /* ftParamUpdateDamage's head: a hit landing while the counter's window is
- * open deals nothing and is counted (Marth's detection patch). The taunt
- * keeps Appeal in status_id (status_replace). */
+ * open deals nothing and is counted (Marth's detection patch), its damage
+ * and knockback kept for the counterattack. The taunt keeps Appeal in
+ * status_id (status_replace). */
 static s32 ndsP4IkeUpdateDamage(FTStruct *fp, s32 damage)
 {
     if ((fp->status_id == nFTCommonStatusAppeal) && (fp->motion_vars.flags.flag0 != 0))
     {
+        s32 *knockback = sNdsP4IkeCounterKnockback[fp->player & 3u];
+
+        ndsP4PickedHitKnockback(fp, &knockback[0], &knockback[1], &knockback[2]);
         *ndsP4IkeCounterHit(fp) = 1;
+        sNdsP4IkeCounterTaken[fp->player & 3u] = damage;
         return 0;
     }
     return damage;
+}
+
+/* ftMainProcPhysicsMap's per-frame hook: the counterattack's hits (its
+ * script makes them) take the counted hit's worth each tic. */
+static void ndsP4IkeAfterProcMap(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->status_id == IKE_STATUS_COUNTER_ATTACK)
+    {
+        ndsP4IkeCounterDamage(fp);
+    }
 }
 
 /* Every status change: the counter starts with no hit. */
@@ -933,6 +991,7 @@ const NDSP4Overrides gNdsP4IkeOverrides = {
     .update_damage = ndsP4IkeUpdateDamage,
     .status_replace = sNdsP4IkeStatusReplace,
     .before_physics_map = ndsP4IkeBeforePhysicsMap,
+    .after_proc_map = ndsP4IkeAfterProcMap,
     /* Ultimate's motions; its hits collide in the stage's plane. */
     .planar_hits = 1u,
     /* They move Roy's locked shoulders, hips and toes (spec "anim_locks"). */
