@@ -201,16 +201,18 @@ CUSTOM_POWERS = {
         # hair panels' texture (joint 9's only span since look_hair.py moved
         # the panels off the bodice: columns 5-27 across, rows 1-62 down), a
         # third of the way round behind him, off his body and hanging.
-        # scripts/p6/hat_preview.py renders it on him.
+        # scripts/p6/hat_preview.py renders it on him. The whole hat 15 units
+        # higher (owner BUGS.md 2026-10-24: "the hair is below kirby's head
+        # slightly. move it up a bit").
         "hat": {"kind": "spans", "joint": 8, "detail": 1, "spans": (1,),
-                "scale": (4.8, 3.6, 4.4), "offset": (0, -38, 14),
+                "scale": (4.8, 3.6, 4.4), "offset": (0, -23, 14),
                 "bands": (
-                    {"joint": 14, "span": 0, "rows": ((122, 119, 4.0), (106, 131, 10.0)), "segments": 12,
+                    {"joint": 14, "span": 0, "rows": ((137, 119, 4.0), (121, 131, 10.0)), "segments": 12,
                      "texels_around": 48},
                     {"joint": 9, "span": 0, "segments": 8, "texels_around": 22, "texel_start": 5.0,
                      "start_angle": 120.0, "arc": 120.0,
-                     "rows": ((150, 92, 1.0), (110, 136, 12.0), (60, 158, 26.0), (0, 161, 40.0),
-                              (-60, 152, 52.0), (-100, 142, 62.0))},
+                     "rows": ((165, 92, 1.0), (125, 136, 12.0), (75, 158, 26.0), (15, 161, 40.0),
+                              (-45, 152, 52.0), (-85, 142, 62.0))},
                 )},
         # Her script's sound (scripts/p6/palutena/audio.json cues) for the
         # code's blast: NDS_P4_KIRBY_PALUTENA_FGM_<key> (the bursts are
@@ -224,16 +226,17 @@ CUSTOM_POWERS = {
 # the base's power and weapon kept. Ike: Roy's Flare Blade and sword, his
 # blue hair and olive headband -- his head row's (joint 9) textured spans 3-5
 # of six in order (the face's three before them) -- over Kirby's head
-# (scripts/p6/hat_preview.py).
+# (scripts/p6/hat_preview.py), 55 units down (owner BUGS.md 2026-10-24: "the
+# hair is above kirby's head slightly. move it down a bit"; it was 40).
 AUTHORED_HATS = {
     "ike": {"kind": "spans", "joint": 9, "detail": 1, "spans": (3, 4, 5),
-            "scale": (2.6, 2.6, 2.6), "offset": (0, -40, 0)},
+            "scale": (2.6, 2.6, 2.6), "offset": (0, -55, 0)},
 }
 # An authored content's own neutral-special starters over its base's power
-# (its statuses, hat and weapon kept). Ike (owner BUGS.md 2026-10-23: "Ike's
-# hat has the wrong attack, is should be ike's dash attack"): Ike's dash
-# attack on Kirby's rising third Dancing Blade swing, not the combo
-# (src/port/nds_p4_ike.c).
+# (its statuses, hat and weapon kept). Ike (owner BUGS.md 2026-10-23 and
+# 2026-10-24: "Ike's hat is missing the chargeable dash"): Ike's Quick Draw
+# -- charge, dash and slash -- on Kirby's rising third Dancing Blade swing,
+# not the combo (src/port/nds_p4_ike.c).
 AUTHORED_STARTERS = {
     "ike": ("ndsP4IkeKirbyNSPGroundInitial", "ndsP4IkeKirbyNSPAirInitial"),
 }
