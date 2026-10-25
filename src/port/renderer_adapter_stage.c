@@ -314,6 +314,9 @@ sb32 ndsRendererSubmitNativeBaked(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsNativeBakedRootOffscreen(const void *handle,
                                  const NDSRendererConfig *config);
+/* The drawn DObj's translation, around each baked submit, for a group's
+ * cross-DObj seeds (Blastoise's Hydro Pump beam); NULL after. */
+void ndsNativeBakedSetSeedTranslate(const Vec3f *translate);
 sb32 ndsNativeBakedRootIsRoom(const void *handle);
 /* The bumper quad's (nds_native_castle_bumper.exec.inc). */
 sb32 ndsNativeCastleBumperOffscreen(const NDSRendererConfig *config);

@@ -492,6 +492,11 @@ class Refused(RuntimeError):
 
 # Group flags (NDSNativeBakedGroup.flags).
 GROUP_I_COVERAGE = 1
+# Bits 8-11: how many of the group's leading vertices a cross-DObj seed list
+# loaded (CROSS_DOBJ_SEEDS). Mirror: NDS_NATIVE_BAKED_GROUP_SEEDED_SHIFT,
+# include/nds/nds_native_baked_types.h.
+GROUP_SEEDED_SHIFT = 8
+GROUP_SEEDED_MAX = 15
 G_IM_FMT_I = 4
 G_IM_SIZ_4B = 0
 G_IM_SIZ_8B = 1
@@ -564,6 +569,17 @@ CACHE_SEEDS = {
     "MVCommonRoomLamp0BD00": (0xBC28,),
     "MVCommonRoomLamp0BD40": (0xBC28, 0xBD00),
 }
+# Seeds loaded under ANOTHER DObj's matrix: the source's vertex cache keeps
+# them as that DObj transformed them. Blastoise's Hydro Pump is two DObjs, the
+# water's head (list 0, 0xF848) and its tail (list 1, 0xF920, the head's
+# child): the tail's list draws the beam between the head's slots 0-1 and its
+# own 2-3, so the beam stretches from the cannon to the head as the head's
+# animation carries it out (owner BUGS.md 2026-10-24, "Blastoise water gun
+# VFX"; drawn under one matrix it was a sliver at the tail). The group puts
+# those vertices first and counts them in its flags; the executor moves them
+# into the tail's frame, by minus the tail's own translation (the tail is
+# the head's child, rotation 0, scale 1).
+CROSS_DOBJ_SEEDS = {"KamexHydro1"}
 G_MWO_POINT_ST = 0x14
 # A TLUT load one entry short of what its texture indexes: the books' CI8
 # cover loads 255 colours (gDPLoadTLUT count 255) and 4 of its texels use
@@ -788,24 +804,46 @@ def seed_cache(res, offset, cache, depth=0):
 
 
 def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
-    """Walk `root` once. Returns (ops, groups, top_words, material_slots).
+    """Walk `root` once. Returns (ops, groups, top_words, material_slots,
+    group_seeded): the last, per group, how many leading vertices a
+    cross-DObj seed loaded (CROSS_DOBJ_SEEDS; 0 elsewhere).
 
     `light` (a unit vector in the DObj's frame) bakes the RSP's lighting
     into the triangles drawn with G_LIGHTING set; without it those keep
     their colour bytes, or refuse when `refuse_unbaked_lit`."""
     ops = []
     groups = []
+    group_seeded = []
     cache = [None] * 64
+    seeded = [False] * 64
+    seeded_values = set()
+    cross_dobj = name in CROSS_DOBJ_SEEDS
     # (G_LIGHTING, light 1 colour, light 2 colour) as the root starts: the
     # pre-render function's G_LIGHTING, then what its seed lists leave.
     lighting = (True, None, None)
     for seed in cache_seeds(name):
         seed_cache(res, seed, cache)
         lighting = end_light_state(res, seed, lighting)
+    if cross_dobj:
+        seeded = [v is not None for v in cache]
     lighting = list(lighting)
     pending = []
     slots = set()
     top_words = []
+
+    def add_group(chunk_verts, chunk_tris):
+        # A cross-DObj seed's vertices first, the triangles renumbered.
+        order = ([v for v in chunk_verts if v in seeded_values] +
+                 [v for v in chunk_verts if v not in seeded_values])
+        count = len(order) - len([v for v in chunk_verts if v not in seeded_values])
+        if count > GROUP_SEEDED_MAX:
+            raise Refused(f"{name}: {count} seeded vertices in one group")
+        where = {v: i for i, v in enumerate(order)}
+        groups.append((tuple(order),
+                       tuple(tuple(where[chunk_verts[k]] for k in tri)
+                             for tri in chunk_tris)))
+        group_seeded.append(count)
+        ops.append((OP_EMIT, 0, 0, len(groups) - 1))
 
     def flush():
         if not pending:
@@ -816,16 +854,14 @@ def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
         for tri in pending:
             new = [v for v in dict.fromkeys(tri) if v not in index]
             if len(chunk_verts) + len(new) > GROUP_VERTEX_MAX:
-                groups.append((tuple(chunk_verts), tuple(chunk_tris)))
-                ops.append((OP_EMIT, 0, 0, len(groups) - 1))
+                add_group(chunk_verts, chunk_tris)
                 chunk_tris, chunk_verts, index = [], [], {}
                 new = list(dict.fromkeys(tri))
             for v in new:
                 index[v] = len(chunk_verts)
                 chunk_verts.append(v)
             chunk_tris.append(tuple(index[v] for v in tri))
-        groups.append((tuple(chunk_verts), tuple(chunk_tris)))
-        ops.append((OP_EMIT, 0, 0, len(groups) - 1))
+        add_group(chunk_verts, chunk_tris)
         pending.clear()
 
     def walk(offset, depth):
@@ -853,6 +889,7 @@ def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
                     raise Refused(f"{name}: G_VTX at {at:#x} leaves the cache")
                 for k in range(count):
                     cache[v0 + k] = sm.decode_vertex(res, ref.offset + k * 16)
+                    seeded[v0 + k] = False
                 continue
             if op == 0x02:
                 where = (w0 >> 16) & 0xFF
@@ -869,6 +906,9 @@ def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
                     verts = tuple(cache[k] for k in tri)
                     if any(v is None for v in verts):
                         raise Refused(f"{name}: triangle at {at:#x} reads an empty slot")
+                    for k in tri:
+                        if seeded[k]:
+                            seeded_values.add(cache[k])
                     if lighting[0] and light is not None:
                         if lighting[1] is None or lighting[2] is None:
                             raise Refused(f"{name}: lit triangle at {at:#x} "
@@ -931,7 +971,7 @@ def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
     for index, seed in enumerate(cache_seeds(name)):
         # The state the seed lists leave carries over as well: replay their
         # state ops (not their draws or their materials) first, in order.
-        seed_ops, _, _, _ = compile_root(f"{name}.seed{index}", res, seed)
+        seed_ops = compile_root(f"{name}.seed{index}", res, seed)[0]
         ops.extend(o for o in seed_ops
                    if o[0] not in (OP_EMIT, OP_MATERIAL))
     walk(root, 0)
@@ -946,7 +986,9 @@ def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
         raise Refused(f"{name}: root {root:#x} draws nothing")
     if slots and slots != set(range(max(slots) + 1)):
         raise Refused(f"{name}: material slots {sorted(slots)} are not dense")
-    return ops, groups, tuple(top_words), (max(slots) + 1) if slots else 0
+    if cross_dobj and not any(group_seeded):
+        raise Refused(f"{name}: a cross-DObj seed root draws no seeded vertex")
+    return ops, groups, tuple(top_words), (max(slots) + 1) if slots else 0, group_seeded
 
 
 def build(scene: bool = False):
@@ -964,7 +1006,7 @@ def build(scene: bool = False):
             light = object_light(LIGHT_ANGLE_ROOM, room_dobj_rows(res, root))
         elif name in BATTLE_LIGHT_BAKES:
             light = object_light(BATTLE_LIGHT_BAKES[name])
-        ops, groups, top, slots = compile_root(
+        ops, groups, top, slots, group_seeded = compile_root(
             name, res, root, light, refuse_unbaked_lit=(gobj_kind == GOBJ_SCENE))
         if name in BATTLE_LIGHT_BAKES:
             ops = [GEOMETRY_CLEAR_LIGHTING] + ops + [GEOMETRY_SET_LIGHTING]
@@ -998,7 +1040,8 @@ def build(scene: bool = False):
             if op == OP_EMIT:
                 arg += group_base
             all_ops.append((op, w0, w1, arg, name))
-        all_groups.extend((name, g, flags.get(i, 0))
+        all_groups.extend((name, g, flags.get(i, 0)
+                           | (group_seeded[i] << GROUP_SEEDED_SHIFT))
                           for i, g in enumerate(groups))
     return roots, all_ops, all_groups
 

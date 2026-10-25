@@ -34,6 +34,17 @@ typedef struct NDSNativeBakedGroup
  * (sNdsRendererHardwareIntensityCoverage). */
 #define NDS_NATIVE_BAKED_GROUP_I_COVERAGE 1u
 
+/* Bits 8-11: how many of the group's leading vertices a seed list of another
+ * DObj loaded (generate_nds_native_item_baked.py CROSS_DOBJ_SEEDS: Blastoise's
+ * Hydro Pump beam). The source's vertex cache keeps them as that DObj's matrix
+ * put them; the executor moves them into this DObj's frame
+ * (ndsNativeBakedSetSeedTranslate). */
+#define NDS_NATIVE_BAKED_GROUP_SEEDED_SHIFT 8u
+#define NDS_NATIVE_BAKED_GROUP_SEEDED_MASK 0xFu
+/* The emitter's vertex buffer (generate_nds_native_item_baked.py
+ * GROUP_VERTEX_MAX). */
+#define NDS_NATIVE_BAKED_GROUP_VERTEX_MAX 24u
+
 typedef struct NDSNativeBakedRoot
 {
     u32 root;

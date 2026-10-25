@@ -96,6 +96,9 @@ typedef struct NDSNativeBakedBounds
     s16 minimum[3];
     s16 maximum[3];
     u32 empty;
+    /* A group whose vertices move each frame (a cross-DObj seed): never
+     * culled by the stored bounds. */
+    u32 moving;
 } NDSNativeBakedBounds;
 static NDSNativeBakedBounds sNdsNativeBakedBounds[NDS_NATIVE_BAKED_BOUNDS_CACHE];
 __attribute__((used)) volatile u32 gNdsBakedCulledRoots;
@@ -115,6 +118,7 @@ static sb32 ndsNativeBakedRootOutsideView(
         s32 lo[3] = { 32767, 32767, 32767 };
         s32 hi[3] = { -32768, -32768, -32768 };
         u32 any = FALSE;
+        u32 moving = FALSE;
         u32 i;
 
         for (i = 0u; i < (u32)r->op_count; i++)
@@ -128,6 +132,11 @@ static sb32 ndsNativeBakedRootOutsideView(
                 continue;
             }
             g = &group_table[op->arg];
+            if ((((u32)g->flags >> NDS_NATIVE_BAKED_GROUP_SEEDED_SHIFT) &
+                 NDS_NATIVE_BAKED_GROUP_SEEDED_MASK) != 0u)
+            {
+                moving = TRUE;
+            }
             for (v = 0u; v < (u32)g->vertex_count; v++)
             {
                 for (axis = 0u; axis < 3u; axis++)
@@ -143,13 +152,14 @@ static sb32 ndsNativeBakedRootOutsideView(
         b->root = r;
         b->generation = gNdsTaskmanHeapGeneration;
         b->empty = (any == FALSE) ? TRUE : FALSE;
+        b->moving = moving;
         for (axis = 0u; axis < 3u; axis++)
         {
             b->minimum[axis] = (s16)lo[axis];
             b->maximum[axis] = (s16)hi[axis];
         }
     }
-    if (b->empty != FALSE)
+    if ((b->empty != FALSE) || (b->moving != FALSE))
     {
         return FALSE;
     }
@@ -241,6 +251,116 @@ sb32 ndsNativeBakedRootOffscreen(const void *handle,
     }
     NDS_DIAG(gNdsBakedCulledRoots++);
     return TRUE;
+}
+
+/* The translation of the DObj whose root the adapter is drawing, for the
+ * groups a cross-DObj seed list loaded (NDS_NATIVE_BAKED_GROUP_SEEDED_SHIFT):
+ * set around each ndsRendererSubmitNativeBaked, NULL otherwise. */
+static const Vec3f *sNdsNativeBakedSeedTranslate;
+
+void ndsNativeBakedSetSeedTranslate(const Vec3f *translate)
+{
+    sNdsNativeBakedSeedTranslate = translate;
+}
+
+static u32 ndsNativeBakedGroupSeeded(const NDSNativeBakedGroup *g)
+{
+    return ((u32)g->flags >> NDS_NATIVE_BAKED_GROUP_SEEDED_SHIFT) &
+           NDS_NATIVE_BAKED_GROUP_SEEDED_MASK;
+}
+
+/* The v16 vertex range (ndsRendererHardwareCoordToV16: source << 4). */
+#define NDS_NATIVE_BAKED_V16_RANGE 2047
+
+/* A group whose leading vertices a cross-DObj seed loaded: Blastoise's Hydro
+ * Pump beam, which the tail's list draws between the head's two vertices
+ * (the source's vertex cache keeps them as the head's matrix put them) and
+ * its own two. Those vertices move into this DObj's frame, by minus its
+ * translation (the tail is the head's child, rotation 0, scale 1), and the
+ * group draws from a copy; a beam past the v16 range takes extra shift bits,
+ * the modelview's axes scaled back as the root's vertex_shift does. Out of
+ * line, so the common emit's frame carries none of this. */
+static sb32 __attribute__((noinline)) ndsNativeBakedEmitSeeded(
+    const NDSNativeBakedGroup *g, u32 seeded, u32 vertex_shift,
+    const NDSRendererConfig *config, NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    s16 moved[NDS_NATIVE_BAKED_GROUP_VERTEX_MAX * 5u];
+    NDSRendererConfig moved_config;
+    NDSRendererMatrix20p12 moved_modelview;
+    s32 offset[3];
+    s32 largest = 0;
+    u32 extra = 0u;
+    u32 i;
+    u32 c;
+    sb32 emitted;
+
+    if ((sNdsNativeBakedSeedTranslate == NULL) ||
+        (config->initial_modelview == NULL) ||
+        ((u32)g->vertex_count > NDS_NATIVE_BAKED_GROUP_VERTEX_MAX))
+    {
+        gNdsItemBakedSubmitStep = 13u;
+        return FALSE;
+    }
+    for (c = 0u; c < 3u; c++)
+    {
+        const f32 t = (&sNdsNativeBakedSeedTranslate->x)[c] /
+                      (f32)(1u << vertex_shift);
+
+        offset[c] = (s32)((t >= 0.0F) ? (t + 0.5F) : (t - 0.5F));
+    }
+    for (i = 0u; i < (u32)seeded * 3u; i++)
+    {
+        const s32 v = (s32)g->verts[((i / 3u) * 5u) + (i % 3u)] - offset[i % 3u];
+
+        largest = (v > largest) ? v : ((-v > largest) ? -v : largest);
+    }
+    while ((largest >> extra) > NDS_NATIVE_BAKED_V16_RANGE)
+    {
+        extra++;
+    }
+    for (i = 0u; i < (u32)g->vertex_count; i++)
+    {
+        for (c = 0u; c < 3u; c++)
+        {
+            const s32 v = (s32)g->verts[(i * 5u) + c] -
+                          ((i < seeded) ? offset[c] : 0);
+            const s32 half = (extra != 0u) ? ((s32)1 << (extra - 1u)) : 0;
+
+            moved[(i * 5u) + c] = (s16)((v >= 0) ? ((v + half) >> extra) :
+                                                   -((-v + half) >> extra));
+        }
+        moved[(i * 5u) + 3u] = g->verts[(i * 5u) + 3u];
+        moved[(i * 5u) + 4u] = g->verts[(i * 5u) + 4u];
+    }
+    moved_config = *config;
+    if (extra != 0u)
+    {
+        u32 row;
+
+        moved_modelview = *config->initial_modelview;
+        for (row = 0u; row < 3u; row++)
+        {
+            for (c = 0u; c < 4u; c++)
+            {
+                moved_modelview.m[row][c] *= (s32)1 << extra;
+            }
+        }
+        moved_config.initial_modelview = &moved_modelview;
+    }
+    /* Its own matrix load, and the root's again for any group after it; a
+     * replay cannot reproduce a moving beam. */
+    if (sNdsItemReplaySink != NULL)
+    {
+        sNdsItemReplaySink->failed = 1u;
+    }
+    sNdsNativeItemWave1MatrixGeneration = ndsRendererNextMatrixGeneration();
+    emitted = ndsNativeItemWave1Emit(
+        moved, g->colors, g->indices, (u32)g->vertex_count,
+        (u32)g->triangle_count, (u32)g->triangle_count * 3u,
+        &moved_config, stats, state, &gNdsItemBakedSubmitStep, &gNdsItemBakedAlpha);
+    sNdsNativeItemWave1MatrixGeneration = ndsRendererNextMatrixGeneration();
+    return emitted;
 }
 
 sb32 ndsRendererSubmitNativeBaked(
@@ -358,12 +478,16 @@ sb32 ndsRendererSubmitNativeBaked(
                 ((g->flags & NDS_NATIVE_BAKED_GROUP_I_COVERAGE) != 0u) ?
                     1u : 0u;
             sNdsNativeItemWave1TexMemoSet = (u32)op->arg;
-            emitted = ndsNativeItemWave1Emit(
-                g->verts, g->colors, g->indices,
-                (u32)g->vertex_count, (u32)g->triangle_count,
-                (u32)g->triangle_count * 3u,
-                config, stats, &state,
-                &gNdsItemBakedSubmitStep, &gNdsItemBakedAlpha);
+            emitted = (ndsNativeBakedGroupSeeded(g) != 0u) ?
+                ndsNativeBakedEmitSeeded(g, ndsNativeBakedGroupSeeded(g),
+                                         (u32)r->vertex_shift, config, stats,
+                                         &state) :
+                ndsNativeItemWave1Emit(
+                    g->verts, g->colors, g->indices,
+                    (u32)g->vertex_count, (u32)g->triangle_count,
+                    (u32)g->triangle_count * 3u,
+                    config, stats, &state,
+                    &gNdsItemBakedSubmitStep, &gNdsItemBakedAlpha);
             sNdsRendererHardwareIntensityCoverage = 0u;
             sNdsNativeItemWave1TexMemoSet =
                 NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE;

@@ -2796,12 +2796,14 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         NDS_DIAG(gNdsLabBakedAcc[1] += cpuGetTiming() - lab_prep);
 #endif
+        ndsNativeBakedSetSeedTranslate(&dobj->translate.vec.f);
         handled = (i == slots) ?
             ndsRendererSubmitNativeBaked(
                 (const void *)(uintptr_t)route->root, loaded->data,
                 loaded->data_size, baked_materials, i, &config,
                 render_stats) :
             FALSE;
+        ndsNativeBakedSetSeedTranslate(NULL);
         if (handled != FALSE)
         {
             NDS_DIAG(gNdsItemBakedDrawCount++);

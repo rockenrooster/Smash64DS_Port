@@ -1528,11 +1528,13 @@
                 ndsRendererAdapterMtxIdentity20p12(&identity);
                 item_config.initial_modelview = &identity;
             }
+            ndsNativeBakedSetSeedTranslate(&dobj->translate.vec.f);
             item_baked_native_handled = (i == baked_slots) ?
                 ndsRendererSubmitNativeBaked(
                     baked, loaded->data, loaded->data_size,
                     baked_materials, i, &item_config, render_stats) :
                 FALSE;
+            ndsNativeBakedSetSeedTranslate(NULL);
             if (item_baked_native_handled != FALSE)
             {
                 NDS_DIAG(gNdsItemBakedDrawCount++);
