@@ -16,8 +16,8 @@
  * while its window is open.
  *
  * status_vars words: 0 Explosive Flame's distance (units), the warp's angle
- * (as f32 bits) or the counter's hit; 1 the warp's frames left, or whether
- * Explosive Flame's fire is made.
+ * (as f32 bits) or the counter's hit; 1 the warp's frames left, whether
+ * Explosive Flame's fire is made, or the counter's voice still to play.
  */
 #include <nds/nds_p4.h>
 
@@ -35,6 +35,7 @@
 #include <sys/utils.h>
 #include <wp/weapon.h>
 #include "kirby/nds_p4_kirby.generated.h"
+#include "nds_p6_cues.generated.h"
 
 /* The source's particle effects (efmanager.c) and Quick Attack's angle
  * test (vector.c). */
@@ -148,6 +149,15 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_COUNTER_MUL 1.3F
 #define PAL_COUNTER_MIN 11
 #define PAL_COUNTER_MAX 50
+/* Her voice as she raises the shield (owner 2026-10-25, the 3DS's:
+ * "counter", another effort line or nothing on down B): Ultimate's
+ * seq_palutena_rnd_special_l01 (sound/sequence/fighter/palutena.sqb), 75%
+ * special_l01, 18% vc_palutena_002, 7% nothing, at the frame
+ * motions/counter.ms played special_l01 every time. The counterattack keeps
+ * its own line (motions/counter_hit.ms). */
+#define PAL_COUNTER_VOICE_AT 4.0F
+#define PAL_COUNTER_VOICE_MAIN 75   /* percent */
+#define PAL_COUNTER_VOICE_EFFORT 18
 /* Its knockback is that hit's (owner 2026-10-24: "inherit the BKB and KBG
  * as the attacker's hit", then, a jab's counter launching, the hit
  * mirrored): its set knockback, growth and base as they were; a stage's
@@ -751,9 +761,14 @@ static void ndsP4PalutenaCounterDamage(FTStruct *fp)
 static void ndsP4PalutenaCounterStart(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 roll;
 
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
     *ndsP4PalutenaCounterHit(fp) = 0;
+    roll = syUtilsRandIntRange(100);
+    *ndsP4PalutenaVar(fp, 1) = (roll < PAL_COUNTER_VOICE_MAIN) ? NDS_P6_PALUTENA_CUE_SPECIAL_L01 :
+                               (roll < (PAL_COUNTER_VOICE_MAIN + PAL_COUNTER_VOICE_EFFORT)) ?
+                               NDS_P6_PALUTENA_CUE_002 : 0;
     fp->special_coll = &sNdsP4PalutenaReflectColl;
     /* The window opens at frame 1 (motions/counter.ms), which the setter has
      * already played before clearing the flags; and the start runs in the
@@ -786,6 +801,17 @@ void ndsP4PalutenaCounterMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     sb32 open = (fp->motion_vars.flags.flag0 != 0) ? TRUE : FALSE;
+    s32 *voice = ndsP4PalutenaVar(fp, 1);
+
+    /* Her voice, as PlayVoiceStoreInfo plays one (ftMainPlayAnimEvent). */
+    if ((*voice != 0) && (fighter_gobj->anim_frame >= PAL_COUNTER_VOICE_AT))
+    {
+        if (!(fp->is_muted) && (fp->attr->is_have_voice))
+        {
+            ftParamPlayVoice(fp, (u16)*voice);
+        }
+        *voice = 0;
+    }
 
     fp->knockback_resist_status = (open != FALSE) ? PAL_COUNTER_ARMOUR : 0.0F;
     fp->is_reflect = open;

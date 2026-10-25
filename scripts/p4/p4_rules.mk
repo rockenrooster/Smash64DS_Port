@@ -53,6 +53,15 @@ nds_p4_data.o: $(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c
 nds_p4.o $(foreach name,$(NDS_P4_CODE_NAMES),nds_p4_$(name).o): \
 	$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.h
 
+# P6: the authored contents' sound cue ids for their own code
+# (scripts/p6/p6_audio.py --cue-header: NDS_P6_<NAME>_CUE_<CUE>, the ids the
+# sound pack and the generator give each cue), rewritten only when they change.
+NDS_P6_CUES_HEADER := $(NDS_P4_GEN)/nds_p6_cues.generated.h
+$(NDS_P6_CUES_HEADER): $(PROJECT_ROOT)/scripts/p6/p6_audio.py $(PROJECT_ROOT)/scripts/p4/contents.json \
+		$(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json)
+	python "$(PROJECT_ROOT)/scripts/p6/p6_audio.py" --cue-header "$@"
+$(foreach name,$(NDS_P4_CODE_NAMES),nds_p4_$(name).o): $(NDS_P6_CUES_HEADER)
+
 # S8: Remix's Kirby hats (scripts/p4/p4_kirby_hats.py): native copy-hat images
 # built through the owner generator's own copy-hat path, their trio programs
 # (nds_renderer_assets.c includes them, in nds_renderer.o) and each power's

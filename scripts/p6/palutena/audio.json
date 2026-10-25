@@ -4,6 +4,10 @@
  "comment": "Palutena's sound cues (docs/P6/characters/palutena.md, Audio; plan D5-D9): Ultimate's voices (vc_palutena) and effects (se_palutena), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id Peach's scripts, attributes and kind tables play (Peach's voices; the vanilla swings) to a cue; her own scripts name cues as cue:<name>. Owner p6w: her second jump played Peach's double-jump sound (0x2BF in Peach's JumpAerialF/B scripts): it plays her own, se_palutena_jump02. Owner p7h (2026-10-19): her KO voice at 0.8x (knockout, gain_db -1.938 = 20 log10 0.8).",
  "source": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters",
  "cues": {
+  "002": {
+   "file": "vc_palutena/vc_palutena_002.wav",
+   "kind": "voice"
+  },
   "announcer": {
    "file": "vc_narration_characall_palutena.wav",
    "kind": "voice"
