@@ -240,6 +240,14 @@ AUTHORED_HATS = {
 AUTHORED_STARTERS = {
     "ike": ("ndsP4IkeKirbyNSPGroundInitial", "ndsP4IkeKirbyNSPAirInitial"),
 }
+# An authored starter's own sounds (scripts/p6/<name>/audio.json cues) for
+# its code, as a custom power's "cues": NDS_P4_KIRBY_<NAME>_FGM_<key>. Ike's
+# Quick Draw plays his four (owner BUGS.md 2026-10-24: "Still missing charge
+# SFX"): the charge's two, the dash and the slash.
+AUTHORED_CUES = {
+    "ike": {"QD_CHARGE": "se_quickdraw_charge", "QD_CHARGE2": "se_quickdraw_charge2",
+            "QD_DASH": "se_quickdraw", "QD_SLASH": "se_quickdraw_slash"},
+}
 # Owner tuning, not Remix (generate_p4_fighter.py OWNER_HITBOX_SCALES, keyed
 # here by power): each MakeAttackColl's size in the power's motions' scripts
 # (every block they reach) times the scale, in the script file's copy; the
@@ -767,8 +775,9 @@ def main() -> int:
         if CUSTOM_POWERS[power_key[c]].get("silhouette"):
             header.append(f"#define NDS_P4_KIRBY_SILHOUETTE_CONTENT {registry[c]['id']}u"
                           f" /* {c}: Kirby drawn black */")
-    for c in custom:
-        cues = CUSTOM_POWERS[power_key[c]].get("cues") or {}
+    cue_rows = [(c, CUSTOM_POWERS[power_key[c]].get("cues") or {}) for c in custom]
+    cue_rows += [(c, AUTHORED_CUES[c]) for c in args.contents.split() if c in AUTHORED_CUES]
+    for c, cues in cue_rows:
         if cues:
             sys.path.insert(0, str(HERE.parent / "p6"))
             import p6_audio  # noqa: E402

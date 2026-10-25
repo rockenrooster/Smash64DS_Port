@@ -23,6 +23,7 @@
 
 #include <macros.h>
 #include <string.h>
+#include <sys/audio.h>
 #include <sys/obj.h>
 #include "kirby/nds_p4_kirby.generated.h"
 
@@ -591,6 +592,7 @@ static void ndsP4IkeBeforePhysicsMap(GObj *fighter_gobj)
 #define IKE_KIRBY_SWING_FRAME 11    /* the slash's hit frame */
 #define IKE_KIRBY_WINDUP_SPEED 2.0F /* the swing's frame speed to its hit */
 #define IKE_KIRBY_CHARGE_COLANIM 126u /* Ike's charge glow (qd_charge.ms) */
+#define IKE_KIRBY_CHARGE2_AT 8      /* the charge's second sound (qd_charge.ms) */
 
 enum
 {
@@ -616,18 +618,23 @@ enum
 #define IKE_KIRBY_DASH_HIT(aid, jid, size, oz) \
     IKE_KIRBY_HIT(aid, jid, 4u, 0u, size, 0, oz, 361u, 100u, 10u, 0u, 1u)
 
-/* The windup to the held pose: the sword in his hand, Ike's charge glow. */
+/* The windup to the held pose: the sword in his hand, Ike's charge glow and
+ * his charge's first sound (the second, at frame 8 of his charge, is the
+ * update's: the held pose stops the script). */
 static const u32 sNdsP4IkeKirbyQDChargeScript[] = {
     0xD0004000u,                                  /* Remix: frame speed 2.0 (the windup) */
     NDS_P4_MOTION_EVENT(nFTMotionEventSetModelPartID, 17u << 19), /* the sword in his hand */
     NDS_P4_MOTION_EVENT(nFTMotionEventHideItem, 0),
     NDS_P4_MOTION_EVENT(nFTMotionEventSetColAnim, IKE_KIRBY_CHARGE_COLANIM << 18),
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGM, NDS_P4_KIRBY_IKE_FGM_QD_CHARGE),
     NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
 };
 
-/* The dash: the sword's trail, the swing's voice and the hits that hold. */
+/* The dash: the sword's trail, Ike's dash sound, the swing's voice and the
+ * hits that hold. */
 static const u32 sNdsP4IkeKirbyQDDashScript[] = {
     NDS_P4_MOTION_EVENT(nFTMotionEventSetAfterImage, 8u << 18),   /* the sword's trail */
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGM, NDS_P4_KIRBY_IKE_FGM_QD_DASH),
     NDS_P4_MOTION_EVENT(nFTMotionEventPlayVoiceStoreInfo, 0x182),
     IKE_KIRBY_DASH_HIT(0u, 17u, 225, 250),
     IKE_KIRBY_DASH_HIT(1u, 6u, 200, 0),
@@ -645,7 +652,7 @@ static const u32 sNdsP4IkeKirbyQDSlashScript[] = {
     IKE_KIRBY_SLASH_HIT(1u, 17u, 225, 0, 250),
     IKE_KIRBY_SLASH_HIT(0u, 17u, 200, -50, 70),
     IKE_KIRBY_SLASH_HIT(2u, 15u, 200, 0, 0),
-    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGMStoreInfo, 0x102),   /* the swing (Ike's 258) */
+    NDS_P4_MOTION_EVENT(nFTMotionEventPlayFGM, NDS_P4_KIRBY_IKE_FGM_QD_SLASH), /* Ike's slash */
     NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 2),
     NDS_P4_MOTION_EVENT(nFTMotionEventClearAttackCollAll, 0),
     NDS_P4_MOTION_EVENT(nFTMotionEventSyncWait, 8),
@@ -723,8 +730,13 @@ void ndsP4IkeKirbyNSPUpdate(GObj *fighter_gobj)
         if ((*charge >= IKE_QD_CHARGE_MAX) || ((fp->input.pl.button_hold & IKE_BUTTON_B) == 0u))
         {
             ndsP4IkeKirbyQDDash(fighter_gobj);
+            break;
         }
-        else if (fighter_gobj->anim_frame >= IKE_KIRBY_HOLD_FRAME)
+        if (*charge == IKE_KIRBY_CHARGE2_AT)
+        {
+            func_800269C0_275C0(NDS_P4_KIRBY_IKE_FGM_QD_CHARGE2);
+        }
+        if (fighter_gobj->anim_frame >= IKE_KIRBY_HOLD_FRAME)
         {
             gcSetAnimSpeed(fighter_gobj, 0.0F);
         }

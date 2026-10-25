@@ -31,6 +31,7 @@ $(NDS_P4_EXPORT)/kirby/resolved.json: $(NDS_P4_STAGING)/ssb64asm.z64 \
 $(NDS_P4_KIRBY_OUT) &: $(NDS_P4_EXPORT)/kirby/resolved.json $(NDS_P4_EXPORT_FILES) \
 		$(PROJECT_ROOT)/scripts/p4/p4_kirby.py $(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py \
 		$(PROJECT_ROOT)/scripts/p4/p4_kirby_custom_hats.py $(PROJECT_ROOT)/scripts/p6/p6_audio.py \
+		$(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json) \
 		$(PROJECT_ROOT)/scripts/p4/p4_anim_compact.py $(PROJECT_ROOT)/scripts/p4/contents.json
 	python "$(PROJECT_ROOT)/scripts/p4/p4_kirby.py" --staging "$(NDS_P4_STAGING)" \
 		--kirby-export "$(NDS_P4_EXPORT)/kirby" --export-root "$(NDS_P4_EXPORT)" \
