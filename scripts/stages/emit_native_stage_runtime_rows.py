@@ -224,7 +224,7 @@ def emit(desc, stage):
               "TextureEpochs", "MaterialEvents", "StatePolicies", "StateDeltas",
               "StateSequence", "StateSpans"):
         out.append(f"    {P}{t},")
-    out.append(f"#if NDS_TASK51_STAGE_NATIVE\n    {P}BakedWorldMatrices,\n#endif")
+    out.append(f"#if NDS_STAGE_BAKED_WORLD\n    {P}BakedWorldMatrices,\n#endif")
     for c in ("ASSET_COUNT", "SEGMENT_COUNT", "DOBJ_COUNT", "BINDING_COUNT", "RUN_COUNT",
               "TEXTURE_EPOCH_COUNT", "MATERIAL_EVENT_COUNT", "STATE_POLICY_COUNT",
               "STATE_DELTA_COUNT", "STATE_SEQUENCE_COUNT", "STATE_SPAN_COUNT",

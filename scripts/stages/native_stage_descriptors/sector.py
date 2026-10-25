@@ -20,7 +20,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="sector",
-    include_sha="e8c861a80126994b0c251740c7382143646012fd2b49a711a092d1b9b6b30bf5",
+    include_sha="22051dd664c8ae317628f9ba285795c571b1c5940f1935f27e925cf8bf5107f2",
     generated_segment_index=-1,
     symbol_prefix="Sector",
     macro_prefix="SECTOR_",

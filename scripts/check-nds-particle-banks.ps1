@@ -23,7 +23,7 @@ if ($null -eq (Get-Command $Python -ErrorAction SilentlyContinue)) {
 # The images in the efcommon .txb are stored linearly. The RDP applies its
 # odd-line TMEM word swap on both the load and the fetch, so it cancels, and a
 # converter that "un-swizzles" them comb-stripes every odd row -- which is what
-# scripts/generate_task39_hit_sparks.py does. Pin the two guards that keep this
+# scripts/generate_fx_hit_sparks.py does. Pin the two guards that keep this
 # generator honest: the recorded reason, and the decode-back self-check that
 # would catch any texel-order regression.
 $source = Get-Content -LiteralPath $generator -Raw

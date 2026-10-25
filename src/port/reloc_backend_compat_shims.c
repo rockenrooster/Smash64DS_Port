@@ -9,7 +9,7 @@
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
-#include <nds/nds_task39_effect_census.h>
+#include <nds/nds_fx_effect_census.h>
 #include <nds/nds_itcm_placement.h>
 #include <nds/nds_ftanim_track.h>
 #include <nds/nds_ft_pose.h>
@@ -1810,9 +1810,9 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
         colanim_id = ndsP4ColAnimRemap(fp, colanim_id);
     }
 
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,
-        NDS_TASK39_EFFECT_ORIGINAL);
+    ndsFxEffectCensusRecord(
+        NDS_FX_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,
+        NDS_FX_ORIGINAL);
     if ((fighter_gobj != NULL) && (ftGetStruct(fighter_gobj) != NULL))
     {
         return ftParamCheckSetColAnimID(&ftGetStruct(fighter_gobj)->colanim,

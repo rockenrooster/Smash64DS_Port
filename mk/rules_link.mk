@@ -11,7 +11,7 @@ $(NDS_PARTICLE_BANKS_STAMP): FORCE
 
 $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) $(NDS_WHISPY_NATIVE_ASSET) $(NDS_HYRULE_NATIVE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
-		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
+		$(PROJECT_ROOT)/scripts/2d_vfx/generate_fx_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
 		$(BATTLESHIP_O2R)/particles/grpupupu_particle_scb \
@@ -499,7 +499,7 @@ nds_r2_sqrtf.o: CFLAGS += -marm
 
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
-nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
+nds_ifcommon_oam.o: $(NDS_FX_HIT_SPARKS_INC)
 
 $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP): \
 		$(NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR) \

@@ -4887,7 +4887,7 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
     )
     # Task 51: baked per-binding world matrices (4x4 s20.12, row-major). Emitted
     # as a flag-gated const table so the published ROM is byte-identical at the
-    # default NDS_TASK51_STAGE_NATIVE=0. The runtime Task 51 path reads this in
+    # default NDS_STAGE_BAKED_WORLD=0. The runtime Task 51 path reads this in
     # place of the per-frame CPU compose for the bindings it converts; the Task
     # 49 differ gates that the bake matches the runtime (Tier 1 = 0, Tier 2
     # <= 1.0 screen-px).
@@ -4901,7 +4901,7 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
             f"#define NDS_NATIVE_STAGE_BAKED_WORLD_COUNT "
             f"{len(packet.baked_world_matrices)}u",
             f"#define NDS_NATIVE_STAGE_BAKED_WORLD_CHECKSUM 0x{baked_checksum:08x}u",
-            "#if NDS_TASK51_STAGE_NATIVE",
+            "#if NDS_STAGE_BAKED_WORLD",
             "static const s32 sNdsNativeStageBakedWorldMatrices"
             "[NDS_NATIVE_STAGE_BAKED_WORLD_COUNT][16] = {",
         )

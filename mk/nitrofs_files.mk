@@ -1179,7 +1179,7 @@ NDS_NITROFS_PARTICLE_FILES += \
 endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
-# reader (ndsTask39PrepareHitSparks), so the ROM does not boot correctly
+# reader (ndsFxPrepareHitSparks), so the ROM does not boot correctly
 # without it whenever the sprite lane is on.
 export NDS_NITROFS_EFFECT_FILES :=
 NDS_NITROFS_EFFECT_FILES := \

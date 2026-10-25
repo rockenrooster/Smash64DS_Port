@@ -15,7 +15,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
-#include <nds/nds_task39_effect_census.h>
+#include <nds/nds_fx_effect_census.h>
 #include <it/item.h>
 #include <mp/map.h>
 #include <reloc_data.h>
@@ -108,9 +108,9 @@ extern sb32 gmCollisionCheckWeaponAttackItemDamageCollide(
 __attribute__((weak)) LBParticle *efManagerItemSpawnSwirlMakeEffect(Vec3f *pos)
 {
     (void)pos;
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_ITEM_SPAWN_SWIRL_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SKIPPED);
+    ndsFxEffectCensusRecord(
+        NDS_FX_EF_MANAGER_ITEM_SPAWN_SWIRL_MAKE_EFFECT,
+        NDS_FX_SKIPPED);
     return NULL;
 }
 extern void gmCollisionGetFighterAttackItemDamagePosition(

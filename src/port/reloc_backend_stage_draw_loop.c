@@ -1056,7 +1056,7 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
     }
     /* "A LINK-15 SOURCE EFFECT DREW TRIANGLES THIS FRAME", which is the arming
      * signal a shield capture needs and which no existing counter provided.
-     * probe-shield-vfx.ps1 could only arm on gNdsTask39FxShieldDrawCount, which
+     * probe-shield-vfx.ps1 could only arm on gNdsFxShieldDrawCount, which
      * belonged to the procedural stand-in and died with it, or on
      * SourceModelAdmitCount, which
      * counts every source admit and is dominated by the impact wave -- so the

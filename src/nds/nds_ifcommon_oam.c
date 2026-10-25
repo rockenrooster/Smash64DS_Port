@@ -32,7 +32,7 @@
 #include <nds/nds_fixed_convert.h>
 #include <nds/nds_fcmp.h>
 #include <nds/nds_r2_hwmath_unit.h>
-#include <nds/nds_task39_effect_census.h>
+#include <nds/nds_fx_effect_census.h>
 #include <gm/generic.h>
 #include <sys/obj.h>
 #include <ft/fighter.h>
@@ -98,17 +98,17 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_OVERLAY_SPEC_COUNT 16u
 #define NDS_IFCOMMON_HASH_SEED 0x49464f41u
 
-#define NDS_TASK39_HIT_SPARK_CAPACITY 16u
-#define NDS_TASK39_HIT_SPARK_CELL_BYTES 512u
-#define NDS_TASK39_HIT_SPARK_FRAME_COUNT 44u
-#define NDS_TASK39_HIT_SPARK_LIGHT_FRAMES 8u
-#define NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME 17u
-#define NDS_TASK39_HIT_SPARK_HEAVY_OFFSET 32u
-#define NDS_TASK39_HIT_SPARK_HEAVY_FRAMES 3u
-#define NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME 6u
-#define NDS_TASK39_HIT_SPARK_SCREEN_SCALE 1.6F
+#define NDS_FX_HIT_SPARK_CAPACITY 16u
+#define NDS_FX_HIT_SPARK_CELL_BYTES 512u
+#define NDS_FX_HIT_SPARK_FRAME_COUNT 44u
+#define NDS_FX_HIT_SPARK_LIGHT_FRAMES 8u
+#define NDS_FX_HIT_SPARK_LIGHT_LIFETIME 17u
+#define NDS_FX_HIT_SPARK_HEAVY_OFFSET 32u
+#define NDS_FX_HIT_SPARK_HEAVY_FRAMES 3u
+#define NDS_FX_HIT_SPARK_HEAVY_LIFETIME 6u
+#define NDS_FX_HIT_SPARK_SCREEN_SCALE 1.6F
 
-#include "generated/task39_hit_sparks.generated.inc"
+#include "generated/fx_hit_sparks.generated.inc"
 
 extern Mtx44f gGMCameraMatrix;
 extern GObj *gGMCameraGObj;
@@ -248,7 +248,7 @@ typedef struct NDSIFCommonNativeAsset
     NDSIFCommonNativeTile tiles[NDS_IFCOMMON_MAX_TILES];
 } NDSIFCommonNativeAsset;
 
-typedef struct NDSTask39HitSpark
+typedef struct NDSFxHitSpark
 {
     Vec3f pos;
     Vec3f vel;
@@ -258,7 +258,7 @@ typedef struct NDSTask39HitSpark
     u8 player;
     u8 is_heavy;
     u8 active;
-} NDSTask39HitSpark;
+} NDSFxHitSpark;
 
 #define TILE(sx, sy, sw, sh, cw, ch, px, py) \
     { (sx), (sy), (sw), (sh), (cw), (ch), (px), (py) }
@@ -483,9 +483,9 @@ static u16 sNdsIFCommonMatrixInverse[32];
 static u32 sNdsIFCommonFrameNeedsCommit;
 static u32 sNdsIFCommonCloudTextureNames[NDS_IFCOMMON_CLOUD_ATLAS_COUNT];
 static u32 sNdsIFCommonTrafficTextureName;
-static NDSTask39HitSpark sNdsTask39HitSparks[
-    NDS_TASK39_HIT_SPARK_CAPACITY];
-static u16 *sNdsTask39HitSparkGfx;
+static NDSFxHitSpark sNdsFxHitSparks[
+    NDS_FX_HIT_SPARK_CAPACITY];
+static u16 *sNdsFxHitSparkGfx;
 
 /* P2-2p8 Phase 3 (A7): the file this state points at is the compact image
  * (src/port/reloc_backend_assets.c) -- the GO and end letters' pixels are not
@@ -572,23 +572,23 @@ volatile u32 gNdsIFCommonNativeOamFrameCloudDrawCount;
 volatile u32 gNdsIFCommonNativeOamFrameSemanticHash;
 volatile u32 gNdsIFCommonNativeOamLastFallbackReason;
 volatile u32 gNdsIFCommonNativeOamCommitCount;
-volatile u32 gNdsTask39FxSpawnTicks;
-volatile u32 gNdsTask39FxUpdateTicks;
-volatile u32 gNdsTask39FxDrawTicks;
-volatile u32 gNdsTask39FxFrameTicks;
-volatile u32 gNdsTask39FxMaxFrameTicks;
-volatile u32 gNdsTask39FxEngagementMask;
-volatile u32 gNdsTask39FxHitSparkSpawnCount;
-volatile u32 gNdsTask39FxHitSparkUpdateCount;
-volatile u32 gNdsTask39FxHitSparkDrawCount;
-volatile u32 gNdsTask39FxHitSparkDropCount;
-volatile u32 gNdsTask39FxFlashDrawCount;
-volatile u32 gNdsTask39FxArenaRejectCount;
-volatile u32 gNdsTask39FxArenaBootSize;
-volatile u32 gNdsTask39FxObjVramBytes;
-volatile u32 gNdsTask39FxObjVramRemaining;
+volatile u32 gNdsFxSpawnTicks;
+volatile u32 gNdsFxUpdateTicks;
+volatile u32 gNdsFxDrawTicks;
+volatile u32 gNdsFxFrameTicks;
+volatile u32 gNdsFxMaxFrameTicks;
+volatile u32 gNdsFxEngagementMask;
+volatile u32 gNdsFxHitSparkSpawnCount;
+volatile u32 gNdsFxHitSparkUpdateCount;
+volatile u32 gNdsFxHitSparkDrawCount;
+volatile u32 gNdsFxHitSparkDropCount;
+volatile u32 gNdsFxFlashDrawCount;
+volatile u32 gNdsFxArenaRejectCount;
+volatile u32 gNdsFxArenaBootSize;
+volatile u32 gNdsFxObjVramBytes;
+volatile u32 gNdsFxObjVramRemaining;
 
-static void ndsTask39HitSparksDraw(void);
+static void ndsFxHitSparksDraw(void);
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
 static f32 ndsIFCommonBattleScreenX(f32 projected_x);
 static f32 ndsIFCommonBattleScreenY(f32 projected_y);

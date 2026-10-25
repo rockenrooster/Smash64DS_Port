@@ -4,7 +4,7 @@
 #ifndef SSB64_NDS_BUILD_CONFIG_H
 #define SSB64_NDS_BUILD_CONFIG_H
 
-#define NDS_TASK51_STAGE_NATIVE 0
+#define NDS_STAGE_BAKED_WORLD 0
 /* The generated header's counters-on arm. */
 #define NDS_DIAG(...) do { __VA_ARGS__; } while (0)
 

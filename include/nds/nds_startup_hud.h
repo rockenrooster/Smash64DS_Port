@@ -36,7 +36,7 @@ enum NDSTickHudBucket {
      * is byte-identical.
      *
      * These are SUB-buckets of SRC, not new work. SRC brackets
-     * ndsTask39EffectsUpdate + scVSBattleFuncUpdate (taskman_seam.c), and both
+     * ndsFxEffectsUpdate + scVSBattleFuncUpdate (taskman_seam.c), and both
      * spans below are nested strictly inside it, so they are deliberately NOT
      * added to `named` -- doing so would double-count them against ALL and
      * corrupt OTHR. The third sub-owner (the decomp sim path, "SBAS") is the
@@ -50,7 +50,7 @@ enum NDSTickHudBucket {
      * value, so every banked measurement stays comparable.
      *
      * The composition was VERIFIED before these were chosen, not assumed. SRC
-     * brackets ndsTask39EffectsUpdate + scVSBattleFuncUpdate; the decomp scene
+     * brackets ndsFxEffectsUpdate + scVSBattleFuncUpdate; the decomp scene
      * update is a one-liner (scvsbattle.c:75) calling
      * ifCommonBattleUpdateInterfaceAll, whose game_status switch reaches
      * ifCommonBattleGoUpdateInterface, which ends in gcRunAll (ifcommon.c:2970).

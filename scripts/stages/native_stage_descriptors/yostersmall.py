@@ -39,7 +39,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="yostersmall",
-    include_sha="622914f480fcbf1607f0c220313f3c4e4b210636311018620b770041ae88cb09",
+    include_sha="752697b93b85850cb604f9e49af043c5bf55cff3b44645f4bbfe805ba8d883c2",
     generated_segment_index=-1,
     symbol_prefix="YosterSmall",
     macro_prefix="YOSTERSMALL_",

@@ -188,22 +188,22 @@ static s32 ndsIFCommonEndAssetActive(u32 asset_index)
     return FALSE;
 }
 
-void ndsTask39EffectsEngage(u32 mask)
+void ndsFxEffectsEngage(u32 mask)
 {
-    gNdsTask39FxEngagementMask |= mask;
+    gNdsFxEngagementMask |= mask;
 }
 
-static s32 ndsTask39EffectsArenaValid(void)
+static s32 ndsFxEffectsArenaValid(void)
 {
-    if ((gNdsTask39FxArenaBootSize == 0u) &&
+    if ((gNdsFxArenaBootSize == 0u) &&
         (gNdsTaskmanArenaChosenSize != 0u))
     {
-        gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
+        gNdsFxArenaBootSize = gNdsTaskmanArenaChosenSize;
     }
-    if ((gNdsTask39FxArenaBootSize == 0u) ||
-        (gNdsTaskmanArenaChosenSize != gNdsTask39FxArenaBootSize))
+    if ((gNdsFxArenaBootSize == 0u) ||
+        (gNdsTaskmanArenaChosenSize != gNdsFxArenaBootSize))
     {
-        gNdsTask39FxArenaRejectCount = 1u;
+        gNdsFxArenaRejectCount = 1u;
         return FALSE;
     }
     return TRUE;
@@ -222,9 +222,9 @@ static s32 ndsTask39EffectsArenaValid(void)
  *   020941c8 <efManagerDamageNormalLightMakeEffect>:
  *     bl 209224c <ndsBaseEFManagerDamageNormalLightMakeEffect>
  *
- * -- straight to the source implementation, never here. `ndsTask39HitSparkSpawn`
+ * -- straight to the source implementation, never here. `ndsFxHitSparkSpawn`
  * is reached only from this file's own heavy-spark death, which nothing starts,
- * so gNdsTask39FxHitSparkSpawnCount is structurally 0.
+ * so gNdsFxHitSparkSpawnCount is structurally 0.
  *
  * BUGS.md's *"orange ball ... looks too big"* row was answered here with the 2.2
  * ceiling below and the owner re-filed it unchanged, because the effect the
@@ -238,37 +238,37 @@ static s32 ndsTask39EffectsArenaValid(void)
  * Left in place rather than deleted because NDS_TASK39_FX_SPRITES gates more
  * than this one path and a deletion is a separate, wider change. Do not tune
  * this constant again -- nothing reads it. */
-#define NDS_TASK39_HIT_SPARK_SCALE_MAX 2.2F
+#define NDS_FX_HIT_SPARK_SCALE_MAX 2.2F
 
-volatile u32 gNdsTask39FxHitSparkScaleClampCount;
+volatile u32 gNdsFxHitSparkScaleClampCount;
 
-void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
+void ndsFxHitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy)
 {
     u32 index;
-    NDSTask39HitSpark *spark = NULL;
+    NDSFxHitSpark *spark = NULL;
 
-    if ((pos == NULL) || (sNdsTask39HitSparkGfx == NULL) ||
-        (ndsTask39EffectsArenaValid() == FALSE))
+    if ((pos == NULL) || (sNdsFxHitSparkGfx == NULL) ||
+        (ndsFxEffectsArenaValid() == FALSE))
     {
-        NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
+        NDS_DIAG(gNdsFxHitSparkDropCount++);
         return;
     }
-    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    for (index = 0u; index < NDS_FX_HIT_SPARK_CAPACITY; index++)
     {
-        if (sNdsTask39HitSparks[index].active == FALSE)
+        if (sNdsFxHitSparks[index].active == FALSE)
         {
-            spark = &sNdsTask39HitSparks[index];
+            spark = &sNdsFxHitSparks[index];
             break;
         }
     }
     if (spark == NULL)
     {
-        NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
+        NDS_DIAG(gNdsFxHitSparkDropCount++);
         return;
     }
 
-    *spark = (NDSTask39HitSpark){0};
+    *spark = (NDSFxHitSpark){0};
     spark->pos = *pos;
     spark->player = (u8)((u32)player & 3u);
     spark->size = (s16)size;
@@ -295,7 +295,7 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
          * sprite -- on a 256x192 screen. That is the owner's *"orange ball
          * visual effect that looks too big"* on side-A hits: a forward tilt is
          * normal-element and light, so it lands here, and HEAVY_ENV tints
-         * player 1's spark RED (generate_task39_hit_sparks.py:30), which is the
+         * player 1's spark RED (generate_fx_hit_sparks.py:30), which is the
          * orange.
          *
          * Note the heavy branch above is a flat 1.0, so before this the LIGHT
@@ -306,27 +306,27 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
          * particles here, not sprites, so the sprite's size is a port choice
          * and the owner is its oracle. 2.2 keeps a big hit clearly bigger than
          * a small one while staying near the heavy spark's own scale. */
-        if (spark->scale > NDS_TASK39_HIT_SPARK_SCALE_MAX)
+        if (spark->scale > NDS_FX_HIT_SPARK_SCALE_MAX)
         {
-            spark->scale = NDS_TASK39_HIT_SPARK_SCALE_MAX;
-            NDS_DIAG(gNdsTask39FxHitSparkScaleClampCount++);
+            spark->scale = NDS_FX_HIT_SPARK_SCALE_MAX;
+            NDS_DIAG(gNdsFxHitSparkScaleClampCount++);
         }
     }
-    gNdsTask39FxHitSparkSpawnCount++;
-    ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);
+    gNdsFxHitSparkSpawnCount++;
+    ndsFxEffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);
 }
 
-void ndsTask39EffectsUpdate(void)
+void ndsFxEffectsUpdate(void)
 {
     u32 index;
 
-    if (ndsTask39EffectsArenaValid() == FALSE)
+    if (ndsFxEffectsArenaValid() == FALSE)
     {
         return;
     }
-    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    for (index = 0u; index < NDS_FX_HIT_SPARK_CAPACITY; index++)
     {
-        NDSTask39HitSpark *spark = &sNdsTask39HitSparks[index];
+        NDSFxHitSpark *spark = &sNdsFxHitSparks[index];
         u32 lifetime;
 
         if (spark->active == FALSE)
@@ -336,10 +336,10 @@ void ndsTask39EffectsUpdate(void)
         spark->pos.x += spark->vel.x;
         spark->pos.y += spark->vel.y;
         spark->age++;
-        NDS_DIAG(gNdsTask39FxHitSparkUpdateCount++);
+        NDS_DIAG(gNdsFxHitSparkUpdateCount++);
         lifetime = (spark->is_heavy != FALSE) ?
-            NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME :
-            NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME;
+            NDS_FX_HIT_SPARK_HEAVY_LIFETIME :
+            NDS_FX_HIT_SPARK_LIGHT_LIFETIME;
         if (spark->age >= lifetime)
         {
             if (spark->is_heavy != FALSE)
@@ -349,10 +349,10 @@ void ndsTask39EffectsUpdate(void)
                 s32 size = spark->size;
 
                 spark->active = FALSE;
-                ndsTask39EffectCensusRecord(
-                    NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
-                    NDS_TASK39_EFFECT_SUBSTITUTE);
-                ndsTask39HitSparkSpawn(&pos, player, size, FALSE, FALSE);
+                ndsFxEffectCensusRecord(
+                    NDS_FX_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
+                    NDS_FX_SUBSTITUTE);
+                ndsFxHitSparkSpawn(&pos, player, size, FALSE, FALSE);
             }
             else
             {
@@ -380,16 +380,16 @@ void ndsTask39EffectsUpdate(void)
 void ndsFsLock(void);
 void ndsFsUnlock(void);
 
-static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
+static s32 ndsFxPrepareHitSparksUnlocked(u32 *vram_cursor)
 {
-    u32 bytes = NDS_TASK39_HIT_SPARK_ASSET_BYTES;
-    u32 cell[NDS_TASK39_HIT_SPARK_CELL_BYTES / sizeof(u32)];
+    u32 bytes = NDS_FX_HIT_SPARK_ASSET_BYTES;
+    u32 cell[NDS_FX_HIT_SPARK_CELL_BYTES / sizeof(u32)];
     FILE *file;
     u32 offset;
 
-    _Static_assert(NDS_TASK39_HIT_SPARK_ASSET_BYTES ==
-                       NDS_TASK39_HIT_SPARK_CELL_BYTES *
-                           NDS_TASK39_HIT_SPARK_FRAME_COUNT,
+    _Static_assert(NDS_FX_HIT_SPARK_ASSET_BYTES ==
+                       NDS_FX_HIT_SPARK_CELL_BYTES *
+                           NDS_FX_HIT_SPARK_FRAME_COUNT,
                    "Task 39 hit-spark payload size drifted");
     *vram_cursor = (*vram_cursor +
                     (NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u)) &
@@ -398,25 +398,25 @@ static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
     {
         return FALSE;
     }
-    file = fopen(NDS_TASK39_HIT_SPARK_ASSET_PATH, "rb");
+    file = fopen(NDS_FX_HIT_SPARK_ASSET_PATH, "rb");
     if (file == NULL)
     {
-        gNdsTask39FxObjVramBytes = 0u;
+        gNdsFxObjVramBytes = 0u;
         return FALSE;
     }
-    sNdsTask39HitSparkGfx =
+    sNdsFxHitSparkGfx =
         (u16 *)((u8 *)SPRITE_GFX + *vram_cursor);
     for (offset = 0u; offset < bytes;
-         offset += NDS_TASK39_HIT_SPARK_CELL_BYTES)
+         offset += NDS_FX_HIT_SPARK_CELL_BYTES)
     {
-        u32 *dst = (u32 *)(void *)((u8 *)sNdsTask39HitSparkGfx + offset);
+        u32 *dst = (u32 *)(void *)((u8 *)sNdsFxHitSparkGfx + offset);
         u32 word;
 
         if (fread(cell, 1u, sizeof(cell), file) != sizeof(cell))
         {
             fclose(file);
-            sNdsTask39HitSparkGfx = NULL;
-            gNdsTask39FxObjVramBytes = 0u;
+            sNdsFxHitSparkGfx = NULL;
+            gNdsFxObjVramBytes = 0u;
             return FALSE;
         }
         for (word = 0u; word < (u32)(sizeof(cell) / sizeof(cell[0])); word++)
@@ -426,18 +426,18 @@ static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
     }
     fclose(file);
     *vram_cursor += bytes;
-    gNdsTask39FxObjVramBytes = bytes;
-    gNdsTask39FxObjVramRemaining =
+    gNdsFxObjVramBytes = bytes;
+    gNdsFxObjVramRemaining =
         NDS_IFCOMMON_OBJ_VRAM_BYTES - *vram_cursor;
     return TRUE;
 }
 
-static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
+static s32 ndsFxPrepareHitSparks(u32 *vram_cursor)
 {
     s32 result;
 
     ndsFsLock();
-    result = ndsTask39PrepareHitSparksUnlocked(vram_cursor);
+    result = ndsFxPrepareHitSparksUnlocked(vram_cursor);
     ndsFsUnlock();
     return result;
 }
@@ -499,8 +499,8 @@ void ndsIFCommonNativeOamDiscardTextures(void)
      * OBJ VRAM packing the prepare above redoes from scratch. Both draw sites
      * guard on `!= NULL` only, so a stale pointer is indistinguishable from a
      * live one and the sparks keep sampling whatever now occupies that offset. */
-    memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
-    sNdsTask39HitSparkGfx = NULL;
+    memset(sNdsFxHitSparks, 0, sizeof(sNdsFxHitSparks));
+    sNdsFxHitSparkGfx = NULL;
     ndsIFCommonResetPlayerTags();
     ndsIFCommonResetItemArrow();
 
@@ -553,25 +553,25 @@ void ndsIFCommonNativeOamInit(void)
     sNdsIFCommonPreparedFileSize = 0u;
     sNdsIFCommonAnnounceActive = FALSE;
     sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
-    memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
-    sNdsTask39HitSparkGfx = NULL;
+    memset(sNdsFxHitSparks, 0, sizeof(sNdsFxHitSparks));
+    sNdsFxHitSparkGfx = NULL;
     ndsIFCommonResetPlayerTags();
     ndsIFCommonResetCommonLetters();
-    gNdsTask39FxSpawnTicks = 0u;
-    gNdsTask39FxUpdateTicks = 0u;
-    gNdsTask39FxDrawTicks = 0u;
-    gNdsTask39FxFrameTicks = 0u;
-    gNdsTask39FxMaxFrameTicks = 0u;
-    gNdsTask39FxEngagementMask = 0u;
-    gNdsTask39FxHitSparkSpawnCount = 0u;
-    gNdsTask39FxHitSparkUpdateCount = 0u;
-    gNdsTask39FxHitSparkDrawCount = 0u;
-    gNdsTask39FxHitSparkDropCount = 0u;
-    gNdsTask39FxFlashDrawCount = 0u;
-    gNdsTask39FxArenaRejectCount = 0u;
-    gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
-    gNdsTask39FxObjVramBytes = 0u;
-    gNdsTask39FxObjVramRemaining = NDS_IFCOMMON_OBJ_VRAM_BYTES;
+    gNdsFxSpawnTicks = 0u;
+    gNdsFxUpdateTicks = 0u;
+    gNdsFxDrawTicks = 0u;
+    gNdsFxFrameTicks = 0u;
+    gNdsFxMaxFrameTicks = 0u;
+    gNdsFxEngagementMask = 0u;
+    gNdsFxHitSparkSpawnCount = 0u;
+    gNdsFxHitSparkUpdateCount = 0u;
+    gNdsFxHitSparkDrawCount = 0u;
+    gNdsFxHitSparkDropCount = 0u;
+    gNdsFxFlashDrawCount = 0u;
+    gNdsFxArenaRejectCount = 0u;
+    gNdsFxArenaBootSize = gNdsTaskmanArenaChosenSize;
+    gNdsFxObjVramBytes = 0u;
+    gNdsFxObjVramRemaining = NDS_IFCOMMON_OBJ_VRAM_BYTES;
     /* The battle's first OBJ write: a held frame's OBJs (the 1P intro's,
      * nds_source2d.c) still read bank E and the OAM, so the hold ends here
      * (ndsPlatformTransitionThaw), before the init and the atlas bakes. */
@@ -671,7 +671,7 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
         }
     }
     vram_cursor = NDS_IFCOMMON_SPARK_BANK_BASE;
-    if (ndsTask39PrepareHitSparks(&vram_cursor) == FALSE)
+    if (ndsFxPrepareHitSparks(&vram_cursor) == FALSE)
     {
         gNdsIFCommonNativeOamPrepareFailCount++;
         gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
@@ -1265,7 +1265,7 @@ void ndsIFCommonNativeOamBeginFrame(void)
     gNdsIFCommonNativeOamFrameCloudDrawCount = 0u;
     NDS_DIAG(gNdsIFCommonNativeOamLastFallbackReason =
         nNDSIFCommonFallbackNone);
-    ndsTask39HitSparksDraw();
+    ndsFxHitSparksDraw();
 }
 
 static s32 ndsIFCommonAssetForSObj(const SObj *sobj)
@@ -1330,19 +1330,19 @@ static s32 ndsIFCommonMatrixForScale(u16 inverse)
     return (s32)matrix_index;
 }
 
-static void ndsTask39HitSparksDraw(void)
+static void ndsFxHitSparksDraw(void)
 {
     u32 index;
 
-    if ((sNdsTask39HitSparkGfx == NULL) || (gGMCameraGObj == NULL) ||
+    if ((sNdsFxHitSparkGfx == NULL) || (gGMCameraGObj == NULL) ||
         (CObjGetStruct(gGMCameraGObj) == NULL) ||
-        (ndsTask39EffectsArenaValid() == FALSE))
+        (ndsFxEffectsArenaValid() == FALSE))
     {
         return;
     }
-    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    for (index = 0u; index < NDS_FX_HIT_SPARK_CAPACITY; index++)
     {
-        NDSTask39HitSpark *spark = &sNdsTask39HitSparks[index];
+        NDSFxHitSpark *spark = &sNdsFxHitSparks[index];
         Vec3f pos;
         f32 projected_x;
         f32 projected_y;
@@ -1361,7 +1361,7 @@ static void ndsTask39HitSparksDraw(void)
         }
         if (sNdsIFCommonNextOamID < 0)
         {
-            NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
+            NDS_DIAG(gNdsFxHitSparkDropCount++);
             break;
         }
         pos = spark->pos;
@@ -1378,7 +1378,7 @@ static void ndsTask39HitSparksDraw(void)
             continue;
         }
 
-        scale = spark->scale * NDS_TASK39_HIT_SPARK_SCREEN_SCALE;
+        scale = spark->scale * NDS_FX_HIT_SPARK_SCREEN_SCALE;
         scale_q16 = (u32)((scale * 65536.0F) + 0.5F);
         if (scale_q16 == 0u)
         {
@@ -1388,35 +1388,35 @@ static void ndsTask39HitSparksDraw(void)
         matrix_index = ndsIFCommonMatrixForScale(inverse);
         if (matrix_index < 0)
         {
-            NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
+            NDS_DIAG(gNdsFxHitSparkDropCount++);
             continue;
         }
         if (spark->is_heavy != FALSE)
         {
-            frame = NDS_TASK39_HIT_SPARK_HEAVY_OFFSET +
-                ((u32)spark->player * NDS_TASK39_HIT_SPARK_HEAVY_FRAMES) +
-                (((u32)spark->age * NDS_TASK39_HIT_SPARK_HEAVY_FRAMES) /
-                 NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME);
+            frame = NDS_FX_HIT_SPARK_HEAVY_OFFSET +
+                ((u32)spark->player * NDS_FX_HIT_SPARK_HEAVY_FRAMES) +
+                (((u32)spark->age * NDS_FX_HIT_SPARK_HEAVY_FRAMES) /
+                 NDS_FX_HIT_SPARK_HEAVY_LIFETIME);
         }
         else
         {
             frame = ((u32)spark->player *
-                     NDS_TASK39_HIT_SPARK_LIGHT_FRAMES) +
-                (((u32)spark->age * NDS_TASK39_HIT_SPARK_LIGHT_FRAMES) /
-                 NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME);
+                     NDS_FX_HIT_SPARK_LIGHT_FRAMES) +
+                (((u32)spark->age * NDS_FX_HIT_SPARK_LIGHT_FRAMES) /
+                 NDS_FX_HIT_SPARK_LIGHT_LIFETIME);
         }
         size_double = (scale_q16 > (1u << 16)) ? TRUE : FALSE;
         oamSet(&oamMain, sNdsIFCommonNextOamID,
                center_x - (size_double ? 16 : 8),
                center_y - (size_double ? 16 : 8),
                0, 15, SpriteSize_16x16, SpriteColorFormat_Bmp,
-               sNdsTask39HitSparkGfx +
-                   (frame * (NDS_TASK39_HIT_SPARK_CELL_BYTES / 2u)),
+               sNdsFxHitSparkGfx +
+                   (frame * (NDS_FX_HIT_SPARK_CELL_BYTES / 2u)),
                matrix_index, size_double, false, false, false, false);
         sNdsIFCommonNextOamID--;
         sNdsIFCommonFrameNeedsCommit = TRUE;
         gNdsIFCommonNativeOamFrameObjectCount++;
-        NDS_DIAG(gNdsTask39FxHitSparkDrawCount++);
+        NDS_DIAG(gNdsFxHitSparkDrawCount++);
     }
 }
 

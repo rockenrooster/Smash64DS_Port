@@ -128,7 +128,7 @@ class StageBlobLoaderTests(unittest.TestCase):
         for index in range(16):
             if index == 13:
                 # Baked-world table is bounds-checked by the loader but has
-                # no published pointer at NDS_TASK51_STAGE_NATIVE=0.
+                # no published pointer at NDS_STAGE_BAKED_WORLD=0.
                 self.assertEqual(block.get(f"t{index}"), "null",
                                  f"{name} baked table leaked a pointer")
                 continue

@@ -18,7 +18,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
 		echo '#define NDS_STAGE_HW_COMPOSE $(NDS_STAGE_HW_COMPOSE)'; \
 		$(if $(NDS_STAGE_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_STAGE_RIGID_BINDING_MASK $(NDS_STAGE_RIGID_BINDING_MASK)'; ,) \
-		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
+		echo '#define NDS_STAGE_BAKED_WORLD $(NDS_STAGE_BAKED_WORLD)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
 		echo '#define NDS_FIGHTER_PRIMITIVES $(NDS_FIGHTER_PRIMITIVES)'; \
 		echo '#define NDS_STAGE_STEADY $(NDS_STAGE_STEADY)'; \
@@ -214,18 +214,18 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 
 # The .inc carries only the sheet's path, size and hash; the 22,528 bytes
 # themselves are the NitroFS payload, produced by the same invocation.
-$(NDS_TASK39_HIT_SPARKS_INC) $(NDS_TASK39_HIT_SPARKS_ASSET) &: \
-		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py \
+$(NDS_FX_HIT_SPARKS_INC) $(NDS_FX_HIT_SPARKS_ASSET) &: \
+		$(PROJECT_ROOT)/scripts/2d_vfx/generate_fx_hit_sparks.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
-	python "$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py"
+	python "$(PROJECT_ROOT)/scripts/2d_vfx/generate_fx_hit_sparks.py"
 
-$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_TASK39_HIT_SPARKS_ASSET)
+$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_FX_HIT_SPARKS_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
 # R2-07: the packed EFCommon particle bank. The reachable-script set is derived
-# from the P1 effect seams in generate_task39_effect_census.py plus the bank's
+# from the P1 effect seams in generate_fx_effect_census.py plus the bank's
 # own spawn graph, so both scripts and efmanager.c are prerequisites. The header
 # and the JSON report are committed; the .inc is a build product under the
 # gitignored src/nds/generated, which is why the ELF depends on it.

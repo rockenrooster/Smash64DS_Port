@@ -14,7 +14,7 @@
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
-#include <nds/nds_task39_effect_census.h>
+#include <nds/nds_fx_effect_census.h>
 #include <nds/timers.h>
 #include <sys/audio.h>
 #include <string.h>
@@ -2715,7 +2715,7 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
 void efManagerInitEffects(void)
 {
     ndsEFManagerResetDeferredDescs();
-    ndsTask39EffectCensusReset();
+    ndsFxEffectCensusReset();
     gNdsVisualEffectCreateCount = 0u;
     gNdsVisualEffectDestroyCount = 0u;
     gNdsEFManagerSourceEffectStopCount = 0u;

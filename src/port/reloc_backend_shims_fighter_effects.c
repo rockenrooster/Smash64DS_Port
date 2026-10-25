@@ -1067,10 +1067,10 @@ efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
                                      sb32 is_static)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SUBSTITUTE);
-    ndsTask39HitSparkSpawn(pos, player, size, is_static, FALSE);
+    ndsFxEffectCensusRecord(
+        NDS_FX_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
+        NDS_FX_SUBSTITUTE);
+    ndsFxHitSparkSpawn(pos, player, size, is_static, FALSE);
     return NULL;
 }
 
@@ -1078,10 +1078,10 @@ __attribute__((weak)) LBParticle *
 efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_HEAVY_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SUBSTITUTE);
-    ndsTask39HitSparkSpawn(pos, player, size, FALSE, TRUE);
+    ndsFxEffectCensusRecord(
+        NDS_FX_EF_MANAGER_DAMAGE_NORMAL_HEAVY_MAKE_EFFECT,
+        NDS_FX_SUBSTITUTE);
+    ndsFxHitSparkSpawn(pos, player, size, FALSE, TRUE);
     return NULL;
 }
 
@@ -1095,7 +1095,7 @@ efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
  * at ftmain.c:2715. A side-A attack is normal-element and never arrives here.
  *
  * The scale left alone at the source-derived value. The owner filed an orange
- * ball on side-A hits; normal-element hits go to ndsTask39HitSparkSpawn under
+ * ball on side-A hits; normal-element hits go to ndsFxHitSparkSpawn under
  * NDS_TASK39_FX_SPRITES, which is where that row has to be answered. */
 __attribute__((weak)) LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos,
                                                                s32 size)

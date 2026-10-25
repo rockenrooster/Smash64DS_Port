@@ -44,14 +44,14 @@ _CENSUS_DIR = Path(__file__).resolve().parent / "2d_vfx"
 if str(_CENSUS_DIR) not in sys.path:
     sys.path.insert(0, str(_CENSUS_DIR))
 
-import generate_task39_effect_census as census  # noqa: E402
+import generate_fx_effect_census as census  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
 O2R_PARTICLES = Path("decomp/BattleShip-main/BattleShip_o2r/particles")
 EFMANAGER = Path("decomp/BattleShip-main/decomp/src/ef/efmanager.c")
 
-# Same two blobs scripts/generate_task39_hit_sparks.py pins.
+# Same two blobs scripts/generate_fx_hit_sparks.py pins.
 SCRIPT_BANK = ("efcommon_particle_scb",
                "4c639924f0c1ce6e4b3d0c5b3d6b49605d237ff7b79816ddd26ff8631ab0eb1d")
 TEXTURE_BANK = ("efcommon_particle_txb",
@@ -982,7 +982,7 @@ SCRIPT_CONSTRUCTORS = {
 }
 
 # efManagerShieldMakeEffect is classified SUBSTITUTE by
-# generate_task39_effect_census.py through an explicit extra row rather than
+# generate_fx_effect_census.py through an explicit extra row rather than
 # through SUBSTITUTES, so name it here to keep the two lists equivalent.
 #
 # The four below joined it on 2026-08-01, when ndsFTParamMakeSourceEffect
@@ -1399,7 +1399,7 @@ def decode_texture_frame(payload: bytes, texture: dict,
     on both the load and the fetch, so it cancels and the RDRAM image is plain
     row-major -- measured on every efcommon texture, and the reason this
     generator must not apply the swizzle that
-    scripts/generate_task39_hit_sparks.py applies.
+    scripts/generate_fx_hit_sparks.py applies.
     """
     width, height, bits = texture["width"], texture["height"], texture["bits"]
     base = texture["images"][frame]

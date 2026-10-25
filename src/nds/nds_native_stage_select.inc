@@ -928,7 +928,7 @@ typedef struct NDSNativeStagePacket
     const NDSNativeStageStateDelta *state_deltas;
     const u8 *state_sequence;
     const NDSNativeStageStateSpan *state_spans;
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     const s32 (*baked_world)[16];
 #endif
     u16 asset_count;
@@ -1000,7 +1000,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
     sNdsNativeStageStateDeltas,
     sNdsNativeStageStateSequence,
     sNdsNativeStageStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_ASSET_COUNT,
@@ -1050,7 +1050,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
     sNdsNativeStageYosterStateDeltas,
     sNdsNativeStageYosterStateSequence,
     sNdsNativeStageYosterStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageYosterBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_YOSTER_ASSET_COUNT,
@@ -1107,7 +1107,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketJungle = {
     sNdsNativeStageJungleStateDeltas,
     sNdsNativeStageJungleStateSequence,
     sNdsNativeStageJungleStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageJungleBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_JUNGLE_ASSET_COUNT,
@@ -1161,7 +1161,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketCastle = {
     sNdsNativeStageCastleStateDeltas,
     sNdsNativeStageCastleStateSequence,
     sNdsNativeStageCastleStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageCastleBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_CASTLE_ASSET_COUNT,
@@ -1220,7 +1220,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketSector = {
     sNdsNativeStageSectorStateDeltas,
     sNdsNativeStageSectorStateSequence,
     sNdsNativeStageSectorStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageSectorBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_SECTOR_ASSET_COUNT,
@@ -1280,7 +1280,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketHyrule = {
     sNdsNativeStageHyruleStateDeltas,
     sNdsNativeStageHyruleStateSequence,
     sNdsNativeStageHyruleStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageHyruleBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_HYRULE_ASSET_COUNT,
@@ -1340,7 +1340,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketInishie = {
     sNdsNativeStageInishieStateDeltas,
     sNdsNativeStageInishieStateSequence,
     sNdsNativeStageInishieStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageInishieBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_INISHIE_ASSET_COUNT,
@@ -1400,7 +1400,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketZebes = {
     sNdsNativeStageZebesStateDeltas,
     sNdsNativeStageZebesStateSequence,
     sNdsNativeStageZebesStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageZebesBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_ZEBES_ASSET_COUNT,
@@ -1458,7 +1458,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
     sNdsNativeStageYamabukiStateDeltas,
     sNdsNativeStageYamabukiStateSequence,
     sNdsNativeStageYamabukiStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageYamabukiBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_YAMABUKI_ASSET_COUNT,
@@ -1492,8 +1492,8 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
      * opt-out.
      *
      * THAT READER IS COMPILED OUT OF EVERY DEFAULT BUILD.
-     * ndsRendererNativeStageTask51EnsureWorld and its single call site both sit
-     * inside `#if NDS_TASK51_STAGE_NATIVE`, and Makefile:232 defaults that to
+     * ndsRendererNativeStageBakedEnsureWorld and its single call site both sit
+     * inside `#if NDS_STAGE_BAKED_WORLD`, and Makefile:232 defaults that to
      * 0 -- r36's own nds_build_config.h:20 has it at 0. So this mask has no
      * consumer in the shipped ROM and every non-rigid binding already composes
      * live each frame. Widening it from 0x4894 to 0xE4894 on 2026-09-21 to fix
@@ -1534,7 +1534,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketPupupuSmall = {
     sNdsNativeStagePupupuSmallStateDeltas,
     sNdsNativeStagePupupuSmallStateSequence,
     sNdsNativeStagePupupuSmallStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStagePupupuSmallBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_PUPUPUSMALL_ASSET_COUNT,
@@ -1590,7 +1590,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYosterSmall = {
     sNdsNativeStageYosterSmallStateDeltas,
     sNdsNativeStageYosterSmallStateSequence,
     sNdsNativeStageYosterSmallStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageYosterSmallBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_YOSTERSMALL_ASSET_COUNT,
@@ -1646,7 +1646,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketMetal = {
     sNdsNativeStageMetalStateDeltas,
     sNdsNativeStageMetalStateSequence,
     sNdsNativeStageMetalStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageMetalBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_METAL_ASSET_COUNT,
@@ -1702,7 +1702,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketZako = {
     sNdsNativeStageZakoStateDeltas,
     sNdsNativeStageZakoStateSequence,
     sNdsNativeStageZakoStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageZakoBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_ZAKO_ASSET_COUNT,
@@ -1758,7 +1758,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketLast = {
     sNdsNativeStageLastStateDeltas,
     sNdsNativeStageLastStateSequence,
     sNdsNativeStageLastStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageLastBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_LAST_ASSET_COUNT,
@@ -1814,7 +1814,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus3 = {
     sNdsNativeStageBonus3StateDeltas,
     sNdsNativeStageBonus3StateSequence,
     sNdsNativeStageBonus3StateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus3BakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS3_ASSET_COUNT,
@@ -1872,7 +1872,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Mario = {
     sNdsNativeStageBonus1MarioStateDeltas,
     sNdsNativeStageBonus1MarioStateSequence,
     sNdsNativeStageBonus1MarioStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1MarioBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1MARIO_ASSET_COUNT,
@@ -1930,7 +1930,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Fox = {
     sNdsNativeStageBonus1FoxStateDeltas,
     sNdsNativeStageBonus1FoxStateSequence,
     sNdsNativeStageBonus1FoxStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1FoxBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1FOX_ASSET_COUNT,
@@ -1988,7 +1988,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Donkey = {
     sNdsNativeStageBonus1DonkeyStateDeltas,
     sNdsNativeStageBonus1DonkeyStateSequence,
     sNdsNativeStageBonus1DonkeyStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1DonkeyBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1DONKEY_ASSET_COUNT,
@@ -2046,7 +2046,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Samus = {
     sNdsNativeStageBonus1SamusStateDeltas,
     sNdsNativeStageBonus1SamusStateSequence,
     sNdsNativeStageBonus1SamusStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1SamusBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1SAMUS_ASSET_COUNT,
@@ -2104,7 +2104,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Luigi = {
     sNdsNativeStageBonus1LuigiStateDeltas,
     sNdsNativeStageBonus1LuigiStateSequence,
     sNdsNativeStageBonus1LuigiStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1LuigiBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1LUIGI_ASSET_COUNT,
@@ -2162,7 +2162,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Link = {
     sNdsNativeStageBonus1LinkStateDeltas,
     sNdsNativeStageBonus1LinkStateSequence,
     sNdsNativeStageBonus1LinkStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1LinkBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1LINK_ASSET_COUNT,
@@ -2220,7 +2220,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Yoshi = {
     sNdsNativeStageBonus1YoshiStateDeltas,
     sNdsNativeStageBonus1YoshiStateSequence,
     sNdsNativeStageBonus1YoshiStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1YoshiBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1YOSHI_ASSET_COUNT,
@@ -2278,7 +2278,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Captain = {
     sNdsNativeStageBonus1CaptainStateDeltas,
     sNdsNativeStageBonus1CaptainStateSequence,
     sNdsNativeStageBonus1CaptainStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1CaptainBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1CAPTAIN_ASSET_COUNT,
@@ -2336,7 +2336,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Kirby = {
     sNdsNativeStageBonus1KirbyStateDeltas,
     sNdsNativeStageBonus1KirbyStateSequence,
     sNdsNativeStageBonus1KirbyStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1KirbyBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1KIRBY_ASSET_COUNT,
@@ -2394,7 +2394,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Pikachu = {
     sNdsNativeStageBonus1PikachuStateDeltas,
     sNdsNativeStageBonus1PikachuStateSequence,
     sNdsNativeStageBonus1PikachuStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1PikachuBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1PIKACHU_ASSET_COUNT,
@@ -2452,7 +2452,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Purin = {
     sNdsNativeStageBonus1PurinStateDeltas,
     sNdsNativeStageBonus1PurinStateSequence,
     sNdsNativeStageBonus1PurinStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1PurinBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1PURIN_ASSET_COUNT,
@@ -2510,7 +2510,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus1Ness = {
     sNdsNativeStageBonus1NessStateDeltas,
     sNdsNativeStageBonus1NessStateSequence,
     sNdsNativeStageBonus1NessStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus1NessBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS1NESS_ASSET_COUNT,
@@ -2568,7 +2568,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Mario = {
     sNdsNativeStageBonus2MarioStateDeltas,
     sNdsNativeStageBonus2MarioStateSequence,
     sNdsNativeStageBonus2MarioStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2MarioBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2MARIO_ASSET_COUNT,
@@ -2626,7 +2626,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Fox = {
     sNdsNativeStageBonus2FoxStateDeltas,
     sNdsNativeStageBonus2FoxStateSequence,
     sNdsNativeStageBonus2FoxStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2FoxBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2FOX_ASSET_COUNT,
@@ -2684,7 +2684,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Donkey = {
     sNdsNativeStageBonus2DonkeyStateDeltas,
     sNdsNativeStageBonus2DonkeyStateSequence,
     sNdsNativeStageBonus2DonkeyStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2DonkeyBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2DONKEY_ASSET_COUNT,
@@ -2742,7 +2742,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Samus = {
     sNdsNativeStageBonus2SamusStateDeltas,
     sNdsNativeStageBonus2SamusStateSequence,
     sNdsNativeStageBonus2SamusStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2SamusBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2SAMUS_ASSET_COUNT,
@@ -2800,7 +2800,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Luigi = {
     sNdsNativeStageBonus2LuigiStateDeltas,
     sNdsNativeStageBonus2LuigiStateSequence,
     sNdsNativeStageBonus2LuigiStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2LuigiBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2LUIGI_ASSET_COUNT,
@@ -2858,7 +2858,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Link = {
     sNdsNativeStageBonus2LinkStateDeltas,
     sNdsNativeStageBonus2LinkStateSequence,
     sNdsNativeStageBonus2LinkStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2LinkBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2LINK_ASSET_COUNT,
@@ -2916,7 +2916,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Yoshi = {
     sNdsNativeStageBonus2YoshiStateDeltas,
     sNdsNativeStageBonus2YoshiStateSequence,
     sNdsNativeStageBonus2YoshiStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2YoshiBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2YOSHI_ASSET_COUNT,
@@ -2974,7 +2974,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Captain = {
     sNdsNativeStageBonus2CaptainStateDeltas,
     sNdsNativeStageBonus2CaptainStateSequence,
     sNdsNativeStageBonus2CaptainStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2CaptainBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2CAPTAIN_ASSET_COUNT,
@@ -3032,7 +3032,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Kirby = {
     sNdsNativeStageBonus2KirbyStateDeltas,
     sNdsNativeStageBonus2KirbyStateSequence,
     sNdsNativeStageBonus2KirbyStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2KirbyBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2KIRBY_ASSET_COUNT,
@@ -3090,7 +3090,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Pikachu = {
     sNdsNativeStageBonus2PikachuStateDeltas,
     sNdsNativeStageBonus2PikachuStateSequence,
     sNdsNativeStageBonus2PikachuStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2PikachuBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2PIKACHU_ASSET_COUNT,
@@ -3148,7 +3148,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Purin = {
     sNdsNativeStageBonus2PurinStateDeltas,
     sNdsNativeStageBonus2PurinStateSequence,
     sNdsNativeStageBonus2PurinStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2PurinBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2PURIN_ASSET_COUNT,
@@ -3206,7 +3206,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketBonus2Ness = {
     sNdsNativeStageBonus2NessStateDeltas,
     sNdsNativeStageBonus2NessStateSequence,
     sNdsNativeStageBonus2NessStateSpans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
     sNdsNativeStageBonus2NessBakedWorldMatrices,
 #endif
     NDS_NATIVE_STAGE_BONUS2NESS_ASSET_COUNT,
@@ -3459,7 +3459,7 @@ __attribute__((used)) volatile u32 gNdsNativeStagePacketUnresolvedKind = 0xffu;
 /* Blob layout proof: the loader's mirror must stay field-identical to this
  * packet, because the resolver below reads a blob packet through a cast.
  * offsetof without <stddef.h>; both structs take the same
- * NDS_TASK51_STAGE_NATIVE arm by construction. */
+ * NDS_STAGE_BAKED_WORLD arm by construction. */
 _Static_assert(sizeof(NDSNativeStagePacket) == sizeof(NDSNativeStageBlobPacket),
                "blob packet mirror drifted from NDSNativeStagePacket");
 _Static_assert((size_t)&((const NDSNativeStagePacket *)0)->assets ==
@@ -3600,7 +3600,7 @@ static s32 ndsRendererNativeStageSelectPacket(void)
 #define sNdsNativeStageStateDeltas (sNdsNativeStagePacketActive->state_deltas)
 #define sNdsNativeStageStateSequence (sNdsNativeStagePacketActive->state_sequence)
 #define sNdsNativeStageStateSpans (sNdsNativeStagePacketActive->state_spans)
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
 #define sNdsNativeStageBakedWorldMatrices (sNdsNativeStagePacketActive->baked_world)
 #endif
 #endif /* NDS_NATIVE_STAGE_MULTI */

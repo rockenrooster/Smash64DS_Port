@@ -42,7 +42,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="metal",
-    include_sha="912ca91b061bc2a617dac4784528fff797928546847a1a7323b2a3377e33e8cd",
+    include_sha="c4a64bb2fbb4fb7e8d3bd3d7c37fd375945fbc03df83fa5a548338021a6558b0",
     generated_segment_index=-1,
     symbol_prefix="Metal",
     macro_prefix="METAL_",

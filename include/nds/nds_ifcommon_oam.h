@@ -59,10 +59,10 @@ void ndsIFCommonTrainingEnd(void);
 #define NDS_TASK39_FX_ENGAGED_SPRITES (1u << 0)
 #define NDS_TASK39_FX_ENGAGED_FLASH (1u << 1)
 
-void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
+void ndsFxHitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy);
-void ndsTask39EffectsUpdate(void);
-void ndsTask39EffectsEngage(u32 mask);
+void ndsFxEffectsUpdate(void);
+void ndsFxEffectsEngage(u32 mask);
 
 extern volatile u32 gNdsIFCommonNativeOamPrepareCount;
 extern volatile u32 gNdsIFCommonNativeOamPrepareSuccessCount;
@@ -97,19 +97,19 @@ extern volatile u32 gNdsIFCommonNativeOamFrameCloudDrawCount;
 extern volatile u32 gNdsIFCommonNativeOamFrameSemanticHash;
 extern volatile u32 gNdsIFCommonNativeOamLastFallbackReason;
 extern volatile u32 gNdsIFCommonNativeOamCommitCount;
-extern volatile u32 gNdsTask39FxSpawnTicks;
-extern volatile u32 gNdsTask39FxUpdateTicks;
-extern volatile u32 gNdsTask39FxDrawTicks;
-extern volatile u32 gNdsTask39FxFrameTicks;
-extern volatile u32 gNdsTask39FxMaxFrameTicks;
-extern volatile u32 gNdsTask39FxEngagementMask;
-extern volatile u32 gNdsTask39FxHitSparkSpawnCount;
-extern volatile u32 gNdsTask39FxHitSparkUpdateCount;
-extern volatile u32 gNdsTask39FxHitSparkDrawCount;
-extern volatile u32 gNdsTask39FxHitSparkDropCount;
-extern volatile u32 gNdsTask39FxFlashDrawCount;
-extern volatile u32 gNdsTask39FxArenaRejectCount;
-extern volatile u32 gNdsTask39FxObjVramBytes;
-extern volatile u32 gNdsTask39FxObjVramRemaining;
+extern volatile u32 gNdsFxSpawnTicks;
+extern volatile u32 gNdsFxUpdateTicks;
+extern volatile u32 gNdsFxDrawTicks;
+extern volatile u32 gNdsFxFrameTicks;
+extern volatile u32 gNdsFxMaxFrameTicks;
+extern volatile u32 gNdsFxEngagementMask;
+extern volatile u32 gNdsFxHitSparkSpawnCount;
+extern volatile u32 gNdsFxHitSparkUpdateCount;
+extern volatile u32 gNdsFxHitSparkDrawCount;
+extern volatile u32 gNdsFxHitSparkDropCount;
+extern volatile u32 gNdsFxFlashDrawCount;
+extern volatile u32 gNdsFxArenaRejectCount;
+extern volatile u32 gNdsFxObjVramBytes;
+extern volatile u32 gNdsFxObjVramRemaining;
 
 #endif

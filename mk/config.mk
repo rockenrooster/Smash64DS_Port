@@ -150,7 +150,7 @@ NDS_FIGHTER_PRIMITIVES ?= 2
 # Task 36's rigid-subset replay to the full 42-binding model-space form.
 # Default off; the published ROM stays byte-identical at 0. Ship-ready only
 # once the differ (Tier 1 = 0, Tier 2 <= 1.0 px) and STG budget clear.
-NDS_TASK51_STAGE_NATIVE ?= 0
+NDS_STAGE_BAKED_WORLD ?= 0
 # Task 62: generated Dream Land DS-native static 3D mesh (candidate c120).
 # Default off; the published ROM stays byte-identical at 0. Ship-ready only
 # once the owner's visual A/B + perf A/B (Commit 5 KEEP gate) clears.

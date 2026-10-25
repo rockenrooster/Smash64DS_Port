@@ -152,8 +152,8 @@ $(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT): $(PROJECT_ROOT)/linker/nds_frontend_overl
 		-e '/battleship_item_tarubomb\.o/d' $< > $@
 endif
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
-NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
-NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
+NDS_FX_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/fx_hit_sparks.generated.inc
+NDS_FX_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
 NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
 # Slice 32. The baked fighter-animation bank: 145,873 20-byte write records plus

@@ -440,7 +440,7 @@ SECTIONS {
 		*(.bss.sNdsSObjHudPass)
 		*(.bss.gNdsFtrPreResetTransient)
 		*(.bss.gNdsFighterDisplayContractMaterialLight1)
-		*(.bss.gNdsTask39FxHitSparkDrawCount)
+		*(.bss.gNdsFxHitSparkDrawCount)
 		*(.bss.gNdsTickHudBackgroundTicks)
 		*(.bss.gNdsParticleScaleShiftMax)
 		*(.bss.gNdsParticleRejectCount)

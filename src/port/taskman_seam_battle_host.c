@@ -200,7 +200,7 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     u32 phase_start = start;
 #endif
 
-    ndsTask39EffectsUpdate();
+    ndsFxEffectsUpdate();
     ndsSeamSceneUpdate();
 #if NDS_TICK_HUD
     {

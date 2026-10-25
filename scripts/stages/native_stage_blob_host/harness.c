@@ -256,7 +256,7 @@ static void dumpAttempt(const char *prefix, s32 result)
             packet->corners, packet->epochs, packet->materials,
             packet->policies, packet->state_deltas, packet->state_sequence,
             packet->state_spans,
-#if NDS_TASK51_STAGE_NATIVE
+#if NDS_STAGE_BAKED_WORLD
             packet->baked_world,
 #else
             NULL,
