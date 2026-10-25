@@ -78,13 +78,14 @@ from native_stage_descriptors import StageDescriptor
 # emits no triangles, runs, or vertices for it. Host census measured binding
 # 16 (global DObj 18, head 1, root 0x8688) going 4 tris / 4 runs / 6 source
 # vertices / 1 epoch to zero with every sibling binding bit-identical; the
-# counts and include_sha below pin that post-omission packet. The selector
+# counts and include_sha below pin that post-omission packet (the sha, since
+# 2026-10-24, with cull_back_roots' flag on the garage interior's run). The selector
 # additionally pins its actual payload DL offset 0x8688; 0x1664 is part of
 # the source symbol's generated name, not the payload offset.
 
 DESCRIPTOR = StageDescriptor(
     name="yamabuki",
-    include_sha="1de67e76c724ff1982787391103ea23dd4fad86beddac6973cd27fb07a86966f",
+    include_sha="8d0c41a6fe53e212bfcdf710a9f2566efec68636b8caee00262f9f300cabe5d1",
     generated_segment_index=-1,
     symbol_prefix="Yamabuki",
     macro_prefix="YAMABUKI_",
@@ -186,6 +187,14 @@ DESCRIPTOR = StageDescriptor(
     material_command_partition=(5, 5),
     segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 18), (4, 6, 17, 4, 77, 15)),
     omitted_draw_roots=((112, "layer3", 2, 1, 0x8688),),
+    # The garage's translucent interior (layer 1 DObj 4, display head 1, DL
+    # 0x68B8: ZMODE_XLU, two-sided) whose ceiling lies 11 units under the
+    # garage roof (layer 1 DObj 1 at y 802). The N64's depth buffer kept the
+    # roof in front; the stage program's packed coordinates put the two within
+    # a few units and the ceiling showed through as white triangles (owner
+    # BUGS.md 2026-10-24). The ceiling faces down: culled from above, drawn
+    # from below through the open gate.
+    cull_back_roots=((112, "layer1", 4, 1, 0x68B8),),
     callback_partition=(("layer0", "grDisplayLayer0PriProcDisplay", 4), ("layer1", "grDisplayLayer1SecProcDisplay", 6), ("layer3", "grDisplayLayer3SecProcDisplay", 17), ("gate", "gcDrawDObjTreeDLLinksForGObj", 6)),
     segment0={
 

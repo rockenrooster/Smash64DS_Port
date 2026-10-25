@@ -175,6 +175,11 @@ RUN_FLAG_VERTEX_ALPHA_RAMP = 1 << 1
 # texture (sNdsRendererHardwareIntensityCoverage). Mirror:
 # NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU, src/nds/nds_renderer_native_owners.c.
 RUN_FLAG_HEAD_XLU = 1 << 2
+# A run of a descriptor's cull_back_roots: the source draws it two-sided, the
+# DS culls its back faces. Mirror: NDS_NATIVE_STAGE_RUN_FLAG_CULL_BACK,
+# src/nds/nds_renderer_native_owners.c. (Bit 5: bits 3 and 4 are the
+# generator-internal flags below.)
+RUN_FLAG_CULL_BACK = 1 << 5
 # Generator-internal run flags, spent before the packet is written
 # (_strip_generator_run_flags), so no runtime run table carries them.
 #
@@ -2893,6 +2898,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 
     binding_cursor = 0
     omitted_draws = set(desc.omitted_draw_roots)
+    cull_back_draws = set(desc.cull_back_roots)
+    matched_cull_backs = set()
     # (file_id, root) keeps one level, the shape every existing row used;
     # (file_id, root, levels) asks for more. Level N splits each triangle of
     # level N-1 at ITS edge midpoints, so the facet count is 4**N and the alpha
@@ -3434,6 +3441,12 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     int(current_run["flags"])
                                     | RUN_FLAG_HEAD_XLU
                                 )
+                            if draw_identity in cull_back_draws:
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_CULL_BACK
+                                )
+                                matched_cull_backs.add(draw_identity)
                             if not state.shading_smooth:
                                 current_run["flags"] = (
                                     int(current_run["flags"])
@@ -3508,6 +3521,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 
     if matched_omissions != omitted_draws:
         raise falsify(f"unmatched drawable omissions: {omitted_draws - matched_omissions}")
+    if matched_cull_backs != cull_back_draws:
+        raise falsify(f"cull_back_roots that draw nothing: {cull_back_draws - matched_cull_backs}")
     packet = Packet(
         assets,
         tuple(segments),
@@ -3707,6 +3722,7 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
             unknown_flags = run.flags & ~(
                 RUN_FLAG_PROJECTED_CROSS_MATRIX | RUN_FLAG_VERTEX_ALPHA_RAMP
                 | RUN_FLAG_HEAD_XLU | RUN_FLAG_FLAT_SHADE | RUN_FLAG_SOURCE_LIT
+                | RUN_FLAG_CULL_BACK
             )
             if unknown_flags:
                 raise falsify(

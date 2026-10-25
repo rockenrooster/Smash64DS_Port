@@ -611,6 +611,11 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
  * scripts/stages/generate_nds_native_stage.py. */
 #define NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU (1u << 2)
 
+/* A run the source draws two-sided whose back faces the DS culls (a stage
+ * descriptor's cull_back_roots: Saffron's garage interior under its roof).
+ * Mirror of RUN_FLAG_CULL_BACK, scripts/stages/generate_nds_native_stage.py. */
+#define NDS_NATIVE_STAGE_RUN_FLAG_CULL_BACK (1u << 5)
+
 /* The render mode a Sec layer's display head 1 enters with
  * (gr/grdisplay.c:66-145): G_RM_AA_ZB_XLU_SURF on layer 1 (link 6),
  * G_RM_AA_XLU_SURF on layers 0, 2 and 3. Head 0's opaque surface mode is
@@ -836,7 +841,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             ((run->flags &
               ~(NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX |
                 NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP |
-                NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU)) != 0u) ||
+                NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU |
+                NDS_NATIVE_STAGE_RUN_FLAG_CULL_BACK)) != 0u) ||
             ((u32)run->first_corner + corner_count >
              NDS_NATIVE_STAGE_CORNER_COUNT))
         {
@@ -1699,6 +1705,11 @@ static s32 ndsRendererNativeStagePrepareRun(
         return FALSE;
     }
     prepared->poly_fmt = ndsRendererHardwarePolyFmt(stats, alpha);
+    if ((run->flags & NDS_NATIVE_STAGE_RUN_FLAG_CULL_BACK) != 0u)
+    {
+        prepared->poly_fmt = (prepared->poly_fmt & ~POLY_CULL_NONE) |
+                             POLY_CULL_BACK;
+    }
     gNdsNativeStageRoofSnapGiven[run_index] = run->triangle_count;
     *epoch_mask |= (u64)1u << run->texture_epoch;
     return TRUE;

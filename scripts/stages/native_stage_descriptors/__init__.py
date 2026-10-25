@@ -44,6 +44,12 @@ class StageDescriptor:
     # and admission are unchanged; only its triangle/run/vertex emission is
     # suppressed. Empty by default, which leaves every packet byte-identical.
     omitted_draw_roots: tuple = ()
+    # Drawables the source draws two-sided whose back faces the DS culls
+    # (generate_nds_native_stage.RUN_FLAG_CULL_BACK): same rows as above. A
+    # surface just under another that the source's depth buffer resolved
+    # (Saffron's garage roof over its translucent interior). Empty by
+    # default, which leaves every packet byte-identical.
+    cull_back_roots: tuple = ()
     # Source roots whose shade-alpha gradients need one source-derived midpoint
     # subdivision before the DS per-polygon alpha collapse. Rows are
     # (asset_id, binding_root). Empty keeps existing packets byte-identical.
