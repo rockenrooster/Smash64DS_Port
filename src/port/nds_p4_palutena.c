@@ -740,6 +740,14 @@ static void ndsP4PalutenaCounterStart(GObj *fighter_gobj, s32 status_id)
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
     *ndsP4PalutenaCounterHit(fp) = 0;
     fp->special_coll = &sNdsP4PalutenaReflectColl;
+    /* The window opens at frame 1 (motions/counter.ms), which the setter has
+     * already played before clearing the flags; and the start runs in the
+     * proc_interrupt, after this tick's proc_update, while this tick's hits
+     * are still to come. So it opens here, armour and reflector with it
+     * (owner BUGS.md 2026-10-24: "attacks go through the counter"). */
+    fp->motion_vars.flags.flag0 = 1;
+    fp->knockback_resist_status = PAL_COUNTER_ARMOUR;
+    fp->is_reflect = TRUE;
 }
 
 /* ground_dsp. */
