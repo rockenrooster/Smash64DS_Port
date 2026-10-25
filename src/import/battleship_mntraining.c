@@ -44,7 +44,7 @@
  * - Resolved port-side, no action: syUtilsRandTimeUCharRange (COM random
  *   roll :3086; port-provided via existing source imports, extern-declared
  *   below like src/nds/nds_menu_shell_core.c:42), ftParamGetCostumeCommonID
- *   (port src/port/reloc_backend_compat_shims.c:16271),
+ *   (port src/port/reloc_backend_source_shims.c:16271),
  *   scSubsysFighterGetLightAngleX/Y (port include/ft/fighter.h:4813),
  *   scSubsysFighterSetLightParams + scSubsysController* (port
  *   include/sc/scene.h:561-569), lbReloc, lbCommon, gc, syVideo, syTaskman,

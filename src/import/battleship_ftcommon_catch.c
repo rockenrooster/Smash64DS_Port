@@ -197,7 +197,7 @@ sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
  * source mash-out timer/knockback release.
  *
  * Import the complete BattleShip ftcommoncapture.c body under base names.  The
- * public wrappers remain in reloc_backend_compat_shims.c so existing diagnostic
+ * public wrappers remain in reloc_backend_source_shims.c so existing diagnostic
  * seams keep one ABI owner, but every cargo behavior call below is the source
  * implementation rather than a DS-local reconstruction.
  */

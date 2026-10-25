@@ -2799,8 +2799,8 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
  *
  * Every function below is a one-line forward to the decomp implementation that
  * this file already compiles as ndsBaseEFManager*. They exist because the port
- * shipped WEAK substitutes for all of them (reloc_backend_compat_shims.c,
- * battle_playable_compat_stubs.c) that build a 16-vertex untextured primitive
+ * shipped WEAK substitutes for all of them (reloc_backend_source_shims.c,
+ * unimported_source_stubs.c) that build a 16-vertex untextured primitive
  * -- dust, star, ring or disc -- recoloured per effect. Thirteen effect kinds
  * shared four shapes, so a Coin looked like a Sparkle and a KO burst was a red
  * ring.
@@ -3146,7 +3146,7 @@ LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
 /* BattleShip ftparam.c:2059-2066 owns this tiny specialization at the fighter
  * layer, but LBParticle is deliberately opaque outside the effect owner on DS.
  * Keep the exact source result (scale 0.7, prim alpha 0xC0) here rather than
- * leaking the particle layout into reloc_backend_compat_shims.c. */
+ * leaking the particle layout into reloc_backend_source_shims.c. */
 LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos)
 {
     LBParticle *pc = efManagerSparkleWhiteScaleMakeEffect(pos, 0.7F);

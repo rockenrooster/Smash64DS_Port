@@ -27,8 +27,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import generate_battle_playable_static_textures as static
-import generate_battle_playable_texture_census as census
+import generate_battle_static_textures as static
+import generate_battle_texture_census as census
 
 
 OUTPUT = ROOT / "src/nds/nds_entry_effects.generated.inc"

@@ -1128,7 +1128,7 @@ export NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES :=
 ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
 ifeq ($(NDS_RENDERER_HW_TRIANGLES),1)
 NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
-	$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin
+	$(NITROFS_DIR)/renderer/battle_static_textures.rgb5a1.bin
 endif
 endif
 

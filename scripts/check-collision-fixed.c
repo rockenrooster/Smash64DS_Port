@@ -88,7 +88,7 @@ static void Verdict(const char *label, double worst, double bound, long cases,
 /* ---- the decomp originals, transcribed ------------------------------- */
 
 /* lb/lbcommon.c:321 as the port ships it
- * (src/port/reloc_backend_compat_shims.c:13519). */
+ * (src/port/reloc_backend_source_shims.c:13519). */
 static float FloatSin(float angle)
 {
     int32_t index = ((int32_t)(angle * 651.8986206f)) & 0xFFF;

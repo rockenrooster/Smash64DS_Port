@@ -283,7 +283,7 @@ EXPECTED_CENSUS_SHA256 = (
     # 56 of 59 words moved out of RAM into a generated ROM record -- and updated
     # this file's renderer expectations WITHOUT re-pinning. Every checkpoint
     # since then failed the census, and because
-    # generate_battle_playable_static_textures.py calls this census, it died too
+    # generate_battle_static_textures.py calls this census, it died too
     # and reported "no residency bytes", so the ENTIRE Boundary verifier profile
     # aborted in pre-flight. 938 commits landed red before it was traced.
     #

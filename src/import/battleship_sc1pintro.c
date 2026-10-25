@@ -39,12 +39,12 @@
  * Fighter-side symbols the intro resolves (all port-provided, no action):
  * ftManagerMakeFighter (battleship_ftmanager.c:94), ftManagerSetupFilesAllKind
  * (battleship_ftmanager.c:80), ftManagerAllocFighter + gFTManagerFigatreeHeapSize
- * (reloc_backend_compat_shims.c:1639), dFTManagerDefaultFighterDesc
+ * (reloc_backend_source_shims.c:1639), dFTManagerDefaultFighterDesc
  * (include/ft/fighter.h:4158), ftParamGetCostumeCommonID
- * (reloc_backend_compat_shims.c:16271), ftParamInitAllParts
- * (reloc_backend_compat_shims.c:1807), ftParamSetModelPartID
- * (reloc_backend_compat_shims.c:8323), scSubsysFighterSetStatus
- * (reloc_backend_compat_shims.c:16316), ftMainSetStatus
+ * (reloc_backend_source_shims.c:16271), ftParamInitAllParts
+ * (reloc_backend_source_shims.c:1807), ftParamSetModelPartID
+ * (reloc_backend_source_shims.c:8323), scSubsysFighterSetStatus
+ * (reloc_backend_source_shims.c:16316), ftMainSetStatus
  * (reloc_backend_ftmain_status_compat.c:4488), ftDisplayMainProcDisplay
  * (reloc_backend_fighter_display_seam.c:1), dSCSubsysFighterScales +
  * scSubsysFighterSetLightParams (reloc_backend_fighter_display_seam.c:93,110),

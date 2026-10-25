@@ -177,7 +177,7 @@ NDS_LAB_JOINT_CAP ?= 0
 # joint lever, never the lever. 0 = shipping.
 NDS_LAB_POSE_JOINT_CAP ?= 0
 # P2-2p8 N05.03. Slots in the flattened fighter-parts invalidation cache
-# (`reloc_backend_compat_shims.c`). Must be a power of two. The shipped value is
+# (`reloc_backend_source_shims.c`). Must be a power of two. The shipped value is
 # 4, chosen when the cache was believed to be keyed per fighter root; it is
 # keyed per invalidated JOINT, so four slots cannot hold a steady state. Raising
 # it costs 396 bytes of .bss per slot and is the whole of the candidate -- the

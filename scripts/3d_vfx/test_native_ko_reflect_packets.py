@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "scripts/3d_vfx"))
 
-import generate_battle_playable_texture_census as census
+import generate_battle_texture_census as census
 import generate_nds_entry_effects as gen
 import packet_test_common
 

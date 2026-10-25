@@ -98,7 +98,7 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
  * the drawn frame shows what it showed. An animation set on an earlier tick
  * starts one tick late. Outside a battle the word is 1 (the source rate).
  * Exceptions keep the source rate: the one-shot costume bake
- * (lbCommonAddMObjForFighterPartsDObj, src/port/reloc_backend_compat_shims.c),
+ * (lbCommonAddMObjForFighterPartsDObj, src/port/reloc_backend_source_shims.c),
  * which removes its AObjs right after its play, and Yoshi's Island's clouds,
  * whose MObj `anim_wait` gryoster.c reads to make cloud lines solid. */
 volatile u32 gNdsMObjTickMul __attribute__((used, section(".data"))) = 1u;
@@ -236,7 +236,7 @@ volatile u32 gNdsCubicEvals;
  *
  *   bit 0 (1) -- the loop-invariant hoist in gcPlayDObjAnimJoint
  *   bit 1 (2) -- the fused length*length_invert multiply in the cubic kernel
- *   bit 2 (4) -- the port-side figatree parser (reloc_backend_compat_shims.c
+ *   bit 2 (4) -- the port-side figatree parser (reloc_backend_source_shims.c
  *                selects it; the body is in battleship_ftanim.c)
  *   bit 3 (8) -- Requirement 4: the fighter AObj stored in fixed point. Reads
  *                in BOTH files at once, because the parser writes the Q form

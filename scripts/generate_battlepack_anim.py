@@ -397,7 +397,7 @@ def emit_blob(directory):
     """One fighter's clips as a single position-independent resident blob.
 
     THE CONSUMER IS `lbCommonAddFighterPartsFigatree`
-    (`src/port/reloc_backend_compat_shims.c:9044`), which walks ONE WORD PER
+    (`src/port/reloc_backend_source_shims.c:9044`), which walks ONE WORD PER
     DObj SLOT and hands each word to `ndsRelocResolvePointerFromFileBase`
     (`reloc_backend_assets.c:2850`). That resolver treats a word which is not
     already inside a known file as a BYTE OFFSET FROM THE CONTAINING FILE'S

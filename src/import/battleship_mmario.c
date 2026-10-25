@@ -13,7 +13,7 @@
  *   with a material swap: the source ships a distinct model/texture file.
  * - knockback_resist_passive 30.0 (ftmanager.c:577-578), fallthrough Mario /
  *   NMario tornado init (:582-584). Compiled via battleship_ftmanager.c whole
- *   import; the port shim at reloc_backend_compat_shims.c:7241-7245 already
+ *   import; the port shim at reloc_backend_source_shims.c:7241-7245 already
  *   carries the Mario/MMario/NMario tornado triple.
  * - is_metallic TRUE (206_MMarioMain.c:185 vs Mario FALSE) selects MDust over
  *   Sparks via the existing switch (ftmain.c:2742-2750), compiled via

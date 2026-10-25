@@ -294,7 +294,7 @@ static void ndsSCVSBattleBeginScenePlacement(void)
     /* And the other half of making GAME SET survivable: the update proc that
      * announcement installs dereferences the two particle GObjs unconditionally,
      * and they are NULL while the particle runtime is off. See
-     * battle_playable_compat_stubs.c for the measurement. */
+     * unimported_source_stubs.c for the measurement. */
     ndsEFParticleEnsureGObjPlaceholders();
 }
 

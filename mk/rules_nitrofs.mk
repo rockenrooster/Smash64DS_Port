@@ -277,23 +277,23 @@ $(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_ph
 # One generator invocation produces the metadata .inc AND the RGB555+A1 payload,
 # so they are a grouped target (`&:`) exactly like the particle bank above --
 # two separate rules would each run the generator. The census script is a
-# prerequisite because generate_battle_playable_static_textures.py imports it
-# (see its own comment at generate_battle_playable_texture_census.py:258): when
+# prerequisite because generate_battle_static_textures.py imports it
+# (see its own comment at generate_battle_texture_census.py:258): when
 # the census digest moved on 2026-08-05 the .inc's provenance stamp moved with
 # it, and nothing rebuilt. The generator verifies its own decomp inputs against
 # pinned sha256s, so corpus drift still fails closed and loudly rather than
 # being silently absorbed here.
 #
 # The `touch` is required, not cosmetic: the generator is deliberately
-# write-if-changed (generate_battle_playable_static_textures.py:1652 rewrites
+# write-if-changed (generate_battle_static_textures.py:1652 rewrites
 # only when the bytes differ), so a run that confirms the outputs are already
 # correct leaves both mtimes untouched. Without the touch the targets stay older
 # than their prerequisites and make re-runs the whole generator on EVERY build
 # forever -- correct output, wasted minutes.
 $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
-		$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py \
-		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py
-	python "$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py" --repo-root "$(PROJECT_ROOT)"
+		$(PROJECT_ROOT)/scripts/generate_battle_static_textures.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_texture_census.py
+	python "$(PROJECT_ROOT)/scripts/generate_battle_static_textures.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 
 # P2-4n1. The native stage packets, one include per baked stage. Same shape
@@ -500,7 +500,7 @@ $(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_st
 	@cp $< $@
 # The VS stages' dead geometry bytes (display lists and vertex arrays their
 # packets were generated from), lent to a battle once the packet loads
-# (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans).
+# (reloc_backend_source_shims.c ndsNativeStageLendDeadSpans).
 NDS_STAGE_DEAD_SPANS_H := $(NDS_NATIVE_STAGE_BLOB_DIR)/nds_stage_dead_spans.generated.h
 $(NDS_STAGE_DEAD_SPANS_H): $(PROJECT_ROOT)/scripts/stages/generate_stage_dead_spans.py $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	@mkdir -p $(dir $@)

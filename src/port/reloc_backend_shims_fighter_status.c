@@ -2,7 +2,7 @@
  * animation helpers, status interrupts and setters (catch, attacks, guard,
  * turn, dash, run, jumps, landing, damage, thrown), the air physics and the
  * fighters' map collision. A slice of reloc_backend.c, after
- * reloc_backend_compat_shims.c. */
+ * reloc_backend_source_shims.c. */
 
 /* Defined beside lbCommonAddFighterPartsFigatree, which owns the shared tree
  * walk and the same pointer resolve. */

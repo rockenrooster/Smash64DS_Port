@@ -10,7 +10,7 @@
  * owns every symbol it defines under its source name; no renamed private
  * copies. No ndsBase* rename here: this TU has NO scene entry (no
  * StartScene), and sc1PGameBossInitWallpaper must keep its source name so it
- * beats the NDS_WEAK stub in src/port/battle_playable_compat_stubs.c:141 by
+ * beats the NDS_WEAK stub in src/port/unimported_source_stubs.c:141 by
  * normal strong-over-weak link override (that file untouched). Same for the
  * sc1pgame.c camera pair already owned by battleship_sc1pgame_runtime.c
  * (sc1PGameSetCameraZoom :1892, sc1PGameBossSetCameraZoom :1910): this TU
@@ -116,7 +116,7 @@ extern void sc1PGameBossSetBossPlayer(void);
  * (battleship_grpupupu_ground.c:58, battleship_grcastle_ground.c:69,
  * battleship_grinishie_ground.c:65, battleship_grjungle_ground.c:65).
  * llGRLastMapMapHeader is deliberately NOT redefined: its only use is as a
- * lbRelocGetFileData symbol in reloc_backend_compat_shims.c, which wants the
+ * lbRelocGetFileData symbol in reloc_backend_source_shims.c, which wants the
  * row form. */
 #define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
 #define llGRLastMapFileHead NDS_RELOC_LVALUE(0x4d48u)

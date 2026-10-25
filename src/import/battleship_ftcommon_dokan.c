@@ -4,7 +4,7 @@
  * `nFTCommonStatusDokanStart/Wait/End/Walk` run the pipe enter, traverse, exit
  * and wall-interior walk callbacks the shared status table already names
  * (decomp ftcommonstatus.h:1267-1327). A fighter that entered a pipe used to
- * freeze there: the enter path lived in reloc_backend_compat_shims.c while
+ * freeze there: the enter path lived in reloc_backend_source_shims.c while
  * every Dokan proc was still an inactive weak stub.
  *
  * This TU imports decomp ft/ftcommon/ftcommondokan.c verbatim. Only the enter

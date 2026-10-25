@@ -14,7 +14,7 @@ void ftCommonShieldBreakDownSetStatus(GObj *fighter_gobj);
 /* The port keeps NULL-safe public entry seams because several imported combat
  * callers may reach them while a partially constructed fighter is being
  * diagnosed.  Rename only those two source entry points; their bodies remain
- * the behavioral authority once the guard in compat_shims has passed. */
+ * the behavioral authority once the guard in source_shims has passed. */
 #define ftCommonShieldBreakFlyCommonSetStatus \
     ndsBaseFTCommonShieldBreakFlyCommonSetStatus
 #define ftCommonShieldBreakFlyReflectorSetStatus \

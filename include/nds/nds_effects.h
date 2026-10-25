@@ -390,7 +390,7 @@ extern volatile u32 gNdsEffectDLSubmitCount;
  * separated from "never spawned". Index is the trigger identity, which is part
  * of the answer rather than a footnote: efManagerImpactWaveMakeEffect's `index`
  * selects the wave's appearance (efmanager.c:3329), the hard landing passes 4
- * (reloc_backend_compat_shims.c:7681), and the owner reports grey/black. */
+ * (reloc_backend_source_shims.c:7681), and the owner reports grey/black. */
 extern volatile u32 gNdsEffectImpactWaveMakeCount;
 extern volatile u32 gNdsEffectImpactWaveMakeNullCount;
 extern volatile s32 gNdsEffectImpactWaveLastIndex;

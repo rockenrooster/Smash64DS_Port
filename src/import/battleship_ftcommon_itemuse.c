@@ -19,7 +19,7 @@
  * Gated on NDS_ITEM_CORE: with no items there is nothing to shoot, and the
  * weak stubs remain the right answer. The stubs it replaces are weak, so a
  * strong definition here wins the link; the two SetStatus shims are not, and
- * are fenced by the same condition in reloc_backend_compat_shims.c.
+ * are fenced by the same condition in reloc_backend_source_shims.c.
  */
 
 #include <ft/fighter.h>
@@ -40,7 +40,7 @@ typedef struct alSoundEffect alSoundEffect;
 extern alSoundEffect *func_800269C0_275C0(u16 fgm_id);
 
 /* The effect-kind names come from the decomp header through the include path,
- * exactly as reloc_backend_compat_shims.c reaches it for nEFKindImpactWave --
+ * exactly as reloc_backend_source_shims.c reaches it for nEFKindImpactWave --
  * forty-five enumerators is not a list worth copying to use three.
  *
  * ft/ftcommon.h and ft/ftcommondata.h CANNOT be reached the same way: both

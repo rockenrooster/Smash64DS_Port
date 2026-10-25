@@ -825,7 +825,7 @@ try {
         # system is always live so they always exist; on this port they are
         # NDS_WEAK globals that only efparticle.c assigns, and that file is
         # compiled only with NDS_PARTICLE_RUNTIME=1. The port's own particle
-        # stubs NULL-check them (battle_playable_compat_stubs.c:263); the decomp
+        # stubs NULL-check them (unimported_source_stubs.c:263); the decomp
         # path does not. NULL here means the crash below is a write through a
         # null GObj, and TIME UP survives because it installs the BONUS update
         # proc, which does not touch them.

@@ -418,7 +418,7 @@ static void ndsRendererAdapterPrepareWorldCaches(void);
 static void ndsMPCollisionSetGeometry(MPGeometryData *geometry);
 
 /* Compatibility/proof shims. */
-#include "reloc_backend_compat_shims.c"
+#include "reloc_backend_source_shims.c"
 #include "reloc_backend_shims_fighter_status.c"
 #include "reloc_backend_shims_fighter_effects.c"
 #include "reloc_backend_shims_fighter_parts.c"

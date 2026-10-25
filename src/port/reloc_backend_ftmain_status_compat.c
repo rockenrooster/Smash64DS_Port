@@ -528,7 +528,7 @@ static void ndsFTMainSetStatusCompatHarness(GObj *fighter_gobj,
         fp->anim_frame = frame_begin;
         fp->anim_speed = anim_speed;
 #if NDS_STAGE_JUNGLE
-        /* P2-4s3: the two procs exist now (compat_shims), so the captured
+        /* P2-4s3: the two procs exist now (source_shims), so the captured
          * fighter counts down, hears the cue at half the shoot wait, fires
          * on either face button, and is launched automatically after 180
          * frames. Before they landed both were NULL and a fighter that

@@ -2,16 +2,16 @@
  * images in their canonical DS form (paletted, PAL16 or PAL256), looked up
  * by source key so the renderer uploads them instead of converting the N64
  * image. Records, payloads and palette blocks come from
- * generated/battle_playable_static_textures.generated.inc
- * (scripts/generate_battle_playable_static_textures.py); each record is
+ * generated/battle_static_textures.generated.inc
+ * (scripts/generate_battle_static_textures.py); each record is
  * checked against its source image before use. */
 
-#include "nds/battle_playable_static_textures.h"
+#include "nds/battle_static_textures.h"
 
-#include "generated/battle_playable_static_textures.generated.inc"
+#include "generated/battle_static_textures.generated.inc"
 
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
-                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
+                   NDS_BATTLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 45u,
                "canonical static texture key count changed");
@@ -27,8 +27,8 @@ _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
                    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,
                "static texture palette block outgrew the renderer's buffer");
 
-static void ndsBattlePlayableStaticTextureClearView(
-    NDSBattlePlayableStaticTextureView *view)
+static void ndsBattleStaticTextureClearView(
+    NDSBattleStaticTextureView *view)
 {
     if (view == 0)
     {
@@ -47,8 +47,8 @@ static void ndsBattlePlayableStaticTextureClearView(
     view->palette_offset = 0u;
 }
 
-static s32 ndsBattlePlayableStaticTextureProvenanceValid(
-    const NDSBattlePlayableStaticTexturePointerProvenance *provenance,
+static s32 ndsBattleStaticTextureProvenanceValid(
+    const NDSBattleStaticTexturePointerProvenance *provenance,
     u32 raw_word, s32 required)
 {
     if ((provenance == 0) || (provenance->reserved != 0u) ||
@@ -69,20 +69,20 @@ static s32 ndsBattlePlayableStaticTextureProvenanceValid(
     return (provenance->asset_id != 0u) ? TRUE : FALSE;
 }
 
-static s32 ndsBattlePlayableStaticTextureInputValid(
-    const NDSBattlePlayableStaticTextureLookupKey *key)
+static s32 ndsBattleStaticTextureInputValid(
+    const NDSBattleStaticTextureLookupKey *key)
 {
     s32 tlut_required;
 
     if ((key == 0) || (key->words == 0) ||
         (key->word_count !=
-         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT))
+         NDS_BATTLE_STATIC_TEXTURE_KEY_WORD_COUNT))
     {
         return FALSE;
     }
-    if (ndsBattlePlayableStaticTextureProvenanceValid(
+    if (ndsBattleStaticTextureProvenanceValid(
             &key->image,
-            key->words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD],
+            key->words[NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD],
             TRUE) == FALSE)
     {
         return FALSE;
@@ -90,22 +90,22 @@ static s32 ndsBattlePlayableStaticTextureInputValid(
     /* N64 format 2 is CI and requires a TLUT; format 3 is IA and correctly
      * carries no palette pointer. The generator supports both source lanes. */
     tlut_required = (key->words[7] == 2u) ? TRUE : FALSE;
-    if (ndsBattlePlayableStaticTextureProvenanceValid(
+    if (ndsBattleStaticTextureProvenanceValid(
             &key->tlut,
-            key->words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD],
+            key->words[NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD],
             tlut_required) == FALSE)
     {
         return FALSE;
     }
-    return ndsBattlePlayableStaticTextureProvenanceValid(
+    return ndsBattleStaticTextureProvenanceValid(
         &key->texel1,
-        key->words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD],
+        key->words[NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD],
         FALSE);
 }
 
-static s32 ndsBattlePlayableStaticTextureRecordImageCompare(
-    const NDSBattlePlayableStaticTextureRecord *record,
-    const NDSBattlePlayableStaticTextureLookupKey *key)
+static s32 ndsBattleStaticTextureRecordImageCompare(
+    const NDSBattleStaticTextureRecord *record,
+    const NDSBattleStaticTextureLookupKey *key)
 {
     if (record->image_asset_id < key->image.asset_id)
     {
@@ -126,9 +126,9 @@ static s32 ndsBattlePlayableStaticTextureRecordImageCompare(
     return 0;
 }
 
-static s32 ndsBattlePlayableStaticTextureRecordMatches(
-    const NDSBattlePlayableStaticTextureRecord *record,
-    const NDSBattlePlayableStaticTextureLookupKey *key)
+static s32 ndsBattleStaticTextureRecordMatches(
+    const NDSBattleStaticTextureRecord *record,
+    const NDSBattleStaticTextureLookupKey *key)
 {
     u32 texel1_offset;
     u32 word;
@@ -141,7 +141,7 @@ static s32 ndsBattlePlayableStaticTextureRecordMatches(
         return FALSE;
     }
     texel1_offset = record->key_words[
-        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
+        NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD];
     if (((texel1_offset == 0u) &&
          ((key->texel1.runtime_address != 0u) ||
           (key->texel1.asset_id != 0u) ||
@@ -154,12 +154,12 @@ static s32 ndsBattlePlayableStaticTextureRecordMatches(
         return FALSE;
     }
     for (word = 0u;
-         word < NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT;
+         word < NDS_BATTLE_STATIC_TEXTURE_KEY_WORD_COUNT;
          word++)
     {
-        if ((word == NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD) ||
-            (word == NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD) ||
-            (word == NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD))
+        if ((word == NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD) ||
+            (word == NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD) ||
+            (word == NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD))
         {
             continue;
         }
@@ -171,8 +171,8 @@ static s32 ndsBattlePlayableStaticTextureRecordMatches(
     return TRUE;
 }
 
-static s32 ndsBattlePlayableStaticTextureRecordValid(
-    const NDSBattlePlayableStaticTextureRecord *record)
+static s32 ndsBattleStaticTextureRecordValid(
+    const NDSBattleStaticTextureRecord *record)
 {
     u32 expected_bytes;
     u32 source_format;
@@ -243,19 +243,19 @@ static s32 ndsBattlePlayableStaticTextureRecordValid(
     return TRUE;
 }
 
-s32 ndsBattlePlayableStaticTextureLookup(
-    const NDSBattlePlayableStaticTextureLookupKey *key,
-    NDSBattlePlayableStaticTextureView *out_view)
+s32 ndsBattleStaticTextureLookup(
+    const NDSBattleStaticTextureLookupKey *key,
+    NDSBattleStaticTextureView *out_view)
 {
     u32 left;
     u32 right;
     u32 index;
 
-    ndsBattlePlayableStaticTextureClearView(out_view);
+    ndsBattleStaticTextureClearView(out_view);
     if ((out_view == 0) ||
-        (ndsBattlePlayableStaticTextureInputValid(key) == FALSE))
+        (ndsBattleStaticTextureInputValid(key) == FALSE))
     {
-        return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID;
+        return NDS_BATTLE_STATIC_TEXTURE_LOOKUP_INVALID;
     }
 
     /* Generated records are sorted by asset ID and source offset. Find the
@@ -266,7 +266,7 @@ s32 ndsBattlePlayableStaticTextureLookup(
     while (left < right)
     {
         u32 middle = left + ((right - left) >> 1);
-        s32 compare = ndsBattlePlayableStaticTextureRecordImageCompare(
+        s32 compare = ndsBattleStaticTextureRecordImageCompare(
             &sNdsBattleStaticTextureRecords[middle], key);
 
         if (compare < 0)
@@ -280,20 +280,20 @@ s32 ndsBattlePlayableStaticTextureLookup(
     }
     for (index = left; index < NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT; index++)
     {
-        const NDSBattlePlayableStaticTextureRecord *record =
+        const NDSBattleStaticTextureRecord *record =
             &sNdsBattleStaticTextureRecords[index];
 
-        if (ndsBattlePlayableStaticTextureRecordImageCompare(record, key) != 0)
+        if (ndsBattleStaticTextureRecordImageCompare(record, key) != 0)
         {
             break;
         }
-        if (ndsBattlePlayableStaticTextureRecordMatches(record, key) == FALSE)
+        if (ndsBattleStaticTextureRecordMatches(record, key) == FALSE)
         {
             continue;
         }
-        if (ndsBattlePlayableStaticTextureRecordValid(record) == FALSE)
+        if (ndsBattleStaticTextureRecordValid(record) == FALSE)
         {
-            return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID;
+            return NDS_BATTLE_STATIC_TEXTURE_LOOKUP_INVALID;
         }
         out_view->payload_offset = record->payload_offset;
         out_view->bytes = record->payload_bytes;
@@ -306,39 +306,39 @@ s32 ndsBattlePlayableStaticTextureLookup(
         out_view->ds_format = record->ds_format;
         out_view->palette_entries = record->palette_entries;
         out_view->palette_offset = record->palette_offset;
-        return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_HIT;
+        return NDS_BATTLE_STATIC_TEXTURE_LOOKUP_HIT;
     }
-    return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_MISS;
+    return NDS_BATTLE_STATIC_TEXTURE_LOOKUP_MISS;
 }
 
-const NDSBattlePlayableStaticTextureRecord *
-ndsBattlePlayableStaticTextureRecordAt(u32 index)
+const NDSBattleStaticTextureRecord *
+ndsBattleStaticTextureRecordAt(u32 index)
 {
     return (index < NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT) ?
         &sNdsBattleStaticTextureRecords[index] : 0;
 }
 
-u32 ndsBattlePlayableStaticTextureKeyCount(void)
+u32 ndsBattleStaticTextureKeyCount(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT;
 }
 
-u32 ndsBattlePlayableStaticTexturePayloadBytes(void)
+u32 ndsBattleStaticTexturePayloadBytes(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES;
 }
 
-u32 ndsBattlePlayableStaticTexturePreparedBytes(void)
+u32 ndsBattleStaticTexturePreparedBytes(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES;
 }
 
-u32 ndsBattlePlayableStaticTexturePaletteBlockOffset(void)
+u32 ndsBattleStaticTexturePaletteBlockOffset(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_OFFSET;
 }
 
-u32 ndsBattlePlayableStaticTexturePaletteBlockBytes(void)
+u32 ndsBattleStaticTexturePaletteBlockBytes(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES;
 }

@@ -566,7 +566,7 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
         cls.lean = (repo / "src" / "port" /
                     "renderer_fighter_lean.c").read_text()
         cls.shims = source(repo / "src" / "port" /
-                           "reloc_backend_compat_shims.c")
+                           "reloc_backend_source_shims.c")
         cls.header = (repo / "include" / "nds" / "nds_renderer.h").read_text()
 
     def test_generator_programs_match_source_vectors(self):

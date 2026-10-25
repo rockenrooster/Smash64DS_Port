@@ -16,7 +16,7 @@
  * nFTCommonStatusTaruCann and hands control to ft/ftcommon/ftcommontarucann.c
  * until the cannon fires. So the stage half here is only half the work; the
  * fighter half lives beside the other common statuses in
- * src/port/reloc_backend_compat_shims.c, and the two are one slice because
+ * src/port/reloc_backend_source_shims.c, and the two are one slice because
  * this file's grJungleTaruCannAddAnimShoot is what the fighter's ProcUpdate
  * and ProcInterrupt call when the shot is armed.
  *

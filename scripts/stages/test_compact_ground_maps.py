@@ -60,7 +60,7 @@ ASSETS_C = ROOT / "src" / "port" / "reloc_backend_assets.c"
 RESOLVE_C = ROOT / "src" / "port" / "reloc_backend_resolve.c"
 MATRIX_C = ROOT / "src" / "port" / "renderer_adapter_matrix.c"
 SPRITE_C = ROOT / "src" / "port" / "sprite_preview_backend.c"
-SHIMS_C = ROOT / "src" / "port" / "reloc_backend_compat_shims.c"
+SHIMS_C = ROOT / "src" / "port" / "reloc_backend_source_shims.c"
 
 # gkind order -> descriptor name (scripts/stages/native_stage_descriptors)
 DESCRIPTORS = ("castle", "sector", "jungle", "zebes", "hyrule", "yoster",

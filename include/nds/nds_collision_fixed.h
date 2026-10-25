@@ -299,7 +299,7 @@ static inline uint32_t ndsCfxIsqrt64Portable(uint64_t value)
  * gm/gmcollision.c:37 asks for six of these per local matrix. lb/lbcommon.c:321
  * indexes a table in 4096ths of a turn, mirrors the quarter with bit 0x400 and
  * negates the lower half with bit 0x800; the port's shim
- * (src/port/reloc_backend_compat_shims.c:13519) reads gSYSinTable, sys's own
+ * (src/port/reloc_backend_source_shims.c:13519) reads gSYSinTable, sys's own
  * 2048-entry u16 Q15 half wave, and multiplies by 1/32768 to hand back an f32.
  *
  * That last multiply and its __aeabi_i2f are pure loss here, because everything

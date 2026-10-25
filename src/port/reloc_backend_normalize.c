@@ -1508,7 +1508,7 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             attr_bytes + offsetof(FTAttributes, heavyget_sfx));
         /* shade_color[3] and fog_color are packed u8 RGBA words, so the
          * blanket swap had them as ABGR; the shade reader
-         * (reloc_backend_compat_shims.c, ftParamsSetupShadeColors) took the
+         * (reloc_backend_source_shims.c, ftParamsSetupShadeColors) took the
          * lanes raw (byte-lane audit, 2026-09-07). */
         _Static_assert((offsetof(FTAttributes, shade_color) %
                         sizeof(u32)) == 0u,

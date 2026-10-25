@@ -550,7 +550,7 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
  * a DObj's list pointer with *storage + offset and never reads it, its
  * vertices or the images it loads (the packet bakes texels) -- lent to a VS
  * battle as allocation space once their files load, as the stage's are
- * (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans): Crash's 15 KB,
+ * (reloc_backend_source_shims.c ndsNativeStageLendDeadSpans): Crash's 15 KB,
  * Palutena's 19 KB, Wolf's 12 KB, and Sonic's 28 KB when his entry-only file
  * loads at the entry (nds_p4.c ndsP4EntryFileEnsure asks again then).
  * The rows, by file, are scripts/p4/p4_dead_spans.py's; a file not loaded in

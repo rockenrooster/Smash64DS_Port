@@ -409,7 +409,7 @@ void ndsFighterDisplayContractProjectTarget(CObj *cobj,
     }
     /* BattleShip ftparam.c:2421-2439, used by fighter magnify culling: the
      * fixed-point projection func_ovl2_800EB924 uses (2026-10-05,
-     * battle_playable_compat_stubs.c). */
+     * unimported_source_stubs.c). */
     ndsProjectToViewport(cobj, matrix, pos, dist_x, dist_y);
 }
 

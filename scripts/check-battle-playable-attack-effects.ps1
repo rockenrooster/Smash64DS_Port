@@ -37,7 +37,7 @@ if (($actual -join ',') -ne ($expected -join ',')) {
 }
 
 $shim = Get-Content -LiteralPath (
-    Join-Path $root 'src/port/reloc_backend_compat_shims.c') -Raw
+    Join-Path $root 'src/port/reloc_backend_source_shims.c') -Raw
 $route = [regex]::Match($shim,
     '(?s)void \*ftParamMakeEffect\(.*?(?=static f32 ndsVisualDamageScale)')
 if (-not $route.Success) {
@@ -74,13 +74,13 @@ $direct = @(
     @{ File = 'src/import/battleship_fox_blaster.c';
        Function = 'efManagerFoxBlasterGlowMakeEffect';
        Kind = 'nNDSVisualEffectHitElectric' },
-    @{ File = 'src/port/reloc_backend_compat_shims.c';
+    @{ File = 'src/port/reloc_backend_source_shims.c';
        Function = 'efManagerDustExpandSmallMakeEffect';
        Kind = 'nNDSVisualEffectDust' },
-    @{ File = 'src/port/reloc_backend_compat_shims.c';
+    @{ File = 'src/port/reloc_backend_source_shims.c';
        Function = 'efManagerFireGrindMakeEffect';
        Kind = 'nNDSVisualEffectHitFire' },
-    @{ File = 'src/port/reloc_backend_compat_shims.c';
+    @{ File = 'src/port/reloc_backend_source_shims.c';
        Function = 'efManagerSparkleWhiteMakeEffect';
        Kind = 'nNDSVisualEffectSparkle' }
 )

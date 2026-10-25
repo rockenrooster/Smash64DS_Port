@@ -51,7 +51,7 @@
  *   already yields it, so no entry arm is admitted.
  * - Kind arms the source gives the N twins already exist in the port, and
  *   none the source lacks was added: Mario/MMario/NMario tornado init
- *   (reloc_backend_compat_shims.c:7239-7249), Donkey/NDonkey/GDonkey charge
+ *   (reloc_backend_source_shims.c:7239-7249), Donkey/NDonkey/GDonkey charge
  *   ColAnim remap (:2000-2003) and charge_level check (:3786-3797),
  *   Samus/NSamus charge pair (:3798-3806), Donkey triple cargo path
  *   (battleship_ftcommon_get.c:241), Fox/NFox laser suppression and status

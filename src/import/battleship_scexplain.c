@@ -52,7 +52,7 @@
  *   func_800266A0_272A0/func_800269C0_275C0 (include/sys/audio.h:99-101),
  *   func_80017EC0 (include/sys/objhelper.h:92),
  *   mpCollisionGetPlayerMapObjPosition (src/port/
- *   reloc_backend_compat_shims.c:17652; decl battleship_gmcamera.c:59),
+ *   reloc_backend_source_shims.c:17652; decl battleship_gmcamera.c:59),
  *   itManagerMakeItemSetupCommon (include/it/item.h:1009, defined by
  *   battleship_item_link_core.c behind NDS_ITEM_CORE -- same cross-gate
  *   shape as training TU riding item core; recorded, not shimmed),

@@ -51,7 +51,7 @@
  *   I_MIN_TO_TICS + ARRAY_COUNT (include/macros.h / include/reloc_data.h),
  *   nSYAudioFGMMenuSelect/nSYAudioFGMMenuScroll2/nSYAudioBGMModeSelect
  *   (include/gm/gmsound.h), func_800269C0_275C0
- *   (src/port/reloc_backend_compat_shims.c:1435), syAudioStopBGMAll/
+ *   (src/port/reloc_backend_source_shims.c:1435), syAudioStopBGMAll/
  *   syAudioPlayBGM (include/sys/audio.h), ovl61 + ovl1_VRAM (DECLARE_OVL in
  *   include/sc/scene.h), SObj/CObj helpers (decomp sys/obj.h, which the port
  *   does not shadow).

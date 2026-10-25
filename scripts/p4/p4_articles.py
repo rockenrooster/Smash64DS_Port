@@ -28,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import generate_battle_playable_texture_census as census  # noqa: E402
+import generate_battle_texture_census as census  # noqa: E402
 
 # Per content, in the order the runtime admits them. "special" is the slot
 # (1-4) of the file the structure is read from; its roots may live in

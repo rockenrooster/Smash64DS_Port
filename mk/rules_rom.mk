@@ -85,7 +85,7 @@ $(OUTPUT).nds: $(NDS_BATTLE_CORE_NITRO_FILES)
 endif
 
 
-$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
+$(NITROFS_DIR)/renderer/battle_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -178,8 +178,8 @@ $(OUTPUT).nds: $(NITROFS_DIR)/p7/messages.bin
 # script by hand.
 $(NDS_ENTRY_EFFECT_INC): \
 		$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py \
-		$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py \
-		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_static_textures.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_texture_census.py \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioSpecial2 \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxSpecial3 \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeySpecial2 \

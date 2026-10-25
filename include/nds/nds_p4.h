@@ -384,7 +384,7 @@ void ndsP4ItemProc(GObj *item_gobj, s32 which);
 /* battleship_ftcommon_get.c: the Maxim Tomato's case with another heal
  * (Remix's custom consumables jump into it at 0x80145C40). */
 void ndsFTCommonGetEatHeal(FTStruct *fp, GObj *item_gobj, s32 heal);
-/* reloc_backend_compat_shims.c ftParamResetStatUpdateColAnim: TRUE when the
+/* reloc_backend_source_shims.c ftParamResetStatUpdateColAnim: TRUE when the
  * fighter's content has its own gfx_routine_end case (run here). */
 sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 

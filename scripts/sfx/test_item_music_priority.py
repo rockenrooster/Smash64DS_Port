@@ -144,7 +144,7 @@ class ItemMusicPriorityTests(unittest.TestCase):
                                      header, re.M).group() for name in constants)
         source = function_source(ROOT / "decomp/BattleShip-main/decomp/src/ft/ftparam.c",
                                  "source_")
-        port = function_source(ROOT / "src/port/reloc_backend_compat_shims.c", "port_")
+        port = function_source(ROOT / "src/port/reloc_backend_source_shims.c", "port_")
         with tempfile.TemporaryDirectory(prefix="smash64ds-item-music-") as folder:
             unit = Path(folder) / "item_music.c"
             exe = Path(folder) / "item_music.exe"

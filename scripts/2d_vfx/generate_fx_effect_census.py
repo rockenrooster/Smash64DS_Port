@@ -22,8 +22,8 @@ ROOT = _paths.REPO_ROOT
 MANAGER_H = ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.h"
 MANAGER_C = ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 PARTICLE_H = ROOT / "decomp/BattleShip-main/decomp/src/ef/efparticle.h"
-PORT_SHIMS = ROOT / "src/port/reloc_backend_compat_shims.c"
-PORT_STUBS = ROOT / "src/port/battle_playable_compat_stubs.c"
+PORT_SHIMS = ROOT / "src/port/reloc_backend_source_shims.c"
+PORT_STUBS = ROOT / "src/port/unimported_source_stubs.c"
 IMPORT = ROOT / "src/import/battleship_efmanager.c"
 
 SUBSTITUTES = {
@@ -116,7 +116,7 @@ def citation_for(name: str, classification: str) -> str:
         include_needle = '#include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"'
         owner = f"src/import/battleship_efmanager.c:{line_of(IMPORT, include_needle)}"
         if classification == "particle-shimmed / skipped":
-            owner += f"; src/port/reloc_backend_compat_shims.c:{line_of(PORT_SHIMS, 'lbParticleMakeScriptID')}"
+            owner += f"; src/port/reloc_backend_source_shims.c:{line_of(PORT_SHIMS, 'lbParticleMakeScriptID')}"
     else:
         owner_path = next(
             path for path in (PORT_SHIMS, PORT_STUBS, IMPORT)
@@ -161,7 +161,7 @@ def main() -> None:
         rows.append(
             (name, "NDS_FX_SKIPPED", "particle-shimmed / skipped",
              f"include/ef/effect.h:{line_of(effect_h, name)}; "
-             f"src/port/reloc_backend_compat_shims.c:{line_of(PORT_SHIMS, name)}")
+             f"src/port/reloc_backend_source_shims.c:{line_of(PORT_SHIMS, name)}")
         )
 
     rows.append(
@@ -169,19 +169,19 @@ def main() -> None:
          "NDS_FX_SUBSTITUTE", "DS substitute",
          f"decomp/BattleShip-main/decomp/src/ef/efmanager.c:"
          f"{line_of(MANAGER_C, 'LBParticle* efManagerDamageNormalHeavyMakeEffect')}; "
-         f"src/port/reloc_backend_compat_shims.c:"
+         f"src/port/reloc_backend_source_shims.c:"
          f"{line_of(PORT_SHIMS, 'efManagerDamageNormalHeavyMakeEffect')}")
     )
     rows.append(
         ("efManagerShieldMakeEffect", "NDS_FX_SUBSTITUTE", "DS substitute",
          f"decomp/BattleShip-main/decomp/src/ef/efmanager.c:{line_of(MANAGER_C, 'GObj* efManagerShieldMakeEffect')}; "
-         f"src/port/reloc_backend_compat_shims.c:{line_of(PORT_SHIMS, 'efManagerShieldMakeEffect')}")
+         f"src/port/reloc_backend_source_shims.c:{line_of(PORT_SHIMS, 'efManagerShieldMakeEffect')}")
     )
     rows.append(
         ("ftParamCheckSetFighterColAnimID", "NDS_FX_ORIGINAL",
          "source color state; DS draw adapter",
          "decomp/BattleShip-main/decomp/src/gm/gmcolscripts.c:48; "
-         f"src/port/reloc_backend_compat_shims.c:{line_of(PORT_SHIMS, 'ftParamCheckSetFighterColAnimID')}")
+         f"src/port/reloc_backend_source_shims.c:{line_of(PORT_SHIMS, 'ftParamCheckSetFighterColAnimID')}")
     )
 
     generated = ROOT / "include/nds/generated/fx_effect_census.generated.h"

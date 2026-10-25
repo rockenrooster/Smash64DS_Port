@@ -271,7 +271,7 @@ $(NDS_NATIVE_WALLPAPER_INC) $(NDS_NATIVE_WALLPAPER_ASSETS) &: \
 	python "$(PROJECT_ROOT)/scripts/stages/generate_native_wallpapers.py" --repo-root "$(PROJECT_ROOT)" --output-dir "$(PROJECT_ROOT)/assets/wallpapers" --header "$(NDS_NATIVE_WALLPAPER_INC)"
 nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
 nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
-battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
+battle_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
 nds_particle_banks.o: $(NDS_PARTICLE_BANKS_INC)
 # GCC .d paths use D:/ while Make's producer paths use /d/. Name the producer
 # dependency explicitly so a configuration switch cannot compile a stale header.

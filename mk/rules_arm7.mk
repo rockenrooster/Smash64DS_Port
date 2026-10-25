@@ -20,7 +20,7 @@ SCENE_BACKEND_SLICES := \
 	$(PROJECT_ROOT)/src/port/diagnostics.c \
 	$(PROJECT_ROOT)/src/port/taskman_seam.c \
 	$(PROJECT_ROOT)/src/port/reloc_backend.c \
-	$(PROJECT_ROOT)/src/port/reloc_backend_compat_shims.c \
+	$(PROJECT_ROOT)/src/port/reloc_backend_source_shims.c \
 	$(PROJECT_ROOT)/src/port/reloc_backend_assets.c \
 	$(PROJECT_ROOT)/src/port/reloc_backend_fighter_model.c \
 	$(PROJECT_ROOT)/src/port/reloc_backend_renderer_dl.c \

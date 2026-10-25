@@ -425,7 +425,7 @@ WHISPY_NATIVE_ASSET_NITRO_PATH = \
 # had about 8 KB of headroom and no more. It now has 74,496 more, because the 23
 # static battle textures stopped being stored at two bytes a texel when 22 of
 # them are sixteen-colour CI4 sources -- see the note on `ds_format` in
-# include/nds/battle_playable_static_textures.h. The sheet costs 24,576 of that
+# include/nds/battle_static_textures.h. The sheet costs 24,576 of that
 # and leaves 49,920 in hand.
 #
 # What it buys is the owner's row: "ALL VFX look low quality or low resolution.
@@ -1021,7 +1021,7 @@ P1_EXTRA_SEAMS = frozenset((
     # HitElectric sprite instead, so the maker had no caller, the seam
     # derivation never saw it, and 0x74 stayed UNREACHABLE -- BUGS.md "Down-B
     # blue self-hit explosion missing". Routing the kind to its source maker
-    # (reloc_backend_compat_shims.c) is only half of it; per the rule above,
+    # (reloc_backend_source_shims.c) is only half of it; per the rule above,
     # the route is not finished until this list knows about it.
     "efManagerThunderAmpMakeEffect",
     # 2026-10-04, the rest of the public makers that start an efcommon

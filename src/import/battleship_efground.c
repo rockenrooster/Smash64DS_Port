@@ -4,7 +4,7 @@
  * and birds, Dream Land Bronto Burt and King Dedede, Saffron City Fearow and
  * friends). grcommonsetup.c:34 calls efGroundMakeAppearActor at every stage
  * start; the port answered it with a witness stub
- * (reloc_backend_compat_shims.c:17559, strong) that must be DELETED now that
+ * (reloc_backend_source_shims.c:17559, strong) that must be DELETED now that
  * this TU defines the real symbol, or the link fails twice-defined.
  *
  * The source bodies stay verbatim below; the adaptations above the include

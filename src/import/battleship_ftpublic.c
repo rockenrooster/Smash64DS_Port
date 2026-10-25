@@ -3,7 +3,7 @@
  * Everything this row called "structurally absent" was one translation unit.
  * `ft/ftpublic.c` is 362 lines, and its entire external surface already exists
  * in the port: `func_800269C0_275C0` / `func_80026738_27338` are the DS FGM
- * backend's play/stop (reloc_backend_compat_shims.c), `ftParamGetPlayerNumGObj`
+ * backend's play/stop (reloc_backend_source_shims.c), `ftParamGetPlayerNumGObj`
  * is ported, and the GObj kind, links, collision bounds and battle state it
  * reads are all live. So the actor is compiled in place rather than translated,
  * which keeps its thresholds, cooldowns, repeat limits and queue ordering
@@ -41,7 +41,7 @@
 alSoundEffect *ndsFtPublicPlayFGM(u16 fgm_id);
 
 /* Declared in no port header. ftParamGetPlayerNumGObj is defined in
- * reloc_backend_compat_shims.c and used by fighter code that reaches it through
+ * reloc_backend_source_shims.c and used by fighter code that reaches it through
  * other seams. */
 GObj *ftParamGetPlayerNumGObj(s32 player_num);
 
@@ -97,7 +97,7 @@ u16 dFTCommonDataPublicFighterCallFGMs[26] = {
 
 /* The dash-run damage proof used to live inside the stub that stood here, so
  * its counters would have died with the stub. It is a port-side recorder now
- * (reloc_backend_compat_shims.c) and both paths call it. */
+ * (reloc_backend_source_shims.c) and both paths call it. */
 void ndsFighterDashRunRecordPublicCheck(GObj *fighter_gobj, f32 knockback,
                                         sb32 is_force_curr_knockback);
 
@@ -123,7 +123,7 @@ volatile u32 gNdsFtPublicCueLetRingCount;
  * Renaming the stop HERE is the same trick line 41 already uses for the play
  * side, and it is what makes the deviation safe: the rename is scoped to this
  * TU, so fighter voices and looping SFX -- the other callers of the real stop,
- * in reloc_backend_compat_shims.c -- keep source behaviour untouched. Only the
+ * in reloc_backend_source_shims.c -- keep source behaviour untouched. Only the
  * audience stops being interrupted.
  *
  * NOT A VOICE LEAK, and that was the thing worth checking before doing it. The

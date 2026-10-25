@@ -258,8 +258,8 @@ NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_qu
 # delta was a header comment. The next such delta would be data, and it would
 # reach a measured ROM with no error anywhere (see CLAUDE.md: this class "races
 # into a subtly wrong binary rather than an error").
-NDS_BATTLE_STATIC_TEXTURE_INC := $(PROJECT_ROOT)/src/nds/generated/battle_playable_static_textures.generated.inc
-NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playable_static_textures.rgb5a1.bin
+NDS_BATTLE_STATIC_TEXTURE_INC := $(PROJECT_ROOT)/src/nds/generated/battle_static_textures.generated.inc
+NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_static_textures.rgb5a1.bin
 # P2-1c. Same shape and the same reason: the manifest is compiled in and the
 # texel/intensity payload ships in NitroFS, both written by one generator so a
 # stale pair cannot link.

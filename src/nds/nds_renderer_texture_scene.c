@@ -2735,7 +2735,7 @@ static const void *ndsRendererHardwareBattleStaticPointer(
 }
 
 NDS_RENDERER_COLD static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
-    const NDSBattlePlayableStaticTextureRecord *record,
+    const NDSBattleStaticTextureRecord *record,
     NDSRendererHardwareTextureKey *key)
 {
     const void *image_base;
@@ -2751,10 +2751,10 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
         (ndsRelocGetLoadedAssetView(
              record->image_asset_id, &image_base, &image_size) == FALSE) ||
         (record->key_words[
-             NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
+             NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD] !=
          record->image_offset) ||
         (record->key_words[
-             NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
+             NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD] !=
          record->tlut_offset))
     {
         return FALSE;
@@ -2785,7 +2785,7 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
         return FALSE;
     }
     texel1_offset = record->key_words[
-        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
+        NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD];
     if (texel1_offset != 0u)
     {
         texel1 = ndsRendererHardwareBattleStaticPointer(
@@ -2814,11 +2814,11 @@ NDS_RENDERER_COLD s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void
         return TRUE;
     }
     for (record_index = 0u;
-         record_index < ndsBattlePlayableStaticTextureKeyCount();
+         record_index < ndsBattleStaticTextureKeyCount();
          record_index++)
     {
-        const NDSBattlePlayableStaticTextureRecord *record =
-            ndsBattlePlayableStaticTextureRecordAt(record_index);
+        const NDSBattleStaticTextureRecord *record =
+            ndsBattleStaticTextureRecordAt(record_index);
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[record_index];
         NDSRendererHardwareTextureKey key;
@@ -2944,7 +2944,7 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
      * the generated residency and its exact VRAM span deterministic. */
     ndsRendererHardwareDiscardTextureCache();
     file = ndsRendererHardwareFencedTextureFopen(
-        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH, "rb");
+        NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_PATH, "rb");
     if (file == NULL)
     {
         gNdsRendererBattleStaticTextureFailStep = 1u;
@@ -2953,7 +2953,7 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     if ((ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_END) != 0) ||
         ((payload_size = ndsRendererHardwareFencedTextureFtell(file)) < 0) ||
         ((u32)payload_size !=
-         ndsBattlePlayableStaticTexturePayloadBytes()) ||
+         ndsBattleStaticTexturePayloadBytes()) ||
         (ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_SET) != 0))
     {
         gNdsRendererBattleStaticTextureFailStep = 2u;
@@ -2964,13 +2964,13 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
      * NitroFS seeks and reads inside the scene load. */
     {
         u32 palette_block_bytes =
-            ndsBattlePlayableStaticTexturePaletteBlockBytes();
+            ndsBattleStaticTexturePaletteBlockBytes();
 
         if ((palette_block_bytes >
              sizeof(sNdsRendererStaticTexturePaletteBlock)) ||
             (ndsRendererHardwareFencedTextureFseek(
                  file,
-                 (long)ndsBattlePlayableStaticTexturePaletteBlockOffset(),
+                 (long)ndsBattleStaticTexturePaletteBlockOffset(),
                  SEEK_SET) != 0) ||
             (ndsRendererHardwareFencedTextureFread(
                  sNdsRendererStaticTexturePaletteBlock, 1,
@@ -2982,11 +2982,11 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     }
 
     for (record_index = 0u;
-         record_index < ndsBattlePlayableStaticTextureKeyCount();
+         record_index < ndsBattleStaticTextureKeyCount();
          record_index++)
     {
-        const NDSBattlePlayableStaticTextureRecord *record =
-            ndsBattlePlayableStaticTextureRecordAt(record_index);
+        const NDSBattleStaticTextureRecord *record =
+            ndsBattleStaticTextureRecordAt(record_index);
         NDSRendererHardwareTextureKey key;
         NDSRendererHardwareTextureCacheEntry *entry;
         u32 key_hash;
@@ -3033,9 +3033,9 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             (record->payload_bytes >
              sizeof(sNdsRendererHardwareTextureScratch)) ||
             (record->payload_offset >
-             ndsBattlePlayableStaticTexturePayloadBytes()) ||
+             ndsBattleStaticTexturePayloadBytes()) ||
             (record->payload_bytes >
-             ndsBattlePlayableStaticTexturePayloadBytes() -
+             ndsBattleStaticTexturePayloadBytes() -
                  record->payload_offset) ||
             (record->payload_bytes !=
              ndsRendererStaticTextureSpanBytes(record)) ||
@@ -3078,17 +3078,17 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                  (u16)(sizeof(sNdsRendererStaticTexturePalette) /
                        sizeof(sNdsRendererStaticTexturePalette[0]))) ||
                 (record->palette_offset <
-                 ndsBattlePlayableStaticTexturePaletteBlockOffset()))
+                 ndsBattleStaticTexturePaletteBlockOffset()))
             {
                 gNdsRendererBattleStaticTextureFailStep = 7u;
                 goto fail;
             }
             block_index = record->palette_offset -
-                ndsBattlePlayableStaticTexturePaletteBlockOffset();
+                ndsBattleStaticTexturePaletteBlockOffset();
             if ((block_index >
-                 ndsBattlePlayableStaticTexturePaletteBlockBytes()) ||
+                 ndsBattleStaticTexturePaletteBlockBytes()) ||
                 (palette_bytes >
-                 ndsBattlePlayableStaticTexturePaletteBlockBytes() -
+                 ndsBattleStaticTexturePaletteBlockBytes() -
                      block_index))
             {
                 gNdsRendererBattleStaticTextureFailStep = 8u;
@@ -3242,10 +3242,10 @@ NDS_RENDERER_COLD s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
          * uploaded contiguously from VRAM_A, so the span is still exact --
          * it is simply shorter by the records whose fighter is absent. */
         u32 applicable_bytes =
-            ndsBattlePlayableStaticTexturePreparedBytes() -
+            ndsBattleStaticTexturePreparedBytes() -
             skipped_payload_bytes;
         u32 applicable_count =
-            ndsBattlePlayableStaticTextureKeyCount() -
+            ndsBattleStaticTextureKeyCount() -
             gNdsRendererBattleStaticTextureSkippedCount;
         u32 expected_bank_mask =
             (applicable_bytes > ((u32)VRAM_B - (u32)VRAM_A)) ? 3u : 1u;

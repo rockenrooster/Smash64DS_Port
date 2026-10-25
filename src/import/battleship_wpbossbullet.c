@@ -30,7 +30,7 @@
  *   wpmap.h:28); the boss-bullet proc table itself is decomp
  *   wp/wpboss/wpbossbullet.h:8-15, also published there.
  * - nSYAudioFGMExplodeL/S (include/gm/gmsound.h) + func_800269C0_275C0
- *   (include/sys/audio.h:71, body in src/port/reloc_backend_compat_shims.c):
+ *   (include/sys/audio.h:71, body in src/port/reloc_backend_source_shims.c):
  *   same audio seam as battleship_item_capsule.c:24,28.
  * - syVectorRotateAbout3D (decomp sys/vector.h:42) and
  *   efManagerSparkleWhiteMultiExplodeMakeEffect (decomp ef/efmanager.h:64):

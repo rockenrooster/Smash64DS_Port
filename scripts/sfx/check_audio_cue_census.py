@@ -450,7 +450,7 @@ def main(argv=None):
         blocked_names = {function for function, _p, _l, _r in blocked}
         # A route is live when the seam it goes through reaches the player.
         # PLAY and DEFAULT ride syAudioPlayBGM, which forwards to
-        # ndsAudioBgmPlay unconditionally (reloc_backend_compat_shims.c:1345,
+        # ndsAudioBgmPlay unconditionally (reloc_backend_source_shims.c:1345,
         # no scene-kind gate); STAGE rides mpCollisionSetPlayBGM, likewise.
         live = {'PLAY', 'PLAY-INDIRECT', 'DEFAULT', 'STAGE'}
         if 'ftParamTryPlayItemMusic' not in blocked_names:

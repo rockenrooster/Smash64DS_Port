@@ -204,7 +204,7 @@ void ndsBaseGmCollisionGetFighterPartsWorldPosition(DObj *main_dobj,
 /* P2-2p8 (2026-10-05): every entry point into this file that can set a
  * fighter FTParts latch (unk_dobjtrans_0x5/6/7, transform_update_mode 1) bumps
  * gNdsFtPartsLatchWrites first, so the per-tick latch clears
- * (src/port/reloc_backend_compat_shims.c) may skip a subtree no latch was set
+ * (src/port/reloc_backend_source_shims.c) may skip a subtree no latch was set
  * in since its last clear. These six have no callers inside gmcollision.c, so
  * the rename moves each definition and captures every call;
  * func_ovl2_800EDBA4's three in-file callers (func_ovl2_800EDE00/EDE5C and the

@@ -257,7 +257,7 @@ volatile u32 gNdsFtrLeanSlow;
 #endif
 
 /* Slice 3: the texture-part writes of each battle slot (ftParamSetTexturePart-
- * ID / ResetTexturePartAll, reloc_backend_compat_shims.c) -- the one in-status
+ * ID / ResetTexturePartAll, reloc_backend_source_shims.c) -- the one in-status
  * writer of a fighter MObj's texture state that is not a material animation. */
 static u32 sNdsFtrLeanTexPartSerial[GMCOMMON_PLAYERS_MAX];
 

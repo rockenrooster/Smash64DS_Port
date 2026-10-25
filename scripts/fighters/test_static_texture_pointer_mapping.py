@@ -29,14 +29,14 @@ typedef uint8_t u8;
 typedef int s32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD 2
-#define NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD 3
-#define NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD 4
+#define NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD 2
+#define NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD 3
+#define NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD 4
 typedef struct { u32 width, height, image, tlut_image, texel1_image; }
     NDSRendererHardwareTextureKey;
 typedef struct { u32 image_asset_id, tlut_asset_id, image_offset, tlut_offset;
                  u32 key_words[5], logical_width, logical_height; }
-    NDSBattlePlayableStaticTextureRecord;
+    NDSBattleStaticTextureRecord;
 static uintptr_t relocation;
 static s32 ndsRelocGetLoadedAssetView(u32 id, const void **base, u32 *size) {
     if (id != 1 && id != 2) return FALSE;
@@ -56,7 +56,7 @@ static const void *ndsRelocNativeAssetAddress(const void *base, u32 offset) {
 ''' + bodies + r'''
 int main(void) {
     NDSRendererHardwareTextureKey key;
-    NDSBattlePlayableStaticTextureRecord r = {1,2,16,32,{8,8,16,32,48},8,8};
+    NDSBattleStaticTextureRecord r = {1,2,16,32,{8,8,16,32,48},8,8};
     assert(ndsRendererHardwareBuildBattleStaticTextureKey(&r,&key));
     assert(key.image == 0x10010 && key.tlut_image == 0x20020 && key.texel1_image == 0x10030);
 #if NDS_MENU_SHELL

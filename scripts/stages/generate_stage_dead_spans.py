@@ -5,7 +5,7 @@ A native stage's geometry file still carries the display lists and vertex
 arrays its packet was generated from. Once the packet loads nothing reads
 them: the owner draws the packet, and a layer DObj's display-list pointer is
 only compared by the binding check. A VS battle lends them as allocation
-space (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans), as
+space (reloc_backend_source_shims.c ndsNativeStageLendDeadSpans), as
 scripts/p5/stage_generate.py dead_spans does for the Remix stages.
 
 The ranges are what the layer owners' DObjs reach (the grDisplayLayer

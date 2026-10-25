@@ -22,7 +22,7 @@
  * Chose verbatim transcription over a textual include of the decomp region
  * the way battleship_ftpublic.c:151 includes a whole .c file, because the
  * region also holds ftParamStopEffect / ftParamProcStopEffect, which already
- * have a strong port definition (reloc_backend_compat_shims.c:2825) -- the
+ * have a strong port definition (reloc_backend_source_shims.c:2825) -- the
  * include would drag in unrelated duplicate symbols.
  */
 #include <PR/ultratypes.h>

@@ -811,7 +811,7 @@ def author_colanims(resolved: dict, rows: dict) -> None:
     Eruption from Roy's ROY_CHARGE). scripts/p4/p4_colanims.py writes each
     copy as a row of its own; a SetColAnim of the source id by the content
     (or by Kirby holding its power) plays the copy (ndsP4ColAnimRemap,
-    src/port/reloc_backend_compat_shims.c)."""
+    src/port/reloc_backend_source_shims.c)."""
     if not rows:
         return
     out = {}

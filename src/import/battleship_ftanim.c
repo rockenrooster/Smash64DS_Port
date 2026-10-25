@@ -48,7 +48,7 @@ void gcPlayMObjMatAnim(MObj *mobj);
  * file, so every type, enum and helper is in scope. It cannot simply redefine
  * the name - the `#define` above renames the definition and its internal call
  * sites TOGETHER - so the port body takes its own name and
- * `reloc_backend_compat_shims.c`'s `ftAnimParseDObjFigatree` (the one
+ * `reloc_backend_source_shims.c`'s `ftAnimParseDObjFigatree` (the one
  * `ftParamUpdateAnimKeys` actually calls) selects it. That is the same
  * interposition `battleship_sys_objanim.c` uses for `gcPlayDObjAnimJoint`.
  *

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <nds/battle_playable_static_textures.h>
+#include <nds/battle_static_textures.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_fox_gun.h>
 #include <nds/nds_gbi_decode.h>
@@ -2568,7 +2568,7 @@ typedef struct NDSRendererHardwareTextureKey
  * The remaining fields are packed rather than one-u32-each because at 254
  * slots every four bytes spent here is 1,016 bytes. Widths are the source's
  * own: owner_mask and the upload dimensions are u16 in
- * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded by
+ * NDSBattleStaticTextureRecord, static_record_plus1 is bounded by
  * NDS_RENDERER_HW_TEXTURE_STATIC_COUNT in
  * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
  * booleans. The texel census and the upload dimensions went with the profile-2
@@ -2772,18 +2772,18 @@ _Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
  * these four have to agree or the reconstruction silently compares the wrong
  * bytes. */
 _Static_assert(sizeof(NDSRendererHardwareTextureKey) ==
-                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT *
+                   NDS_BATTLE_STATIC_TEXTURE_KEY_WORD_COUNT *
                        sizeof(u32),
                "texture key and generated record must hold the same words");
 _Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey, image) ==
-                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD * sizeof(u32),
+                   NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD * sizeof(u32),
                "image word index disagrees with the generated record");
 _Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey, tlut_image) ==
-                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD * sizeof(u32),
+                   NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD * sizeof(u32),
                "tlut word index disagrees with the generated record");
 _Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey,
                                   texel1_image) ==
-                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD * sizeof(u32),
+                   NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD * sizeof(u32),
                "texel1 word index disagrees with the generated record");
 #endif
 
@@ -2818,7 +2818,7 @@ static NDSRendererHardwareTextureIdent *ndsRendererHardwareEntryIdent(
 }
 
 /* The generated record backing a static slot; NULL for a dynamic or empty one. */
-static const NDSBattlePlayableStaticTextureRecord *
+static const NDSBattleStaticTextureRecord *
 ndsRendererHardwareEntryStaticRecord(
     const NDSRendererHardwareTextureCacheEntry *entry)
 {
@@ -2828,7 +2828,7 @@ ndsRendererHardwareEntryStaticRecord(
     {
         return NULL;
     }
-    return ndsBattlePlayableStaticTextureRecordAt(
+    return ndsBattleStaticTextureRecordAt(
         (u32)entry->static_record_plus1 - 1u);
 }
 
@@ -2901,9 +2901,9 @@ static u32 ndsRendererHardwareEntryKeyWord(
     const NDSRendererHardwareTextureCacheEntry *entry, u32 word)
 {
     const NDSRendererHardwareTextureIdent *ident;
-    const NDSBattlePlayableStaticTextureRecord *record;
+    const NDSBattleStaticTextureRecord *record;
 
-    if (word >= NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT)
+    if (word >= NDS_BATTLE_STATIC_TEXTURE_KEY_WORD_COUNT)
     {
         return 0u;
     }
@@ -2914,11 +2914,11 @@ static u32 ndsRendererHardwareEntryKeyWord(
          * these; anything else is only in the lab's shadow. */
         switch (word)
         {
-        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD:
+        case NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD:
             return ident->image;
-        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD:
+        case NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD:
             return ident->tlut_image;
-        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD:
+        case NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD:
             return ident->texel1_image;
         case NDS_RENDERER_HW_TEXTURE_KEY_WORD(prim_lod_fraction):
             return ident->prim_lod_fraction;
@@ -2934,13 +2934,13 @@ static u32 ndsRendererHardwareEntryKeyWord(
     }
     switch (word)
     {
-    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD:
+    case NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD:
         return sNdsRendererHardwareStaticKeyPointers[
             ndsRendererHardwareEntrySlot(entry)][0];
-    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD:
+    case NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD:
         return sNdsRendererHardwareStaticKeyPointers[
             ndsRendererHardwareEntrySlot(entry)][1];
-    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD:
+    case NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD:
         return sNdsRendererHardwareStaticKeyPointers[
             ndsRendererHardwareEntrySlot(entry)][2];
     default:
@@ -2955,7 +2955,7 @@ static void ndsRendererHardwareEntryCopyStaticKey(
     const NDSRendererHardwareTextureCacheEntry *entry,
     NDSRendererHardwareTextureKey *out)
 {
-    const NDSBattlePlayableStaticTextureRecord *record =
+    const NDSBattleStaticTextureRecord *record =
         ndsRendererHardwareEntryStaticRecord(entry);
     const u32 *pointers;
 
@@ -2988,7 +2988,7 @@ static s32 ndsRendererHardwareEntryKeyEqual(
     const NDSRendererHardwareTextureKey *key)
 {
     const NDSRendererHardwareTextureIdent *ident;
-    const NDSBattlePlayableStaticTextureRecord *record;
+    const NDSBattleStaticTextureRecord *record;
     const u32 *pointers;
     const u32 *words;
 
@@ -3024,11 +3024,11 @@ static s32 ndsRendererHardwareEntryKeyEqual(
         sNdsRendererHardwareStaticKeyPointers[
             ndsRendererHardwareEntrySlot(entry)];
     words = (const u32 *)key;
-    if ((words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
+    if ((words[NDS_BATTLE_STATIC_TEXTURE_IMAGE_WORD] !=
          pointers[0]) ||
-        (words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
+        (words[NDS_BATTLE_STATIC_TEXTURE_TLUT_WORD] !=
          pointers[1]) ||
-        (words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] !=
+        (words[NDS_BATTLE_STATIC_TEXTURE_TEXEL1_WORD] !=
          pointers[2]))
     {
         return FALSE;
@@ -3288,7 +3288,7 @@ volatile u32 gNdsRendererTextureRefreshCompactRequestBytesHighWater;
 #define NDS_RENDERER_CAPACITY_HIGH_WATER(name, value) ((void)0)
 #endif
 /* Sixteen entries is the whole of a GL_RGB16 palette; the static corpus never
- * needs more (generate_battle_playable_static_textures.py falls back to direct
+ * needs more (generate_battle_static_textures.py falls back to direct
  * colour above that). */
 /* The whole palette block, read once per prepare. Per-record reads cost 22
  * extra NitroFS round trips inside the longest pause in the game. */
@@ -3300,7 +3300,7 @@ static u16 sNdsRendererStaticTexturePalette[256];
  * and not upload_width x upload_height x 2 any more. 0 means "not a format this
  * uploader knows", which every caller treats as a rejection. */
 static u32 ndsRendererStaticTextureSpanBytes(
-    const NDSBattlePlayableStaticTextureRecord *record)
+    const NDSBattleStaticTextureRecord *record)
 {
     u32 texels;
 

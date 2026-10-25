@@ -56,7 +56,7 @@
  *   rows (port include/reloc_data.h:682-691).
  * - sc1PTrainingModeLoadWallpaper (:652, called by grwallpaper.c:271):
  *   defined here (strong); battleship_grwallpaper.c:12 only declares it
- *   and src/port/battle_playable_compat_stubs.c:137 carries a WEAK stub,
+ *   and src/port/unimported_source_stubs.c:137 carries a WEAK stub,
  *   so the strong def wins with no edit needed there.
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): sc1PTrainingModeStartScene (adapter below) vs

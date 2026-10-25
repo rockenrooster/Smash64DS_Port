@@ -409,7 +409,7 @@ $ImportBattleShipFTManager = $true
 # like a correctness property. Ask the generator once, at script scope, so a
 # future size change is a regeneration rather than a six-site edit.
 $staticTextureFixture = (& (Get-Command python -ErrorAction Stop).Source -B `
-    (Join-Path $PSScriptRoot 'generate_battle_playable_static_textures.py') `
+    (Join-Path $PSScriptRoot 'generate_battle_static_textures.py') `
     --repo-root $root --check --fixture-json | Out-String) | ConvertFrom-Json
 # APPLICABLE, NOT DECLARED (2026-09-12). The corpus is the P2 pin set and
 # carries records for owners a given match does not load: Samus's Charge Shot

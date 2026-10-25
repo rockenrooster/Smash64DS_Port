@@ -123,7 +123,7 @@ class BattleTextureEntryTest(unittest.TestCase):
         taskman = (DECOMP / "sys/taskman.c").read_text()
         load = function(taskman, "syTaskmanLoadScene")
         self.assertLess(load.index("func_start();"), load.index("syTaskmanRunTask("))
-        for path, name in (("src/port/reloc_backend_compat_shims.c", "mpCollisionSetPlayBGM"),
+        for path, name in (("src/port/reloc_backend_source_shims.c", "mpCollisionSetPlayBGM"),
                            ("src/port/reloc_backend_mp_collision.c", "mpCollisionSetBGM")):
             self.assertNotIn("ndsBattlePrepareSceneTextures", function(read_split(ROOT / path), name))
         for forbidden in ("gNdsMatchConfig", "gSCManagerTransferBattleState", "ndsAnimCachePreload"):

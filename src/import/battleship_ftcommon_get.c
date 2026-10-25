@@ -12,7 +12,7 @@
  * HeavyGet, and on the animation's flag1 frame put it in the fighter's hand.
  * The stubs it replaces are weak, so a strong definition here wins the link
  * without editing that file; `ftCommonGetCheckInterruptCommon` is NOT weak and
- * its shim is gated off in reloc_backend_compat_shims.c.
+ * its shim is gated off in reloc_backend_source_shims.c.
  *
  * Gated on NDS_ITEM_CORE: without items there is nothing to pick up, and
  * the weak stubs remain the right answer.

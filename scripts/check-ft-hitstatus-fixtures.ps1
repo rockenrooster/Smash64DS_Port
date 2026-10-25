@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $localHeaderPath = Join-Path $root 'include/ft/fighter.h'
-$localShimPath = Join-Path $root 'src/port/reloc_backend_compat_shims.c'
+$localShimPath = Join-Path $root 'src/port/reloc_backend_source_shims.c'
 $upstreamRoot = Join-Path $root 'decomp/BattleShip-main/decomp'
 $upstreamHeaderPath = Join-Path $upstreamRoot 'src/gm/gmdef.h'
 $foxMotionPath = Join-Path $upstreamRoot 'src/relocData/208_FoxMainMotion.c'
@@ -188,8 +188,8 @@ Assert-True ([regex]::IsMatch(
     'Failed fighter-animation loads can retain stale heap bytes.'
 
 
-# reloc_backend_compat_shims.c continues in its slices (readability Phase C).
-$localShim = (@('reloc_backend_compat_shims.c', 'reloc_backend_shims_fighter_status.c',
+# reloc_backend_source_shims.c continues in its slices (readability Phase C).
+$localShim = (@('reloc_backend_source_shims.c', 'reloc_backend_shims_fighter_status.c',
     'reloc_backend_shims_fighter_effects.c', 'reloc_backend_shims_fighter_parts.c',
     'reloc_backend_shims_map_collision.c') |
     ForEach-Object { Get-Content (Join-Path (Split-Path $localShimPath) $_) -Raw }) -join "`n"

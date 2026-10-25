@@ -1364,7 +1364,7 @@ typedef struct NDSStageMPWallHitScoutResultSnapshot {
  *
  * The source fills gMPCollisionLineGroups inside its own map loader, so its
  * getters may read the table cold. The port does not: mpCollisionInitGroundData
- * (reloc_backend_compat_shims.c) only assigns the geometry, and
+ * (reloc_backend_source_shims.c) only assigns the geometry, and
  * ndsMPCollisionEnsureLineGroups (:180) builds the per-kind id arrays on first
  * demand -- which is why func_ovl2_800F8FFC (:1690) and the topology getter
  * (:2113) each call it before touching line_count/line_id. These two arrived

@@ -213,7 +213,7 @@ static s32 ndsFxEffectsArenaValid(void)
  * clamp below is what proved it the expensive way.
  *
  * Its only external entry is the weak `efManagerDamageNormalLightMakeEffect` /
- * `...HeavyMakeEffect` in reloc_backend_compat_shims.c, and
+ * `...HeavyMakeEffect` in reloc_backend_source_shims.c, and
  * `battleship_efmanager.c` provides STRONG definitions of both names under
  * NDS_SOURCE_EFFECTS_PARTICLE, which defaults to 1 and is not overridden by
  * any target. The linker takes the strong ones. Disassembly of the published

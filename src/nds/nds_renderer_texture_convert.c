@@ -77,7 +77,7 @@ static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha,
 /* Losslessly repack a resolved RGB5A1 image into the DS's native 16-colour
  * format when the final image actually uses at most sixteen visible colours.
  *
- * This is the runtime twin of generate_battle_playable_static_textures.py's
+ * This is the runtime twin of generate_battle_static_textures.py's
  * repack_paletted(): the renderer has already resolved every N64 texture,
  * palette, material and combiner contribution into canonical RGB5A1 pixels, so
  * this changes representation only. Alpha-zero RGB is intentionally collapsed

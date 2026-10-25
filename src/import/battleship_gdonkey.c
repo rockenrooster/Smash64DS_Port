@@ -22,7 +22,7 @@
  *   (ftcommonentry.c table :39 + switch :204-207; port arm in
  *   battleship_ftcommon_entry.c under NDS_GDONKEY).
  * - Donkey triples already carry GDonkey: charge ColAnim remap
- *   (reloc_backend_compat_shims.c:2000-2003), charge_level check (:3788-3796),
+ *   (reloc_backend_source_shims.c:2000-2003), charge_level check (:3788-3796),
  *   charge joint 16 x=100 (:10600-10604, source ftparam.c:1842-1847), get.c:241
  *   cargo path; throw/damage/itemthrow triples ride whole ftcommon imports.
  * - Only attr delta besides size/weight/speeds: is_have_specialairlw 0

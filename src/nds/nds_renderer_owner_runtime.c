@@ -1161,7 +1161,7 @@ ndsRendererNativeFighterTablesForResolvedRoot(
                  * Before the low-detail deferral this meant a failed load or a
                  * heap generation change, and falling through was right. It
                  * now also covers a wrong predicate: the copy site
-                 * (reloc_backend_compat_shims.c) skips the low image when the
+                 * (reloc_backend_source_shims.c) skips the low image when the
                  * fighter's base detail is High, on the argument that nothing
                  * can then select Low. If that argument is ever wrong the hat
                  * stops drawing, which is SILENT -- so count it here. A
@@ -1175,7 +1175,7 @@ ndsRendererNativeFighterTablesForResolvedRoot(
                 /* THE COUNTER THAT PRICES THE LOW-DETAIL HAT LEVER.
                  *
                  * Both hat details load eagerly at the copy
-                 * (reloc_backend_compat_shims.c:12522-12525), about 8,556
+                 * (reloc_backend_source_shims.c:12522-12525), about 8,556
                  * bytes each, and the general heap never recovers: measured
                  * 41,684 free before the copy, 23,204 after, against the
                  * 25,600 floor where ifCommonSetMaxNumGObj freezes the GObj

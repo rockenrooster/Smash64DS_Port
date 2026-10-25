@@ -1066,7 +1066,7 @@ static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
      * own early-out (census 2026-08-23: memset 8.5M cycles, the ready check
      * 2.9M at 68 bytes). A topology that is valid for the current geometry
      * is exactly what the ensure would leave in place: the gMPCollisionGeometry
-     * assignment seam (compat_shims) invalidates both pointers, so a stale
+     * assignment seam (source_shims) invalidates both pointers, so a stale
      * equal pointer cannot reach here. Only build when it is not valid. */
     if ((sNdsMPTopologyGeometry != gMPCollisionGeometry) ||
         (gMPCollisionVertexInfo == NULL))

@@ -4,7 +4,7 @@
  * generated/nds_particle_banks.generated.inc, and check-nds-particle-banks.ps1
  * proves it reproduces the source .scb/.txb byte for byte. This file exists
  * only to give that .inc a translation unit, which is the same shape
- * battle_playable_static_textures.c and nds_ifcommon_oam.c already use.
+ * battle_static_textures.c and nds_ifcommon_oam.c already use.
  *
  * It replaces nds_particle_banks_placeholder.c, whose weak empty definitions
  * were correct only while the pack did not exist.

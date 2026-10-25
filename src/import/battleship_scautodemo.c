@@ -62,7 +62,7 @@
  *   (include/ft/fighter.h:188-191,3654,4089), is_magnify_display
  *   (include/if/interface.h:105), mpCollisionGetMapObjCountKind/
  *   GetMapObjIDsKind/GetMapObjPositionID (src/port/
- *   reloc_backend_compat_shims.c:17539-17650),
+ *   reloc_backend_source_shims.c:17539-17650),
  *   nSYAudioVoicePublicExcited (include/gm/gmsound.h:704),
  *   func_800266A0_272A0/func_800269C0_275C0 (include/sys/audio.h:99-101),
  *   ovl64_BSS_END (DECLARE_OVL in include/sc/scene.h:588-604).

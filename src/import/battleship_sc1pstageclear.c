@@ -39,7 +39,7 @@
  * inventory names all defer to the strong owner under this flag:
  * Tomato/Heart (battleship_ftcommon_get.c:41-44 #if !NDS_1P_GAME),
  * MewCatcher (battleship_item_map_core.c:168 same gate), Star/GiantImpact
- * (reloc_backend_compat_shims.c:396 same gate), ShieldBreaker (weak in
+ * (reloc_backend_source_shims.c:396 same gate), ShieldBreaker (weak in
  * battleship_ftcommon_shieldbreakfly.c:28, strong ub8 in the included
  * sc1pgame.c:720), and the Attack/Defend arrays plus BrosCalamity
  * (sc1pgame.c:706-750, defined once by battleship_sc1pgame_runtime.c under

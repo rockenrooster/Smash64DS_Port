@@ -12,7 +12,7 @@ from source_test_helpers import braced, function, source as read_split
 def test_tree_attachment_converts_loaded_material_without_mutating_source(tmp_path):
     types = (ROOT / "decomp/BattleShip-main/decomp/src/sys/objtypes.h").read_text()
     assets = read_split(ROOT / "src/port/reloc_backend_assets.c")
-    compat = read_split(ROOT / "src/port/reloc_backend_compat_shims.c")
+    compat = read_split(ROOT / "src/port/reloc_backend_source_shims.c")
     material = braced(types, r"struct MObjSub\s*\{", True)
     normalize = "\n".join(function(assets, name) for name in (
         "ndsRelocSwapS16Pair", "ndsRelocReverseColorPackBytes",

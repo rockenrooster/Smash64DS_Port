@@ -28,10 +28,10 @@
  * ftManagerMakeFighter (battleship_ftmanager.c:94),
  * ftManagerSetupFilesAllKind (battleship_ftmanager.c:80),
  * ftManagerAllocFighter + gFTManagerFigatreeHeapSize
- * (reloc_backend_compat_shims.c:1639), dFTManagerDefaultFighterDesc
+ * (reloc_backend_source_shims.c:1639), dFTManagerDefaultFighterDesc
  * (include/ft/fighter.h:4158), ftParamGetCostumeCommonID
- * (reloc_backend_compat_shims.c:16271), ftParamCheckSetFighterColAnimID
- * (reloc_backend_compat_shims.c:1983), dSCSubsysFighterScales
+ * (reloc_backend_source_shims.c:16271), ftParamCheckSetFighterColAnimID
+ * (reloc_backend_source_shims.c:1983), dSCSubsysFighterScales
  * (reloc_backend_fighter_display_seam.c:93). The challenger shows one fighter
  * (sSC1PChallengerFighterKind from gSCManagerSceneData.challenger_fkind); its
  * production data is the same manifest that backs the intro (ftchar_data_slots.c

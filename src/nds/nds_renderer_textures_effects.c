@@ -556,7 +556,7 @@ static s32 ndsRendererCombineSecondOutputUsesAlpha(u32 w1, u32 source)
  * is every antialiased opaque mode (AA_ZB_OPA_SURF, the fighters'
  * AA_ZB_OPA_SURF2): its blender alpha is the coverage, so those modes draw
  * every texel whatever its alpha, and the pinned stage and fighter keys
- * (generate_battle_playable_static_textures.py) keep the C/D test for them. */
+ * (generate_battle_static_textures.py) keep the C/D test for them. */
 static s32 ndsRendererHardwareBlenderReadsAlpha(const NDSRendererStats *stats)
 {
     const u32 mode = stats->othermode_l;

@@ -5,7 +5,7 @@
 # NDS_P4_ENABLED are set.
 
 # Colour animations: Remix's extended GFX routines the enabled contents reach
-# (scripts/p4/p4_colanims.py); reloc_backend_compat_shims.c appends them to
+# (scripts/p4/p4_colanims.py); reloc_backend_source_shims.c appends them to
 # dGMColScriptsDescs.
 NDS_P4_COLANIM_INC := $(NDS_P4_GEN)/nds_p4_colanims.generated.inc
 $(NDS_P4_COLANIM_INC): $(NDS_P4_STAGING)/ssb64asm.z64 \
@@ -13,7 +13,7 @@ $(NDS_P4_COLANIM_INC): $(NDS_P4_STAGING)/ssb64asm.z64 \
 		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_EXPORT)/$(name)/resolved.json)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_colanims.py" --staging "$(NDS_P4_STAGING)" \
 		--export-root "$(NDS_P4_EXPORT)" --contents "$(NDS_P4_ENABLED)" --out "$@"
-# reloc_backend_compat_shims.c is a slice of scene_backend.o.
+# reloc_backend_source_shims.c is a slice of scene_backend.o.
 scene_backend.o: $(NDS_P4_COLANIM_INC)
 
 # S8: Kirby's copies of the enabled contents (scripts/p4/p4_kirby.py): his

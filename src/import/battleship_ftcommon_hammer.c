@@ -16,7 +16,7 @@
  * weak stubs remain the right answer. The stubs this replaces are weak, so a
  * strong definition here wins the link; the SetStatus/CheckHold/UpdateStats
  * shims are not, and are fenced by the same condition in
- * reloc_backend_compat_shims.c, as is ftHammerProcMap in
+ * reloc_backend_source_shims.c, as is ftHammerProcMap in
  * battleship_ftstatus_map_physics_shims.c.
  */
 
