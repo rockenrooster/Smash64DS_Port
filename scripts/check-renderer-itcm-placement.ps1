@@ -68,7 +68,7 @@ $evictedFunctions = @(
     # Section 39: 4,252 B renting 1,309 cycles a byte; the second census pack
     # bought -11.2K paired with its bytes.
     'ndsRendererCommitNativeStageSegment',
-    'ndsRendererR2MaterialColor15'
+    'ndsRendererMaterialColor15'
 )
 $nativeFighterFunctions = @(
     'ndsRendererNativeShadeProductionActions',

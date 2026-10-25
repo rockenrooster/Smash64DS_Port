@@ -110,11 +110,11 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * become the material's diffuse and ambient, so the engine evaluates
      * exactly light_color_2 + light_color_1 * dot(N, L). The light vector
      * itself cannot be written here -- stats->light_dir_* is only populated by
-     * the epoch state deltas -- so ndsRendererR2WriteLightVector does it on the
+     * the epoch state deltas -- so ndsRendererWriteLightVector does it on the
      * first epoch of this execute that has a direction. */
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
     {
-        ndsRendererR2BuildDenseNormals();
+        ndsRendererBuildDenseNormals();
     }
     sNdsLightVectorWritten = 0u;
     /* The light colour does not depend on any matrix, so unlike the vector it

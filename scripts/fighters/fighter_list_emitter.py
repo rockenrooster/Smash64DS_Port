@@ -579,7 +579,7 @@ class Emitter(object):
                 if not prepare_valid:
                     if textured:
                         if (self.memo is not None) and (r in self.memo):
-                            # ndsRendererR2RunTextureMemoApply: the run index
+                            # ndsRendererRunTextureMemoApply: the run index
                             # alone keys production's run texture memo, so a
                             # donor-table root replays whatever run of the
                             # same index prepared first in this execute.

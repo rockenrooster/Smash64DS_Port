@@ -643,7 +643,7 @@ static void ndsFighterTintSyncGeneration(void)
 /* The GL name of a resident tile whose every texel is `material_color`, or 0.
  * Callable from the fighter draw walk: it allocates, uploads, evicts and binds
  * nothing. A miss is queued for the frame boundary. */
-static u32 ndsRendererR2FighterTintLookup(u32 material_color)
+static u32 ndsRendererFighterTintLookup(u32 material_color)
 {
     u32 rgb = (material_color >> 8) & 0x00ffffffu;
     u32 i;
@@ -795,7 +795,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
 
 /* P2-2p8 Phase 1 slice 1: the resident tile for a colour, as the words a
  * packet bind carries. `touch` refreshes its LRU stamp (a lean draw uses it
- * without going through ndsRendererR2FighterTintLookup). */
+ * without going through ndsRendererFighterTintLookup). */
 s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
 {
     u32 i;

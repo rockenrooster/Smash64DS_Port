@@ -787,7 +787,7 @@ ndsRendererEntryEffectCoord(s16 value)
  *    dots the untransformed source normal with that same vector and the
  *    modelview's scale never enters;
  *  - diffuse/ambient are the two source light colours at five bits, the
- *    fighters' no-material mapping (ndsRendererR2MaterialChannel);
+ *    fighters' no-material mapping (ndsRendererMaterialChannel);
  *  - each corner sends its normal (GFX_NORMAL) instead of a colour.
  *
  * Not exact: the engine's five-bit light arithmetic differs from the CPU's

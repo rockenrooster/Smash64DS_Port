@@ -1744,13 +1744,13 @@ ndsFtrLeanEntryResetShade(u32 battle_slot, const NDSFtrLeanPatchView *view)
             material_color =
                 NDS_FTR_LEAN_VIEW_PRE(view, site->root)->prim_color;
         }
-        diffuse = ndsRendererR2MaterialColor15(
+        diffuse = ndsRendererMaterialColor15(
             site->light_color_1, material_color, site->use_material,
             view->modulate);
-        ambient = ndsRendererR2MaterialColor15(
+        ambient = ndsRendererMaterialColor15(
             site->light_color_2, material_color, site->use_material,
             view->modulate);
-        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+        diffuse = ndsRendererClampDiffuseToMaterial(
             diffuse, ambient, material_color, site->use_material,
             view->modulate);
         word = diffuse | (ambient << 16);
@@ -1877,7 +1877,7 @@ ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
 /* 2.6 tile-word patch: each tint bind's TEXIMAGE_PARAM/PAL_FORMAT words for
  * the live colour, read from the resident tile (the words the live draw's
  * bind would write). The colour is the root's prim unless the display list
- * overrode it, exactly as ndsRendererR2ResolveEpochShade sees it. FALSE when
+ * overrode it, exactly as ndsRendererResolveEpochShade sees it. FALSE when
  * the live draw would bind differently: a white prim draws untinted, a
  * colour with no resident tile folds (and queues the tile), or the palette
  * word's presence differs -- the list is re-materialized then. */

@@ -131,10 +131,10 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
             (material_color != memo_material) ||
             ((u32)site->use_material != memo_use))
         {
-            u32 diffuse = ndsRendererR2MaterialColor15(
+            u32 diffuse = ndsRendererMaterialColor15(
                 site->light_color_1, material_color, site->use_material,
                 modulate);
-            u32 ambient = ndsRendererR2MaterialColor15(
+            u32 ambient = ndsRendererMaterialColor15(
                 site->light_color_2, material_color, site->use_material,
                 modulate);
 
@@ -163,7 +163,7 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
              * Nothing else needs to change: a rigid clamp of the recorded inputs is
              * what the live draw would have written for this prim, so prepared and
              * replayed frames now derive the identical word instead of two. */
-            diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse = ndsRendererClampDiffuseToMaterial(
                 diffuse, ambient, material_color, site->use_material,
                 modulate);
             memo_light_1 = site->light_color_1;
@@ -179,7 +179,7 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
     return TRUE;
 }
 
-/* ndsRendererR2WriteLightVector's normalisation, same hardware units.
+/* ndsRendererWriteLightVector's normalisation, same hardware units.
  *
  * TWIN, AND IT IS A CHECK OWED. A replayed frame submits this word instead of
  * the live one, so the two formulas must agree or the same fighter shades
@@ -236,7 +236,7 @@ _Static_assert(((((u64)0xffffu) * NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8) <=
 /* GX texgen (gNdsFighterPacketHwTexgen, nds_renderer_preamble.c). The engine
  * forms S = TEXCOORD + (N0*m0 + N1*m4 + N2*m8) >> 21 per GFX_NORMAL, the
  * normal 1.0.9 and the matrix 20.12. The corner's normal word is the source
- * s8 normal n scaled by 511/127 (ndsRendererR2NormalComponent), so the
+ * s8 normal n scaled by 511/127 (ndsRendererNormalComponent), so the
  * source's (n.Lq) * scale / (8 * 127 * 32767) is N.M >> 21 with
  * M = Lq * scale * 2^18 / (511 * 32767): a 2^48 reciprocal and a shift. */
 #define NDS_FIGHTER_PACKET_HW_TEXGEN_RECIP \

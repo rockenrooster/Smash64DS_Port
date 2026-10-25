@@ -29,7 +29,7 @@ It does three things, none of which needs a build or an emulator:
         pixel = clamp8(light2 + light1 * dot) * prim / 255      -> RGB5
     The DS geometry engine has no equivalent inner clamp, so the port folds the
     primitive colour into the material diffuse/ambient *before* the engine's
-    clamp (`ndsRendererR2MaterialColor15`,
+    clamp (`ndsRendererMaterialColor15`,
     `src/nds/nds_renderer_native_common.c:6512`, called at :6827-6832):
         pixel = clamp5(light2*prim/255 + light1*prim/255 * dot)
     For prim == white the two are identical; for a tinted prim they diverge in
@@ -405,8 +405,8 @@ def epoch_uses_material(ctx, epoch_index: int) -> bool:
     """The generated policy family's USE_MATERIAL bit for this epoch.
 
     It gates both halves of the port's arithmetic: the prim fold in
-    ndsRendererR2MaterialChannel and the diffuse cap in
-    ndsRendererR2ClampDiffuseToMaterial.  A textured, non-material epoch
+    ndsRendererMaterialChannel and the diffuse cap in
+    ndsRendererClampDiffuseToMaterial.  A textured, non-material epoch
     (family 0) multiplies by its texel instead, which this census does not
     model, so for those only the shade itself is compared.
     """
@@ -467,7 +467,7 @@ def ds_pixel5_tinted(light1: int, light2: int, prim: int, dot: float,
                      use_material: bool = True):
     """The tint route: shade the RAW light, then modulate by a solid prim tile.
 
-    ndsRendererR2ResolveEpochShade writes RGB5(light) into diffuse/ambient for
+    ndsRendererResolveEpochShade writes RGB5(light) into diffuse/ambient for
     an untextured material epoch with a non-white prim whose tile is resident,
     and the run binds an 8x8 tile whose every texel is RGB5(prim):
     clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's clamp-then-multiply
@@ -500,9 +500,9 @@ def ds_pixel5_capped(light1: int, light2: int, prim: int, dot: float,
     tile exists, and what shipped before the tint route, at identity colour
     modulation.
 
-    ndsRendererR2MaterialChannel folds prim into each light only when the
+    ndsRendererMaterialChannel folds prim into each light only when the
     policy uses material (else the channel is light >> 3), and
-    ndsRendererR2ClampDiffuseToMaterial then caps each diffuse channel to the
+    ndsRendererClampDiffuseToMaterial then caps each diffuse channel to the
     headroom prim5 - ambient5, where prim5 is the same fold of full white
     light -- skipped for a white prim, which is the identity fold.  The hurt
     flash (colour modulate) is a second multiply this census does not model.

@@ -6947,7 +6947,7 @@ def _prefix_equal(full, prefix) -> bool:
 
 
 def _pack_ds_normal_from_rgba(rgba: int) -> int:
-    """Mirror ndsRendererR2BuildDenseNormals at generation time."""
+    """Mirror ndsRendererBuildDenseNormals at generation time."""
     packed = 0
     for shift, out_shift in ((24, 0), (16, 10), (8, 20)):
         source = (rgba >> shift) & 0xff

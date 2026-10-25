@@ -190,7 +190,7 @@ def _rows(values: list[str]) -> list[str]:
 def _bake_dense_normal_word(rgba: int) -> int:
     """The runtime bake's output word for one dense vertex, computed here.
 
-    Bit-identical replica of `ndsRendererR2BuildDenseNormals` in
+    Bit-identical replica of `ndsRendererBuildDenseNormals` in
     `src/nds/nds_renderer_native_common.c`: each of the packed normal bytes
     (rgba>>24, >>16, >>8 as s8) scales by 0x1FF/127 with C truncation toward
     zero, clamps to [-512, 511], and packs masked-10-bit. The bake input is

@@ -1130,7 +1130,7 @@ typedef struct NDSFighterPacketRoot
  * the colour modulate and the root prim move every flash frame -- so the
  * word is re-derived on replay from the recorded light colours and the live
  * prim/modulate instead of invalidating the packet: exactly the shade's
- * ndsRendererR2MaterialColor15 inputs, with `prim_from_root` saying whether
+ * ndsRendererMaterialColor15 inputs, with `prim_from_root` saying whether
  * the material colour was the root preamble's prim (follows the flash) or a
  * material/state-delta override (stays as recorded, as the source does). */
 typedef struct NDSFighterPacketShadeSite

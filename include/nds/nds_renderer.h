@@ -1416,7 +1416,7 @@ s32 ndsRendererFighterPacketPrecheck(
 /* Drops the run texture memo rows of the player slot in `owner_key` bits 10:9
  * when `material_identity` (the adapter's live MObj identity word) differs
  * from the one the rows were filled under. A no-op with the memo off. */
-void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity);
+void ndsRendererRunTextureMemoFence(u32 owner_key, u32 material_identity);
 /* `packet_key` is the adapter's identity word for everything the fighter
  * packet's static words depend on outside the renderer (live material keys and
  * the colour modulate); the renderer mixes in its own fences. */
@@ -1708,7 +1708,7 @@ void ndsRendererHardwareArmBattleStaticTextures(void);
  * this header does not depend on the generated config defines being visible
  * first; defined only under NDS_FLASH_PROBE, and its one call site is guarded
  * by the same flag. Delete with the experiment. */
-void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame);
+void ndsRendererFlashProbeFrameEnd(u32 presented_frame);
 void ndsRendererHardwareDiscardBattleStaticTextures(void);
 void ndsRendererHardwareAbortBattleStaticTextures(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,

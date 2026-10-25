@@ -374,7 +374,7 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     /* Tint tiles the frame just asked for are created HERE: the frame's batch
      * is closed and no draw walk is running, and the tracker reset right below
      * cleans up after the upload's own bind. See
-     * ndsRendererR2FighterTintLookup for why never inside a walk. */
+     * ndsRendererFighterTintLookup for why never inside a walk. */
     ndsRendererHardwareServiceFighterTintTiles();
     /* Same reason: one particle animation sheet a frame, once the countdown
      * has released its atlases (nds_renderer_particles.c). */

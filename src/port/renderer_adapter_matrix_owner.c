@@ -714,7 +714,7 @@ u32 gNdsGxComposeDeclines;
  * and the rest are allocated DOWNWARD from 30. Downward on purpose:
  * MTX_STORE/MTX_RESTORE address ABSOLUTE stack levels while glPushMatrix writes
  * whatever level the stack pointer is at, so the low levels belong to anyone who
- * pushes inside the execute (ndsRendererR2WriteLightVector does, once). Mario
+ * pushes inside the execute (ndsRendererWriteLightVector does, once). Mario
  * needs one new slot and Fox eleven.
  *
  * THE CROSS-RUN RANGE IS 16..25, not the 16..23 this comment claimed until

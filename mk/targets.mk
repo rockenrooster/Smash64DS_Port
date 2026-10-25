@@ -29,7 +29,7 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_STAGE_HW_COMPOSE := 2
 # R2-08: THE SWITCH (SwitchPlan §6), the measurement/proof half. This block must
 # carry every published flag or the instrument measures a path the user is not
-# running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_R2_PATH,
+# running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_PATH,
 # Makefile:4203).
 ifneq ($(NDS_LAB_R1_PATH),1)
 override NDS_PATH := 1

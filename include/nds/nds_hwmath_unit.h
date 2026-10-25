@@ -9,7 +9,7 @@
  * eight functions, and every one of them is mainline draw-phase or
  * simulation-phase code --
  *
- *   ndsRendererR2WriteLightVector         0x298 0x2a0 0x2b4  (div64 + sqrt64)
+ *   ndsRendererWriteLightVector         0x298 0x2a0 0x2b4  (div64 + sqrt64)
  *   ndsRendererHardwareClipVertex         0x298 0x2a0
  *   ndsRendererHardwareSubmitVertex       0x298 0x2a0
  *   ndsRendererHardwareClipVertexNdcDepth 0x298 0x2a0
@@ -210,7 +210,7 @@ static inline uint32_t ndsHwMathSqrt64Fast(uint64_t value)
  * PRICE, measured two independent ways. In situ, from the per-PC execution
  * profile of build-c200-trackprof-off over its 80 marginal frames, the leading
  * polls that these two delete cost 398,615 cycles = 2,491.3 tk/fr:
- * sqrtf 295,320, ndsRendererR2WriteLightVector 46,191,
+ * sqrtf 295,320, ndsRendererWriteLightVector 46,191,
  * ndsRendererSubmitNativeImpactWave 25,088, ndsRendererHardwareSubmitVertex
  * 32,016. On the microbenchmark, 41.0 tk per divide and 20.0 per root.
  * ========================================================================== */

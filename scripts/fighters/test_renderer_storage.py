@@ -86,8 +86,8 @@ int main(void) {{
         source=source.replace('__attribute__((noinline))', '')
         record=braced(source,r'typedef struct NDSRunTextureMemo\s*\{',True)
         bodies='\n'.join(function(source,name) for name in (
-            'ndsRendererR2RunTextureMemoFor','ndsRendererR2RunTextureMemoApply',
-            'ndsRendererR2RunTextureMemoFill'))
+            'ndsRendererRunTextureMemoFor','ndsRendererRunTextureMemoApply',
+            'ndsRendererRunTextureMemoFill'))
         counters='\n'.join('static u32 '+name+';' for name in sorted(set(re.findall(r'\bgNds\w+',bodies))))
         program=TYPES+record+'''
 #define NDS_RUN_MEMO_MAX 67u
@@ -118,22 +118,22 @@ int main(void) {
         *e=(NDSRendererHardwareTextureCacheEntry){1,(s32)(lane+10),100,0,1,0xdeadbeef};
         sNdsNativeFighterOwnerExecution.texture_memo_owner_key=0x10000|(lane<<9);
         sNdsRendererHardwareActiveTextureEntry=e;
-        ndsRendererR2RunTextureMemoFill(2,&s,lane+10,65535,32768,65535,0,-32768);
+        ndsRendererRunTextureMemoFill(2,&s,lane+10,65535,32768,65535,0,-32768);
     }
     for(u32 lane=0;lane<4;++lane) {
         sNdsNativeFighterOwnerExecution.texture_memo_owner_key=0x10000|(lane<<9);
         sNdsRendererHardwareActiveTextureEntry=NULL;
-        CHECK(ndsRendererR2RunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
+        CHECK(ndsRendererRunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
         CHECK(name==lane+10 && ss==65535 && st==32768 && os==65535 && ot==0 && off==-32768);
         CHECK(s.hardware_texture_format==4 && s.hardware_texture_width==256 && s.hardware_texture_height==128);
         CHECK(bound_name==name && bound_params==0xdeadbeef && static_hits==lane+1);
         CHECK(sNdsRendererHardwareTextureCache[lane].last_used_frame==11);
     }
     sNdsNativeFighterOwnerExecution.texture_memo_owner_key=0x20000;
-    CHECK(!ndsRendererR2RunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
+    CHECK(!ndsRendererRunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
     sNdsNativeFighterOwnerExecution.texture_memo_owner_key=0x10000;
     ++sNdsRendererHardwareTextureCache[0].key_generation;
-    CHECK(!ndsRendererR2RunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
+    CHECK(!ndsRendererRunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
     for(u32 fault=0;fault<11;++fault) {
         NDSRendererHardwareTextureCacheEntry *e=&sNdsRendererHardwareTextureCache[fault==10?255:0];
         u32 n=10,a=65535,b=0,c=1,d=2; s32 o=32767;
@@ -151,9 +151,9 @@ int main(void) {
         *e=(NDSRendererHardwareTextureCacheEntry){1,(s32)n,101,0,1,0};
         sNdsRendererHardwareActiveTextureEntry=e;
         sNdsRunTextureMemo[2][0].valid=1;
-        ndsRendererR2RunTextureMemoFill(2,&s,n,a,b,c,d,o);
+        ndsRendererRunTextureMemoFill(2,&s,n,a,b,c,d,o);
         CHECK(!sNdsRunTextureMemo[2][0].valid);
-        CHECK(!ndsRendererR2RunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
+        CHECK(!ndsRendererRunTextureMemoApply(2,&s,&name,&ss,&st,&os,&ot,&off));
     }
     return 0;
 }

@@ -16,7 +16,7 @@
 
 /* Source normals are s8 with 1.0 == 127; the DS normal is 10-bit signed with
  * 1.0 == 0x1ff. Load time, so the exact scale costs nothing. */
-static s32 ndsRendererR2NormalComponent(s32 source)
+static s32 ndsRendererNormalComponent(s32 source)
 {
     s32 scaled = (source * 0x1ff) / 127;
 
@@ -32,18 +32,18 @@ static inline u32 ndsRendererEntryEffectNormalWord(
     const NDSRendererInputVertex *vtx)
 {
     return NDS_NORMAL_PACK(
-        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->r),
-        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->g),
-        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->b));
+        (int)ndsRendererNormalComponent((s32)(s8)vtx->r),
+        (int)ndsRendererNormalComponent((s32)(s8)vtx->g),
+        (int)ndsRendererNormalComponent((s32)(s8)vtx->b));
 }
 
 static inline u32 ndsRendererEntryEffectLightWord(
     const NDSRendererHardwareLightDirection *direction)
 {
     return NDS_NORMAL_PACK(
-        (int)ndsRendererR2NormalComponent(-direction->x),
-        (int)ndsRendererR2NormalComponent(-direction->y),
-        (int)ndsRendererR2NormalComponent(-direction->z));
+        (int)ndsRendererNormalComponent(-direction->x),
+        (int)ndsRendererNormalComponent(-direction->y),
+        (int)ndsRendererNormalComponent(-direction->z));
 }
 
 /* The GFX_NORMAL word of every source colour entry (the corners' normals are

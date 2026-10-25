@@ -742,7 +742,7 @@ ndsFtrLeanRootSelfContainedCached(const NDSNativeFighterRuntimeTables *tables,
  * root, asset base, light preamble, palette slot, corner format, GX slots,
  * preamble and material rows -- the rows by the material words they are
  * built from (`material_key`, the event path's per-root fold). Not the
- * colour modulate: it moves only the shade words (ndsRendererR2Resolve-
+ * colour modulate: it moves only the shade words (ndsRendererResolve-
  * EpochShade's diffuse/ambient), which a copy re-derives
  * (ndsFtrLeanRederiveSites).
  *
@@ -868,13 +868,13 @@ static void ndsFtrLeanRederiveSites(NDSFighterPacket *packet, u32 first,
         {
             material_color = inputs[site->root].preamble->prim_color;
         }
-        diffuse = ndsRendererR2MaterialColor15(
+        diffuse = ndsRendererMaterialColor15(
             site->light_color_1, material_color, site->use_material,
             modulate);
-        ambient = ndsRendererR2MaterialColor15(
+        ambient = ndsRendererMaterialColor15(
             site->light_color_2, material_color, site->use_material,
             modulate);
-        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+        diffuse = ndsRendererClampDiffuseToMaterial(
             diffuse, ambient, material_color, site->use_material, modulate);
         packet->words[site->index] = diffuse | (ambient << 16);
     }
@@ -1245,7 +1245,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
             }
             m->light_written = TRUE;
         }
-        shade = ndsRendererR2ResolveEpochShade(
+        shade = ndsRendererResolveEpochShade(
             stats->light_color_1, stats->light_color_2, material_color,
             use_material, state->color_modulate, policy->textured);
         tinted = (sNdsEpochTintTexture != 0u) ? 1u : 0u;
@@ -1956,7 +1956,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     NDS_FTR_LEAN_MAT_PART(m, 4u);
     if (tint != 0u)
     {
-        ndsRendererR2BindTintTile(stats, tint);
+        ndsRendererBindTintTile(stats, tint);
     }
     /* The run's prepare: texture matrix, bind, POLYGON_ATTR, BEGIN. */
     if (m->hw_texgen != 0u)
@@ -2105,7 +2105,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     ndsFtrLeanPack1(pk, FIFO_BEGIN, (u32)GL_TRIANGLE);
     if (tint != 0u)
     {
-        /* ndsRendererR2OpenTintBatch: the tile-centre coordinate every vertex
+        /* ndsRendererOpenTintBatch: the tile-centre coordinate every vertex
          * of the run keeps, then the prepare is invalidated so the next run
          * re-binds its own texture. */
         ndsFtrLeanPack1(pk, FIFO_TEX_COORD,
@@ -2316,7 +2316,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
     {
-        ndsRendererR2BuildDenseNormals();
+        ndsRendererBuildDenseNormals();
     }
     /* The head: the execute's light colour, P' once, and the light vector
      * under an identity vector matrix (its word is patched per draw). */

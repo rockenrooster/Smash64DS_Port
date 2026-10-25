@@ -13,9 +13,9 @@ static void ndsRendererNativeBuildDenseShadeWords(
     for (index = 0u; index < vertex_count; index++)
     {
         u32 rgba = vertices[index].rgba;
-        s32 nx = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 24));
-        s32 ny = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 16));
-        s32 nz = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 8));
+        s32 nx = ndsRendererNormalComponent((s32)(s8)(rgba >> 24));
+        s32 ny = ndsRendererNormalComponent((s32)(s8)(rgba >> 16));
+        s32 nz = ndsRendererNormalComponent((s32)(s8)(rgba >> 8));
 
         dense_words[index] =
             NDS_NORMAL_PACK((int)nx, (int)ny, (int)nz);
@@ -46,7 +46,7 @@ static void ndsRendererNativeBuildDenseShadeWords(
     }
 }
 
-NDS_RENDERER_COLD static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
+NDS_RENDERER_COLD static void __attribute__((noinline)) ndsRendererBuildDenseNormals(void)
 {
     ndsRendererNativeBuildDenseShadeWords(
         sNdsNativeFighterActiveTables->dense_vertices,
@@ -64,7 +64,7 @@ NDS_RENDERER_COLD static void __attribute__((noinline)) ndsRendererR2BuildDenseN
  * so the only intended difference is that the engine evaluates the dot product.
  * `base` is the source light colour byte; `material` is the epoch's material
  * byte when the policy uses one. */
-static inline u32 ndsRendererR2MaterialChannel(
+static inline u32 ndsRendererMaterialChannel(
     u32 base, u32 material, u32 use_material)
 {
     if (use_material != 0u)
@@ -80,7 +80,7 @@ static u8 sNdsLightVectorWritten;
 
 /* The resident tint tile this epoch's untextured runs modulate by, or 0 for the
  * folded-material path. Written once per epoch by
- * ndsRendererNativeShadeProductionActions (via ndsRendererR2ResolveEpochShade)
+ * ndsRendererNativeShadeProductionActions (via ndsRendererResolveEpochShade)
  * and read by the run prepare. Deliberately OUTSIDE the
  * NDS_UNLIT_VERTEX_EPOCH guard that sNdsEpochUnlitVertexColor above sits
  * inside -- that flag is 0 in every shipping config, and both of this
@@ -137,7 +137,7 @@ u32 gNdsLightVectorWrites;
  * 1.0 rotates with the fighter.
  *
  * Either shape reads as a FACE/BODY seam rather than a uniform brightness
- * change, because ndsRendererR2ClampDiffuseToMaterial caps the use_material run
+ * change, because ndsRendererClampDiffuseToMaterial caps the use_material run
  * at prim - ambient while the no-material / white-prim run still climbs to 31.
  * The two runs saturate at different levels, so an error in the LEVEL surfaces
  * as a boundary between them -- which is why the clamp repair fixed one facing
@@ -243,7 +243,7 @@ typedef struct NDSLightMatrixWitness
  *
  * COVERAGE, because a counter that only counts what it saw is how a green run
  * gets over-read: a REPLAYED fighter submits the recorded packet and never
- * enters ndsRendererR2WriteLightVector, so it contributes no sample at all.
+ * enters ndsRendererWriteLightVector, so it contributes no sample at all.
  * Compare gNdsLightMatrixWitnessWrites against gNdsLightVectorWrites (they
  * should track) and both against the number of fighters actually drawing
  * before concluding anything from a slot that did not move. */
@@ -262,7 +262,7 @@ __attribute__((used)) volatile u32 gNdsLightMatrixStretchDeclined;
 /* Returns |M L| in 20.12 * source units, or 0 when the sample is unusable --
  * which is the caller's signal to keep the r25 divisor. noinline and outside
  * .itcm.native_fighter for the same reason as its caller: the region is full. */
-static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
+static s32 __attribute__((noinline)) ndsRendererSampleVectorMatrix(
     s32 lx, s32 ly, s32 lz, s32 light_len_q12)
 {
     volatile NDSLightMatrixWitness *witness;
@@ -377,7 +377,7 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
  *
  * Deliberately outside .itcm.native_fighter and noinline -- the shade function
  * is ITCM-resident and full, and the region overflowed once already this task. */
-static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
+static void __attribute__((noinline)) ndsRendererWriteLightVector(
     const NDSRendererStats *stats)
 {
     s32 x = stats->light_dir_x;
@@ -414,7 +414,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     /* Before the identity bracket on purpose: the sample must be the LIVE
      * root/joint vector matrix this execute's normals will be multiplied by,
      * not the identity the light vector is written under. */
-    stretched_len = ndsRendererR2SampleVectorMatrix(x, y, z, light_len_q12);
+    stretched_len = ndsRendererSampleVectorMatrix(x, y, z, light_len_q12);
     /* Witness-only build still CLASSIFIES the sample below -- Applied and
      * Declined are the measurement -- and only the divisor is left alone. */
 #endif
@@ -501,16 +501,16 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
  * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
-static u16 __attribute__((noinline)) ndsRendererR2MaterialColor15(
+static u16 __attribute__((noinline)) ndsRendererMaterialColor15(
     u32 light_color, u32 material_color, u32 use_material, u32 color_modulate)
 {
-    u32 r = ndsRendererR2MaterialChannel(
+    u32 r = ndsRendererMaterialChannel(
         (light_color >> 24) & 0xffu, (material_color >> 24) & 0xffu,
         use_material);
-    u32 g = ndsRendererR2MaterialChannel(
+    u32 g = ndsRendererMaterialChannel(
         (light_color >> 16) & 0xffu, (material_color >> 16) & 0xffu,
         use_material);
-    u32 b = ndsRendererR2MaterialChannel(
+    u32 b = ndsRendererMaterialChannel(
         (light_color >> 8) & 0xffu, (material_color >> 8) & 0xffu,
         use_material);
 
@@ -523,11 +523,11 @@ volatile u32 gNdsShadeClampAppliedCount;
 /* Forward: the shade resolver and the two tint-run helpers live outside the
  * fighter ITCM section, so the ITCM callers below carry only a call each; see
  * their definitions. */
-static u32 ndsRendererR2ResolveEpochShade(
+static u32 ndsRendererResolveEpochShade(
     u32 light1, u32 light2, u32 material_color, u32 use_material,
     u32 color_modulate, u32 textured);
-static void ndsRendererR2BindTintTile(NDSRendererStats *stats, u32 tint);
-static void ndsRendererR2OpenTintBatch(
+static void ndsRendererBindTintTile(NDSRendererStats *stats, u32 tint);
+static void ndsRendererOpenTintBatch(
     NDSRendererStats *stats, u32 tint, u32 poly_fmt, u32 matrix_generation);
 
 /* OWNER 2026-09-21: Kirby's face and body are still two colours, and HOLDING
@@ -566,7 +566,7 @@ typedef struct NDSShadeWitness
 volatile NDSShadeWitness gNdsShadeWitness[NDS_SHADE_WITNESS_SLOTS];
 volatile u32 gNdsShadeWitnessWrites;
 
-static void ndsRendererR2RecordShadeWitness(u32 lit, u32 unlit_vertex,
+static void ndsRendererRecordShadeWitness(u32 lit, u32 unlit_vertex,
                                             u32 use_material, u32 material)
 {
     u32 slot = gNdsShadeWitnessWrites % NDS_SHADE_WITNESS_SLOTS;
@@ -608,7 +608,7 @@ static void ndsRendererR2RecordShadeWitness(u32 lit, u32 unlit_vertex,
  *
  * Only the prim-folded case is touched. With use_material clear the source has
  * no prim multiply either, so that path already agrees and is left alone. */
-static inline u32 ndsRendererR2ClampDiffuseChannel(
+static inline u32 ndsRendererClampDiffuseChannel(
     u32 diffuse, u32 ambient, u32 prim, u32 shift)
 {
     u32 d = (diffuse >> shift) & 0x1fu;
@@ -621,7 +621,7 @@ static inline u32 ndsRendererR2ClampDiffuseChannel(
 
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
  * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
-static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
+static u16 __attribute__((noinline)) ndsRendererClampDiffuseToMaterial(
     u32 diffuse, u32 ambient, u32 material_color, u32 use_material,
     u32 color_modulate)
 {
@@ -658,11 +658,11 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
     }
     /* Full white light through the same fold IS the modulated prim colour, so
      * the cap comes from the identical arithmetic, not a second copy of it. */
-    prim = ndsRendererR2MaterialColor15(0xffffffffu, material_color,
+    prim = ndsRendererMaterialColor15(0xffffffffu, material_color,
                                         use_material, color_modulate);
-    r = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 0u);
-    g = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 5u);
-    b = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 10u);
+    r = ndsRendererClampDiffuseChannel(diffuse, ambient, prim, 0u);
+    g = ndsRendererClampDiffuseChannel(diffuse, ambient, prim, 5u);
+    b = ndsRendererClampDiffuseChannel(diffuse, ambient, prim, 10u);
     capped = (u16)RGB15(r, g, b);
     if (capped != (u16)diffuse)
     {
@@ -679,7 +679,7 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
  * clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's clamp-then-multiply
  * order, and the same arithmetic the textured face beside it already gets. A
  * colour with no tile yet (its first frame, or a full table) keeps the capped
- * fold; ndsRendererR2FighterTintLookup has queued it for the frame boundary.
+ * fold; ndsRendererFighterTintLookup has queued it for the frame boundary.
  *
  * Textured epochs never tint: only the run prepare's untextured branch puts
  * prim back, so a textured epoch that took raw light here would lose prim.
@@ -693,7 +693,7 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
  * room for the body (an inlined first version overflowed it by 1,416 bytes).
  *
  * Returns diffuse | (ambient << 16) and publishes sNdsEpochTintTexture. */
-static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
+static u32 __attribute__((noinline)) ndsRendererResolveEpochShade(
     u32 light1, u32 light2, u32 material_color, u32 use_material,
     u32 color_modulate, u32 textured)
 {
@@ -704,22 +704,22 @@ static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
     if ((use_material != 0u) && (textured == 0u) &&
         (((material_color >> 8) & 0x00ffffffu) != 0x00ffffffu))
     {
-        tint = ndsRendererR2FighterTintLookup(material_color);
+        tint = ndsRendererFighterTintLookup(material_color);
     }
     sNdsEpochTintTexture = tint;
     sNdsEpochTintRgb = (material_color >> 8) & 0x00ffffffu;
     if (tint != 0u)
     {
-        diffuse = ndsRendererR2MaterialColor15(light1, 0u, 0u, color_modulate);
-        ambient = ndsRendererR2MaterialColor15(light2, 0u, 0u, color_modulate);
+        diffuse = ndsRendererMaterialColor15(light1, 0u, 0u, color_modulate);
+        ambient = ndsRendererMaterialColor15(light2, 0u, 0u, color_modulate);
     }
     else
     {
-        diffuse = ndsRendererR2MaterialColor15(
+        diffuse = ndsRendererMaterialColor15(
             light1, material_color, use_material, color_modulate);
-        ambient = ndsRendererR2MaterialColor15(
+        ambient = ndsRendererMaterialColor15(
             light2, material_color, use_material, color_modulate);
-        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+        diffuse = ndsRendererClampDiffuseToMaterial(
             diffuse, ambient, material_color, use_material, color_modulate);
     }
     /* Composed with the same expression the replay twin uses, deliberately:
@@ -732,7 +732,7 @@ static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
  * it records any cache texture -- and, finding no cache entry active, marks
  * the packet needs_fence. Replay then binds the tile itself; nothing about the
  * tint has to be re-derived except the raw-light shade words. */
-static void __attribute__((noinline)) ndsRendererR2BindTintTile(
+static void __attribute__((noinline)) ndsRendererBindTintTile(
     NDSRendererStats *stats, u32 tint)
 {
     ndsRendererHardwareBindForeignTextureName(stats, tint);
@@ -743,7 +743,7 @@ static void __attribute__((noinline)) ndsRendererR2BindTintTile(
  * single GFX_TEX_COORD at the tile centre (1/16-texel units) covers the run
  * under either wrap mode and the untextured vertex emitter stays untouched.
  * The packet records the same word after its BEGIN, so replay matches. */
-static void __attribute__((noinline)) ndsRendererR2OpenTintBatch(
+static void __attribute__((noinline)) ndsRendererOpenTintBatch(
     NDSRendererStats *stats, u32 tint, u32 poly_fmt, u32 matrix_generation)
 {
     u32 word = (u32)TEXTURE_PACK((NDS_FIGHTER_TINT_DIM / 2u) << 4,
@@ -828,7 +828,7 @@ ndsRendererNativeShadeProductionActions(
         epoch_lit = TRUE;
     }
 
-    ndsRendererR2RecordShadeWitness(
+    ndsRendererRecordShadeWitness(
         epoch_lit,
         0u,
         use_material, material_color);
@@ -849,9 +849,9 @@ ndsRendererNativeShadeProductionActions(
 
         if (sNdsLightVectorWritten == 0u)
         {
-            ndsRendererR2WriteLightVector(stats);
+            ndsRendererWriteLightVector(stats);
         }
-        u32 shade = ndsRendererR2ResolveEpochShade(
+        u32 shade = ndsRendererResolveEpochShade(
             stats->light_color_1, stats->light_color_2, material_color,
             use_material, state->color_modulate, policy->textured);
         u32 tinted = (sNdsEpochTintTexture != 0u) ? 1u : 0u;
@@ -917,7 +917,7 @@ volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoFillCount;
 volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoStaleCount;
 volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoVerifyFail;
 /* Player-slot memo columns dropped because the fighter's material identity
- * moved (ndsRendererR2RunTextureMemoFence). */
+ * moved (ndsRendererRunTextureMemoFence). */
 volatile u32 NDS_TEXMEMO_COUNTER gNdsTexMemoFenceCount;
 
 /* E12. E5 proved every field below is invariant in run_index over a whole
@@ -993,7 +993,7 @@ static NDSRunTextureMemo
  * and runs sharing a residue only take turns. Run indices fit the tag byte
  * (the generator's u8 run counts); a larger one is never memoized. */
 #define NDS_RUN_TEXMEMO_RUN_MAX 0xffu
-static inline NDSRunTextureMemo *ndsRendererR2RunTextureMemoFor(
+static inline NDSRunTextureMemo *ndsRendererRunTextureMemoFor(
     u32 run_index, u32 owner_key)
 {
     u32 row = run_index;
@@ -1024,7 +1024,7 @@ static inline NDSRunTextureMemo *ndsRendererR2RunTextureMemoFor(
  * material change, not per frame. */
 static u32 sNdsRunTextureMemoIdentity[NDS_RUN_TEXMEMO_PLAYER_COUNT];
 
-void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
+void ndsRendererRunTextureMemoFence(u32 owner_key, u32 material_identity)
 {
     u32 slot = (owner_key >> 9) & 3u;
     u32 run_index;
@@ -1042,7 +1042,7 @@ void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
 }
 
 /* The cheap tail of the resolver's cache-hit path, replayed from the memo. */
-static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
+static s32 __attribute__((noinline)) ndsRendererRunTextureMemoApply(
     u32 run_index,
     NDSRendererStats *stats,
     u32 *texture_name,
@@ -1059,7 +1059,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     {
         return FALSE;
     }
-    memo = ndsRendererR2RunTextureMemoFor(
+    memo = ndsRendererRunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     if ((memo->valid == 0u) || (memo->run != (u8)run_index))
     {
@@ -1113,7 +1113,7 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     return TRUE;
 }
 
-static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
+static void __attribute__((noinline)) ndsRendererRunTextureMemoFill(
     u32 run_index,
     const NDSRendererStats *stats,
     u32 texture_name,
@@ -1150,7 +1150,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
      * (0xEA80003D, an ARM opcode, on the run that caught this). Nine fills a
      * match, so the load/store is free. */
     gNdsTexMemoVerifyFail = gNdsTexMemoVerifyFail;
-    memo = ndsRendererR2RunTextureMemoFor(
+    memo = ndsRendererRunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     /* Preserve the full resolver for values outside the compact memo's
      * representation. This only declines caching; it never truncates a draw.
@@ -1776,7 +1776,7 @@ ndsRendererNativePrepareProductionRunCore(
 
         use_texture = FALSE;
         if ((policy->textured != 0u) && (hierarchy_run == NULL) &&
-            (ndsRendererR2RunTextureMemoApply(
+            (ndsRendererRunTextureMemoApply(
                  run_index, stats, &texture_name,
                  &texture_scale_s, &texture_scale_t,
                  &texture_origin_s, &texture_origin_t,
@@ -1851,7 +1851,7 @@ ndsRendererNativePrepareProductionRunCore(
                     NDS_RENDERER_TEXCOORD_FILTER_OFFSET : 0;
             if (hierarchy_run == NULL)
             {
-                ndsRendererR2RunTextureMemoFill(
+                ndsRendererRunTextureMemoFill(
                     run_index, stats, texture_name,
                     texture_scale_s, texture_scale_t,
                     texture_origin_s, texture_origin_t, texture_offset);
@@ -1916,14 +1916,14 @@ ndsRendererNativePrepareProductionRunCore(
      * avoids duplicating the recording branch in scarce fighter ITCM. */
     /* An untextured run of a tinted epoch draws through its tile. Bound here,
      * before the hook, so the packet records the tile as this run's texture
-     * (see ndsRendererR2BindTintTile); the hierarchy preflight (mode 7, not a
+     * (see ndsRendererBindTintTile); the hierarchy preflight (mode 7, not a
      * shipping target) keeps the fold. */
     u32 tint = ((policy->textured == 0u) && (hierarchy_run == NULL) &&
                 (packet_mode == 0u)) ? sNdsEpochTintTexture : 0u;
 
     if (tint != 0u)
     {
-        ndsRendererR2BindTintTile(stats, tint);
+        ndsRendererBindTintTile(stats, tint);
     }
     if ((hierarchy_run != NULL) && (policy->textured != 0u) &&
         (resolved_texture.entry == NULL))
@@ -2018,7 +2018,7 @@ ndsRendererNativePrepareProductionRunCore(
     {
         if (tint != 0u)
         {
-            ndsRendererR2OpenTintBatch(stats, tint,
+            ndsRendererOpenTintBatch(stats, tint,
                                        state->texture_prepare_poly_fmt,
                                        state->matrix_generation);
             /* THE BIND HAS TO BE DECLARED, OR IT STEALS THE NEXT RUN'S TEXTURE.
