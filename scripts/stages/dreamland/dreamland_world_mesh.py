@@ -580,11 +580,11 @@ def check_ir(
         errors.append("static_partition_rule does not name the dynamic resource")
 
     if errors:
-        print("TASK57 CHECK: FAIL", file=sys.stderr)
+        print("WORLD_MESH CHECK: FAIL", file=sys.stderr)
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         raise SystemExit(1)
-    print("TASK57 CHECK: PASS")
+    print("WORLD_MESH CHECK: PASS")
 
 
 # ---------------------------------------------------------------------------
@@ -628,7 +628,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.check:
         if not output.is_file():
-            print(f"TASK57 CHECK: FAIL — IR absent: {output}", file=sys.stderr)
+            print(f"WORLD_MESH CHECK: FAIL — IR absent: {output}", file=sys.stderr)
             return 1
         stored = json.loads(output.read_text(encoding="utf-8"))
         # Validate the stored IR against a freshly rebuilt extraction.
@@ -658,17 +658,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(census, indent=2, sort_keys=True))
     else:
         sha = ir_sha256(ir)
-        print(f"TASK57: wrote {output}")
-        print(f"TASK57: IR sha256 = {sha}")
+        print(f"WORLD_MESH: wrote {output}")
+        print(f"WORLD_MESH: IR sha256 = {sha}")
         c = census
         print(
-            f"TASK57: {c['baked_static_triangles']} static tris / "
+            f"WORLD_MESH: {c['baked_static_triangles']} static tris / "
             f"{c['baked_static_dense_vertices']} dense verts / "
             f"{c['unique_exact_positions']} unique positions / "
             f"{c['unique_position_uv_color_binding_vertices']} unique full verts"
         )
         print(
-            f"TASK57: source {c['source_triangles_total']} tris "
+            f"WORLD_MESH: source {c['source_triangles_total']} tris "
             f"(static {c['static_triangles_source']} + dynamic "
             f"{c['dynamic_triangles_source']}); components "
             f"{c['connected_components']}, boundary edges "

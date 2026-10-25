@@ -225,10 +225,10 @@ def run_census() -> dict[str, Any]:
     # with the Task 59/60 numbers) and a gameplay set framed on the fighting
     # surface. A cull is only claimed when it holds under BOTH.
     fixture_sets = {
-        "task58_envelope": oracle.build_fixtures(),
+        "camera_envelope": oracle.build_fixtures(),
         "gameplay_surface": gameplay_fixtures(ir),
     }
-    fixtures = fixture_sets["task58_envelope"] + fixture_sets["gameplay_surface"]
+    fixtures = fixture_sets["camera_envelope"] + fixture_sets["gameplay_surface"]
     vps = [(f.name, oracle.view_projection(f)) for f in fixtures]
 
     by_class: dict[int, int] = {}
@@ -253,7 +253,7 @@ def run_census() -> dict[str, Any]:
             ]
     # The claim requires agreement across both fixture sets.
     never_visible: dict[float, list[int]] = {
-        m: sorted(set(per_set["task58_envelope"][m])
+        m: sorted(set(per_set["camera_envelope"][m])
                   & set(per_set["gameplay_surface"][m]))
         for m in MARGINS
     }

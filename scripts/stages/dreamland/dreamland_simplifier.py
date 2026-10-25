@@ -939,22 +939,22 @@ def cmd_build() -> int:
     PARETO_OUTPUT.write_text(
         json.dumps(pareto, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    print(f"TASK59: wrote {len(candidates)} candidates to {CANDIDATES_DIR}")
-    print(f"TASK59: wrote Pareto report to {PARETO_OUTPUT.name}")
-    print(f"TASK59: source submitted verts = {source_verts}")
+    print(f"SIMPLIFIER: wrote {len(candidates)} candidates to {CANDIDATES_DIR}")
+    print(f"SIMPLIFIER: wrote Pareto report to {PARETO_OUTPUT.name}")
+    print(f"SIMPLIFIER: source submitted verts = {source_verts}")
     for r in results:
         flag = "OK" if (r.silhouette_pass and r.protected_pass) else "REJECT"
         print(f"  {r.name:<16} tris={r.tri_count:>3} verts={r.vert_count:>3} "
               f"sub={r.submitted_verts:>4} IoU={r.worst_region_iou:.3f} "
               f"prot={r.worst_protected_px:.2f}px [{flag}]")
-    print(f"TASK59: PROCEED gate met = {pareto['proceed_gate_met']}")
+    print(f"SIMPLIFIER: PROCEED gate met = {pareto['proceed_gate_met']}")
     return 0
 
 
 def cmd_candidate(name: str) -> int:
     path = CANDIDATES_DIR / f"{name}.json"
     if not path.is_file():
-        print(f"TASK59: candidate {name} not found at {path}", file=sys.stderr)
+        print(f"SIMPLIFIER: candidate {name} not found at {path}", file=sys.stderr)
         return 1
     print(path.read_text(encoding="utf-8"))
     return 0
@@ -1064,11 +1064,11 @@ def _sha256(payload: dict[str, Any]) -> str:
 
 def _fail(errors: list[str]) -> int:
     if errors:
-        print("TASK59 CHECK: FAIL", file=sys.stderr)
+        print("SIMPLIFIER CHECK: FAIL", file=sys.stderr)
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         return 1
-    print("TASK59 CHECK: PASS")
+    print("SIMPLIFIER CHECK: PASS")
     return 0
 
 

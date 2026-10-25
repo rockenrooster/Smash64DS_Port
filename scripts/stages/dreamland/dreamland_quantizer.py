@@ -411,8 +411,8 @@ def cmd_build() -> int:
     REPORT_OUTPUT.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    print(f"TASK61: encoded {len(reports)} candidates -> {ENCODED_DIR}")
-    print(f"TASK61: visual gate IoU >= {VISUAL_GATE_IOU}")
+    print(f"QUANTIZER: encoded {len(reports)} candidates -> {ENCODED_DIR}")
+    print(f"QUANTIZER: visual gate IoU >= {VISUAL_GATE_IOU}")
     print(f"{'candidate':<16} {'src_words':>9} {'v16+ax':>7} {'v10+ax':>7} "
           f"{'srcIoU':>7} {'v16IoU':>7} {'v10IoU':>7} {'policy':>10}")
     for r in reports:
@@ -420,7 +420,7 @@ def cmd_build() -> int:
         print(f"{r.name:<16} {r.source_vertex_words:>9} {r.v16_only_words:>7} "
               f"{r.v10_words:>7} {r.source_iou:>7.3f} {r.v16_iou:>7.3f} "
               f"{r.v10_iou:>7.3f} {policy:>10}")
-    print(f"TASK61: recommended = {payload['recommended_candidate']} "
+    print(f"QUANTIZER: recommended = {payload['recommended_candidate']} "
           f"({payload['recommended_policy']})")
     return 0
 
@@ -480,7 +480,7 @@ def cmd_check() -> int:
     errors: list[str] = []
     if not REPORT_OUTPUT.is_file():
         errors.append(f"report absent: {REPORT_OUTPUT}")
-        print("TASK61 CHECK: FAIL", file=sys.stderr)
+        print("QUANTIZER CHECK: FAIL", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
@@ -510,11 +510,11 @@ def cmd_check() -> int:
         if r.worst_quant_error_world > 1e9:  # sanity (overflow guard)
             errors.append(f"{r.name}: v10 quant error overflow")
     if errors:
-        print("TASK61 CHECK: FAIL", file=sys.stderr)
+        print("QUANTIZER CHECK: FAIL", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
-    print("TASK61 CHECK: PASS")
+    print("QUANTIZER CHECK: PASS")
     return 0
 
 

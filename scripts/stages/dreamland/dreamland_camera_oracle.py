@@ -723,11 +723,11 @@ def cmd_build() -> int:
     REFERENCE_OUTPUT.write_text(
         json.dumps(reference, indent=2, sort_keys=True) + "\n",
         encoding="utf-8")
-    print(f"TASK58: wrote {FIXTURES_OUTPUT.name} ({len(fixtures)} fixtures)")
-    print(f"TASK58: wrote {REFERENCE_OUTPUT.name} "
+    print(f"CAMERA_ORACLE: wrote {FIXTURES_OUTPUT.name} ({len(fixtures)} fixtures)")
+    print(f"CAMERA_ORACLE: wrote {REFERENCE_OUTPUT.name} "
           f"(protected {len(reference['protected_vertex_indices'])} verts)")
-    print(f"TASK58: fixtures sha256 = {_sha256_json(fixtures_ir)}")
-    print(f"TASK58: reference sha256 = {_sha256_json(reference)}")
+    print(f"CAMERA_ORACLE: fixtures sha256 = {_sha256_json(fixtures_ir)}")
+    print(f"CAMERA_ORACLE: reference sha256 = {_sha256_json(reference)}")
     return 0
 
 
@@ -816,7 +816,7 @@ def cmd_self() -> int:
         worst_prot = max(worst_prot, m["protected_edge_max_displacement_px"])
     # Identity: IoU must be 1.0 and protected-edge displacement 0 (same mesh).
     ok = (worst_iou >= 1.0 - 1e-9) and (worst_prot < 1e-6)
-    print(f"TASK58 identity probe: worst IoU = {worst_iou:.10f}, "
+    print(f"CAMERA_ORACLE identity probe: worst IoU = {worst_iou:.10f}, "
           f"protected = {worst_prot:.10f} px")
     return 0 if ok else 1
 
@@ -881,11 +881,11 @@ def cmd_check() -> int:
             errors.append("identity probe: source-vs-self displacement != 0")
 
     if errors:
-        print("TASK58 CHECK: FAIL", file=sys.stderr)
+        print("CAMERA_ORACLE CHECK: FAIL", file=sys.stderr)
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         return 1
-    print("TASK58 CHECK: PASS")
+    print("CAMERA_ORACLE CHECK: PASS")
     return 0
 
 

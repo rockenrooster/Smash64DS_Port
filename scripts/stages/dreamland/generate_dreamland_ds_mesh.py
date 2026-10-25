@@ -340,20 +340,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     rendered = render_include(blob)
     if args.check:
         if not output.is_file():
-            print(f"TASK62-BLOB: FAIL — include absent: {output}", file=sys.stderr)
+            print(f"DS_MESH-BLOB: FAIL — include absent: {output}", file=sys.stderr)
             return 1
         if output.read_bytes() != rendered:
-            print(f"TASK62-BLOB: FAIL — include stale: {output}", file=sys.stderr)
+            print(f"DS_MESH-BLOB: FAIL — include stale: {output}", file=sys.stderr)
             return 1
-        print(f"TASK62-BLOB: OK ({args.candidate}: {len(blob['groups'])} groups, "
+        print(f"DS_MESH-BLOB: OK ({args.candidate}: {len(blob['groups'])} groups, "
               f"{len(blob['vertices'])} verts, sha256={include_sha256(rendered)[:12]})")
         return 0
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(rendered)
-    print(f"TASK62-BLOB: wrote {output}")
-    print(f"TASK62-BLOB: {args.candidate} -> {len(blob['groups'])} groups, "
+    print(f"DS_MESH-BLOB: wrote {output}")
+    print(f"DS_MESH-BLOB: {args.candidate} -> {len(blob['groups'])} groups, "
           f"{len(blob['vertices'])} verts, cert=0x{blob['certificate']:08X}")
-    print(f"TASK62-BLOB: sha256 = {include_sha256(rendered)}")
+    print(f"DS_MESH-BLOB: sha256 = {include_sha256(rendered)}")
     return 0
 
 

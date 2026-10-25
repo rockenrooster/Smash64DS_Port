@@ -494,7 +494,7 @@ def cmd_build() -> int:
         _, tris = _load_candidate_mesh(path)
         val_errors.extend(validate_compiled(compiled_all[name], tris))
     if val_errors:
-        print("TASK60 VALIDATION: FAIL", file=sys.stderr)
+        print("PRIMITIVES VALIDATION: FAIL", file=sys.stderr)
         for err in val_errors[:10]:
             print(f"  - {err}", file=sys.stderr)
         return 1
@@ -504,9 +504,9 @@ def cmd_build() -> int:
     REPORT_OUTPUT.write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    print(f"TASK60: compiled {len(reports)} candidates -> {STREAMS_DIR}")
-    print(f"TASK60: report -> {REPORT_OUTPUT.name}")
-    print(f"TASK60: source baseline = {SOURCE_SUBMITTED_BASELINE} submitted verts")
+    print(f"PRIMITIVES: compiled {len(reports)} candidates -> {STREAMS_DIR}")
+    print(f"PRIMITIVES: report -> {REPORT_OUTPUT.name}")
+    print(f"PRIMITIVES: source baseline = {SOURCE_SUBMITTED_BASELINE} submitted verts")
     iou_by_name = {c["name"]: c["worst_region_iou"]
                    for c in report["candidates"]}
     accept_by_name = {c["name"]: c["visually_acceptable"]
@@ -522,9 +522,9 @@ def cmd_build() -> int:
               f"{r.tri_groups:>6} {r.submitted_verts:>9} "
               f"{iou_by_name.get(r.name, 0.0):>5.3f} "
               f"{r.reduction_vs_source_pct:>6.1f}% {flag}")
-    print(f"TASK60: target <=200 met = {report['target_200_met']}, "
+    print(f"PRIMITIVES: target <=200 met = {report['target_200_met']}, "
           f"stretch <=150 met = {report['stretch_150_met']}")
-    print(f"TASK60: recommended = {report['recommended_candidate']}")
+    print(f"PRIMITIVES: recommended = {report['recommended_candidate']}")
     return 0
 
 
@@ -532,7 +532,7 @@ def cmd_check() -> int:
     errors: list[str] = []
     if not REPORT_OUTPUT.is_file():
         errors.append(f"report absent: {REPORT_OUTPUT}")
-        print("TASK60 CHECK: FAIL", file=sys.stderr)
+        print("PRIMITIVES CHECK: FAIL", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
@@ -561,15 +561,15 @@ def cmd_check() -> int:
     if _sha256(stored) != _sha256(rebuilt_payload):
         errors.append("determinism: rebuilt report sha256 != stored")
     if errors:
-        print("TASK60 CHECK: FAIL", file=sys.stderr)
+        print("PRIMITIVES CHECK: FAIL", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
-    print("TASK60 CHECK: PASS")
+    print("PRIMITIVES CHECK: PASS")
     return 0
 
 
-def _load_task59_iou() -> dict[str, float]:
+def _load_simplifier_iou() -> dict[str, float]:
     """Load each Task 59 candidate's worst-case region IoU (geometry-only, so
     identical here — Task 60 doesn't change geometry). Used to gate the
     recommendation: only visually-acceptable (IoU >= 0.95) candidates may be
@@ -653,12 +653,12 @@ def candidate_material_qualified(name: str) -> bool:
 
 
 def _build_report(reports: list[CostReport]) -> dict[str, Any]:
-    task59_iou = _load_task59_iou()
+    simplifier_iou = _load_simplifier_iou()
     # For candidates not in Task 59's Pareto, evaluate IoU live.
     cand_iou: dict[str, float] = {}
     for r in reports:
-        if r.name in task59_iou:
-            cand_iou[r.name] = task59_iou[r.name]
+        if r.name in simplifier_iou:
+            cand_iou[r.name] = simplifier_iou[r.name]
         else:
             live = _live_iou(r.name)
             cand_iou[r.name] = live if live is not None else 0.0
