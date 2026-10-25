@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Read-Task26Artifact {
+function Read-Segment0Artifact {
     param([string]$Path, [int]$ExpectedSelector)
 
     $resolved = (Resolve-Path -LiteralPath $Path).Path
@@ -30,8 +30,8 @@ function Assert-ExactJson {
     }
 }
 
-$controlArtifact = Read-Task26Artifact $Control 0
-$candidateArtifact = Read-Task26Artifact $Candidate 1
+$controlArtifact = Read-Segment0Artifact $Control 0
+$candidateArtifact = Read-Segment0Artifact $Candidate 1
 $controlSamples = $controlArtifact.samples
 $candidateSamples = $candidateArtifact.samples
 
@@ -60,6 +60,6 @@ Assert-ExactJson $controlSegmentHashes $candidateSegmentHashes `
 $wordCount = $controlSamples.m3GeneratedSegment0TraceWords.Count
 $frameCount = $controlSegmentHashes.Count
 Write-Output (
-    "TASK26_SEGMENT0_TRACE_EXACT frames=$frameCount words=$wordCount " +
+    "SEGMENT0_TRACE_EXACT frames=$frameCount words=$wordCount " +
     'runs=26 mismatches=0 arm_faults=0'
 )

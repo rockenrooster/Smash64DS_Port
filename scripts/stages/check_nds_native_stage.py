@@ -365,12 +365,12 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
         "consumed-field classification vocabulary drifted",
     )
     require(
-        [row["index"] for row in manifest["task26_live_operand_order"]]
+        [row["index"] for row in manifest["segment0_live_operand_order"]]
         == list(range(4)),
         "Task 26 live-operand order is not dense",
     )
     require(
-        [row["operand"] for row in manifest["task26_live_operand_order"]]
+        [row["operand"] for row in manifest["segment0_live_operand_order"]]
         == ["asset_bases[4]", "binding_composed[42]", "materials[4]", "config"],
         "Task 26 live-operand names drifted",
     )
@@ -414,7 +414,7 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
         "Task 23R census dimensions drifted",
     )
     require(
-        manifest["task26_segment0_program"]
+        manifest["generated_segment0_program"]
         == {
             "admission": (
                 "execute only after the existing generation/stamp topology "
@@ -455,15 +455,15 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
         },
         "Task 26 segment-0 topology-cache dependency drifted",
     )
-    task26_closures = manifest["task26_generated_closures"]
+    segment0_closures = manifest["segment0_generated_closures"]
     require(
-        [row["closure"] for row in task26_closures]
+        [row["closure"] for row in segment0_closures]
         == [
             "ndsRendererNativeStageValidateGeneratedSegment0",
             "ndsRendererNativeStagePrepareGeneratedSegment0",
             "ndsRendererNativeStageHashGeneratedSegment0Outputs",
         ]
-        and sum(len(row["fields"]) for row in task26_closures) == 120,
+        and sum(len(row["fields"]) for row in segment0_closures) == 120,
         "Task 26 generated-closure field certificate drifted",
     )
     bound_closures = {
@@ -510,7 +510,7 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
         raise generator.falsify("unclassified static source read was accepted")
     return (
         sum(len(row["fields"]) for row in manifest["source_closures"]),
-        sum(len(row["fields"]) for row in task26_closures),
+        sum(len(row["fields"]) for row in segment0_closures),
     )
 
 
@@ -688,7 +688,7 @@ def verify_multistage_runtime(repo_root: Path) -> None:
             "Yoster's rigid mask includes an animated binding or omits a static one")
 
 
-def verify_task26_execution_shape(repo_root: Path) -> None:
+def verify_segment0_execution_shape(repo_root: Path) -> None:
     renderer = read_renderer_translation_unit(repo_root)
     closure = generator.named_c_closure(
         renderer, "ndsRendererNativeStagePrepareGeneratedSegment0"
@@ -1365,8 +1365,8 @@ def verify_generated_segment0_program(
     )
     require(
         "NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM" in rendered_program
-        and "NDS_TASK26_RUN(25u);" in rendered_program
-        and "NDS_TASK26_SYNC(2u);" in rendered_program
+        and "NDS_SEG0_RUN(25u);" in rendered_program
+        and "NDS_SEG0_SYNC(2u);" in rendered_program
         and all(
             token not in rendered_program
             for token in (
@@ -1374,7 +1374,7 @@ def verify_generated_segment0_program(
                 "StateDeltas",
                 "->effect",
                 "switch (",
-                "NDS_TASK26_TAIL",
+                "NDS_SEG0_TAIL",
             )
         ),
         "generated segment-0 macro is scanner-like or lost its tail",
@@ -1818,7 +1818,7 @@ def main(stage: str | object = "dreamland") -> int:
         _require_dreamland_adapter_control(desc)
         require(
             desc.include_sha
-        == "b38335496a236f4770a0e7e9ee63e38fd0641a09756cf548a43346a2601cf2ee",
+        == "bd769c7d5dbc14e589a6d57abb229d692e6cbc1127856f447d69fb1ef2512935",
             "Dream Land include sha drifted",
         )
     repo_root = _paths.REPO_ROOT
@@ -1838,10 +1838,10 @@ def main(stage: str | object = "dreamland") -> int:
         verify_multistage_runtime(repo_root)
         verify_camera_binding_contract(repo_root, first, desc)
         segment0_program = verify_generated_segment0_program(first)
-        verify_task26_execution_shape(repo_root)
+        verify_segment0_execution_shape(repo_root)
         replay_commands = verify_command_replay(first, repo_root)
         perturbations = verify_fail_closed(first, stage)
-        manifest_fields, task26_manifest_fields = verify_consumed_fields_manifest(
+        manifest_fields, segment0_manifest_fields = verify_consumed_fields_manifest(
             repo_root
         )
 
@@ -1882,7 +1882,7 @@ def main(stage: str | object = "dreamland") -> int:
         f"replay_commands={replay_commands} "
         f"fail_closed_perturbations={perturbations} "
         f"manifest_fields={manifest_fields} "
-        f"task26_manifest_fields={task26_manifest_fields} "
+        f"segment0_manifest_fields={segment0_manifest_fields} "
         f"segment0_program_runs={len(segment0_program.runs)} "
         f"segment0_program_bytes={segment0_program.footprint_bytes()} "
         f"segment0_source_checksum=0x{segment0_program.certificate.source_checksum:08x} "

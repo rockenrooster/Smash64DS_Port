@@ -1730,27 +1730,27 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
     {
         goto fail;
     }
-#define NDS_TASK26_SYNC(count) \
+#define NDS_SEG0_SYNC(count) \
     do { \
         stats->sync_command_count += (u32)(count); \
     } while (0)
-#define NDS_TASK26_OTHERMODE(w0, w1) \
+#define NDS_SEG0_OTHERMODE(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordOtherMode( \
             stats, ((u32)(w0)) >> 24, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_COMBINE(w0, w1) \
+#define NDS_SEG0_COMBINE(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordSetCombine(stats, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_TEXTURE(w0, w1) \
+#define NDS_SEG0_TEXTURE(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordTextureState(stats, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_GEOMETRY(clear_mask, set_mask) \
+#define NDS_SEG0_GEOMETRY(clear_mask, set_mask) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         stats->geometry_mode = \
@@ -1759,7 +1759,7 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
         stats->geometry_set_mask = (u32)(set_mask); \
         stats->geometry_command_count++; \
     } while (0)
-#define NDS_TASK26_IMAGE(asset_index, w0, offset) \
+#define NDS_SEG0_IMAGE(asset_index, w0, offset) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordSetImage( \
@@ -1767,33 +1767,33 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
             (u32)(uintptr_t)(frame->asset_bases[(u32)(asset_index)] + \
                              (u32)(offset))); \
     } while (0)
-#define NDS_TASK26_TILE(w0, w1) \
+#define NDS_SEG0_TILE(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordSetTile(stats, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_LOAD_TLUT(w1) \
+#define NDS_SEG0_LOAD_TLUT(w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordLoadTlut(stats, (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_LOAD_BLOCK(w0, w1) \
+#define NDS_SEG0_LOAD_BLOCK(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordLoadBlock(stats, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_TILE_SIZE(w0, w1) \
+#define NDS_SEG0_TILE_SIZE(w0, w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         ndsRendererRecordSetTileSize(stats, (u32)(w0), (u32)(w1)); \
     } while (0)
-#define NDS_TASK26_BLEND(w1) \
+#define NDS_SEG0_BLEND(w1) \
     do { \
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
         stats->blend_color = (u32)(w1); \
         stats->color_command_count++; \
     } while (0)
-#define NDS_TASK26_RUN(run_index) \
+#define NDS_SEG0_RUN(run_index) \
     do { \
         if (ndsRendererNativeStagePrepareRun( \
                 (u32)(run_index), frame, stats, state, epoch_mask) == FALSE) \
@@ -1802,18 +1802,18 @@ static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
         } \
     } while (0)
     NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM;
-#undef NDS_TASK26_RUN
-#undef NDS_TASK26_BLEND
-#undef NDS_TASK26_TILE_SIZE
-#undef NDS_TASK26_LOAD_BLOCK
-#undef NDS_TASK26_LOAD_TLUT
-#undef NDS_TASK26_TILE
-#undef NDS_TASK26_IMAGE
-#undef NDS_TASK26_GEOMETRY
-#undef NDS_TASK26_TEXTURE
-#undef NDS_TASK26_COMBINE
-#undef NDS_TASK26_OTHERMODE
-#undef NDS_TASK26_SYNC
+#undef NDS_SEG0_RUN
+#undef NDS_SEG0_BLEND
+#undef NDS_SEG0_TILE_SIZE
+#undef NDS_SEG0_LOAD_BLOCK
+#undef NDS_SEG0_LOAD_TLUT
+#undef NDS_SEG0_TILE
+#undef NDS_SEG0_IMAGE
+#undef NDS_SEG0_GEOMETRY
+#undef NDS_SEG0_TEXTURE
+#undef NDS_SEG0_COMBINE
+#undef NDS_SEG0_OTHERMODE
+#undef NDS_SEG0_SYNC
     return TRUE;
 
 fail:

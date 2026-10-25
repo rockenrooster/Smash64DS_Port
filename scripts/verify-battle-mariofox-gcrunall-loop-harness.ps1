@@ -1274,17 +1274,17 @@ Assert-Condition ($bg0BuildConfigText -match
     'Built Task 36 hardware-compose configuration does not match the requested selector.' `
     $bg0BuildConfigText
 if ($nativeStageGeneratedSegment0Selected) {
-    $task26BuildDirectory = Resolve-Smash64DSBuildPath `
+    $segment0BuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
-    $task26BuildConfig = Join-Path $task26BuildDirectory 'nds_build_config.h'
-    Assert-Condition (Test-Path -LiteralPath $task26BuildConfig -PathType Leaf) `
+    $segment0BuildConfig = Join-Path $segment0BuildDirectory 'nds_build_config.h'
+    Assert-Condition (Test-Path -LiteralPath $segment0BuildConfig -PathType Leaf) `
         'Built generated-segment0 configuration is missing; refusing stale -NoBuild evidence.' `
-        $task26BuildConfig
-    $task26BuildConfigText = Get-Content -LiteralPath $task26BuildConfig -Raw
-    Assert-Condition ($task26BuildConfigText -match
+        $segment0BuildConfig
+    $segment0BuildConfigText = Get-Content -LiteralPath $segment0BuildConfig -Raw
+    Assert-Condition ($segment0BuildConfigText -match
         "(?m)^#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $effectiveNativeStageGeneratedSegment0Enable$") `
         'Built generated-segment0 configuration does not match the requested selector; refusing stale -NoBuild evidence.' `
-        $task26BuildConfigText
+        $segment0BuildConfigText
     if ($RendererProfileLevel -eq 1) {
         $nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
         if (-not (Test-Path -LiteralPath $nm -PathType Leaf)) {

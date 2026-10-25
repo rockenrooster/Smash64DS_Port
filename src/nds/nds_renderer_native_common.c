@@ -543,7 +543,7 @@ ndsRendererNativeApplyStateDelta(
         stats->color_command_count++;
         break;
     /* P2-3f5. G_SETBLENDCOLOR on a FIGHTER root. The native stage program has
-     * carried this effect since Task 26 (`NDS_TASK26_BLEND`, and the stage span
+     * carried this effect since Task 26 (`NDS_SEG0_BLEND`, and the stage span
      * applier below); no fighter owner produced one until Captain Falcon, whose
      * high-detail root 6 brackets its two draws with G_AC_THRESHOLD and a blend
      * colour. blend_color IS the alpha reference the threshold compares

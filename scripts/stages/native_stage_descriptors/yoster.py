@@ -136,7 +136,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="yoster",
-    include_sha="2c056813ddc09e081d3985683bae852bf1e9338c7b40f2cdcc721b27db1cca29",
+    include_sha="d6a136a02c0ae8b7f0f73c7b316fa9d525d515f4c4519263721295abf9316b66",
     generated_segment_index=3,
     # P2-4n1 step 5: the packet now links, so its macros and objects take the
     # namespace the docstring's promotion note reserved for them.

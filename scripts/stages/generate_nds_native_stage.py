@@ -1267,7 +1267,7 @@ SOURCE_CLOSURE_POLICIES = (
 # Task 23R's 588-field source certificate remains a stable baseline.  Task 26
 # adds only these generated-program closures, so keep their reads separately
 # counted while applying the same fail-closed classification audit.
-TASK26_GENERATED_CLOSURE_POLICIES = (
+SEGMENT0_GENERATED_CLOSURE_POLICIES = (
     {
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererNativeStageValidateGeneratedSegment0",
@@ -4230,7 +4230,7 @@ def render_generated_segment0_program(program: GeneratedStageProgram) -> list[st
             )
         else:
             rendered = ", ".join(c_u32(value) for value in operands)
-        lines.append(f"        NDS_TASK26_{opcode}({rendered}); \\")
+        lines.append(f"        NDS_SEG0_{opcode}({rendered}); \\")
     lines.append("    } while (0)")
     return lines
 
@@ -5922,8 +5922,8 @@ def build_consumed_fields_manifest(
     closures = build_consumed_closure_rows(
         repo_root, SOURCE_CLOSURE_POLICIES, source_cache
     )
-    task26_closures = build_consumed_closure_rows(
-        repo_root, TASK26_GENERATED_CLOSURE_POLICIES, source_cache
+    segment0_closures = build_consumed_closure_rows(
+        repo_root, SEGMENT0_GENERATED_CLOSURE_POLICIES, source_cache
     )
     segment0 = build_generated_segment0_program(generate(repo_root, desc), desc).certificate
 
@@ -5932,7 +5932,7 @@ def build_consumed_fields_manifest(
         "generated_by": "scripts/generate_nds_native_stage.py",
         "allowed_classifications": list(FIELD_CLASSES),
         "source_closures": closures,
-        "task26_generated_closures": task26_closures,
+        "segment0_generated_closures": segment0_closures,
         "generated_runtime_fields": [
             {
                 "record": record,
@@ -6037,7 +6037,7 @@ def build_consumed_fields_manifest(
             {"slot": 2, "binding": 31, "required_flags": 107},
             {"slot": 3, "binding": 32, "required_flags": 107},
         ],
-        "task26_live_operand_order": [
+        "segment0_live_operand_order": [
             {
                 "index": 0,
                 "operand": "asset_bases[4]",
@@ -6063,7 +6063,7 @@ def build_consumed_fields_manifest(
                 "disposition": "bind_current_exact_callbacks_and_limits",
             },
         ],
-        "task26_segment0_program": {
+        "generated_segment0_program": {
             "admission": (
                 "execute only after the existing generation/stamp topology "
                 "admission has populated sNdsNativeStageValidationCache"
@@ -6157,7 +6157,7 @@ def build_consumed_fields_manifest(
             "interleaved commits, and restores captured texture IDs only at "
             "segments 1, 2, and 5."
         ),
-        "task26_overlap": {
+        "segment0_overlap": {
             "consume": (
                 "immutable generated control fields plus the ordered live "
                 "operand block above"
@@ -6271,7 +6271,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         segment0_program = build_generated_segment0_program(packet, desc)
         rendered = render_include(packet, desc)
         rendered_manifest: bytes | None = None
-        manifest: dict = {"source_closures": [], "task26_generated_closures": []}
+        manifest: dict = {"source_closures": [], "segment0_generated_closures": []}
         if manifest_output is not None:
             rendered_manifest = render_consumed_fields_manifest(repo_root, desc)
             manifest = json.loads(rendered_manifest)
@@ -6339,7 +6339,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"segment0_program_bytes={program_bytes} "
         f"total_const_max_bytes={packet.slab_bytes() + program_bytes} "
         f"manifest_fields={sum(len(row['fields']) for row in manifest['source_closures'])} "
-        f"task26_manifest_fields={sum(len(row['fields']) for row in manifest['task26_generated_closures'])} "
+        f"segment0_manifest_fields={sum(len(row['fields']) for row in manifest['segment0_generated_closures'])} "
         f"sha256={rendered_hash}"
     )
     return 0

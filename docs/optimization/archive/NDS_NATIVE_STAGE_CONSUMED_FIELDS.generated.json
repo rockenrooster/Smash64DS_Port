@@ -246,6 +246,51 @@
       "record": "sNdsNativeStageStateSequence"
     }
   ],
+  "generated_segment0_program": {
+    "admission": "execute only after the existing generation/stamp topology admission has populated sNdsNativeStageValidationCache",
+    "bindings": {
+      "count": 20,
+      "first": 0
+    },
+    "dobjs": {
+      "count": 21,
+      "first": 0
+    },
+    "final_tail_span": 73,
+    "final_tail_state_sync": [
+      4,
+      2
+    ],
+    "material_count": 0,
+    "prepared_dense_cache": {
+      "disposition": "reuse the Task-14 prepared_dense_offsets/indices; do not emit a second schedule",
+      "first_visit_count": 108,
+      "offset_count": 27,
+      "offset_indices": [
+        0,
+        26
+      ],
+      "order_checksum": "0xf1c6fadc",
+      "source": "sNdsNativeStageValidationCache",
+      "terminal": 108
+    },
+    "retained_live_seams": [
+      "ndsRendererHardwareResolveOrBindTexture and mutable texture residency",
+      "per-frame composed-matrix transforms and near-plane classification",
+      "one shared traversal/stats/epoch-mask transaction across all eight segments"
+    ],
+    "runs": {
+      "count": 26,
+      "first": 0
+    },
+    "segment": 0,
+    "texture_epochs": {
+      "count": 22,
+      "first": 0,
+      "mask": "0x00000000003fffff"
+    },
+    "triangle_count": 54
+  },
   "invalidation_manifest": [
     "asset owner generation, loaded-file identity, data pointer, asset ID, size, or owner generation changes",
     "segment identity, link, callback, display-link order, or visibility flags change",
@@ -308,6 +353,275 @@
     }
   ],
   "schema": "smash64ds.m3-consumed-fields.v1",
+  "segment0_generated_closures": [
+    {
+      "closure": "ndsRendererNativeStageValidateGeneratedSegment0",
+      "fields": [
+        {
+          "access": "certificate.asset_base_mask",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.final_tail_span",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_dobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.hot_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.link",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.live_operand_mask",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.material_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_offset_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.segment_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.source_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.table_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.texture_epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "generated.binding_composed_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "generated.run_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_dobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.link",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.sync_count",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
+      "fields": [
+        {
+          "access": "frame.asset_bases",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "sNdsNativeStageValidationCache.valid",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.color_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_clear_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_mode",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_set_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    }
+  ],
+  "segment0_live_operand_order": [
+    {
+      "classification": "immutable_generation",
+      "disposition": "generation_validated_address_binding",
+      "index": 0,
+      "operand": "asset_bases[4]"
+    },
+    {
+      "classification": "live_camera_dependent",
+      "disposition": "recompute_and_bind_each_frame",
+      "index": 1,
+      "operand": "binding_composed[42]"
+    },
+    {
+      "classification": "live_camera_independent",
+      "disposition": "rebuild_and_bind_each_frame",
+      "index": 2,
+      "operand": "materials[4]"
+    },
+    {
+      "classification": "live_camera_independent",
+      "disposition": "bind_current_exact_callbacks_and_limits",
+      "index": 3,
+      "operand": "config"
+    }
+  ],
+  "segment0_overlap": {
+    "consume": "immutable generated control fields plus the ordered live operand block above",
+    "forbid": "a second topology cache, cached camera/near results, a generic runtime scanner, or post-GX fallback",
+    "retain_current": "generation/stamp admission, all per-frame matrices and near-plane computation, exact material rebuild, callback restoration, and pre-GX fail-closed validation"
+  },
   "segment_order": [
     "layer0",
     "whispy_eyes",
@@ -3308,320 +3622,6 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     }
   ],
-  "task26_generated_closures": [
-    {
-      "closure": "ndsRendererNativeStageValidateGeneratedSegment0",
-      "fields": [
-        {
-          "access": "certificate.asset_base_mask",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.binding_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.dobj_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.final_tail_span",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.first_binding",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.first_dobj",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.first_run",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.first_state",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.first_texture_epoch",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.hot_checksum",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.link",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.live_operand_mask",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.material_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.owner",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.prepared_dense_checksum",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.prepared_dense_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.prepared_dense_offset_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.run_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.segment_index",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.source_checksum",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.state_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.submit_class",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.sync_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.table_checksum",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.texture_epoch_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.triangle_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "generated.binding_composed_index",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "generated.run_index",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "run.binding_index",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "run.flags",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "run.submit_class",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "run.texture_epoch",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "run.triangle_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.binding_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.dobj_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.first_binding",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.first_dobj",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.first_run",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.link",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.owner",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "segment.run_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "span.first_state",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "span.state_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "span.sync_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "tail.first_state",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "tail.state_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "tail.sync_count",
-          "classification": "immutable_generation"
-        }
-      ],
-      "path": "src/nds/nds_renderer.c"
-    },
-    {
-      "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
-      "fields": [
-        {
-          "access": "frame.asset_bases",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "sNdsNativeStageValidationCache.valid",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "stats.blend_color",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.color_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_clear_mask",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_mode",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_set_mask",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.sync_command_count",
-          "classification": "callback_visible_mutation_output"
-        }
-      ],
-      "path": "src/nds/nds_renderer.c"
-    }
-  ],
-  "task26_live_operand_order": [
-    {
-      "classification": "immutable_generation",
-      "disposition": "generation_validated_address_binding",
-      "index": 0,
-      "operand": "asset_bases[4]"
-    },
-    {
-      "classification": "live_camera_dependent",
-      "disposition": "recompute_and_bind_each_frame",
-      "index": 1,
-      "operand": "binding_composed[42]"
-    },
-    {
-      "classification": "live_camera_independent",
-      "disposition": "rebuild_and_bind_each_frame",
-      "index": 2,
-      "operand": "materials[4]"
-    },
-    {
-      "classification": "live_camera_independent",
-      "disposition": "bind_current_exact_callbacks_and_limits",
-      "index": 3,
-      "operand": "config"
-    }
-  ],
-  "task26_overlap": {
-    "consume": "immutable generated control fields plus the ordered live operand block above",
-    "forbid": "a second topology cache, cached camera/near results, a generic runtime scanner, or post-GX fallback",
-    "retain_current": "generation/stamp admission, all per-frame matrices and near-plane computation, exact material rebuild, callback restoration, and pre-GX fail-closed validation"
-  },
-  "task26_segment0_program": {
-    "admission": "execute only after the existing generation/stamp topology admission has populated sNdsNativeStageValidationCache",
-    "bindings": {
-      "count": 20,
-      "first": 0
-    },
-    "dobjs": {
-      "count": 21,
-      "first": 0
-    },
-    "final_tail_span": 73,
-    "final_tail_state_sync": [
-      4,
-      2
-    ],
-    "material_count": 0,
-    "prepared_dense_cache": {
-      "disposition": "reuse the Task-14 prepared_dense_offsets/indices; do not emit a second schedule",
-      "first_visit_count": 108,
-      "offset_count": 27,
-      "offset_indices": [
-        0,
-        26
-      ],
-      "order_checksum": "0xf1c6fadc",
-      "source": "sNdsNativeStageValidationCache",
-      "terminal": 108
-    },
-    "retained_live_seams": [
-      "ndsRendererHardwareResolveOrBindTexture and mutable texture residency",
-      "per-frame composed-matrix transforms and near-plane classification",
-      "one shared traversal/stats/epoch-mask transaction across all eight segments"
-    ],
-    "runs": {
-      "count": 26,
-      "first": 0
-    },
-    "segment": 0,
-    "texture_epochs": {
-      "count": 22,
-      "first": 0,
-      "mask": "0x00000000003fffff"
-    },
-    "triangle_count": 54
-  },
   "transitive_inputs": [
     {
       "closures": [

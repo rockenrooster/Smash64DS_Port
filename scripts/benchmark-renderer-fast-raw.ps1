@@ -144,7 +144,7 @@ $build = if ($PSBoundParameters.ContainsKey('StageSteadyMode')) {
 } elseif ($Task29GXCensus) {
     'builds/build-task29-gx-census-lab'
 } elseif ($nativeStageGeneratedSegment0Selected) {
-    "builds/build-task26-segment0-e${NativeStageGeneratedSegment0Enable}-p$([int]$RendererM3Phase0Profile.IsPresent)-lab"
+    "builds/build-segment0-e${NativeStageGeneratedSegment0Enable}-p$([int]$RendererM3Phase0Profile.IsPresent)-lab"
 } elseif ($RendererScreenSpaceCensusMode -eq 1) {
     'builds/build-task11-screen-space-census-lab'
 } elseif ($RenderEconomyMode -eq 1) {
