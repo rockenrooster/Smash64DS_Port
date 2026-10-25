@@ -488,10 +488,11 @@ Defaults for the specials:
   (owner BUGS.md 2026-10-24); `ndsP4PalutenaCounterStart` opens the window
   itself -- flag0, the armour and the reflector -- and the script's frame-41
   clear closes it. The counterattack deals 1.3x the counted hit's damage
-  (11-50%) and, since 2026-10-24 (owner: "inherit the BKB and KBG as the
-  attacker's hit"), takes that hit's knockback growth and base, at least the
-  script's 65 and 33; a hit of set knockback, or a stage's, leaves 65 and
-  33, and the angle stays 361. The hit is the one the hit search picked
+  (11-50%) and, since 2026-10-24, that hit's knockback as it was: its set
+  knockback, growth and base (owner: "inherit the BKB and KBG as the
+  attacker's hit"; first floored at the script's 65 and 33, then mirrored
+  when a countered jab launched: "a little jab can send them launching").
+  A stage's hit leaves the script's, and the angle stays 361. The hit is the one the hit search picked
   (its largest knockback), kept per fighter by `ndsP4UpdateHitDamageStats`
   (`ndsP4PickedHitKnockback`).
 

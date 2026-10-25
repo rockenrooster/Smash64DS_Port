@@ -251,7 +251,14 @@ Defaults for the new specials:
     the plunge is now tucked with Ragnell level ahead at his waist, the
     landing a deep crouch with the blade along the floor ahead.
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
-  so the counter is too.
+  so the counter is too. Since 2026-10-24 (owner: "can we apply the same
+  counter tweaks to Ike's counter?", Palutena's) the counterattack follows the hit it
+  counted: 1.2x its damage (Ultimate's Ike), 10-50%, and its knockback as
+  it was -- set knockback, growth and base (owner: "a little jab can send
+  them launching" with the script's 100 and 48 as a floor); a stage's hit
+  keeps the script's (`counter_hit.ms`), and the angle stays 361
+  (`nds_p4_ike.c` `IKE_COUNTER_*`, the hit kept by
+  `ndsP4PickedHitKnockback`).
 
 ## Animations from Ultimate's motions (owner p6p, 2026-10-15)
 
