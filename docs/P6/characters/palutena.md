@@ -482,6 +482,12 @@ Defaults for the specials:
   the default) during which a melee hit triggers her counterattack, a light
   blast from the staff (Marth's counter override, `NDSP4Overrides.update_damage`),
   and a projectile is reflected (Fox's reflector rule). Ground and air.
+  Window frames 1-40 (owner 2026-10-23). The status setter plays frames 0-1
+  and then clears the motion flags (the source's setter shape), so the
+  script's frame-1 `SetFlag0` never survived and nothing was countered
+  (owner BUGS.md 2026-10-24); `ndsP4PalutenaCounterStart` opens the window
+  itself -- flag0, the armour and the reflector -- and the script's frame-41
+  clear closes it.
 
 ## Animations from Ultimate's motions (owner p6p, 2026-10-15)
 
@@ -1463,7 +1469,8 @@ of his head, a gold ring under its front edge (her staff's band texture: her
 own circlet is painted on her face and turns brown at 16 colours), and a
 sheet of her hair panels' texture down his back, a third of the way round
 behind him. `scripts/p6/hat_preview.py` renders it on Kirby from four sides
-(local review image).
+(local review image). The whole hat sits 15 units higher since 2026-10-24
+(owner: "the hair is below kirby's head slightly. move it up a bit").
 
 Lab check (four-CPU lab ROM, Kirby in port 0 tapping B against three CPU
 Palutenas, `p6kirbypal.ps1`): he copies her (copy 20) and casts Explosive

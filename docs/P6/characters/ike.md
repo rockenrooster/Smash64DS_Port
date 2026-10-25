@@ -531,14 +531,24 @@ The clips used come to well under 1 MB of NitroFS.
 
 ## Kirby
 
-Power: Eruption, through Roy's Kirby power rows with Ike's tint, so a Kirby
-holding Ike's power charges blue fire. Hat: Ike's hair. With Roy in the same
-match, Kirby holding Roy's power keeps Roy's red fire and Roy's hat.
+Power: Quick Draw (owner BUGS.md 2026-10-23 and 2026-10-24: "Ike's hat is
+missing the chargeable dash"), through Roy's Kirby power rows: Kirby keeps
+Roy's statuses and sword, and his neutral special
+(`p4_kirby.py` `AUTHORED_STARTERS`, `nds_p4_ike.c`) plays Ike's three Quick
+Draw phases on his rising third Dancing Blade swing (`ROY_NSPG_3_High` /
+`ROY_NSPA_3_High`) with Ike's numbers: the windup held at its frame 6 while B
+is held (charge up to 75 frames, Ike's blue charge glow through the colour
+remap), a dash of 6-20 frames by charge at four times his run speed (hits
+that hold a foe; a hit or a shield cuts to the slash), then the slash (6% and
+up to 7 more by charge, 60 degrees, growth 88, base 70); special fall when it
+ends in the air. With Roy in the same match, Kirby holding Roy's power keeps
+Roy's Dancing Blade and Roy's hat.
 
 Hat (2026-10-14): Ike's own look's blue hair and olive headband -- his head
 row's (joint 9) textured spans 3-5, the face's three before them -- cut from
 his written model and drawn at Kirby's joint 6 over the plain head as the
-custom powers' hats are (`p4_kirby.py` `AUTHORED_HATS`, 2.6x, 40 units down;
+custom powers' hats are (`p4_kirby.py` `AUTHORED_HATS`, 2.6x, 55 units down
+since 2026-10-24, owner: "the hair is above kirby's head slightly";
 `scripts/p6/hat_preview.py` renders it on Kirby). Roy's power rows and Roy's
 sword (the weapon keyed by Roy's hat id) stay.
 
