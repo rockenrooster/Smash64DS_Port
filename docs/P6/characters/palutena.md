@@ -496,7 +496,16 @@ Defaults for the specials:
   her light wings and orb as the smashes do (owner 2026-10-25: "its the
   exact same wing/orb vfx in the smash attacks, just reuse that"): Ultimate's
   backlight at the counterattack's start at rate 2.75, grown by frame 2,
-  gone by 15 (`sNdsP4PalutenaLightWindows`, motions 226 and 227). The hit is the one the hit search picked
+  gone by 15 (`sNdsP4PalutenaLightWindows`, motions 226 and 227).
+  Her voice as she raises the shield is random, as on the 3DS (owner
+  2026-10-25: "counter", another effort line or nothing on down B; it said
+  "counter" every time): Ultimate's `seq_palutena_rnd_special_l01`
+  (`sound/sequence/fighter/palutena.sqb`) -- 75% `special_l01`, 18%
+  `vc_palutena_002` (cue `002`), 7% nothing -- at frame 4
+  (`PAL_COUNTER_VOICE_*`, the cue ids from `nds_p6_cues.generated.h`). The
+  counterattack keeps its own line, `special_l02` (`counter_hit.ms`; Ultimate
+  plays that set on a reflect instead, `seq_palutena_rnd_special_l02`: 75%
+  `special_l02`, 18% `vc_palutena_001`, 7% nothing). The hit is the one the hit search picked
   (its largest knockback), kept per fighter by `ndsP4UpdateHitDamageStats`
   (`ndsP4PickedHitKnockback`).
 
