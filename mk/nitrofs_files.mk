@@ -1183,5 +1183,5 @@ endif
 # without it whenever the sprite lane is on.
 export NDS_NITROFS_EFFECT_FILES :=
 NDS_NITROFS_EFFECT_FILES := \
-	$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin
+	$(NITROFS_DIR)/effects/efcommon_hitspark.rgb5a1.bin
 

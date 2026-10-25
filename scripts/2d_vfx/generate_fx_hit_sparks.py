@@ -29,8 +29,8 @@ LIGHT_TEXTURES = (33, 34, 35, 36)
 HEAVY_TEXTURE = 41
 HEAVY_ENV = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (120, 120, 120))
 ALPHA_THRESHOLD = 32
-BINARY = "assets/effects/task39_hit_sparks.rgb5a1.bin"
-NITRO_PATH = "nitro:/effects/task39_hit_sparks.rgb5a1.bin"
+BINARY = "assets/effects/efcommon_hitspark.rgb5a1.bin"
+NITRO_PATH = "nitro:/effects/efcommon_hitspark.rgb5a1.bin"
 
 
 def sha256(path: Path) -> str:

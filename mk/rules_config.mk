@@ -220,7 +220,7 @@ $(NDS_FX_HIT_SPARKS_INC) $(NDS_FX_HIT_SPARKS_ASSET) &: \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
 	python "$(PROJECT_ROOT)/scripts/2d_vfx/generate_fx_hit_sparks.py"
 
-$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_FX_HIT_SPARKS_ASSET)
+$(NITROFS_DIR)/effects/efcommon_hitspark.rgb5a1.bin: $(NDS_FX_HIT_SPARKS_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
