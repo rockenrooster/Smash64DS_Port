@@ -3565,6 +3565,10 @@ static u16 sNdsP4HitboxFgm[GMCOMMON_PLAYERS_MAX][4] = {
     { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }, { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu },
     { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }, { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }
 };
+/* The knockback values (set knockback, growth, base) of the hit
+ * ftMainProcessHitCollisionStatsMain last picked for each fighter, its
+ * largest knockback; zeros for a stage's hit (ndsP4PickedHitKnockback). */
+static u16 sNdsP4PickedHitKnockback[GMCOMMON_PLAYERS_MAX][3];
 
 /* Defined in the decomp's lb and sys code (no DS header declares them). */
 void *lbCommonMakePositionFGM(u16 fgm, f32 pos);
@@ -3605,11 +3609,56 @@ void ndsP4MakeHitPositionFGM(FTStruct *attacker_fp, FTAttackColl *attack_coll,
     }
 }
 
+static void ndsP4KeepPickedHitKnockback(const FTHitLog *hitlog, const FTStruct *fp)
+{
+    u16 *picked = sNdsP4PickedHitKnockback[fp->player & 3u];
+    u32 weight = 0u;
+    u32 scale = 0u;
+    u32 base = 0u;
+
+    switch (hitlog->attacker_object_class)
+    {
+    case nFTHitLogObjectFighter:
+        weight = (u32)((const FTAttackColl *)hitlog->attack_coll)->knockback_weight;
+        scale = (u32)((const FTAttackColl *)hitlog->attack_coll)->knockback_scale;
+        base = (u32)((const FTAttackColl *)hitlog->attack_coll)->knockback_base;
+        break;
+
+    case nFTHitLogObjectWeapon:
+        weight = ((const WPAttackColl *)hitlog->attack_coll)->knockback_weight;
+        scale = ((const WPAttackColl *)hitlog->attack_coll)->knockback_scale;
+        base = ((const WPAttackColl *)hitlog->attack_coll)->knockback_base;
+        break;
+
+    case nFTHitLogObjectItem:
+        weight = ((const ITAttackColl *)hitlog->attack_coll)->knockback_weight;
+        scale = ((const ITAttackColl *)hitlog->attack_coll)->knockback_scale;
+        base = ((const ITAttackColl *)hitlog->attack_coll)->knockback_base;
+        break;
+
+    default:
+        break;
+    }
+    picked[0] = (u16)weight;
+    picked[1] = (u16)scale;
+    picked[2] = (u16)base;
+}
+
+void ndsP4PickedHitKnockback(const FTStruct *fp, s32 *weight, s32 *scale, s32 *base)
+{
+    const u16 *picked = sNdsP4PickedHitKnockback[fp->player & 3u];
+
+    *weight = picked[0];
+    *scale = picked[1];
+    *base = picked[2];
+}
+
 void ndsP4UpdateHitDamageStats(const FTHitLog *hitlog, FTStruct *fp,
                                s32 damage_player, s32 damage_object_class,
                                s32 damage_object_kind, u16 flags,
                                u16 damage_stat_count)
 {
+    ndsP4KeepPickedHitKnockback(hitlog, fp);
     if (hitlog->attacker_object_class == nFTHitLogObjectFighter)
     {
         const FTStruct *attacker_fp = ftGetStruct(hitlog->attacker_gobj);

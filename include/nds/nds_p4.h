@@ -1259,11 +1259,17 @@ void ndsP4MakeHitPositionFGM(FTStruct *attacker_fp, FTAttackColl *attack_coll,
                              u16 fgm_id, f32 pos_x);
 /* ftMainProcessHitCollisionStatsMain, once the victim's damage_lr is set
  * (apply_direction_, fighter hits only): forward launches away from the
- * attacker's facing, backward along it; then the source's stats call. */
+ * attacker's facing, backward along it; then the source's stats call. It
+ * keeps the hit's knockback values first (ndsP4PickedHitKnockback). */
 void ndsP4UpdateHitDamageStats(const FTHitLog *hitlog, FTStruct *fp,
                                s32 damage_player, s32 damage_object_class,
                                s32 damage_object_kind, u16 flags,
                                u16 damage_stat_count);
+/* The knockback values of the hit ndsP4UpdateHitDamageStats last saw for the
+ * fighter (the one the hit search picked: its largest knockback): set
+ * knockback, growth and base; zeros for a stage's hit. Palutena's counter
+ * inherits them. */
+void ndsP4PickedHitKnockback(const FTStruct *fp, s32 *weight, s32 *scale, s32 *base);
 
 /* The fighter's SwordTrail.asm row for a SET AFTERIMAGE id >= 2, or NULL
  * (not its trail: the source then records and draws nothing). */
