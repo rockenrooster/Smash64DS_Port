@@ -256,7 +256,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                     f"#define NDS_RENDERER_PROFILE_LEVEL 0\n"
                     f"#define NDS_R2_FIGHTER_HW_LIGHT {hw}\n"
                     "#define NDS_RENDERER_M2_DETAILED_LEDGER 0\n"
-                    "#define NDS_TASK56_FIGHTER_PRIMITIVES 1\n",
+                    "#define NDS_FIGHTER_PRIMITIVES 1\n",
                     encoding="utf-8")
                 (inc / "nds" / "nds_native_fighter_tables.h").write_text(
                     tables_h, encoding="utf-8")

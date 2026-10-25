@@ -83,7 +83,7 @@
 
 
 
-/* Task 56 emits fighter GL_TRIANGLE_STRIP/QUAD primitive streams; the native
+/* The fighter primitive streams are GL_TRIANGLE_STRIP/QUAD groups; the native
  * fighter production path is compiled only when HW triangles are on and the
  * instrumentation level is below the forensic oracle. */
 
@@ -152,7 +152,7 @@ extern volatile u32 gNdsG1SiteOccupancy;
  * executor (modes 5-7) with the CPU triangle rasteriser behind it, and the
  * resident raw-path tables (PackedCorners, DenseCorners, RunFirstCorner and the
  * joint schedules). A build that draws fighters through the production owner
- * (fast-run mode 8 or 9, no oracle, Task 56 primitive streams, HW light) never
+ * (fast-run mode 8 or 9, no oracle, the fighter primitive streams, HW light) never
  * reaches them, so the P2 targets set 0 and the linker drops the code. Every
  * other target and the host tools keep the default 1 and compile exactly as
  * before. The guard turns a flag combination that would need one of the retired
@@ -160,7 +160,7 @@ extern volatile u32 gNdsG1SiteOccupancy;
 
 
 #if (0 != NDS_RENDERER_BENCHMARK_NONE) || (9 < NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)
-#error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, Task 56 streams (no strip route or census) and fast-run mode 8 or 9"
+#error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, the fighter primitive streams (no strip route or census) and fast-run mode 8 or 9"
 #endif
 
 #define NDS_RENDERER_BLOCKER_NONE 0u

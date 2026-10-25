@@ -123,7 +123,7 @@ typedef struct NDSRendererTraversalState
  * the row at 8 bytes; dense_normals stores FIFO_COLOR words for those flagged
  * runs. v5 adds foreign IMAGE asset provenance. v4 adds
  * derived run-first-corner addressing and
- * conditionally omits the source-order packed-corner stream when the Task56
+ * conditionally omits the source-order packed-corner stream when the primitive
  * primitive stream is the only production consumer.
  * v2 11-bit packed-corner ABI (dense 0..10, GX
  * slot 11..15; spans first 0..10, count 11..15). The untagged v1 (10-bit)

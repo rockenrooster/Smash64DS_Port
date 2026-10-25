@@ -41,7 +41,7 @@ Every closure below runs for EVERY landed owner in BOTH detail levels.
   5. WINDING closure. Every interior edge is traversed in opposite directions
      by its two triangles.
 
-  6. PRIMITIVE closure. Expand every Task 56 primitive group back into oriented
+  6. PRIMITIVE closure. Expand every fighter primitive group back into oriented
      triangles under the DS strip rule AND the runtime's BEGIN policy
      (`ndsRendererNativeEmitProductionPrimitiveGroups`: a GL_TRIANGLE group
      following a GL_TRIANGLE group shares the open list, everything else opens

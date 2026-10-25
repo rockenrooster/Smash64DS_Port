@@ -36,7 +36,7 @@ extern volatile u32 gNdsEffectPoolFreeMin;
  * and animation by two frames per tick -- is the real work, and is the part
  * that needs the owner's "substantially the same gameplay experience" call. */
 #define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT \
-    NDS_TASK106_UPDATES_PER_PRESENT
+    NDS_UPDATES_PER_PRESENT
 #define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
 #define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
 

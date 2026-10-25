@@ -2154,7 +2154,7 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
 #define NDS_R2_STRIP_ROUTE_ON() (1)
 
 
-/* Task 56: emit a RAW run's triangles as DS-native primitive groups
+/* Emit a RAW run's triangles as DS-native primitive groups
  * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
  * generator. 626 triangles submitted as 1,878 individual GL_TRIANGLES corners
  * become 1,014 strip corners in 163 groups -- **46.0% fewer vertex

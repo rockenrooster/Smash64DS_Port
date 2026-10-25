@@ -1871,10 +1871,6 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
         return TRUE;
     }
 
-    /* Task 75 E0: counted here rather than at the open, because this is the one
-     * point every load path funnels through exactly once per file -- the early
-     * return above is the re-entrant case and must not be counted twice. */
-    NDS_TASK75_MARK_ASSET_LOAD();
     /* K0 line 4, "animation-file relocation / fixups". This function is the
      * whole fixup chain: internal pointers, AObj16, attributes, weapon
      * attributes, external pointers and the sprite pass. */

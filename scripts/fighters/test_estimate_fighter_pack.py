@@ -193,9 +193,9 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertFalse(e._eval_image_guard(
             "NDS_RENDERER_PROFILE_LEVEL < 2", profile2))
         self.assertTrue(e._eval_image_guard(
-            "NDS_TASK56_FIGHTER_PRIMITIVES == 2", hwtri))
+            "NDS_FIGHTER_PRIMITIVES == 2", hwtri))
         self.assertFalse(e._eval_image_guard(
-            "NDS_TASK56_FIGHTER_PRIMITIVES == 1", hwtri))
+            "NDS_FIGHTER_PRIMITIVES == 1", hwtri))
         self.assertTrue(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", hwtri))
         self.assertFalse(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", base))
         self.assertFalse(e._eval_image_guard("!NDS_R2_FIGHTER_HW_LIGHT", hwtri))

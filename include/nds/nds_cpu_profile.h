@@ -112,12 +112,10 @@ static inline void ndsCpuProfileFrameTick(unsigned int presented_frames)
 
 #define NDS_CPU_PROFILE_FRAME_TICK(frames) \
     ndsCpuProfileFrameTick((unsigned int)(frames))
-#define NDS_CPU_PROFILE_RESULTS_TICK(tics) ((void)0)
 
 #else
 
 #define NDS_CPU_PROFILE_FRAME_TICK(frames) ((void)0)
-#define NDS_CPU_PROFILE_RESULTS_TICK(tics) ((void)0)
 
 #endif /* NDS_CPU_PROFILE */
 

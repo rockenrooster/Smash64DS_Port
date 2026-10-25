@@ -103,7 +103,7 @@ NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
 
-# Task 56: fighter DS-native primitive streams. Compiles the immutable Mario/Fox
+# The fighter DS-native primitive streams. Compiles the immutable Mario/Fox
 # topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one
 # GFX_BEGIN per primitive group + an N+2-vertex strip sequence) instead of the
 # current GL_TRIANGLES (3 verts/tri, no sharing). E0 measured mode 2 (within-run
@@ -143,7 +143,7 @@ NDS_TASK36_HW_COMPOSE ?= 0
 # did not follow. Both are fixed and the checker now models the policy: under
 # the old one it reports mode 2 drawing 744 triangles against 626 source across
 # 29 runs. Run it after touching either side.
-NDS_TASK56_FIGHTER_PRIMITIVES ?= 2
+NDS_FIGHTER_PRIMITIVES ?= 2
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -210,7 +210,7 @@ NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # `gNdsR2FighterStripRoute` selects between them at run time, so the strip A/B
 # runs on ONE binary. Task 56 was killed in 2026-07 against a control built
 # three days earlier and ~31 KB smaller, which is not a control at all on a ROM
-# whose pacing is placement-sensitive. Needs NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+# whose pacing is placement-sensitive. Needs NDS_FIGHTER_PRIMITIVES >= 1
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
 NDS_R2_STRIP_ROUTE ?= 0
@@ -737,7 +737,7 @@ NDS_R2_SOAK_MATCH_MINUTES ?= 0
 # simulation against a 30 Hz present). Building with 1 prices what a 30 Hz
 # simulation would save; it is a sizing arm only, uncompensated, and plays at
 # half speed. Do not publish a ROM built with 1.
-NDS_TASK106_UPDATES_PER_PRESENT ?= 2
+NDS_UPDATES_PER_PRESENT ?= 2
 # 2026-08-16: the INITIAL VALUE of gNdsFtrDrawMemoRoute -- the fighter draw
 # contract memo. The census above measured the answer: the contract is unchanged
 # on 4,025 of 4,076 captures (98.75%), and every one of the 51 changes is decided

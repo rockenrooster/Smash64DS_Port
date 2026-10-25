@@ -8,7 +8,7 @@ profile that already exists. No build, no emulator run.
 
 READ THIS BEFORE TRUSTING A LINE NUMBER. `addr2line` resolves against the DWARF
 in the ELF, which describes the source **as it was when that ELF was built** --
-not HEAD. This script therefore reads `NDS_TASK10_GIT_SHORT` out of the build's
+not HEAD. This script therefore reads `NDS_GIT_SHORT` out of the build's
 own `nds_build_config.h`, prints it, and quotes each line from THAT commit. It
 exists because a cycle was spent sizing a slice off line numbers read from HEAD
 when the profile came from a commit ~85 lines adrift: the largest single row,
@@ -85,14 +85,14 @@ def profile_regions(profile_dir: Path) -> int:
 
 
 def build_commit(build_dir: Path) -> str | None:
-    # Revision-first: NDS_TASK10_GIT_SHORT lives in nds_build_revision.h since
+    # Revision-first: NDS_GIT_SHORT lives in nds_build_revision.h since
     # the rebuild split; the config fallback covers older build directories.
     for name in ("nds_build_revision.h", "nds_build_config.h"):
         config = build_dir / name
         if not config.exists():
             continue
         text = config.read_text(encoding="utf-8", errors="replace")
-        match = re.search(r'#define\s+NDS_TASK10_GIT_SHORT\s+"([0-9a-f]+)"', text)
+        match = re.search(r'#define\s+NDS_GIT_SHORT\s+"([0-9a-f]+)"', text)
         if match:
             return match.group(1)
     return None

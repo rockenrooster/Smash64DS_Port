@@ -588,7 +588,7 @@ static s32 ndsRendererValidateNativeRun(
         }
     }
 #else
-    /* Task56 production executes primitive_vertices, not packed_corners.
+    /* The primitive-stream production executes primitive_vertices, not packed_corners.
      * The host primitive-stream checker proves oriented source-triangle
      * equivalence. Runtime still validates every source triangle command below;
      * the duplicate packed stream is intentionally absent from this image. */

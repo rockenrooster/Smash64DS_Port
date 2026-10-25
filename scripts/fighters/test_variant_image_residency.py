@@ -274,7 +274,7 @@ int main(void) {{
         """Exact active-image bytes per variant owner under campaign flags.
 
         Compiles the real generated header with the campaign-walk build
-        config (PROFILE 0, HW-light, no ledger, Task56 mode 2) and reports
+        config (PROFILE 0, HW-light, no ledger, primitive mode 2) and reports
         sizeof per image. Prints stay for the residency report; asserts pin
         the layout contract (tag first, prepared_dense contiguous with zero
         padding after dense_normals).
@@ -297,7 +297,7 @@ int main(void) {{
                 "#define NDS_RENDERER_PROFILE_LEVEL 0\n"
                 "#define NDS_R2_FIGHTER_HW_LIGHT 1\n"
                 "#define NDS_RENDERER_M2_DETAILED_LEDGER 0\n"
-                "#define NDS_TASK56_FIGHTER_PRIMITIVES 2\n",
+                "#define NDS_FIGHTER_PRIMITIVES 2\n",
                 encoding="utf-8")
             (tmp_path / "nds" / "nds_native_fighter_tables.h").write_text(
                 tables, encoding="utf-8")

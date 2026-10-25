@@ -94,7 +94,7 @@ def _owner_guard(owner_name: str) -> str:
 # (`src/nds/nds_renderer_assets.c`) before binding any member. v3 adds
 # scene-resident PreparedDense to v2's 11-bit packed-corner ABI. v4 removes
 # the redundant per-run first-corner table and omits the source-order packed
-# corner stream when Task56's production primitive stream is the only runtime
+# corner stream when the production primitive stream is the only runtime
 # consumer. Diagnostic/raw-route builds keep that stream through the generated
 # guard below. v1
 # (10-bit) images are untagged AND one word shorter, so they fail the exact
@@ -107,7 +107,7 @@ def _owner_guard(owner_name: str) -> str:
 # keeps a guarded copy so both regen orders compile.
 NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x364F444E
 
-# Task56 mode 2 is the shipping path. Its primitive_vertices array already
+# Primitive mode 2 is the shipping path. Its primitive_vertices array already
 # carries every raw-run dense id and, for cross-matrix runs, the exact packed
 # source-order corner value including the matrix-slot high bits. Keep the older
 # packed-corner stream only for configurations that can execute the raw emitter
@@ -328,7 +328,7 @@ def _member_values(
           for index, (first, count, submit_class, mask) in enumerate(runs)], ""),
     ]
 
-    # Task 56 primitive streams. Both compiled modes are emitted under their
+    # The fighter primitive streams. Both compiled modes are emitted under their
     # own guard, exactly as `render_p2_owner_runtime_program` emits the arrays:
     # the mode is a build flag, so which stream is in the image is decided by
     # the same `nds_build_config.h` the renderer reads.
@@ -336,7 +336,7 @@ def _member_values(
         (run_group_first, run_group_count, group_type,
          group_first_vertex, group_vertex_count,
          primitive_vertices) = primitive_streams[mode]
-        guard = f"NDS_TASK56_FIGHTER_PRIMITIVES == {mode}"
+        guard = f"NDS_FIGHTER_PRIMITIVES == {mode}"
         members += [
             ("u16", f"primitive_group_first_m{mode}",
              [f"{value}u" for value in run_group_first], guard),
@@ -380,7 +380,7 @@ def _array_stem(member: str) -> str:
     """The owner generator's array-name stem for an image member.
 
     `_m1`/`_m2` mode suffixes are stripped: the runtime arrays are already
-    guarded to a single Task 56 mode and share one name.
+    guarded to a single primitive mode and share one name.
     """
     stem = member
     if stem.endswith("_m1") or stem.endswith("_m2"):
@@ -543,10 +543,10 @@ def render_header(
         "#include <nds/nds_ftr_lean_live.h>",
         "#include <nds/nds_native_fighter_tables.h>",
         "",
-        "/* Source-order packed corners are redundant in the production Task56",
+        "/* Source-order packed corners are redundant in the production primitive",
         " * stream. Keep them only when a build can execute the raw fallback or",
         " * when the screen-space census explicitly walks source triangles. */",
-        "#if (NDS_TASK56_FIGHTER_PRIMITIVES == 0) || NDS_R2_STRIP_ROUTE || \\",
+        "#if (NDS_FIGHTER_PRIMITIVES == 0) || NDS_R2_STRIP_ROUTE || \\",
         "    NDS_RENDERER_SCREEN_SPACE_CENSUS",
         "#define NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS 1",
         "#else",

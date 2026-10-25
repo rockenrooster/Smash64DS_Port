@@ -882,8 +882,8 @@ def check_nonaligned_split_matrix_falsifier():
             "unsafe split matrices unexpectedly match raw composition")
 
 
-def check_task56_primitive_streams(source_root: Path) -> None:
-    """Task 56: validate the generated fighter primitive streams.
+def check_fighter_primitive_streams(source_root: Path) -> None:
+    """Validate the generated fighter primitive streams.
 
     Rebuilds the strip plans for both mode 1 (exact order) and mode 2
     (within-run reorder) and asserts that every RAW run's strip-expanded
@@ -915,15 +915,15 @@ def check_task56_primitive_streams(source_root: Path) -> None:
         for gtype, verts in groups:
             if gtype == 0:  # GL_TRIANGLES
                 require(len(verts) == 3,
-                        "Task 56 GL_TRIANGLES group must have 3 vertices")
+                        "primitive streams: GL_TRIANGLES group must have 3 vertices")
                 out.append(frozenset(verts))
             elif gtype == 2:  # GL_TRIANGLE_STRIP
                 require(len(verts) >= 3,
-                        "Task 56 GL_TRIANGLE_STRIP group must have >= 3 verts")
+                        "primitive streams: GL_TRIANGLE_STRIP group must have >= 3 verts")
                 for k in range(len(verts) - 2):
                     out.append(frozenset(verts[k:k + 3]))
             else:
-                require(False, f"Task 56 unknown primitive type {gtype}")
+                require(False, f"primitive streams: unknown primitive type {gtype}")
         return out
 
     for mode in (1, 2):
@@ -932,12 +932,12 @@ def check_task56_primitive_streams(source_root: Path) -> None:
                 runs, packed_corners, run_first_corner, mode)
         # group/vertex bookkeeping consistency
         require(len(rgf) == len(runs) and len(rgc) == len(runs),
-                f"Task 56 mode {mode}: per-run group bookkeeping length")
+                f"primitive streams: mode {mode}: per-run group bookkeeping length")
         total_groups = sum(rgc)
         require(total_groups == len(gt) == len(gfv) == len(gvc),
-                f"Task 56 mode {mode}: group table length consistency")
+                f"primitive streams: mode {mode}: group table length consistency")
         require(len(pv) <= current_vertices,
-                f"Task 56 mode {mode}: strip must not add vertices")
+                f"primitive streams: mode {mode}: strip must not add vertices")
         # semantic identity per RAW run
         raw_runs_checked = 0
         for r in range(len(runs)):
@@ -954,10 +954,10 @@ def check_task56_primitive_streams(source_root: Path) -> None:
             groups = native._stripify_run(tris, mode)
             exp_geo = collections.Counter(expand(groups))
             require(src_geo == exp_geo,
-                    f"Task 56 mode {mode} run {r}: strip expansion diverged "
+                    f"primitive streams: mode {mode} run {r}: strip expansion diverged "
                     f"from source triangle multiset")
         require(raw_runs_checked > 0,
-                f"Task 56 mode {mode}: no RAW runs checked")
+                f"primitive streams: mode {mode}: no RAW runs checked")
     # mode 2 must beat mode 1 (the spec's justification for mode 2)
     (_m1rgf, _m1rgc, _m1gt, _m1gfv, _m1gvc, m1pv) = \
         native.build_fighter_primitive_streams(
@@ -966,7 +966,7 @@ def check_task56_primitive_streams(source_root: Path) -> None:
         native.build_fighter_primitive_streams(
             runs, packed_corners, run_first_corner, 2)
     require(len(m2pv) < len(m1pv),
-            "Task 56: mode 2 must use fewer vertices than mode 1")
+            "primitive streams: mode 2 must use fewer vertices than mode 1")
 
 
 TARUCANN_EXPECTED = {
@@ -1167,7 +1167,7 @@ def main() -> int:
             "combined texcoord patch count changed")
     require(max_words == 4034,
             "maximum staging payload changed")
-    check_task56_primitive_streams(source_root)
+    check_fighter_primitive_streams(source_root)
     print("combined: triangles=626 corners=1878 textured=381 maxStage=16136B")
     return 0
 

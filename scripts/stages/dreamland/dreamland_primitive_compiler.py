@@ -56,7 +56,7 @@ if str(_scripts_root) not in _sys.path:
 import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 import dreamland_simplifier as simplifier
-import task56_fighter_topology_census as t56
+import fighter_topology_census as t56
 
 SCRIPTS_DIR = _paths.SCRIPTS_ROOT
 REPO_ROOT = SCRIPTS_DIR.parent

@@ -208,10 +208,6 @@ extern volatile u32 gNdsTickHudSpans;
 #define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) ((void)0)
 #define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) ((void)0)
 
-/* Task 75 E0: completed file loads, differenced per frame into the census ring.
- * See the definition in diagnostics.c for why this rides the same ring as the
- * Task 70 fallback counter rather than adding a second one. */
-#define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
 extern volatile u32 gNdsTickHudFighterTicks;
 extern volatile u32 gNdsTickHudStageTicks;
 extern volatile u32 gNdsTickHudBackgroundTicks;
@@ -422,14 +418,6 @@ extern volatile u32 gNdsFtrPreResetRuntime;
  * plan is being thrown away and re-derived. */
 extern volatile u32 gNdsFtrPlanHit;
 extern volatile u32 gNdsFtrPlanBuild;
-/* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
- * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD
- * target (the published ROM) saw no definition at all. Fail the macro open to a
- * no-op here rather than guarding the call site, so adding a future counter
- * cannot break the shipping build the same way. */
-#ifndef NDS_TASK75_MARK_ASSET_LOAD
-#define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
-#endif
 extern volatile u32 gNdsRendererProfileTextureUploads;
 extern volatile u32 gNdsRendererProfileTextureUploadBytes;
 extern volatile u32 gNdsRendererProfileTextureCi4DirectPixels;

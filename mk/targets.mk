@@ -2,16 +2,16 @@
 # (the shipping smash64ds, the four-CPU gate, the shell and lab targets).
 # Included in place from the Makefile (P8 G); its text is unchanged.
 
-# Task 56: NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2.
-ifneq ($(NDS_TASK56_FIGHTER_PRIMITIVES),$(filter $(NDS_TASK56_FIGHTER_PRIMITIVES),0 1 2))
-$(error NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2; got "$(NDS_TASK56_FIGHTER_PRIMITIVES)")
+# NDS_FIGHTER_PRIMITIVES (the fighter primitive streams) must be 0, 1, or 2.
+ifneq ($(NDS_FIGHTER_PRIMITIVES),$(filter $(NDS_FIGHTER_PRIMITIVES),0 1 2))
+$(error NDS_FIGHTER_PRIMITIVES must be 0, 1, or 2; got "$(NDS_FIGHTER_PRIMITIVES)")
 endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= 0
 # R1 retirement, done (2026-10-20, old machinery): fighter hierarchy mode 7, the
 # per-root hardware executor, the CPU triangle rasteriser and the resident
 # raw-path tables are gone from the sources; every target builds the production
 # fighter path, which nds_renderer.h still checks (profile 0, mode 8/9,
-# NO_ORACLE, HW light, Task 56 streams).
+# NO_ORACLE, HW light, the fighter primitive streams).
 override NDS_FIGHTER_LEGACY_EXEC := 0
 ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the

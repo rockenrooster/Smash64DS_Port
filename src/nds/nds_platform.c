@@ -43,8 +43,8 @@
 #include "nds_build_revision.h"
 #endif
 #endif
-#ifndef NDS_TASK10_GIT_SHORT
-#define NDS_TASK10_GIT_SHORT "unknown"
+#ifndef NDS_GIT_SHORT
+#define NDS_GIT_SHORT "unknown"
 #endif
 
 
@@ -2911,7 +2911,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         NDS_BATTLE_FPS_HUD_PRINT(20u, "WORK      --       -- n:0");
         NDS_BATTLE_FPS_HUD_PRINT(21u, "VBI  --  --  --");
         NDS_BATTLE_FPS_HUD_PRINT(22u, "5+  --  max --");
-        NDS_BATTLE_FPS_HUD_PRINT(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
+        NDS_BATTLE_FPS_HUD_PRINT(23u, "GIT %s TICKHUD", NDS_GIT_SHORT);
 #endif
         return;
     }
@@ -3031,7 +3031,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
              * compile-time constant or an unguarded global, so this row costs
              * the lean build nothing and cannot go stale against the flags. */
             NDS_BATTLE_FPS_HUD_PRINT(
-                23u, "GIT %s A%lx S%u C%u L%u", NDS_TASK10_GIT_SHORT,
+                23u, "GIT %s A%lx S%u C%u L%u", NDS_GIT_SHORT,
                 (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
                 (unsigned int)NDS_STAGE_STEADY,
                 (unsigned int)NDS_TASK36_HW_COMPOSE,

@@ -1320,7 +1320,7 @@ static s32 ndsRendererHardwareStageUniqueTextureRows(
     return TRUE;
 }
 
-static s32 NDS_TASK82_EVICTED_HOT_CODE
+static s32 NDS_RENDERER_EVICTED_HOT_CODE
 ndsRendererHardwareConvertTexel01Ci4Direct(
     const NDSRendererConfig *config,
     const u8 *texels0,

@@ -73,18 +73,11 @@
  * question is no longer "which admission is unsafe" but "does any change to
  * .main layout do this".
  *
- * NDS_TASK37_LAYOUT_PROBE emits exactly N bytes of never-executed padding into
- * .main. It moves nothing into ITCM and calls nothing. If the gate diverges
- * against this too, the sensitivity is latent and pre-existing -- Task 37 only
- * disturbs it -- and the gate cannot referee any code change at all. If the
- * gate passes against it, ITCM residency specifically is what breaks, and Task
- * 37 is genuinely at fault.
+ * A layout probe (NDS_TASK37_LAYOUT_PROBE, since removed) emitted exactly N
+ * bytes of never-executed padding into .main or .itcm, moving nothing into
+ * ITCM and calling nothing, to tell a latent layout sensitivity from ITCM
+ * residency itself; padding .main passed the gate on 2026-07-22.
  */
-
-/* 0 = pad .main (shifts main-RAM layout), 1 = pad .itcm (grows the ITCM section
- * and its load image without relocating any real function). Padding .main
- * passed the gate on 2026-07-22, so the remaining question is whether growing
- * .itcm at all is what diverges, independently of which code moved. */
 
 
 #endif /* NDS_ITCM_PLACEMENT_H */

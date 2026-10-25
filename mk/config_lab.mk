@@ -194,5 +194,5 @@ NDS_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_ITCM_LIB_LEAVES)),1,0)
 # Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
 # so the Task 37 divergence names an offset instead of a 3,012-byte blob.
 # Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
-NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+NDS_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 

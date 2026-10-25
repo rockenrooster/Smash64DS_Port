@@ -20,7 +20,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		$(if $(NDS_TASK36_RIGID_BINDING_MASK),echo '#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK $(NDS_TASK36_RIGID_BINDING_MASK)'; ,) \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
-		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
+		echo '#define NDS_FIGHTER_PRIMITIVES $(NDS_FIGHTER_PRIMITIVES)'; \
 		echo '#define NDS_STAGE_STEADY $(NDS_STAGE_STEADY)'; \
 		echo '#define NDS_CPU_PROFILE $(NDS_CPU_PROFILE)'; \
 		echo '#define NDS_ITCM_LIB_LEAVES $(NDS_ITCM_LIB_LEAVES)'; \
@@ -123,7 +123,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_NESS_VFX_PROOF $(NDS_P2_NESS_VFX_PROOF)'; \
 		echo '#define NDS_P2_YOSHI_BUG_PROOF $(NDS_P2_YOSHI_BUG_PROOF)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
-		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
+		echo '#define NDS_UPDATES_PER_PRESENT $(NDS_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
 		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
@@ -175,7 +175,7 @@ $(NDS_BUILD_REVISION): FORCE
 	{ \
 		echo '#ifndef NDS_BUILD_REVISION_H'; \
 		echo '#define NDS_BUILD_REVISION_H'; \
-		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
+		echo '#define NDS_GIT_SHORT "$(NDS_GIT_SHORT)"'; \
 		echo '#endif'; \
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi

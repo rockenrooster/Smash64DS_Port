@@ -86,11 +86,11 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * needs this re-packed, and the checkers were narrowed from six paths to five
  * rather than deleted so that stays visible. */
 #if defined(__arm__)
-#define NDS_TASK82_ITCM_CODE __attribute__((section(".itcm")))
-#define NDS_TASK82_EVICTED_HOT_CODE     __attribute__((hot, optimize("O3"), target("arm")))
+#define NDS_RENDERER_ITCM_CODE __attribute__((section(".itcm")))
+#define NDS_RENDERER_EVICTED_HOT_CODE     __attribute__((hot, optimize("O3"), target("arm")))
 #else
-#define NDS_TASK82_ITCM_CODE
-#define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
+#define NDS_RENDERER_ITCM_CODE
+#define NDS_RENDERER_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
 #endif
 
 /* Campaign 01 re-knapsack, 2026-08-17. See include/nds/nds_itcm_placement.h for
@@ -108,7 +108,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
 #else
 #define NDS_R2_ITCM_PACK2_EVICTED_CODE NDS_RENDERER_HOT_CODE
-#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE NDS_TASK82_ITCM_CODE
+#define NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE NDS_RENDERER_ITCM_CODE
 #endif
 
 /* R2-03 E26 SIZING ARM ONLY -- THE SHIPPED ROM'S ITCM PACK IS UNTOUCHED.
@@ -134,7 +134,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  * everything that shares it. Size the bake from the counts; take ticks from an
  * unevicted arm.
  *
- * Placement only, in the spirit of Task 82: NDS_TASK82_EVICTED_HOT_CODE drops
+ * Placement only, in the spirit of Task 82: NDS_RENDERER_EVICTED_HOT_CODE drops
  * the section and keeps hot/O3/ARM, so no emitted instruction changes. */
 /* 2026-08-17: the re-knapsack makes this eviction unconditional. The shipping
  * census measures ndsRendererScanList at 599 tk/fr on the gate's own rank-80
@@ -158,7 +158,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
  *
  * Placement and nothing else, in the spirit of Task 82 -- no behaviour changes,
  * so a win is attributable to fetch and a null refutes the mechanism. */
-#define NDS_R2_DELTA_PATH_CODE NDS_TASK82_ITCM_CODE
+#define NDS_R2_DELTA_PATH_CODE NDS_RENDERER_ITCM_CODE
 
 /* Profiles 0/1 publish the shipping contract through the compact frame
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not

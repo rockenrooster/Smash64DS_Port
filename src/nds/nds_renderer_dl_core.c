@@ -173,7 +173,7 @@ static void ndsRendererMtxStoreDS20p12ToN64(
     }
 }
 
-void NDS_FIGHTER_PACKET_EVICT(NDS_TASK82_ITCM_CODE)
+void NDS_FIGHTER_PACKET_EVICT(NDS_RENDERER_ITCM_CODE)
 ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst)
 {
@@ -241,7 +241,7 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
         (s64)mtx->m[2][3] * z + mtx->m[3][3]);
 }
 
-void NDS_TASK82_ITCM_CODE
+void NDS_RENDERER_ITCM_CODE
 ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
                             const NDSRendererMatrix20p12 *rhs,
                             NDSRendererMatrix20p12 *out)

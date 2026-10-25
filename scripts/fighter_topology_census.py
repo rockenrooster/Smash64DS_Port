@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Task 56 E0 offline topology census for the native-fighter AOT stream.
+"""Offline topology census for the native-fighter AOT stream (Task 56's E0).
 
 Read-only analysis companion (spec: "add a read-only analysis companion that
 consumes the exact generated native-fighter topology"). It parses the EXACT

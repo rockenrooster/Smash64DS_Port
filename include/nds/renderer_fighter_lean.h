@@ -8,7 +8,7 @@
  * Samus, Link, Kirby -- from packets the old path RECORDED and the lean path
  * adopted. Slice 4 (spec ORDER steps 5-6): the lean path no longer depends on
  * recorded packets. A fighter's list is MATERIALIZED from the generated owner
- * tables (the owner generator's image: roots, epochs, runs, Task 56 strips,
+ * tables (the owner generator's image: roots, epochs, runs, the primitive strips,
  * dense normals, packed VTX16 positions, dense UVs, state spans) and the live
  * material state, in the LOAD4x3 + P' layout, into the slot's existing region:
  *

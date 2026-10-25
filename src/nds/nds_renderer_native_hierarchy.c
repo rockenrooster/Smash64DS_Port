@@ -45,7 +45,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
-        /* Task 56: RAW runs emit DS-native primitive groups (strips + residual
+        /* RAW runs emit DS-native primitive groups (strips + residual
          * triangles) compiled host-side. The first group's begin-batch already
          * ran in PrepareProductionRun; this walk re-begins only on type change
          * and leaves GL_TRIANGLE selected for whoever reuses the batch. Only

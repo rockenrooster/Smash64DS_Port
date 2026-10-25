@@ -5797,7 +5797,7 @@ def _strip_extend_active_edge(active_edge, tri):
     flips winding every other triangle, so a new triangle extends the strip
     iff it CONTAINS the active edge (the last two emitted verts); the third
     vertex becomes the new emit. Returns (new_vertex, new_active_edge) or None.
-    Same validated model as scripts/task56_fighter_topology_census.py.
+    Same validated model as scripts/fighter_topology_census.py.
     """
     shared = [v for v in tri if v in active_edge]
     if len(shared) != 2:
@@ -6198,7 +6198,7 @@ def render_p2_owner_runtime_program(
         (run_group_first, run_group_count, group_type,
          group_first_vertex, group_vertex_count,
          primitive_vertices) = primitive_streams[primitive_mode]
-        lines += [f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {primitive_mode}"]
+        lines += [f"#if NDS_FIGHTER_PRIMITIVES == {primitive_mode}"]
         lines += emit_rows(
             "u16", f"{stem}PrimitiveGroupFirst{suffix}",
             [f"{value}u" for value in run_group_first],
@@ -9394,11 +9394,11 @@ def build_mariofox_runtime_context(
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots, *detail_args,
     )
-    # Task 56: host-side fighter stripify. Compile each run's triangles into
+    # The host-side fighter stripify. Compile each run's triangles into
     # DS-native primitive groups (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) for
     # both mode 1 (exact source order) and mode 2 (within-run reorder). The
     # generated IR carries both sets in gated #if blocks; the build selects one
-    # via NDS_TASK56_FIGHTER_PRIMITIVES. Cross-matrix runs stay GL_TRIANGLES.
+    # via NDS_FIGHTER_PRIMITIVES. Cross-matrix runs stay GL_TRIANGLES.
     primitive_streams = {
         1: build_fighter_primitive_streams(
             runs, packed_corners, run_first_corner, 1),
@@ -9855,16 +9855,16 @@ def generate(repo_root: Path | None = None) -> str:
         [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
          for first, count, submit_class, mask in runs],
     )
-    # Task 56: DS-native fighter primitive streams (GL_TRIANGLE_STRIP + residual
+    # The DS-native fighter primitive streams (GL_TRIANGLE_STRIP + residual
     # GL_TRIANGLES). Two table sets, one per stripify mode; the build selects one
-    # via NDS_TASK56_FIGHTER_PRIMITIVES. Topology is compiled host-side; the
+    # via NDS_FIGHTER_PRIMITIVES. Topology is compiled host-side; the
     # runtime only walks these tables (no strip finding at runtime).
-    for _task56_mode in (1, 2):
+    for stream_mode in (1, 2):
         (run_group_first, run_group_count, group_type,
          group_first_vertex, group_vertex_count,
-         primitive_vertices) = fighter_primitive_streams[_task56_mode]
+         primitive_vertices) = fighter_primitive_streams[stream_mode]
         lines += [
-            f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {_task56_mode}",
+            f"#if NDS_FIGHTER_PRIMITIVES == {stream_mode}",
         ]
         lines += emit_rows(
             "u16", "sNdsNativeFighterPrimitiveGroupFirst",
@@ -9891,9 +9891,9 @@ def generate(repo_root: Path | None = None) -> str:
             [f"0x{value:04x}u" for value in primitive_vertices],
         )
         lines += [
-            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_GROUP_COUNT {_task56_mode}_"
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_GROUP_COUNT {stream_mode}_"
             f"{len(group_type)}",
-            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_VERTEX_COUNT {_task56_mode}_"
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_VERTEX_COUNT {stream_mode}_"
             f"{len(primitive_vertices)}",
             "#endif",
             "",
@@ -10058,12 +10058,12 @@ def generate(repo_root: Path | None = None) -> str:
         [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
          for first, count, submit_class, mask in low_runs],
     )
-    for _task56_mode in (1, 2):
+    for stream_mode in (1, 2):
         (run_group_first, run_group_count, group_type,
          group_first_vertex, group_vertex_count,
-         primitive_vertices) = low_fighter_primitive_streams[_task56_mode]
+         primitive_vertices) = low_fighter_primitive_streams[stream_mode]
         lines += [
-            f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {_task56_mode}",
+            f"#if NDS_FIGHTER_PRIMITIVES == {stream_mode}",
         ]
         lines += emit_rows(
             "u16", "sNdsNativeFighterPrimitiveGroupFirstLow",
@@ -10091,9 +10091,9 @@ def generate(repo_root: Path | None = None) -> str:
         )
         lines += [
             f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_GROUP_COUNT_LOW_"
-            f"{_task56_mode}_{len(group_type)}",
+            f"{stream_mode}_{len(group_type)}",
             f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_VERTEX_COUNT_LOW_"
-            f"{_task56_mode}_{len(primitive_vertices)}",
+            f"{stream_mode}_{len(primitive_vertices)}",
             "#endif",
             "",
         ]
