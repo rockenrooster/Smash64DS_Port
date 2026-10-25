@@ -545,9 +545,21 @@ Hyrule Temple decimation (nothing to take).
 | P11 | Hyrule Temple's half-res textures (owner-approved 2026-10-21, gkind 43 only) | Hyrule Temple's heavy roster | only if it still misses after its spend |
 | P12 | Lower update rates where `PROJECT_GOAL.md` allows them (particles, background animation) | | visible: owner's yes first, and only after P1-P11 |
 
+Added 2026-10-25 from the modern-techniques audit
+(`docs/optimization/MODERN_TECHNIQUES_AUDIT.md`; its bounds are from the
+`s70`/`s82` profiles, none built). Each is one gate trial, cheapest first:
+
+| # | lever | target | notes |
+|---|---|---|---|
+| P13 | Main RAM priority to the ARM9 (`EXMEMCNT` bit 15: no ARM9 code writes it today, so the boot value's ARM7 priority stands) | ARM9 miss latency under ARM7 traffic | one register write; watch BGM seams, FGM drops, STRD and wireless (audit M7) |
+| P14 | The lean kernel reads the pose engine's fixed-point joint values instead of the DObj floats it converts back | the kernel's DObj misses and float-to-fixed work (`ndsFtrLeanKernelCompose` 6.0% of work) | audit M2, 1-3% of work; a host proof of identical cells; joints other code writes keep the DObj path |
+| P15 | I-cache lockdown: the hottest main-RAM lines in one contiguous section, two of the four ways locked at boot | fetch stalls of the hottest main-RAM code | audit item 1: 2.9-3.7% of work gross for 4 KB; the rest of the code keeps half the cache, and its misses are capacity misses |
+| P16 | Selective LTO, size first: a trial link of the decomp gameplay objects with `-flto` | code bytes (heap for P2's spares), then the cross-unit calls (~1% of work) | audit item 2; ITCM's name list, `--wrap` and the decomp's mismatched declarations decide whether it can ship |
+| P17 | Section anchors for `scene_backend.o` and `nds_renderer.o` (built without `-fdata-sections`; their DTCM name rules become section attributes) | same-file literal loads (~1.4% of work at stake) | audit M1; costs the unused data `--gc-sections` can no longer drop in those two objects |
+
 **Exit P:** the heavy roster and the four mixes meet the owner's stress target
 (<= 1,250,000 and >= 90% within two VBlanks) on every VS stage, or every lever
-P1-P11 landed or refuted with numbers; the cast keeps <= 1,250,000 / >= 95% on
+P1-P11 and P13-P17 landed or refuted with numbers; the cast keeps <= 1,250,000 / >= 95% on
 all 16 VS stages with no stage worse than `s56`; replay digests identical;
 no frame pushed past two VBlanks by a motion read. Record the over-target
 counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
