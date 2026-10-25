@@ -921,6 +921,7 @@ static void ndsP4MrgawKirbyNSPProcStatus(GObj *fighter_gobj)
 
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
+    fp->motion_vars.flags.flag2 = 0;
 }
 
 static void ndsP4MrgawKirbyNSPSetStatus(GObj *fighter_gobj, s32 status_id)
@@ -959,25 +960,33 @@ void ndsP4MrgawKirbyNSPUpdate(GObj *fighter_gobj)
     }
 }
 
-/* The refresh: past frame 12 (the throw), B pressed, or held when the
- * animation ends, restarts the cook; flag1 counts them as MRGAW's does. */
+/* The refresh: at or past the toss (frame 16), B pressed, or held when the
+ * animation ends, restarts the cook; flag1 counts them as MRGAW's does. A
+ * press between frame 12 and the toss waits for it (flag2): restarting there
+ * cut the toss, and its sausage was never made (owner BUGS.md 2026-10-24:
+ * "pressing b too fast sometimes doesn't spawn the projectile"). The toss's
+ * sausage is made in the update, before this interrupt on the same tick. */
 void ndsP4MrgawKirbyNSPRefresh(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 frame = fighter_gobj->anim_frame;
     u32 loops = fp->motion_vars.flags.flag1;
+    sb32 pressed = ((fp->input.pl.button_tap & MRGAW_BUTTON_B) != 0u) ? TRUE : FALSE;
+    sb32 held_end = ((frame <= 0.0F) && (fp->input.pl.button_hold & MRGAW_BUTTON_B)) ? TRUE : FALSE;
 
     if ((MRGAW_CHEF_MAX_LOOPS - (s32)loops) <= 0)
     {
         return;
     }
-    if (!(MRGAW_KIRBY_REFRESH_FROM < frame) &&
-        !((frame <= 0.0F) && (fp->input.pl.button_hold & MRGAW_BUTTON_B)))
+    if ((pressed != FALSE) && (MRGAW_KIRBY_REFRESH_FROM < frame) &&
+        (frame < (f32)MRGAW_KIRBY_TOSS_FRAME))
     {
+        fp->motion_vars.flags.flag2 = 1;
         return;
     }
-    if (!(fp->input.pl.button_tap & MRGAW_BUTTON_B) &&
-        !((frame <= 0.0F) && (fp->input.pl.button_hold & MRGAW_BUTTON_B)))
+    if (!(((f32)MRGAW_KIRBY_TOSS_FRAME <= frame) &&
+          ((pressed != FALSE) || (fp->motion_vars.flags.flag2 != 0))) &&
+        (held_end == FALSE))
     {
         return;
     }
@@ -986,6 +995,7 @@ void ndsP4MrgawKirbyNSPRefresh(GObj *fighter_gobj)
     ftMainPlayAnimEventsAll(fighter_gobj);
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = loops + 1u;
+    fp->motion_vars.flags.flag2 = 0;
 }
 
 static void ndsP4MrgawKirbyNSPSwitchAir(GObj *fighter_gobj)
