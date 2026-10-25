@@ -140,7 +140,7 @@ try {
         $expected = [int]$entry.Value
         $stem = [System.IO.Path]::GetFileNameWithoutExtension($member)
         $fresh = Join-Path $temp $member
-        # NDS_TASK9_FLOAT_MAIN_MEMBERS (2026-08-16) sends a member to main RAM
+        # NDS_FLOAT_MAIN_MEMBERS (2026-08-16) sends a member to main RAM
         # by emitting `<stem>.mainram.o` with its .text left alone, instead of
         # `<stem>.itcm.o` with .text renamed to .itcm. The build's own output
         # filename is the source of truth for which happened -- an artifact
@@ -206,29 +206,29 @@ try {
                     $_ -match ("\s__aeabi_{0}$" -f $routine)
                 }).Count -ne 0 -or
                 @($addSubSymbols | Where-Object {
-                    $_ -match ("\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+                    $_ -match ("\s__nds_libgcc_{0}_golden$" -f $routine)
                 }).Count -ne 1) {
                 throw "Task 16 did not rename exactly the stock $routine wrapper as its golden."
             }
         }
-        $task16ObjectSource = Join-Path $resolvedBuild 'nds_task16_float_addsub.o'
+        $task16ObjectSource = Join-Path $resolvedBuild 'nds_float_addsub.o'
         if (-not (Test-Path -LiteralPath $task16ObjectSource -PathType Leaf)) {
             throw "Missing Task 16 add/sub object '$task16ObjectSource'."
         }
-        $task16Object = Join-Path $temp 'nds_task16_float_addsub.o'
+        $task16Object = Join-Path $temp 'nds_float_addsub.o'
         Copy-Item -LiteralPath $task16ObjectSource -Destination $task16Object
         $task16AddSubBytes = Get-SectionBytes -Path $task16Object `
-            -Section '.itcm.task16_float_addsub'
+            -Section '.itcm.float_addsub'
         if ($task16AddSubBytes -ne 0x194) {
             throw "Task 16 add/sub leaf is $task16AddSubBytes bytes instead of 404."
         }
         $task16Symbols = @(& $Objdump -t $task16Object)
         if ($LASTEXITCODE -ne 0 -or
             @($task16Symbols | Where-Object {
-                $_ -match '\sF\s+\.itcm\.task16_float_addsub\s+00000004\s+__aeabi_fsub$'
+                $_ -match '\sF\s+\.itcm\.float_addsub\s+00000004\s+__aeabi_fsub$'
             }).Count -ne 1 -or
             @($task16Symbols | Where-Object {
-                $_ -match '\sF\s+\.itcm\.task16_float_addsub\s+00000190\s+__aeabi_fadd$'
+                $_ -match '\sF\s+\.itcm\.float_addsub\s+00000190\s+__aeabi_fadd$'
             }).Count -ne 1) {
             throw 'Task 16 object does not contain the expected shared add/sub leaf.'
         }
@@ -244,7 +244,7 @@ try {
             throw 'Task 16 add/sub is not the expected stackless, call-free ARM CLZ leaf.'
         }
         $task16Code = Join-Path $temp 'task16-addsub.bin'
-        & $Objcopy --dump-section ".itcm.task16_float_addsub=$task16Code" `
+        & $Objcopy --dump-section ".itcm.float_addsub=$task16Code" `
             $task16Object
         if ($LASTEXITCODE -ne 0) {
             throw 'Could not dump Task 16 add/sub machine code.'
@@ -263,7 +263,7 @@ try {
                     $_ -match ("\s__aeabi_{0}$" -f $routine)
                 }).Count -ne 1 -or
                 @($addSubSymbols | Where-Object {
-                    $_ -match ("\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+                    $_ -match ("\s__nds_libgcc_{0}_golden$" -f $routine)
                 }).Count -ne 0) {
                 throw "Task 16 off-mode did not retain the stock $routine wrapper."
             }
@@ -276,25 +276,25 @@ try {
                 $_ -match '\s__aeabi_i2f$'
             }).Count -ne 0 -or
             @($addSubSymbols | Where-Object {
-                $_ -match '\s__nds_task16_libgcc_i2f_golden$'
+                $_ -match '\s__nds_libgcc_i2f_golden$'
             }).Count -ne 1) {
             throw 'Task 16 did not rename exactly the stock i2f wrapper as its golden.'
         }
-        $task16I2fObjectSource = Join-Path $resolvedBuild 'nds_task16_float_i2f.o'
+        $task16I2fObjectSource = Join-Path $resolvedBuild 'nds_float_i2f.o'
         if (-not (Test-Path -LiteralPath $task16I2fObjectSource -PathType Leaf)) {
             throw "Missing Task 16 i2f object '$task16I2fObjectSource'."
         }
-        $task16I2fObject = Join-Path $temp 'nds_task16_float_i2f.o'
+        $task16I2fObject = Join-Path $temp 'nds_float_i2f.o'
         Copy-Item -LiteralPath $task16I2fObjectSource -Destination $task16I2fObject
         $task16I2fBytes = Get-SectionBytes -Path $task16I2fObject `
-            -Section '.itcm.task16_i2f'
+            -Section '.itcm.float_i2f'
         if ($task16I2fBytes -ne 0x5c) {
             throw "Task 16 i2f leaf is $task16I2fBytes bytes instead of 92."
         }
         $task16I2fSymbols = @(& $Objdump -t $task16I2fObject)
         if ($LASTEXITCODE -ne 0 -or
             @($task16I2fSymbols | Where-Object {
-                $_ -match '\sF\s+\.itcm\.task16_i2f\s+0000005c.*\s__aeabi_i2f$'
+                $_ -match '\sF\s+\.itcm\.float_i2f\s+0000005c.*\s__aeabi_i2f$'
             }).Count -ne 1 -or
             @($task16I2fSymbols | Where-Object { $_ -match '\*UND\*' }).Count -ne 0) {
             throw 'Task 16 i2f object is not the exact self-contained 92-byte leaf.'
@@ -311,7 +311,7 @@ try {
             throw 'Task 16 i2f is not the expected stackless, call-free ARM CLZ leaf.'
         }
         $task16I2fCode = Join-Path $temp 'task16-i2f.bin'
-        & $Objcopy --dump-section ".itcm.task16_i2f=$task16I2fCode" `
+        & $Objcopy --dump-section ".itcm.float_i2f=$task16I2fCode" `
             $task16I2fObject
         if ($LASTEXITCODE -ne 0) { throw 'Could not dump Task 16 i2f code.' }
         $task16I2fCodeHash =
@@ -326,7 +326,7 @@ try {
             $_ -match '\s__aeabi_i2f$'
         }).Count -ne 1 -or
         @($addSubSymbols | Where-Object {
-            $_ -match '\s__nds_task16_libgcc_i2f_golden$'
+            $_ -match '\s__nds_libgcc_i2f_golden$'
         }).Count -ne 0) {
         throw 'Task 16 i2f off-mode did not retain the stock wrapper.'
     }
@@ -342,26 +342,26 @@ try {
                 $_ -match '\s__aeabi_fcmpeq$'
             }).Count -ne 0 -or
             @($compareSymbols | Where-Object {
-                $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+                $_ -match '\s__nds_libgcc_fcmpeq_golden$'
             }).Count -ne 1) {
             throw 'Phase 2 did not rename exactly the stock fcmpeq wrapper as its golden.'
         }
 
-        $phase2ObjectSource = Join-Path $resolvedBuild 'nds_task9_float_phase2.o'
+        $phase2ObjectSource = Join-Path $resolvedBuild 'nds_float_fcmpeq.o'
         if (-not (Test-Path -LiteralPath $phase2ObjectSource -PathType Leaf)) {
             throw "Missing Task 9 Phase 2 object '$phase2ObjectSource'."
         }
-        $phase2Object = Join-Path $temp 'nds_task9_float_phase2.o'
+        $phase2Object = Join-Path $temp 'nds_float_fcmpeq.o'
         Copy-Item -LiteralPath $phase2ObjectSource -Destination $phase2Object
         $phase2Bytes = Get-SectionBytes -Path $phase2Object `
-            -Section '.itcm.task9_float_phase2'
+            -Section '.itcm.float_fcmpeq'
         if ($phase2Bytes -ne 0x24) {
             throw "Task 9 Phase 2 fcmpeq leaf is $phase2Bytes bytes instead of 36."
         }
         $phase2Symbols = @(& $Objdump -t $phase2Object)
         if ($LASTEXITCODE -ne 0 -or
             @($phase2Symbols | Where-Object {
-                $_ -match '\sF\s+\.itcm\.task9_float_phase2\s+[0-9a-fA-F]+\s+__aeabi_fcmpeq$'
+                $_ -match '\sF\s+\.itcm\.float_fcmpeq\s+[0-9a-fA-F]+\s+__aeabi_fcmpeq$'
             }).Count -ne 1 -or
             @($phase2Symbols | Where-Object { $_ -match '\*UND\*' }).Count -ne 0) {
             throw 'Task 9 Phase 2 object is not one self-contained fcmpeq ITCM definition.'
@@ -380,7 +380,7 @@ try {
             throw 'Task 9 Phase 2 fcmpeq is not a stackless ARM leaf.'
         }
         $phase2Code = Join-Path $temp 'task9-phase2.bin'
-        & $Objcopy --dump-section ".itcm.task9_float_phase2=$phase2Code" `
+        & $Objcopy --dump-section ".itcm.float_fcmpeq=$phase2Code" `
             $phase2Object
         if ($LASTEXITCODE -ne 0) {
             throw 'Could not dump Task 9 Phase 2 machine code.'
@@ -400,7 +400,7 @@ try {
                 $_ -match '\s__aeabi_fcmpeq$'
             }).Count -ne 1 -or
             @($compareSymbols | Where-Object {
-                $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+                $_ -match '\s__nds_libgcc_fcmpeq_golden$'
             }).Count -ne 0) {
             throw 'Phase 1 comparison object did not retain the stock fcmpeq symbol.'
         }
@@ -419,7 +419,7 @@ try {
                     $_ -match ("\s__aeabi_{0}$" -f $routine)
                 }).Count -ne 0 -or
                 @($compareSymbols | Where-Object {
-                    $_ -match ("\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+                    $_ -match ("\s__nds_libgcc_{0}_golden$" -f $routine)
                 }).Count -ne 1) {
                 throw "Task 16 did not rename exactly the stock $routine wrapper."
             }
@@ -428,20 +428,20 @@ try {
                 $_ -match '\s__aeabi_fcmpun$'
             }).Count -ne 0 -or
             @($unordSymbols | Where-Object {
-                $_ -match '\s__nds_task16_libgcc_fcmpun_golden$'
+                $_ -match '\s__nds_libgcc_fcmpun_golden$'
             }).Count -ne 1) {
             throw 'Task 16 did not rename exactly the stock fcmpun wrapper.'
         }
         $task16CompareObjectSource = Join-Path $resolvedBuild `
-            'nds_task16_float_compare.o'
+            'nds_float_compare.o'
         if (-not (Test-Path -LiteralPath $task16CompareObjectSource -PathType Leaf)) {
             throw "Missing Task 16 compare object '$task16CompareObjectSource'."
         }
-        $task16CompareObject = Join-Path $temp 'nds_task16_float_compare.o'
+        $task16CompareObject = Join-Path $temp 'nds_float_compare.o'
         Copy-Item -LiteralPath $task16CompareObjectSource `
             -Destination $task16CompareObject
         $task16CompareBytes = Get-SectionBytes -Path $task16CompareObject `
-            -Section '.itcm.task16_float_compare'
+            -Section '.itcm.float_compare'
         if ($task16CompareBytes -ne 0xec) {
             throw "Task 16 compare leaf is $task16CompareBytes bytes instead of 236."
         }
@@ -456,7 +456,7 @@ try {
         foreach ($entry in $candidateCompareSizes.GetEnumerator()) {
             $size = '{0:x8}' -f $entry.Value
             if (@($task16CompareSymbols | Where-Object {
-                    $_ -match ("\sF\s+\.itcm\.task16_float_compare\s+$size\s+" +
+                    $_ -match ("\sF\s+\.itcm\.float_compare\s+$size\s+" +
                         [regex]::Escape($entry.Key) + '$')
                 }).Count -ne 1) {
                 throw "Task 16 compare object omitted $($entry.Key)/$size."
@@ -479,7 +479,7 @@ try {
         }
         $task16CompareCode = Join-Path $temp 'task16-compare.bin'
         & $Objcopy --dump-section `
-            ".itcm.task16_float_compare=$task16CompareCode" `
+            ".itcm.float_compare=$task16CompareCode" `
             $task16CompareObject
         if ($LASTEXITCODE -ne 0) { throw 'Could not dump Task 16 compare code.' }
         $task16CompareCodeHash =
@@ -496,7 +496,7 @@ try {
                     $_ -match ("\s__aeabi_{0}$" -f $routine)
                 }).Count -ne 1 -or
                 @($compareSymbols | Where-Object {
-                    $_ -match ("\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+                    $_ -match ("\s__nds_libgcc_{0}_golden$" -f $routine)
                 }).Count -ne 0) {
                 throw "Task 16 compare off-mode did not retain stock $routine."
             }
@@ -505,7 +505,7 @@ try {
                 $_ -match '\s__aeabi_fcmpun$'
             }).Count -ne 1 -or
             @($unordSymbols | Where-Object {
-                $_ -match '\s__nds_task16_libgcc_fcmpun_golden$'
+                $_ -match '\s__nds_libgcc_fcmpun_golden$'
             }).Count -ne 0) {
             throw 'Task 16 compare off-mode did not retain stock fcmpun.'
         }
@@ -592,7 +592,7 @@ try {
     # so the stock helper was renamed OUT of the call graph and the port's
     # replacement is the one linked. The golden's SECTION was never part of that
     # invariant -- it read .itcm only because the whole member was placed there.
-    # NDS_TASK9_FLOAT_MAIN_MEMBERS (2026-08-16) can now send a member to main
+    # NDS_FLOAT_MAIN_MEMBERS (2026-08-16) can now send a member to main
     # RAM, and the build states which it did by the name of the relocated object
     # it emitted. Read that, rather than hardcoding a placement policy the
     # Makefile no longer owns -- and keep it strict in both directions: the
@@ -608,11 +608,11 @@ try {
         $goldenWhere = if ($compareInItcm) {
             'ITCM'
         } else {
-            'main RAM (NDS_TASK9_FLOAT_MAIN_MEMBERS)'
+            'main RAM (NDS_FLOAT_MAIN_MEMBERS)'
         }
         if (@($symbols | Where-Object {
                 $_ -match ("\sF\s+$goldenSection\s+[0-9a-fA-F]+.*" +
-                    '\s__nds_task9_libgcc_fcmpeq_golden$')
+                    '\s__nds_libgcc_fcmpeq_golden$')
             }).Count -ne 1) {
             throw ('Task 9 Phase 2 ELF omitted its selected-libgcc fcmpeq ' +
                 "golden from $goldenWhere.")
@@ -620,14 +620,14 @@ try {
     }
     if ($Phase2Mode -eq 0 -and
         @($symbols | Where-Object {
-            $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+            $_ -match '\s__nds_libgcc_fcmpeq_golden$'
         }).Count -ne 0) {
         throw 'Task 9 Phase 1 ELF unexpectedly contains the Phase 2 golden symbol.'
     }
     # Every golden below lives wherever ITS OWN member was placed. Ask the
     # placement map for the linked output section instead of writing `.itcm`
     # into the pattern -- that is the form that broke when
-    # NDS_TASK9_FLOAT_MAIN_MEMBERS first moved a member.
+    # NDS_FLOAT_MAIN_MEMBERS first moved a member.
     $goldenElf = {
         param([string]$Member)
         if ($memberSections[$Member] -eq '.itcm') { '\.itcm' } else { '\.main' }
@@ -637,7 +637,7 @@ try {
     $unordElfSection = & $goldenElf '_arm_unordsf2.o'
     foreach ($routine in @('fadd', 'fsub')) {
         $goldenCount = @($symbols | Where-Object {
-            $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+            $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_libgcc_{0}_golden$" -f $routine)
         }).Count
         if (($Task16AddSubMode -eq 1 -and $goldenCount -ne 1) -or
             ($Task16AddSubMode -eq 0 -and $goldenCount -ne 0)) {
@@ -645,7 +645,7 @@ try {
         }
     }
     $i2fGoldenCount = @($symbols | Where-Object {
-        $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_i2f_golden$")
+        $_ -match ("\sF\s+$addSubElfSection\s+[0-9a-fA-F]+.*\s__nds_libgcc_i2f_golden$")
     }).Count
     if (($Task16I2fMode -eq 1 -and $i2fGoldenCount -ne 1) -or
         ($Task16I2fMode -eq 0 -and $i2fGoldenCount -ne 0)) {
@@ -658,7 +658,7 @@ try {
             $compareElfSection
         }
         $goldenCount = @($symbols | Where-Object {
-            $_ -match ("\sF\s+$routineSection\s+[0-9a-fA-F]+.*\s__nds_task16_libgcc_{0}_golden$" -f $routine)
+            $_ -match ("\sF\s+$routineSection\s+[0-9a-fA-F]+.*\s__nds_libgcc_{0}_golden$" -f $routine)
         }).Count
         if (($Task16CompareMode -eq 1 -and $goldenCount -ne 1) -or
             ($Task16CompareMode -eq 0 -and $goldenCount -ne 0)) {
@@ -691,12 +691,12 @@ try {
         }
     }
     $candidateMapSections = [ordered]@{
-        '.itcm.task16_float_compare' = @($Task16CompareMode, '0xec',
-            'nds_task16_float_compare.o')
-        '.itcm.task16_i2f' = @($Task16I2fMode, '0x5c',
-            'nds_task16_float_i2f.o')
-        '.itcm.task16_float_addsub' = @($Task16AddSubMode, '0x194',
-            'nds_task16_float_addsub.o')
+        '.itcm.float_compare' = @($Task16CompareMode, '0xec',
+            'nds_float_compare.o')
+        '.itcm.float_i2f' = @($Task16I2fMode, '0x5c',
+            'nds_float_i2f.o')
+        '.itcm.float_addsub' = @($Task16AddSubMode, '0x194',
+            'nds_float_addsub.o')
     }
     foreach ($entry in $candidateMapSections.GetEnumerator()) {
         $mode = [int]$entry.Value[0]
@@ -722,7 +722,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Could not read baseline ELF symbols.' }
         if ($task16Bytes -gt 0) {
             if (@($baselineSymbols | Where-Object {
-                    $_ -match '\s__nds_task16_libgcc_\S+_golden$'
+                    $_ -match '\s__nds_libgcc_\S+_golden$'
                 }).Count -ne 0) {
                 throw 'Task 16 baseline already contains a Task 16 golden symbol.'
             }

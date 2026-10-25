@@ -191,7 +191,7 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
-$(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
+$(NDS_DRAW_HOT_FRAGMENT): FORCE
 	@tmp="$@.tmp"; \
 	{ \
 		echo '*scene_backend.o(.text.ndsRendererAdapterFindDObjWorldMatrix)'; \

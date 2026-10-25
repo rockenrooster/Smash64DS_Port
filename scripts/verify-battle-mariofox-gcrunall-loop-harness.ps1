@@ -34,7 +34,7 @@ param(
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
-    [switch]$Task29GXCensus,
+    [switch]$GXCensus,
     [switch]$Task34StageStreamCensus,
     [ValidateRange(0,2)][int]$StageHwComposeMode = 0,
     [ValidateRange(0,1)][int]$StageSteadyMode = 0,
@@ -329,9 +329,9 @@ if ($PhaseMatrixMode -and -not (
 if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
     throw 'RendererM2DetailedLedger requires RendererProfileLevel 1.'
 }
-if ($Task29GXCensus -and
+if ($GXCensus -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
-    throw 'Task29GXCensus requires profile 1 and complete-stage fast-run mode 9.'
+    throw 'GXCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
 if ($Task34StageStreamCensus -and
     (($RendererProfileLevel -ne 1) -or
@@ -791,7 +791,7 @@ function Get-BenchmarkMakeIdentity {
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'SHIP_TELEMETRY',
         'TICK_HUD', 'M2_DETAILED_LEDGER',
         'M3_PHASE0_PROFILE', 'NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE',
-        'TASK29_GX_CENSUS', 'TASK34_STAGE_STREAM_CENSUS',
+        'GX_CENSUS_CENSUS', 'TASK34_STAGE_STREAM_CENSUS',
         'STAGE_HW_COMPOSE',
         'TASK22_WALLPAPER_RUN_LAB',
         'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
@@ -822,7 +822,7 @@ function Get-BenchmarkMakeIdentity {
         M3Phase0Profile = [int]$values.M3_PHASE0_PROFILE
         NativeStageGeneratedSegment0Enable =
             [int]$values.NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
-        Task29GXCensus = [int]$values.TASK29_GX_CENSUS
+        GXCensus = [int]$values.GX_CENSUS_CENSUS
         Task34StageStreamCensus = [int]$values.TASK34_STAGE_STREAM_CENSUS
         StageHwComposeMode = [int]$values.STAGE_HW_COMPOSE
         StageSteadyMode = [int]$values.STAGE_STEADY_MODE
@@ -1150,7 +1150,7 @@ $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
 $makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGeneratedSegment0Enable"
-$makeArgs += "NDS_TASK29_GX_CENSUS=$([int]$Task29GXCensus.IsPresent)"
+$makeArgs += "NDS_GX_CENSUS=$([int]$GXCensus.IsPresent)"
 $makeArgs += "NDS_TASK34_STAGE_STREAM_CENSUS=$([int]$Task34StageStreamCensus.IsPresent)"
 $makeArgs += "NDS_STAGE_HW_COMPOSE=$effectiveStageHwComposeMode"
 $makeArgs += "NDS_STAGE_STEADY=$effectiveStageSteadyMode"
@@ -1159,9 +1159,9 @@ $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
 $makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
 $makeArgs += "NDS_RENDER_ECONOMY_OWNER_MASK=$renderEconomyCompileOwnerMask"
 $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
-$makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
-$makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
-$makeArgs += "NDS_TASK9_FLOAT_PHASE2=$Task9FloatPhase2Mode"
+$makeArgs += "NDS_FLOAT_CENSUS=$Task9FloatCensusMode"
+$makeArgs += "NDS_FLOAT_ITCM=$Task9FloatItcmMode"
+$makeArgs += "NDS_FLOAT_PHASE2=$Task9FloatPhase2Mode"
 $makeArgs += "NDS_TASK16_FLOAT_COMPARE=$effectiveTask16FloatCompareMode"
 $makeArgs += "NDS_TASK16_FLOAT_I2F=$effectiveTask16FloatI2fMode"
 $makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
@@ -1307,25 +1307,25 @@ if ($nativeStageGeneratedSegment0Selected) {
             ($nmOutput -join "`n")
     }
 }
-if ($Task29GXCensus) {
-    $task29BuildDirectory = Resolve-Smash64DSBuildPath `
+if ($GXCensus) {
+    $gxCensusBuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
-    $task29BuildConfig = Join-Path $task29BuildDirectory 'nds_build_config.h'
-    $task29BuildConfigText = Get-Content -LiteralPath $task29BuildConfig -Raw
+    $gxCensusBuildConfig = Join-Path $gxCensusBuildDirectory 'nds_build_config.h'
+    $gxCensusBuildConfigText = Get-Content -LiteralPath $gxCensusBuildConfig -Raw
     Assert-Condition (
-        (Test-Path -LiteralPath $task29BuildConfig -PathType Leaf) -and
-        ($task29BuildConfigText -match
-            '(?m)^#define NDS_TASK29_GX_CENSUS 1$')
+        (Test-Path -LiteralPath $gxCensusBuildConfig -PathType Leaf) -and
+        ($gxCensusBuildConfigText -match
+            '(?m)^#define NDS_GX_CENSUS 1$')
     ) 'Built Task 29 GX census configuration is absent or stale.' `
-        $task29BuildConfig
-    $task29Nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
-    $task29NmOutput = @(& $task29Nm $elf 2>&1 | ForEach-Object { "$_" })
+        $gxCensusBuildConfig
+    $gxCensusNm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
+    $gxCensusNmOutput = @(& $gxCensusNm $elf 2>&1 | ForEach-Object { "$_" })
     Assert-Condition (
         $LASTEXITCODE -eq 0 -and
-        ($task29NmOutput -match '\bgNdsTask29GXCommandCount$') -and
-        ($task29NmOutput -match '\bgNdsTask29GXNeverSuppressMask$')
+        ($gxCensusNmOutput -match '\bgNdsGXCensusCommandCount$') -and
+        ($gxCensusNmOutput -match '\bgNdsGXCensusNeverSuppressMask$')
     ) 'Built Task 29 GX census ELF lacks its fail-closed command/mask exports.' `
-        ($task29NmOutput -join "`n")
+        ($gxCensusNmOutput -join "`n")
 }
 if ($Task34StageStreamCensus) {
     $task34BuildDirectory = Resolve-Smash64DSBuildPath -Root $root -Build $Build
@@ -1338,8 +1338,8 @@ if ($Task34StageStreamCensus) {
         ($task34BuildConfigText -match
             '(?m)^#define NDS_TASK34_STAGE_STREAM_CENSUS 1$') -and
         ($task34BuildConfigText -match
-            ("(?m)^#define NDS_TASK29_GX_CENSUS {0}$" -f
-             [int]$Task29GXCensus.IsPresent)) -and
+            ("(?m)^#define NDS_GX_CENSUS {0}$" -f
+             [int]$GXCensus.IsPresent)) -and
         $LASTEXITCODE -eq 0 -and
         ($task34NmOutput -match '\bgNdsTask34StageStreamEntries$') -and
         ($task34NmOutput -match '\bgNdsTask34StageStreamCaptureEnabled$') -and
@@ -1351,7 +1351,7 @@ if ($Task34StageStreamCensus) {
 if ($Task9FloatItcmMode -eq 1) {
     $task9BuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
-    & (Join-Path $PSScriptRoot 'check-task9-float-itcm.ps1') `
+    & (Join-Path $PSScriptRoot 'check-float-itcm.ps1') `
         -Elf $elf `
         -BuildDirectory $task9BuildDirectory `
         -Phase2Mode $Task9FloatPhase2Mode `
@@ -1367,7 +1367,7 @@ if (($Task9FloatItcmMode -eq 1) -or
         -BenchmarkAblation:($Target -like '*triangle-noop*')
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
-& (Join-Path $PSScriptRoot 'check-task20-dtcm-layout.ps1') -Elf $elf
+& (Join-Path $PSScriptRoot 'check-dtcm-layout.ps1') -Elf $elf
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
@@ -1386,8 +1386,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             [int]$RendererM3Phase0Profile.IsPresent -and
         $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq
             $effectiveNativeStageGeneratedSegment0Enable -and
-        $benchmarkMakeIdentity.Task29GXCensus -eq
-            [int]$Task29GXCensus.IsPresent -and
+        $benchmarkMakeIdentity.GXCensus -eq
+            [int]$GXCensus.IsPresent -and
         $benchmarkMakeIdentity.Task34StageStreamCensus -eq
             [int]$Task34StageStreamCensus.IsPresent -and
         $benchmarkMakeIdentity.StageHwComposeMode -eq
@@ -1871,26 +1871,26 @@ try {
                 }
                 $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
                 $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
-                if ($Task29GXCensus) {
+                if ($GXCensus) {
                     $coarseBenchmarkCommands += @(
-                        'printf "TASK29_GX_META=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask29GXFrame, gNdsTask29GXTotalCommandCount, gNdsTask29GXTotalWordCount, gNdsTask29GXTotalRepeatCount, gNdsTask29GXStreamHashA, gNdsTask29GXStreamHashB, gNdsTask29GXBoundaryHashA, gNdsTask29GXBoundaryHashB, gNdsTask29GXBoundaryCount, gNdsTask29GXFaultCount, gNdsTask29GXNeverSuppressMask',
-                        'printf "TASK29_GX_CLASS=%u", gNdsTask29GXFrame',
-                        'set $task29_gx_class = 0',
-                        'while $task29_gx_class < 22',
-                        'printf ",%u,%u,%u", gNdsTask29GXCommandCount[$task29_gx_class], gNdsTask29GXWordCount[$task29_gx_class], gNdsTask29GXRepeatCount[$task29_gx_class]',
-                        'set $task29_gx_class = $task29_gx_class + 1',
+                        'printf "GX_CENSUS_META=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsGXCensusFrame, gNdsGXCensusTotalCommandCount, gNdsGXCensusTotalWordCount, gNdsGXCensusTotalRepeatCount, gNdsGXCensusStreamHashA, gNdsGXCensusStreamHashB, gNdsGXCensusBoundaryHashA, gNdsGXCensusBoundaryHashB, gNdsGXCensusBoundaryCount, gNdsGXCensusFaultCount, gNdsGXCensusNeverSuppressMask',
+                        'printf "GX_CENSUS_CLASS=%u", gNdsGXCensusFrame',
+                        'set $gx_class = 0',
+                        'while $gx_class < 22',
+                        'printf ",%u,%u,%u", gNdsGXCensusCommandCount[$gx_class], gNdsGXCensusWordCount[$gx_class], gNdsGXCensusRepeatCount[$gx_class]',
+                        'set $gx_class = $gx_class + 1',
                         'end',
                         'printf "\n"',
-                        'set $task29_gx_owner = 0',
-                        'while $task29_gx_owner < 4',
-                        'printf "TASK29_GX_OWNER=%u,%u,%u,%u", gNdsTask29GXFrame, $task29_gx_owner, gNdsTask29GXOwnerHashA[$task29_gx_owner], gNdsTask29GXOwnerHashB[$task29_gx_owner]',
-                        'set $task29_gx_class = 0',
-                        'while $task29_gx_class < 22',
-                        'printf ",%u,%u,%u", gNdsTask29GXOwnerCommandCount[$task29_gx_owner][$task29_gx_class], gNdsTask29GXOwnerWordCount[$task29_gx_owner][$task29_gx_class], gNdsTask29GXOwnerRepeatCount[$task29_gx_owner][$task29_gx_class]',
-                        'set $task29_gx_class = $task29_gx_class + 1',
+                        'set $gx_owner = 0',
+                        'while $gx_owner < 4',
+                        'printf "GX_CENSUS_OWNER=%u,%u,%u,%u", gNdsGXCensusFrame, $gx_owner, gNdsGXCensusOwnerHashA[$gx_owner], gNdsGXCensusOwnerHashB[$gx_owner]',
+                        'set $gx_class = 0',
+                        'while $gx_class < 22',
+                        'printf ",%u,%u,%u", gNdsGXCensusOwnerCommandCount[$gx_owner][$gx_class], gNdsGXCensusOwnerWordCount[$gx_owner][$gx_class], gNdsGXCensusOwnerRepeatCount[$gx_owner][$gx_class]',
+                        'set $gx_class = $gx_class + 1',
                         'end',
                         'printf "\n"',
-                        'set $task29_gx_owner = $task29_gx_owner + 1',
+                        'set $gx_owner = $gx_owner + 1',
                         'end'
                     )
                 }
@@ -3049,9 +3049,9 @@ try {
     $m3PreparedBenchmark = @()
     $m3WhispyBenchmark = @()
     $g2StateBenchmark = @()
-    $task29GxMetaBenchmark = @()
-    $task29GxClassBenchmark = @()
-    $task29GxOwnerBenchmark = @()
+    $gxCensusMetaBenchmark = @()
+    $gxCensusClassBenchmark = @()
+    $gxCensusOwnerBenchmark = @()
     $task34ArenaBoot = @()
     $task34StageMetaBenchmark = @()
     $task34StageEntryValues = [Collections.Generic.List[object]]::new()
@@ -3133,13 +3133,13 @@ try {
             $task9FloatCostBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_COST' -FieldCount 7)
             $task9FloatTimerBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_TIMER' -FieldCount 2)
         }
-        if ($Task29GXCensus) {
-            $task29GxMetaBenchmark = @(Get-UnsignedMarkerMatches `
-                -Text $gdbStdout -Name 'TASK29_GX_META' -FieldCount 11)
-            $task29GxClassBenchmark = @(Get-UnsignedMarkerMatches `
-                -Text $gdbStdout -Name 'TASK29_GX_CLASS' -FieldCount 67)
-            $task29GxOwnerBenchmark = @(Get-UnsignedMarkerMatches `
-                -Text $gdbStdout -Name 'TASK29_GX_OWNER' -FieldCount 70)
+        if ($GXCensus) {
+            $gxCensusMetaBenchmark = @(Get-UnsignedMarkerMatches `
+                -Text $gdbStdout -Name 'GX_CENSUS_META' -FieldCount 11)
+            $gxCensusClassBenchmark = @(Get-UnsignedMarkerMatches `
+                -Text $gdbStdout -Name 'GX_CENSUS_CLASS' -FieldCount 67)
+            $gxCensusOwnerBenchmark = @(Get-UnsignedMarkerMatches `
+                -Text $gdbStdout -Name 'GX_CENSUS_OWNER' -FieldCount 70)
         }
         if ($Task34StageStreamCensus) {
                 $task34StageMetaBenchmark = @(Get-UnsignedMarkerMatches `
@@ -4523,9 +4523,9 @@ try {
                     $m3ResidualSamples = [System.Collections.Generic.List[object]]::new()
                     $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
                     $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
-                    $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
-                    $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
-                    $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
+                    $gxCensusMetaSamples = [System.Collections.Generic.List[object]]::new()
+                    $gxCensusClassSamples = [System.Collections.Generic.List[object]]::new()
+                    $gxCensusOwnerSamples = [System.Collections.Generic.List[object]]::new()
                     $task34StageMetaSamples = [System.Collections.Generic.List[object]]::new()
                     $task34StageEntrySamples = [System.Collections.Generic.List[object]]::new()
                     $task34StageWordSamples = [System.Collections.Generic.List[object]]::new()
@@ -4582,9 +4582,9 @@ try {
                         $stageHwSamples = [System.Collections.Generic.List[object]]::new()
                         $stageGxSamples = [System.Collections.Generic.List[object]]::new()
                         $stageSteadyAdmitSamples = [System.Collections.Generic.List[object]]::new()
-                        $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
-                        $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
-                        $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
+                        $gxCensusMetaSamples = [System.Collections.Generic.List[object]]::new()
+                        $gxCensusClassSamples = [System.Collections.Generic.List[object]]::new()
+                        $gxCensusOwnerSamples = [System.Collections.Generic.List[object]]::new()
                         $task34StageMetaSamples = [System.Collections.Generic.List[object]]::new()
                         $task34StageEntrySamples = [System.Collections.Generic.List[object]]::new()
                         $task34StageWordSamples = [System.Collections.Generic.List[object]]::new()
@@ -4705,13 +4705,13 @@ try {
                         Assert-Condition ($m4StaticBenchmark.Count -eq $RendererBenchmarkSamples) "M4 static-texture benchmark captured $($m4StaticBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($m4FenceBenchmark.Count -eq $RendererBenchmarkSamples) "M4 post-GO texture fence captured $($m4FenceBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         Assert-Condition ($texturePhaseBenchmark.Count -eq $RendererBenchmarkSamples) "Texture-phase benchmark captured $($texturePhaseBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
-                        if ($Task29GXCensus) {
+                        if ($GXCensus) {
                             Assert-Condition (
-                                $task29GxMetaBenchmark.Count -eq $RendererBenchmarkSamples -and
-                                $task29GxClassBenchmark.Count -eq $RendererBenchmarkSamples -and
-                                $task29GxOwnerBenchmark.Count -eq
+                                $gxCensusMetaBenchmark.Count -eq $RendererBenchmarkSamples -and
+                                $gxCensusClassBenchmark.Count -eq $RendererBenchmarkSamples -and
+                                $gxCensusOwnerBenchmark.Count -eq
                                     (4 * $RendererBenchmarkSamples)
-                            ) "Task 29 GX census is incomplete (meta=$($task29GxMetaBenchmark.Count) class=$($task29GxClassBenchmark.Count) owner=$($task29GxOwnerBenchmark.Count))." $gdbStdout
+                            ) "Task 29 GX census is incomplete (meta=$($gxCensusMetaBenchmark.Count) class=$($gxCensusClassBenchmark.Count) owner=$($gxCensusOwnerBenchmark.Count))." $gdbStdout
                         }
                         if ($Task34StageStreamCensus) {
                             Assert-Condition (
@@ -4753,123 +4753,123 @@ try {
                             if ($loopKnown -gt $loopWall) { $expectedConservationError += $loopKnown - $loopWall }
 
                             Assert-Condition ($frame -eq $render[1] -and $drawTicks -eq $render[3]) "Coarse renderer benchmark frame $frame is not synchronized with RENDER_BENCH." $gdbStdout
-                            if ($Task29GXCensus) {
-                                $task29Meta = Get-Ints $task29GxMetaBenchmark[$sampleIndex]
-                                $task29Class = Get-Ints $task29GxClassBenchmark[$sampleIndex]
-                                $task29ClassCommandSum = [int64]0
-                                $task29ClassWordSum = [int64]0
-                                $task29ClassRepeatSum = [int64]0
-                                $task29OwnerCommandSums = @(0L, 0L, 0L, 0L)
-                                $task29OwnerWordSums = @(0L, 0L, 0L, 0L)
-                                $task29OwnerRepeatSums = @(0L, 0L, 0L, 0L)
-                                $task29OwnerClassCommandSums = @(0L) * 22
-                                $task29OwnerClassWordSums = @(0L) * 22
-                                $task29OwnerClassRepeatSums = @(0L) * 22
-                                $task29FastRun = Get-Ints `
+                            if ($GXCensus) {
+                                $gxCensusMeta = Get-Ints $gxCensusMetaBenchmark[$sampleIndex]
+                                $gxCensusClass = Get-Ints $gxCensusClassBenchmark[$sampleIndex]
+                                $gxCensusClassCommandSum = [int64]0
+                                $gxCensusClassWordSum = [int64]0
+                                $gxCensusClassRepeatSum = [int64]0
+                                $gxCensusOwnerCommandSums = @(0L, 0L, 0L, 0L)
+                                $gxCensusOwnerWordSums = @(0L, 0L, 0L, 0L)
+                                $gxCensusOwnerRepeatSums = @(0L, 0L, 0L, 0L)
+                                $gxCensusOwnerClassCommandSums = @(0L) * 22
+                                $gxCensusOwnerClassWordSums = @(0L) * 22
+                                $gxCensusOwnerClassRepeatSums = @(0L) * 22
+                                $gxCensusFastRun = Get-Ints `
                                     $fastRunBenchmark[$sampleIndex]
 
                                 Assert-Condition (
-                                    $task29Meta[0] -eq $frame -and
-                                    $task29Class[0] -eq $frame -and
-                                    $task29Meta[1] -gt 0 -and
-                                    $task29Meta[2] -ge $task29Meta[1] -and
-                                    $task29Meta[3] -le $task29Meta[1] -and
-                                    $task29Meta[4] -ne 0 -and
-                                    $task29Meta[5] -ne 0 -and
-                                    $task29Meta[6] -ne 0 -and
-                                    $task29Meta[7] -ne 0 -and
-                                    $task29Meta[8] -gt 0 -and
-                                    $task29Meta[9] -eq 0 -and
-                                    $task29Meta[10] -eq 3374912
-                                ) "Task 29 GX meta census failed synchronization, hash, boundary, fault, or side-effect classification at frame $frame (actual=$($task29Meta -join ','))." $gdbStdout
+                                    $gxCensusMeta[0] -eq $frame -and
+                                    $gxCensusClass[0] -eq $frame -and
+                                    $gxCensusMeta[1] -gt 0 -and
+                                    $gxCensusMeta[2] -ge $gxCensusMeta[1] -and
+                                    $gxCensusMeta[3] -le $gxCensusMeta[1] -and
+                                    $gxCensusMeta[4] -ne 0 -and
+                                    $gxCensusMeta[5] -ne 0 -and
+                                    $gxCensusMeta[6] -ne 0 -and
+                                    $gxCensusMeta[7] -ne 0 -and
+                                    $gxCensusMeta[8] -gt 0 -and
+                                    $gxCensusMeta[9] -eq 0 -and
+                                    $gxCensusMeta[10] -eq 3374912
+                                ) "Task 29 GX meta census failed synchronization, hash, boundary, fault, or side-effect classification at frame $frame (actual=$($gxCensusMeta -join ','))." $gdbStdout
 
-                                for ($task29ClassIndex = 0;
-                                     $task29ClassIndex -lt 22;
-                                     $task29ClassIndex++) {
-                                    $task29ClassBase = 1 + (3 * $task29ClassIndex)
-                                    $task29Commands = [int64]$task29Class[$task29ClassBase]
-                                    $task29Words = [int64]$task29Class[$task29ClassBase + 1]
-                                    $task29Repeats = [int64]$task29Class[$task29ClassBase + 2]
+                                for ($gxCensusClassIndex = 0;
+                                     $gxCensusClassIndex -lt 22;
+                                     $gxCensusClassIndex++) {
+                                    $gxCensusClassBase = 1 + (3 * $gxCensusClassIndex)
+                                    $gxCensusCommands = [int64]$gxCensusClass[$gxCensusClassBase]
+                                    $gxCensusWords = [int64]$gxCensusClass[$gxCensusClassBase + 1]
+                                    $gxCensusRepeats = [int64]$gxCensusClass[$gxCensusClassBase + 2]
                                     Assert-Condition (
-                                        $task29Words -ge $task29Commands -and
-                                        $task29Repeats -le $task29Commands
-                                    ) "Task 29 GX class $task29ClassIndex has invalid command/word/repeat conservation at frame $frame." $gdbStdout
-                                    $task29ClassCommandSum += $task29Commands
-                                    $task29ClassWordSum += $task29Words
-                                    $task29ClassRepeatSum += $task29Repeats
+                                        $gxCensusWords -ge $gxCensusCommands -and
+                                        $gxCensusRepeats -le $gxCensusCommands
+                                    ) "Task 29 GX class $gxCensusClassIndex has invalid command/word/repeat conservation at frame $frame." $gdbStdout
+                                    $gxCensusClassCommandSum += $gxCensusCommands
+                                    $gxCensusClassWordSum += $gxCensusWords
+                                    $gxCensusClassRepeatSum += $gxCensusRepeats
                                 }
                                 Assert-Condition (
-                                    $task29ClassCommandSum -eq $task29Meta[1] -and
-                                    $task29ClassWordSum -eq $task29Meta[2] -and
-                                    $task29ClassRepeatSum -eq $task29Meta[3] -and
-                                    $task29Class[1 + (3 * 16)] -gt 0 -and
-                                    $task29Class[1 + (3 * 20)] -eq
+                                    $gxCensusClassCommandSum -eq $gxCensusMeta[1] -and
+                                    $gxCensusClassWordSum -eq $gxCensusMeta[2] -and
+                                    $gxCensusClassRepeatSum -eq $gxCensusMeta[3] -and
+                                    $gxCensusClass[1 + (3 * 16)] -gt 0 -and
+                                    $gxCensusClass[1 + (3 * 20)] -eq
                                         (3 * $render[11]) -and
-                                    $task29Class[2 + (3 * 20)] -eq
+                                    $gxCensusClass[2 + (3 * 20)] -eq
                                         (6 * $render[11]) -and
-                                    $task29Class[1 + (3 * 21)] -eq 1
+                                    $gxCensusClass[1 + (3 * 21)] -eq 1
                                 ) "Task 29 GX class totals no longer conserve the synchronized actual-triangle stream and one flush at frame $frame." $gdbStdout
 
-                                for ($task29OwnerIndex = 0;
-                                     $task29OwnerIndex -lt 4;
-                                     $task29OwnerIndex++) {
-                                    $task29Owner = Get-Ints $task29GxOwnerBenchmark[
-                                        (4 * $sampleIndex) + $task29OwnerIndex]
+                                for ($gxCensusOwnerIndex = 0;
+                                     $gxCensusOwnerIndex -lt 4;
+                                     $gxCensusOwnerIndex++) {
+                                    $gxCensusOwner = Get-Ints $gxCensusOwnerBenchmark[
+                                        (4 * $sampleIndex) + $gxCensusOwnerIndex]
                                     Assert-Condition (
-                                        $task29Owner[0] -eq $frame -and
-                                        $task29Owner[1] -eq $task29OwnerIndex -and
-                                        $task29Owner[2] -ne 0 -and
-                                        $task29Owner[3] -ne 0
-                                    ) "Task 29 GX owner $task29OwnerIndex is not synchronized or hashed at frame $frame." $gdbStdout
-                                    for ($task29ClassIndex = 0;
-                                         $task29ClassIndex -lt 22;
-                                         $task29ClassIndex++) {
-                                        $task29OwnerBase = 4 + (3 * $task29ClassIndex)
-                                        $task29OwnerCommands = [int64]$task29Owner[$task29OwnerBase]
-                                        $task29OwnerWords = [int64]$task29Owner[$task29OwnerBase + 1]
-                                        $task29OwnerRepeats = [int64]$task29Owner[$task29OwnerBase + 2]
-                                        $task29OwnerCommandSums[$task29OwnerIndex] +=
-                                            $task29OwnerCommands
-                                        $task29OwnerWordSums[$task29OwnerIndex] +=
-                                            $task29OwnerWords
-                                        $task29OwnerRepeatSums[$task29OwnerIndex] +=
-                                            $task29OwnerRepeats
-                                        $task29OwnerClassCommandSums[$task29ClassIndex] +=
-                                            $task29OwnerCommands
-                                        $task29OwnerClassWordSums[$task29ClassIndex] +=
-                                            $task29OwnerWords
-                                        $task29OwnerClassRepeatSums[$task29ClassIndex] +=
-                                            $task29OwnerRepeats
+                                        $gxCensusOwner[0] -eq $frame -and
+                                        $gxCensusOwner[1] -eq $gxCensusOwnerIndex -and
+                                        $gxCensusOwner[2] -ne 0 -and
+                                        $gxCensusOwner[3] -ne 0
+                                    ) "Task 29 GX owner $gxCensusOwnerIndex is not synchronized or hashed at frame $frame." $gdbStdout
+                                    for ($gxCensusClassIndex = 0;
+                                         $gxCensusClassIndex -lt 22;
+                                         $gxCensusClassIndex++) {
+                                        $gxCensusOwnerBase = 4 + (3 * $gxCensusClassIndex)
+                                        $gxCensusOwnerCommands = [int64]$gxCensusOwner[$gxCensusOwnerBase]
+                                        $gxCensusOwnerWords = [int64]$gxCensusOwner[$gxCensusOwnerBase + 1]
+                                        $gxCensusOwnerRepeats = [int64]$gxCensusOwner[$gxCensusOwnerBase + 2]
+                                        $gxCensusOwnerCommandSums[$gxCensusOwnerIndex] +=
+                                            $gxCensusOwnerCommands
+                                        $gxCensusOwnerWordSums[$gxCensusOwnerIndex] +=
+                                            $gxCensusOwnerWords
+                                        $gxCensusOwnerRepeatSums[$gxCensusOwnerIndex] +=
+                                            $gxCensusOwnerRepeats
+                                        $gxCensusOwnerClassCommandSums[$gxCensusClassIndex] +=
+                                            $gxCensusOwnerCommands
+                                        $gxCensusOwnerClassWordSums[$gxCensusClassIndex] +=
+                                            $gxCensusOwnerWords
+                                        $gxCensusOwnerClassRepeatSums[$gxCensusClassIndex] +=
+                                            $gxCensusOwnerRepeats
                                     }
-                                    $task29GxOwnerSamples.Add($task29Owner)
+                                    $gxCensusOwnerSamples.Add($gxCensusOwner)
                                 }
-                                for ($task29ClassIndex = 0;
-                                     $task29ClassIndex -lt 22;
-                                     $task29ClassIndex++) {
-                                    $task29ClassBase = 1 + (3 * $task29ClassIndex)
+                                for ($gxCensusClassIndex = 0;
+                                     $gxCensusClassIndex -lt 22;
+                                     $gxCensusClassIndex++) {
+                                    $gxCensusClassBase = 1 + (3 * $gxCensusClassIndex)
                                     Assert-Condition (
-                                        $task29OwnerClassCommandSums[$task29ClassIndex] -eq
-                                            $task29Class[$task29ClassBase] -and
-                                        $task29OwnerClassWordSums[$task29ClassIndex] -eq
-                                            $task29Class[$task29ClassBase + 1] -and
-                                        $task29OwnerClassRepeatSums[$task29ClassIndex] -eq
-                                            $task29Class[$task29ClassBase + 2]
-                                    ) "Task 29 GX owner partition does not conserve class $task29ClassIndex at frame $frame." $gdbStdout
+                                        $gxCensusOwnerClassCommandSums[$gxCensusClassIndex] -eq
+                                            $gxCensusClass[$gxCensusClassBase] -and
+                                        $gxCensusOwnerClassWordSums[$gxCensusClassIndex] -eq
+                                            $gxCensusClass[$gxCensusClassBase + 1] -and
+                                        $gxCensusOwnerClassRepeatSums[$gxCensusClassIndex] -eq
+                                            $gxCensusClass[$gxCensusClassBase + 2]
+                                    ) "Task 29 GX owner partition does not conserve class $gxCensusClassIndex at frame $frame." $gdbStdout
                                 }
                                 Assert-Condition (
-                                    $task29OwnerClassCommandSums[20] -eq
+                                    $gxCensusOwnerClassCommandSums[20] -eq
                                         (3 * $render[11]) -and
-                                    (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex)])[64] -eq
-                                        (3 * ($render[11] - $task29FastRun[5] -
-                                              $task29FastRun[6])) -and
-                                    (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex) + 1])[64] -eq
-                                        (3 * $task29FastRun[5]) -and
-                                    (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex) + 2])[64] -eq
-                                        (3 * $task29FastRun[6]) -and
-                                    (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex) + 3])[64] -eq 0
+                                    (Get-Ints $gxCensusOwnerBenchmark[(4 * $sampleIndex)])[64] -eq
+                                        (3 * ($render[11] - $gxCensusFastRun[5] -
+                                              $gxCensusFastRun[6])) -and
+                                    (Get-Ints $gxCensusOwnerBenchmark[(4 * $sampleIndex) + 1])[64] -eq
+                                        (3 * $gxCensusFastRun[5]) -and
+                                    (Get-Ints $gxCensusOwnerBenchmark[(4 * $sampleIndex) + 2])[64] -eq
+                                        (3 * $gxCensusFastRun[6]) -and
+                                    (Get-Ints $gxCensusOwnerBenchmark[(4 * $sampleIndex) + 3])[64] -eq 0
                                 ) "Task 29 GX vertex ownership diverged from the synchronized fast-owner lifecycle or failed to assign all residual triangles to the stage at frame $frame." $gdbStdout
-                                $task29GxMetaSamples.Add($task29Meta)
-                                $task29GxClassSamples.Add($task29Class)
+                                $gxCensusMetaSamples.Add($gxCensusMeta)
+                                $gxCensusClassSamples.Add($gxCensusClass)
                             }
                             if ($Task34StageStreamCensus) {
                                 $task34Meta = Get-Ints `
@@ -5901,8 +5901,8 @@ try {
                             $benchmarkMakeIdentity.StageHwComposeMode
                         nativeStageGeneratedSegment0Enable =
                             $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
-                        task29GxCensus =
-                            [bool]($benchmarkMakeIdentity.Task29GXCensus -eq 1)
+                        gxCensusCensus =
+                            [bool]($benchmarkMakeIdentity.GXCensus -eq 1)
                         task20StackProfileMode =
                             $benchmarkMakeIdentity.Task20StackProfileMode
                         task32DrawHotTextMode =
@@ -6025,7 +6025,7 @@ try {
                                 [bool]($Task20StackProfileMode -eq 1)
                             task20Stack = $task20StackEvidence
                             task22WallpaperRunLab = [bool]$Task22WallpaperRunLab
-                            task29GxCensus = [bool]$Task29GXCensus
+                            gxCensusCensus = [bool]$GXCensus
                             task34StageStreamCensus =
                                 [bool]$Task34StageStreamCensus
                             stageHwComposeMode =
@@ -6074,9 +6074,9 @@ try {
                                 m3PreparedOutput = @($m3PreparedSamples)
                                 m3WhispySourceState = @($m3WhispySamples)
                                 g2State = @($g2StateSamples)
-                                task29GxMeta = @($task29GxMetaSamples)
-                                task29GxClass = @($task29GxClassSamples)
-                                task29GxOwner = @($task29GxOwnerSamples)
+                                gxCensusMeta = @($gxCensusMetaSamples)
+                                gxCensusClass = @($gxCensusClassSamples)
+                                gxCensusOwner = @($gxCensusOwnerSamples)
                                 task34ArenaBoot = @($task34ArenaBoot)
                                 task34StageMeta = @($task34StageMetaSamples)
                                 task34StageEntries =

@@ -313,7 +313,7 @@ void ndsFxHitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
         }
     }
     gNdsFxHitSparkSpawnCount++;
-    ndsFxEffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);
+    ndsFxEffectsEngage(NDS_FX_ENGAGED_SPRITES);
 }
 
 void ndsFxEffectsUpdate(void)

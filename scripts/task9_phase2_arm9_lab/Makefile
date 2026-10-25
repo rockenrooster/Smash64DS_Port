@@ -23,7 +23,7 @@ LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sectio
 LIBS := -lnds9
 LIBDIRS := $(LIBNDS)
 
-NDS_TASK9_FLOAT_LIBGCC_SHA256 := c755adc33eca252260360327904591b8462cce5c25e48b0e881ac0b295953f48
+NDS_FLOAT_LIBGCC_SHA256 := c755adc33eca252260360327904591b8462cce5c25e48b0e881ac0b295953f48
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
@@ -54,8 +54,8 @@ clean:
 else
 
 DEPENDS := $(OFILES:.o=.d)
-NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
-NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
+NDS_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
+NDS_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
 
 .PHONY: all
 
@@ -65,12 +65,12 @@ $(OUTPUT).nds: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 
 libgcc_fcmpeq_golden.o: $(LAB_ROOT)/Makefile
-	@echo "$(NDS_TASK9_FLOAT_LIBGCC_SHA256) *$(NDS_TASK9_FLOAT_LIBGCC)" | sha256sum -c -
+	@echo "$(NDS_FLOAT_LIBGCC_SHA256) *$(NDS_FLOAT_LIBGCC)" | sha256sum -c -
 	@mkdir -p .task9-fcmpeq-golden
-	@cp "$(NDS_TASK9_FLOAT_LIBGCC)" .task9-fcmpeq-golden/libgcc.a
-	@cd .task9-fcmpeq-golden && $(NDS_TASK9_FLOAT_AR) x libgcc.a _arm_cmpsf2.o
+	@cp "$(NDS_FLOAT_LIBGCC)" .task9-fcmpeq-golden/libgcc.a
+	@cd .task9-fcmpeq-golden && $(NDS_FLOAT_AR) x libgcc.a _arm_cmpsf2.o
 	@$(OBJCOPY) \
-		--redefine-sym __aeabi_fcmpeq=__nds_task9_libgcc_fcmpeq_golden \
+		--redefine-sym __aeabi_fcmpeq=__nds_libgcc_fcmpeq_golden \
 		--rename-section .text=.itcm,alloc,load,readonly,code,contents \
 		.task9-fcmpeq-golden/_arm_cmpsf2.o $@
 	@rm -f .task9-fcmpeq-golden/libgcc.a .task9-fcmpeq-golden/_arm_cmpsf2.o

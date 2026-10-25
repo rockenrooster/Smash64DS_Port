@@ -486,7 +486,7 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
 /* Capture-free matrix registers for the fighter-exclusive split loader.
  *
  * glMatrixMode and glLoadMatrix4x4 are #defined in this TU to the Task 29
- * wrappers, which funnel every write through ndsRendererTask29GXRecord. At the
+ * wrappers, which funnel every write through ndsRendererGXCensusRecord. At the
  * shipped config that funnel still carries the NDS_STAGE_HW_COMPOSE == 2
  * replay recorder, and under the tick HUD an sNdsEffectPacketArmed test as
  * well: 791 + 454 ticks/frame over 161,603 executions in the c106 profile, for

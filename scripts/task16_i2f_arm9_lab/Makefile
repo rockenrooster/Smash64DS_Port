@@ -70,7 +70,7 @@ libgcc_i2f_golden.o: $(LAB_ROOT)/Makefile
 	@cp "$(NDS_TASK16_LIBGCC)" .task16-i2f-golden/libgcc.a
 	@cd .task16-i2f-golden && $(NDS_TASK16_AR) x libgcc.a _arm_addsubsf3.o
 	@$(OBJCOPY) \
-		--redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden \
+		--redefine-sym __aeabi_i2f=__nds_libgcc_i2f_golden \
 		--rename-section .text=.itcm,alloc,load,readonly,code,contents \
 		.task16-i2f-golden/_arm_addsubsf3.o $@
 	@rm -rf .task16-i2f-golden

@@ -14,9 +14,9 @@ enum
 
 extern uint32_t __aeabi_fadd(uint32_t left, uint32_t right);
 extern uint32_t __aeabi_fsub(uint32_t left, uint32_t right);
-extern uint32_t __nds_task16_libgcc_fadd_golden(uint32_t left,
+extern uint32_t __nds_libgcc_fadd_golden(uint32_t left,
                                                 uint32_t right);
-extern uint32_t __nds_task16_libgcc_fsub_golden(uint32_t left,
+extern uint32_t __nds_libgcc_fsub_golden(uint32_t left,
                                                 uint32_t right);
 
 volatile uint32_t gTask16AddSubArm9Result;
@@ -118,10 +118,10 @@ int main(void)
 
             task16AddSubCheck(0u, left, right,
                               __aeabi_fadd(left, right),
-                              __nds_task16_libgcc_fadd_golden(left, right));
+                              __nds_libgcc_fadd_golden(left, right));
             task16AddSubCheck(1u, left, right,
                               __aeabi_fsub(left, right),
-                              __nds_task16_libgcc_fsub_golden(left, right));
+                              __nds_libgcc_fsub_golden(left, right));
         }
     }
     gTask16AddSubArm9DirectedOperationCount = 2u * count * count;
@@ -135,11 +135,11 @@ int main(void)
         const uint32_t random_right = task16AddSubNextRandom(&random);
         task16AddSubCheck(0u, random_left, random_right,
                           __aeabi_fadd(random_left, random_right),
-                          __nds_task16_libgcc_fadd_golden(random_left,
+                          __nds_libgcc_fadd_golden(random_left,
                                                          random_right));
         task16AddSubCheck(1u, random_left, random_right,
                           __aeabi_fsub(random_left, random_right),
-                          __nds_task16_libgcc_fsub_golden(random_left,
+                          __nds_libgcc_fsub_golden(random_left,
                                                          random_right));
     }
     gTask16AddSubArm9RandomCompleted = TASK16_ADDSUB_RANDOM_PAIRS;

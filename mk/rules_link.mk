@@ -168,7 +168,7 @@ $(dir $(OUTPUT)):
 
 $(OUTPUT).elf: $(OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) $(NDS_MEMORY_LINKER_SCRIPT) $(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
-	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
+	$(NDS_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
 	$(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) \
 	$(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) \
@@ -312,52 +312,52 @@ scene_backend.o: $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER)
 # intact and scrub only this oversized make-only variable when a shell must
 # launch a native tool for the private ITCM archive work below.
 NDS_SHELL_DEVKIT_ENV := env -u NDS_NITROFS_RELOC_FILES
-NDS_TASK9_FLOAT_LIBGCC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-libgcc-file-name)
-NDS_TASK9_FLOAT_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
+NDS_FLOAT_LIBGCC := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-libgcc-file-name)
+NDS_FLOAT_AR := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Keep the installed archive out of Make's prerequisite graph: `make -B` would
 # otherwise try to rebuild that external .a through an implicit archive rule.
 # One grouped recipe makes one verified private copy and extracts only from it.
-$(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
-	@echo "$(NDS_TASK9_FLOAT_LIBGCC_SHA256) *$(NDS_TASK9_FLOAT_LIBGCC)" | sha256sum -c -
+$(NDS_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
+	@echo "$(NDS_FLOAT_LIBGCC_SHA256) *$(NDS_FLOAT_LIBGCC)" | sha256sum -c -
 	@# Remove BOTH spellings, not just the ones this configuration emits. A build
 	@# directory that previously held `<stem>.itcm.o` keeps it when the member
 	@# moves to `<stem>.mainram.o`, and the two then look like one member
-	@# claiming two placements. check-task9-float-itcm.ps1 fails closed on that,
+	@# claiming two placements. check-float-itcm.ps1 fails closed on that,
 	@# which is how this was caught rather than shipped.
-	@rm -rf ".task9-float-itcm" $(foreach member,$(NDS_TASK9_FLOAT_ITCM_MEMBERS),$(basename $(member)).itcm.o $(basename $(member)).mainram.o)
-	@mkdir -p ".task9-float-itcm"
-	@cp "$(NDS_TASK9_FLOAT_LIBGCC)" ".task9-float-itcm/libgcc.a"
-	@cd ".task9-float-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
-	@for member in $(NDS_TASK9_FLOAT_ITCM_MEMBERS); do \
+	@rm -rf ".float-itcm" $(foreach member,$(NDS_FLOAT_ITCM_MEMBERS),$(basename $(member)).itcm.o $(basename $(member)).mainram.o)
+	@mkdir -p ".float-itcm"
+	@cp "$(NDS_FLOAT_LIBGCC)" ".float-itcm/libgcc.a"
+	@cd ".float-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_FLOAT_AR) x "libgcc.a" $(NDS_FLOAT_ITCM_MEMBERS)
+	@for member in $(NDS_FLOAT_ITCM_MEMBERS); do \
 		stem="$${member%.o}"; \
 		phase2_filter=""; \
 		if test "$$member" = "_arm_cmpsf2.o"; then \
-			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_task9_libgcc_fcmpeq_golden"; \
+			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_libgcc_fcmpeq_golden"; \
 		fi; \
 		if test "$$member" = "_arm_cmpsf2.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmplt=__nds_task16_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_task16_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_task16_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_task16_libgcc_fcmpgt_golden"; \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmplt=__nds_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_libgcc_fcmpgt_golden"; \
 		fi; \
 		if test "$$member" = "_arm_unordsf2.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmpun=__nds_task16_libgcc_fcmpun_golden"; \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmpun=__nds_libgcc_fcmpun_golden"; \
 		fi; \
 		if test "$$member" = "_arm_addsubsf3.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fadd=__nds_task16_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_task16_libgcc_fsub_golden"; \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fadd=__nds_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_libgcc_fsub_golden"; \
 		fi; \
 		if test "$$member" = "_arm_addsubsf3.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden"; \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_libgcc_i2f_golden"; \
 		fi; \
 		if test "$(NDS_P2_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_ui2f=__nds_p2_libgcc_ui2f_golden --redefine-sym __floatunsisf=__nds_p2_libgcc_floatunsisf_golden --redefine-sym __aeabi_l2f=__nds_p2_libgcc_l2f_golden --redefine-sym __floatdisf=__nds_p2_libgcc_floatdisf_golden --redefine-sym __floatsisf=__nds_p2_libgcc_floatsisf_golden"; \
 		fi; \
 		rename_filter="--rename-section .text=.itcm,alloc,load,readonly,code,contents"; \
 		out="$$stem.itcm.o"; \
-		case " $(strip $(NDS_TASK9_FLOAT_MAIN_MEMBERS)) " in \
+		case " $(strip $(NDS_FLOAT_MAIN_MEMBERS)) " in \
 			*" $$member "*) rename_filter=""; out="$$stem.mainram.o";; \
 		esac; \
 		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) $$phase2_filter $$rename_filter \
-			".task9-float-itcm/$$member" "$$out" || exit $$?; \
+			".float-itcm/$$member" "$$out" || exit $$?; \
 	done
-	@rm -rf ".task9-float-itcm"
+	@rm -rf ".float-itcm"
 ifneq ($(strip $(NDS_ITCM_LIB_OFILES)),)
 NDS_LIBC_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libc.a)
 NDS_LIBM_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)

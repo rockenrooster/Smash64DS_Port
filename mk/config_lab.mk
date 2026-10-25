@@ -112,7 +112,7 @@ NDS_PRESENT_LEAD ?= 131
 # correctness work now needs those bytes in the hard 32 KiB ITCM budget.
 # This list is placement-only: the extracted libgcc member is byte-identical
 # and merely retains its original .text section in main RAM.
-NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
+NDS_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
 # Replace EFCommon script 0x62 with its closed nine-visible-tick size program
 # and upload texture 27 as the source's exact PAL16 16x8 half-disc. The DS
 # texture unit mirrors T in hardware, reproducing the N64 MASKT tile as one

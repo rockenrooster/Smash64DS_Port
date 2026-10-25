@@ -388,7 +388,7 @@ SECTIONS {
 		 * .dtcm.bss and therefore ShieldPose and __irq_table. The hot-scalar
 		 * block is 40 bytes, so with ALIGN(4) it left __irq_table at
 		 * 0x02ff27c8, which is 8 bytes off a 32-byte boundary.
-		 * scripts/check-task20-dtcm-layout.ps1 catches exactly this; it is
+		 * scripts/check-dtcm-layout.ps1 catches exactly this; it is
 		 * why that check pins the Calico boundaries and not just the sizes. */
 		. = ALIGN(32);
 	} >dtcm AT>lma9 :dtcm = 0xff
@@ -671,7 +671,7 @@ SECTIONS {
 	/* Device-refereed draw working set. The build-generated include is empty
 	 * for control ROMs and contains only measured input sections when enabled. */
 	.text.hot.draw : {
-		INCLUDE nds_task32_draw_hot.inc
+		INCLUDE nds_draw_hot.inc
 		. = ALIGN(4);
 	} >main AT>lma9 :main = 0xff
 	ASSERT(SIZEOF(.text.hot.draw) <= 8192,

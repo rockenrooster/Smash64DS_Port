@@ -30,7 +30,7 @@ ndsCoroutineTrampoline:
     .size ndsCoroutineTrampoline, .-ndsCoroutineTrampoline
 
     /* Kept separate so --gc-sections removes Task 20 from normal ROMs. */
-    .section .text.ndsCoroutineTask20StackProfile, "ax", %progbits
+    .section .text.ndsCoroutineStackProfile, "ax", %progbits
     .align 2
     .arm
     .global ndsCoroutineReadSp

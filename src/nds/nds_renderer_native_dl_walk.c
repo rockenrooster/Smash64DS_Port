@@ -539,7 +539,7 @@ static s32 ndsRendererNativePreflightProductionOwner(
  * word from each per corner, 1,878 times a frame, in the same random order, so
  * the two tables thrash the same 4 KB data cache against each other. Built once
  * at load by ARM9 code and read only by ARM9 code -- never a DMA endpoint, never
- * touched by the ARM7 or IPC, per the check-task20-dtcm-layout.ps1 gate.
+ * touched by the ARM7 or IPC, per the check-dtcm-layout.ps1 gate.
  * P8 R7: with the "mariofox" owner image the words arrive baked in it, as
  * every imaged owner's do, and neither table nor its bake exists. */
 #if !NDS_NATIVE_OWNER_IMAGE_MARIOFOX

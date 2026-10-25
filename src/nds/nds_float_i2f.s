@@ -5,7 +5,7 @@
 	.arch armv5te
 	.arm
 
-	.section .itcm.task16_i2f,"ax",%progbits
+	.section .itcm.float_i2f,"ax",%progbits
 	.align 2
 	.global __aeabi_i2f
 	.hidden __aeabi_i2f

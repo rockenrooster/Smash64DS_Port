@@ -5,7 +5,7 @@
 	.arch armv5te
 	.arm
 
-	.section .itcm.task16_float_compare,"ax",%progbits
+	.section .itcm.float_compare,"ax",%progbits
 	.align 2
 
 	.macro ordered_compare name, left, right, equal_result

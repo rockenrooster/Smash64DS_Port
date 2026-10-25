@@ -9698,7 +9698,7 @@ def generate(repo_root: Path | None = None) -> str:
         # R2-03 E29. DTCM: single-cycle, uncached, and CPU-only. This table is
         # randomly indexed by 1,878 corners a frame from the emit and rewritten
         # by the UV prepare, against a 4 KB data cache it does not fit in.
-        # Audited for the check-task20-dtcm-layout.ps1 placement gate: written
+        # Audited for the check-dtcm-layout.ps1 placement gate: written
         # and read only by ARM9 code, never a DMA source or destination (the
         # GXFIFO DMA is the stage replay's owner->words) and never touched by
         # the ARM7 or IPC.

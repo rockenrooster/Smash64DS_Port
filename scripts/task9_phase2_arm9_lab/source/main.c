@@ -9,7 +9,7 @@ enum
 };
 
 extern uint32_t __aeabi_fcmpeq(uint32_t left, uint32_t right);
-extern uint32_t __nds_task9_libgcc_fcmpeq_golden(
+extern uint32_t __nds_libgcc_fcmpeq_golden(
     uint32_t left, uint32_t right);
 
 volatile uint32_t gTask9FcmpeqArm9Result;
@@ -69,7 +69,7 @@ int main(void)
             const uint32_t right = sTask9FcmpeqDirectedValues[right_index];
             const uint32_t candidate = __aeabi_fcmpeq(left, right);
             const uint32_t golden =
-                __nds_task9_libgcc_fcmpeq_golden(left, right);
+                __nds_libgcc_fcmpeq_golden(left, right);
 
             ++gTask9FcmpeqArm9PairCount;
             if ((candidate != golden) || (candidate > 1u) || (golden > 1u))

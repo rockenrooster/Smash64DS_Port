@@ -41,7 +41,7 @@ $(info       Run `make TARGET=$(TARGET)` with no overrides afterwards, or the ro
 # the .nds alone relinks the ROM from the STALE .elf (a ROM that is neither
 # build); a force on the .elf pulls the link into the top-level make, which does
 # not have the sub-make's working directory and dies with "cannot open linker
-# script file nds_task32_draw_hot.inc". The fix belongs in the harness -- resolve
+# script file nds_draw_hot.inc". The fix belongs in the harness -- resolve
 # a per-build .elf -- not at this seam.
 #
 # Until then: run a lab build IMMEDIATELY before its measurement, and if a

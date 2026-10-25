@@ -172,210 +172,210 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 
 
 #if NDS_TICK_HUD
-#define NDS_TASK29_GX_MAX_WORDS 16u
-#define NDS_TASK29_GX_CENSUS_CODE \
+#define NDS_GX_CENSUS_MAX_WORDS 16u
+#define NDS_GX_CENSUS_CODE \
     __attribute__((noinline, noclone, cold, optimize("Os"), \
-                   section(".text.task29_gx_census")))
+                   section(".text.gx_census")))
 
 
 
-static inline void ndsRendererTask29GXRecord(
-    NDSRendererTask29GXClass command_class,
+static inline void ndsRendererGXCensusRecord(
+    NDSRendererGXClass command_class,
     const u32 *words,
     u32 word_count)
 {
     /* The GX recorders' hook; no recorder is built. */
 }
 
-static inline void ndsRendererTask29GlEnable(int bits)
+static inline void ndsRendererGxGlEnable(int bits)
 {
     u32 value;
 
     glEnable(bits);
     value = (u32)GFX_CONTROL;
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_CONTROL, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlDisable(int bits)
+static inline void ndsRendererGxGlDisable(int bits)
 {
     u32 value;
 
     glDisable(bits);
     value = (u32)GFX_CONTROL;
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_CONTROL, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlAlphaFunc(int threshold)
+static inline void ndsRendererGxGlAlphaFunc(int threshold)
 {
     u32 value = (u32)threshold;
 
     glAlphaFunc(threshold);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_ALPHA_TEST, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_ALPHA_TEST, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlFogDensity(int index, int density)
+static inline void ndsRendererGxGlFogDensity(int index, int density)
 {
     u32 words[2] = {(u32)index, (u32)density};
 
     glFogDensity(index, density);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_TABLE, words, 2u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_FOG_TABLE, words, 2u);
 }
 
-static inline void ndsRendererTask29GlFogShift(int shift)
+static inline void ndsRendererGxGlFogShift(int shift)
 {
     u32 value;
 
     glFogShift(shift);
     value = (u32)GFX_CONTROL;
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_CONTROL, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlFogOffset(int offset)
+static inline void ndsRendererGxGlFogOffset(int offset)
 {
     u32 value = (u32)offset;
 
     glFogOffset(offset);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_OFFSET, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_FOG_OFFSET, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlFogColor(
+static inline void ndsRendererGxGlFogColor(
     u8 red, u8 green, u8 blue, u8 alpha)
 {
     u32 value = RGB15(red, green, blue) | ((u32)alpha << 16);
 
     glFogColor(red, green, blue, alpha);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_COLOR, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_FOG_COLOR, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlTexParameter(int target, int param)
+static inline void ndsRendererGxGlTexParameter(int target, int param)
 {
     u32 value;
 
     glTexParameter(target, param);
     value = glGetTexParameter();
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEXTURE_PARAM, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_TEXTURE_PARAM, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlBindTexture(int target, int name)
+static inline void ndsRendererGxGlBindTexture(int target, int name)
 {
     u32 words[2];
 
     glBindTexture(target, name);
     words[0] = (u32)name;
     words[1] = glGetTexParameter();
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEXTURE_BIND, words, 2u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_TEXTURE_BIND, words, 2u);
 }
 
-static inline void ndsRendererTask29GlMatrixMode(int mode)
+static inline void ndsRendererGxGlMatrixMode(int mode)
 {
     u32 value = (u32)mode;
 
     glMatrixMode(mode);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_MODE, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_MODE, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlLoadIdentity(void)
+static inline void ndsRendererGxGlLoadIdentity(void)
 {
     u32 value = 0u;
 
     glLoadIdentity();
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_IDENTITY, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_IDENTITY, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlLoadMatrix4x4(const m4x4 *matrix)
+static inline void ndsRendererGxGlLoadMatrix4x4(const m4x4 *matrix)
 {
     glLoadMatrix4x4(matrix);
-    ndsRendererTask29GXRecord(
-        NDS_TASK29_GX_MATRIX_LOAD4X4, (const u32 *)matrix, 16u);
+    ndsRendererGXCensusRecord(
+        NDS_GX_CLASS_MATRIX_LOAD4X4, (const u32 *)matrix, 16u);
 }
 
-static inline void ndsRendererTask29GlMultMatrix4x4(const m4x4 *matrix)
+static inline void ndsRendererGxGlMultMatrix4x4(const m4x4 *matrix)
 {
     glMultMatrix4x4(matrix);
-    ndsRendererTask29GXRecord(
-        NDS_TASK29_GX_MATRIX_MULT4X4, (const u32 *)matrix, 16u);
+    ndsRendererGXCensusRecord(
+        NDS_GX_CLASS_MATRIX_MULT4X4, (const u32 *)matrix, 16u);
 }
 
 /* Task 51: wrapped emit so the differ (Task 49) observes the 12-word 4x3
  * model-matrix command. Mirrors the MULT4X4 wrapper; records the new class. */
-static inline void ndsRendererTask29GlMultMatrix4x3(const m4x3 *matrix)
+static inline void ndsRendererGxGlMultMatrix4x3(const m4x3 *matrix)
 {
     glMultMatrix4x3(matrix);
-    ndsRendererTask29GXRecord(
-        NDS_TASK29_GX_MATRIX_MULT4x3, (const u32 *)matrix, 12u);
+    ndsRendererGXCensusRecord(
+        NDS_GX_CLASS_MATRIX_MULT4x3, (const u32 *)matrix, 12u);
 }
 
-static inline void ndsRendererTask29GlPushMatrix(void)
+static inline void ndsRendererGxGlPushMatrix(void)
 {
     u32 value = 0u;
 
     glPushMatrix();
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_PUSH, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_PUSH, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlPopMatrix(int count)
+static inline void ndsRendererGxGlPopMatrix(int count)
 {
     u32 value = (u32)count;
 
     glPopMatrix(count);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_POP, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_POP, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlStoreMatrix(int index)
+static inline void ndsRendererGxGlStoreMatrix(int index)
 {
     u32 value = (u32)index;
 
     glStoreMatrix(index);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_STORE, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_STORE, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlRestoreMatrix(int index)
+static inline void ndsRendererGxGlRestoreMatrix(int index)
 {
     u32 value = (u32)index;
 
     glRestoreMatrix(index);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_RESTORE, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_MATRIX_RESTORE, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlPolyFmt(u32 params)
+static inline void ndsRendererGxGlPolyFmt(u32 params)
 {
     glPolyFmt(params);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_POLY_FORMAT, &params, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_POLY_FORMAT, &params, 1u);
 }
 
-static inline void ndsRendererTask29GlBegin(GL_GLBEGIN_ENUM mode)
+static inline void ndsRendererGxGlBegin(GL_GLBEGIN_ENUM mode)
 {
     u32 value = (u32)mode;
 
     glBegin(mode);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_BEGIN, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_BEGIN, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlEnd(void)
+static inline void ndsRendererGxGlEnd(void)
 {
     u32 value = 0u;
 
     glEnd();
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_END, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_END, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlColor(rgb color)
+static inline void ndsRendererGxGlColor(rgb color)
 {
     u32 value = (u32)color;
 
     glColor(color);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_COLOR, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlTexCoord2t16(t16 s, t16 t)
+static inline void ndsRendererGxGlTexCoord2t16(t16 s, t16 t)
 {
     u32 value = (u32)(u16)s | ((u32)(u16)t << 16);
 
     glTexCoord2t16(s, t);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_TEX_COORD, &value, 1u);
 }
 
-static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
+static inline void ndsRendererGxGlVertex3v16(v16 x, v16 y, v16 z)
 {
     u32 words[2] = {
         (u32)(u16)x | ((u32)(u16)y << 16),
@@ -383,33 +383,33 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
     };
 
     glVertex3v16(x, y, z);
-    ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
+    ndsRendererGXCensusRecord(NDS_GX_CLASS_VERTEX16, words, 2u);
 }
 
-#define glEnable ndsRendererTask29GlEnable
-#define glDisable ndsRendererTask29GlDisable
-#define glAlphaFunc ndsRendererTask29GlAlphaFunc
-#define glFogDensity ndsRendererTask29GlFogDensity
-#define glFogShift ndsRendererTask29GlFogShift
-#define glFogOffset ndsRendererTask29GlFogOffset
-#define glFogColor ndsRendererTask29GlFogColor
-#define glTexParameter ndsRendererTask29GlTexParameter
-#define glBindTexture ndsRendererTask29GlBindTexture
-#define glMatrixMode ndsRendererTask29GlMatrixMode
-#define glLoadIdentity ndsRendererTask29GlLoadIdentity
-#define glLoadMatrix4x4 ndsRendererTask29GlLoadMatrix4x4
-#define glMultMatrix4x4 ndsRendererTask29GlMultMatrix4x4
-#define glMultMatrix4x3 ndsRendererTask29GlMultMatrix4x3
-#define glPushMatrix ndsRendererTask29GlPushMatrix
-#define glPopMatrix ndsRendererTask29GlPopMatrix
-#define glStoreMatrix ndsRendererTask29GlStoreMatrix
-#define glRestoreMatrix ndsRendererTask29GlRestoreMatrix
-#define glPolyFmt ndsRendererTask29GlPolyFmt
-#define glBegin ndsRendererTask29GlBegin
-#define glEnd ndsRendererTask29GlEnd
-#define glColor ndsRendererTask29GlColor
-#define glTexCoord2t16 ndsRendererTask29GlTexCoord2t16
-#define glVertex3v16 ndsRendererTask29GlVertex3v16
+#define glEnable ndsRendererGxGlEnable
+#define glDisable ndsRendererGxGlDisable
+#define glAlphaFunc ndsRendererGxGlAlphaFunc
+#define glFogDensity ndsRendererGxGlFogDensity
+#define glFogShift ndsRendererGxGlFogShift
+#define glFogOffset ndsRendererGxGlFogOffset
+#define glFogColor ndsRendererGxGlFogColor
+#define glTexParameter ndsRendererGxGlTexParameter
+#define glBindTexture ndsRendererGxGlBindTexture
+#define glMatrixMode ndsRendererGxGlMatrixMode
+#define glLoadIdentity ndsRendererGxGlLoadIdentity
+#define glLoadMatrix4x4 ndsRendererGxGlLoadMatrix4x4
+#define glMultMatrix4x4 ndsRendererGxGlMultMatrix4x4
+#define glMultMatrix4x3 ndsRendererGxGlMultMatrix4x3
+#define glPushMatrix ndsRendererGxGlPushMatrix
+#define glPopMatrix ndsRendererGxGlPopMatrix
+#define glStoreMatrix ndsRendererGxGlStoreMatrix
+#define glRestoreMatrix ndsRendererGxGlRestoreMatrix
+#define glPolyFmt ndsRendererGxGlPolyFmt
+#define glBegin ndsRendererGxGlBegin
+#define glEnd ndsRendererGxGlEnd
+#define glColor ndsRendererGxGlColor
+#define glTexCoord2t16 ndsRendererGxGlTexCoord2t16
+#define glVertex3v16 ndsRendererGxGlVertex3v16
 #endif
 
 /* The bin macro is defined by the G3 capture block above, which is itself
@@ -1463,7 +1463,7 @@ typedef struct NDSRendererRuntimeFrameSummary
  * leave the struct zero, and verify-battle-mariofox-gcrunall-loop-harness.ps1's
  * exact batch and texture-prepare accounting needs a diagnostics build.
  *
- * `.dtcm` (loaded), where check-task20-dtcm-layout.ps1 models it; it used to
+ * `.dtcm` (loaded), where check-dtcm-layout.ps1 models it; it used to
  * ride `.dtcm.fighter`, which left DTCM with Mario's dense tables (P2-2p8,
  * the DTCM hot stack).
  *

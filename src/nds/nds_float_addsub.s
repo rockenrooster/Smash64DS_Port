@@ -5,7 +5,7 @@
 	.arch armv5te
 	.arm
 
-	.section .itcm.task16_float_addsub,"ax",%progbits
+	.section .itcm.float_addsub,"ax",%progbits
 	.align 2
 	.global __aeabi_fsub
 	.type __aeabi_fsub,%function

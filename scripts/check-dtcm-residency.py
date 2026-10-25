@@ -163,7 +163,7 @@ def main() -> int:
         high = max(a for _s, a in resident)
         print(f"  span 0x{low:08x}..0x{high:08x}")
     # STRICT about absence, on purpose, and this is the division of labour with
-    # check-task20-dtcm-layout.ps1.
+    # check-dtcm-layout.ps1.
     #
     # A mistyped input section produces a mistyped SYMBOL name too, because the
     # name is the text after the last dot. If absence were tolerated, that typo

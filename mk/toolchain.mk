@@ -151,7 +151,7 @@ $(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT): $(PROJECT_ROOT)/linker/nds_frontend_overl
 	sed -e '/battleship_item_tarubomb\.o (\.data/,/)/d' \
 		-e '/battleship_item_tarubomb\.o/d' $< > $@
 endif
-NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
+NDS_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_draw_hot.inc
 NDS_FX_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/fx_hit_sparks.generated.inc
 NDS_FX_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
@@ -293,10 +293,10 @@ LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-T,$(NDS_MEMORY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
-LDFLAGS += -Wl,--undefined=__nds_task9_libgcc_fcmpeq_golden \
-	-Wl,--undefined=__nds_task16_libgcc_fcmpun_golden
-LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_i2f_golden
-LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_fadd_golden
+LDFLAGS += -Wl,--undefined=__nds_libgcc_fcmpeq_golden \
+	-Wl,--undefined=__nds_libgcc_fcmpun_golden
+LDFLAGS += -Wl,--undefined=__nds_libgcc_i2f_golden
+LDFLAGS += -Wl,--undefined=__nds_libgcc_fadd_golden
 
 # Task 9 Phase 1 uses the exact objects from the selected Thumb multilib. The
 # objects contain ARM-state implementations; only their section placement is
@@ -304,9 +304,9 @@ LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_fadd_golden
 # links one integer-only leaf replacement ahead of libgcc. Keep the list narrow
 # so the renderer's existing ITCM ownership is never displaced by low-frequency
 # double-precision helpers.
-NDS_TASK9_FLOAT_LIBGCC_SHA256 := \
+NDS_FLOAT_LIBGCC_SHA256 := \
 	c755adc33eca252260360327904591b8462cce5c25e48b0e881ac0b295953f48
-NDS_TASK9_FLOAT_ITCM_MEMBERS := \
+NDS_FLOAT_ITCM_MEMBERS := \
 	_arm_addsubsf3.o _arm_muldivsf3.o _arm_cmpsf2.o \
 	_arm_unordsf2.o _arm_fixsfsi.o _arm_fixunssfsi.o
 # P2-2p8 2026-09-27: src/nds/nds_float_conv.c supplies the unsigned and 64-bit
@@ -315,7 +315,7 @@ NDS_TASK9_FLOAT_ITCM_MEMBERS := \
 # renamed below and lives in main RAM. Needs the Task 16 __aeabi_i2f.
 NDS_P2_FLOAT_CONV ?= 1
 ifeq ($(NDS_P2_FLOAT_CONV),1)
-NDS_TASK9_FLOAT_MAIN_MEMBERS += _arm_addsubsf3.o
+NDS_FLOAT_MAIN_MEMBERS += _arm_addsubsf3.o
 endif
 # The suffix is load-bearing, not cosmetic. `linker/nds_hot_text.ld:113` reads
 #   *.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
@@ -323,9 +323,9 @@ endif
 # is called. Dropping --rename-section alone therefore frees nothing; the member
 # has to leave the filename pattern as well. `.mainram.o` matches neither that
 # rule nor the `*.32.o` one beside it.
-NDS_TASK9_FLOAT_ITCM_OFILES := \
-	$(foreach member,$(NDS_TASK9_FLOAT_ITCM_MEMBERS), \
-		$(basename $(member))$(if $(filter $(member),$(NDS_TASK9_FLOAT_MAIN_MEMBERS)),.mainram.o,.itcm.o))
+NDS_FLOAT_ITCM_OFILES := \
+	$(foreach member,$(NDS_FLOAT_ITCM_MEMBERS), \
+		$(basename $(member))$(if $(filter $(member),$(NDS_FLOAT_MAIN_MEMBERS)),.mainram.o,.itcm.o))
 
 # Task 37 measured leaves. The census split every profiled instruction's stall
 # cycles by whether the instruction touched data, because only the non-memory

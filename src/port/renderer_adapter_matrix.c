@@ -477,7 +477,7 @@ static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
         const GMColKeys *color = &fp->colanim.color1;
 
         NDS_DIAG(gNdsFxFlashDrawCount++);
-        ndsFxEffectsEngage(NDS_TASK39_FX_ENGAGED_FLASH);
+        ndsFxEffectsEngage(NDS_FX_ENGAGED_FLASH);
         if ((fp->shade != 0) && (fp->attr != NULL))
         {
             return ndsRendererAdapterFighterShadeFlash(fp);

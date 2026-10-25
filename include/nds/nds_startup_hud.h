@@ -70,7 +70,7 @@ enum NDSTickHudBucket {
      * (ftmain.c:1269, case nFTPlayerKindCom); SCAT, SHDT and SPRM are separate
      * sequential procs; all four nest inside GCRA. Two residuals are DERIVED by
      * the analyzer at zero byte cost -- SOUT = SBAS - GCRA (work outside the sim:
-     * task39 sprites, the interface dispatch, port glue) and SGCO = GCRA - SCPU
+     * Fx sprites, the interface dispatch, port glue) and SGCO = GCRA - SCPU
      * - SCAT - SHDT - SPRM (inside the sim, unattributed: the interrupt proc less
      * its AI, both physics procs, camera, effects, items, weapons, interface
      * GObjs). Their non-negativity on every frame is the proof the nesting is
@@ -296,7 +296,7 @@ extern volatile u32 gNdsEffectDLCensusVertsMaxTotal;
 /* G3 step 1: the effect GX stream capture. Defined in nds_renderer.c beside the
  * GX record funnel it hooks; the comment there states what it is for and why
  * geometry, colour and matrix words are hashed apart. Arrays are declared
- * unsized so this header does not have to see NDS_TASK29_GX_CLASS_COUNT, which
+ * unsized so this header does not have to see NDS_GX_CLASS_COUNT, which
  * is itself behind a renderer-config guard. */
 extern volatile u32 gNdsEffectPacketWords[];
 extern volatile u32 gNdsEffectPacketClassCommands[];

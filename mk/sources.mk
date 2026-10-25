@@ -472,13 +472,13 @@ CFILES += battleship_grmodelsetup.c
 endif
 CPPFILES :=
 SFILES := coroutine_arm.s
-SFILES += nds_task9_float_phase2.s
-SFILES += nds_task16_float_compare.s
-SFILES += nds_task16_float_i2f.s
+SFILES += nds_float_fcmpeq.s
+SFILES += nds_float_compare.s
+SFILES += nds_float_i2f.s
 ifeq ($(NDS_P2_FLOAT_CONV),1)
 CFILES += nds_float_conv.c
 endif
-SFILES += nds_task16_float_addsub.s
+SFILES += nds_float_addsub.s
 ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
 SFILES += nds_freeze_diagnostics_irq.s
@@ -505,7 +505,7 @@ endif
 
 export LD := $(CC)
 export OFILES := \
-	$(NDS_TASK9_FLOAT_ITCM_OFILES) \
+	$(NDS_FLOAT_ITCM_OFILES) \
 	$(NDS_ITCM_LIB_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) \

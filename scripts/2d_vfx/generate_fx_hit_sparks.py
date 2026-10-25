@@ -196,7 +196,7 @@ def main() -> None:
     sheet(source_rows, 32).save(visibility / "2026-07-21_task39-hit-sparks-source.png")
     preview_rows = [[unpack_ds(pack_ds(frame)) for frame in row] for row in source_rows]
     sheet(preview_rows, 16).save(visibility / "2026-07-21_task39-hit-sparks-ds-preview.png")
-    print(f"TASK39_HIT_SPARKS=PASS bytes={len(data)} sha256={digest}")
+    print(f"FX_HIT_SPARKS=PASS bytes={len(data)} sha256={digest}")
 
 
 if __name__ == "__main__":

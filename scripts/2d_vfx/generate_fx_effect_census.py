@@ -239,7 +239,7 @@ def main() -> None:
         for name, _route, classification, citation in rows
     )
     report.write_text("\n".join(table) + "\n", encoding="utf-8", newline="\n")
-    print(f"TASK39_EFFECT_CENSUS=PASS rows={len(rows)} manager={len(manager)} particle={len(particle)} runtime_nonzero={len(runtime_counts)}")
+    print(f"FX_EFFECT_CENSUS=PASS rows={len(rows)} manager={len(manager)} particle={len(particle)} runtime_nonzero={len(runtime_counts)}")
 
 
 if __name__ == "__main__":

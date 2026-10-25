@@ -11,7 +11,7 @@ enum
 
 #define DECLARE_COMPARE(name) \
     extern uint32_t __aeabi_##name(uint32_t left, uint32_t right); \
-    extern uint32_t __nds_task16_libgcc_##name##_golden( \
+    extern uint32_t __nds_libgcc_##name##_golden( \
         uint32_t left, uint32_t right)
 
 DECLARE_COMPARE(fcmplt);
@@ -27,11 +27,11 @@ static const Task16Compare sCandidates[TASK16_PREDICATE_COUNT] = {
     __aeabi_fcmpgt, __aeabi_fcmpun
 };
 static const Task16Compare sGoldens[TASK16_PREDICATE_COUNT] = {
-    __nds_task16_libgcc_fcmplt_golden,
-    __nds_task16_libgcc_fcmple_golden,
-    __nds_task16_libgcc_fcmpge_golden,
-    __nds_task16_libgcc_fcmpgt_golden,
-    __nds_task16_libgcc_fcmpun_golden
+    __nds_libgcc_fcmplt_golden,
+    __nds_libgcc_fcmple_golden,
+    __nds_libgcc_fcmpge_golden,
+    __nds_libgcc_fcmpgt_golden,
+    __nds_libgcc_fcmpun_golden
 };
 
 volatile uint32_t gTask16CompareArm9Result;

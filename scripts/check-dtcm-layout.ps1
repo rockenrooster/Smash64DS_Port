@@ -36,7 +36,7 @@ function Get-Task20DTCMHotScalarNames {
     param([string]$LinkerScript)
 
     if (-not (Test-Path -LiteralPath $LinkerScript)) {
-        throw "check-task20-dtcm-layout: missing linker script '$LinkerScript'."
+        throw "check-dtcm-layout: missing linker script '$LinkerScript'."
     }
     $text = Get-Content -LiteralPath $LinkerScript -Raw
     $begin = '/* DTCM-RESIDENT HOT SCALARS: BEGIN */'
@@ -44,7 +44,7 @@ function Get-Task20DTCMHotScalarNames {
     $beginCount = ([regex]::Matches($text, [regex]::Escape($begin))).Count
     $endCount = ([regex]::Matches($text, [regex]::Escape($end))).Count
     if ($beginCount -ne $endCount) {
-        throw ("check-task20-dtcm-layout: '$LinkerScript' has $beginCount " +
+        throw ("check-dtcm-layout: '$LinkerScript' has $beginCount " +
             "BEGIN and $endCount END hot-scalar markers.")
     }
     if ($beginCount -eq 0) { return @() }
@@ -57,12 +57,12 @@ function Get-Task20DTCMHotScalarNames {
             if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
             $m = [regex]::Match($trimmed, '^\*\(\s*([^)\s]+)\s*\)')
             if (-not $m.Success) {
-                throw ("check-task20-dtcm-layout: cannot parse hot-scalar " +
+                throw ("check-dtcm-layout: cannot parse hot-scalar " +
                     "input section from '$trimmed'.")
             }
             $section = $m.Groups[1].Value
             if ($section -match '[*?]') {
-                throw ("check-task20-dtcm-layout: '$section' is a wildcard. " +
+                throw ("check-dtcm-layout: '$section' is a wildcard. " +
                     "This block names one section per entry so a gather that " +
                     "matches nothing can be detected.")
             }

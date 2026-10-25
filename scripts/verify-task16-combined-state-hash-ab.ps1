@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $owner = Join-Path $PSScriptRoot `
     'verify-battle-mariofox-gcrunall-loop-harness.ps1'
-$itcmChecker = Join-Path $PSScriptRoot 'check-task9-float-itcm.ps1'
+$itcmChecker = Join-Path $PSScriptRoot 'check-float-itcm.ps1'
 $controlPath = Join-Path $root `
     'artifacts\performance\2026-07-18_task16-combined-state-control.json'
 $candidatePath = Join-Path $root `
@@ -164,7 +164,7 @@ foreach ($case in @(
             $_ -match '\sF\s+\.itcm\s+00000198.*\s__aeabi_fmul$'
         }).Count -ne 1 -or
         @($symbols | Where-Object {
-            $_ -match '__nds_task16_libgcc_fmul_golden$'
+            $_ -match '__nds_libgcc_fmul_golden$'
         }).Count -ne 0) {
         throw "$($case.Name) ELF did not retain the stock 408-byte fmul."
     }

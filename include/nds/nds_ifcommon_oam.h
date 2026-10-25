@@ -56,8 +56,8 @@ void ndsIFCommonTrainingFillRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
                                  u32 rgb, u32 alpha);
 void ndsIFCommonTrainingEnd(void);
 
-#define NDS_TASK39_FX_ENGAGED_SPRITES (1u << 0)
-#define NDS_TASK39_FX_ENGAGED_FLASH (1u << 1)
+#define NDS_FX_ENGAGED_SPRITES (1u << 0)
+#define NDS_FX_ENGAGED_FLASH (1u << 1)
 
 void ndsFxHitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy);

@@ -11,7 +11,7 @@ enum
 };
 
 extern uint32_t __aeabi_i2f(uint32_t input);
-extern uint32_t __nds_task16_libgcc_i2f_golden(uint32_t input);
+extern uint32_t __nds_libgcc_i2f_golden(uint32_t input);
 
 volatile uint32_t gTask16I2fResult;
 volatile uint32_t gTask16I2fVectorCount;
@@ -58,7 +58,7 @@ static const uint32_t sTask16I2fTimingValues[] = {
 static void task16I2fCheck(uint32_t input)
 {
     const uint32_t candidate = __aeabi_i2f(input);
-    const uint32_t golden = __nds_task16_libgcc_i2f_golden(input);
+    const uint32_t golden = __nds_libgcc_i2f_golden(input);
 
     ++gTask16I2fVectorCount;
     if (candidate != golden)
@@ -117,7 +117,7 @@ int main(void)
     cpuStartTiming(0);
     for (index = 0; index < TASK16_I2F_TIMING_COUNT; ++index)
     {
-        sink ^= __nds_task16_libgcc_i2f_golden(
+        sink ^= __nds_libgcc_i2f_golden(
             sTask16I2fTimingValues[index & 63u]);
     }
     gTask16I2fGoldenTicks = cpuGetTiming();

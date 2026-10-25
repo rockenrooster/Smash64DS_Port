@@ -5,7 +5,7 @@
 	.arch armv5te
 	.arm
 
-	.section .itcm.task9_float_phase2,"ax",%progbits
+	.section .itcm.float_fcmpeq,"ax",%progbits
 	.align 2
 	.global __aeabi_fcmpeq
 	.type __aeabi_fcmpeq,%function
