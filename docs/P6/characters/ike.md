@@ -541,8 +541,11 @@ is held (charge up to 75 frames, Ike's blue charge glow through the colour
 remap), a dash of 6-20 frames by charge at four times his run speed (hits
 that hold a foe; a hit or a shield cuts to the slash), then the slash (6% and
 up to 7 more by charge, 60 degrees, growth 88, base 70); special fall when it
-ends in the air. With Roy in the same match, Kirby holding Roy's power keeps
-Roy's Dancing Blade and Roy's hat.
+ends in the air. It plays Ike's four Quick Draw sounds (owner BUGS.md
+2026-10-24: "Still missing charge SFX"; `p4_kirby.py` `AUTHORED_CUES`): the
+charge's two (the second at charge 8, from the code: the held pose stops the
+script), the dash and the slash. With Roy in the same match, Kirby holding
+Roy's power keeps Roy's Dancing Blade and Roy's hat.
 
 Hat (2026-10-14): Ike's own look's blue hair and olive headband -- his head
 row's (joint 9) textured spans 3-5, the face's three before them -- cut from
