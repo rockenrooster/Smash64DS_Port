@@ -37,7 +37,7 @@ param(
     [switch]$Task29GXCensus,
     [switch]$Task34StageStreamCensus,
     [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
-    [ValidateRange(0,1)][int]$Task44StageSteadyMode = 0,
+    [ValidateRange(0,1)][int]$StageSteadyMode = 0,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
@@ -148,11 +148,11 @@ $effectiveTask36HwComposeMode = if (
     $usesIntrinsicStageGx) { 2 } else { $Task36HwComposeMode }
 # Task 44 rides the same intrinsic block as the Task 36 replay it depends on:
 # the published targets force it on, so the harness must expect it on there.
-$effectiveTask44StageSteadyMode = if (
-    $usesIntrinsicStageGx) { 1 } else { $Task44StageSteadyMode }
-if (($effectiveTask44StageSteadyMode -eq 1) -and
+$effectiveStageSteadyMode = if (
+    $usesIntrinsicStageGx) { 1 } else { $StageSteadyMode }
+if (($effectiveStageSteadyMode -eq 1) -and
     ($effectiveTask36HwComposeMode -eq 0)) {
-    throw 'Task44StageSteadyMode requires Task36HwComposeMode.'
+    throw 'StageSteadyMode requires Task36HwComposeMode.'
 }
 $staticTextureAotSelected =
     $PSBoundParameters.ContainsKey('StaticTextureAotMode')
@@ -803,7 +803,7 @@ function Get-BenchmarkMakeIdentity {
         'TASK9_FLOAT_PHASE2', 'TASK16_FLOAT_COMPARE', 'TASK16_FLOAT_I2F',
         'TASK16_FLOAT_ADDSUB', 'TASK9_STATE_HASH',
         'TASK20_STACK_PROFILE', 'TASK32_DRAW_HOT_TEXT',
-        'TASK44_STAGE_STEADY',
+        'STAGE_STEADY_MODE',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -825,7 +825,7 @@ function Get-BenchmarkMakeIdentity {
         Task29GXCensus = [int]$values.TASK29_GX_CENSUS
         Task34StageStreamCensus = [int]$values.TASK34_STAGE_STREAM_CENSUS
         Task36HwComposeMode = [int]$values.TASK36_HW_COMPOSE
-        Task44StageSteadyMode = [int]$values.TASK44_STAGE_STEADY
+        StageSteadyMode = [int]$values.STAGE_STEADY_MODE
         Task22WallpaperRunLab = [int]$values.TASK22_WALLPAPER_RUN_LAB
         ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
         RenderEconomyMode = [int]$values.RENDER_ECONOMY
@@ -1153,7 +1153,7 @@ $makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGe
 $makeArgs += "NDS_TASK29_GX_CENSUS=$([int]$Task29GXCensus.IsPresent)"
 $makeArgs += "NDS_TASK34_STAGE_STREAM_CENSUS=$([int]$Task34StageStreamCensus.IsPresent)"
 $makeArgs += "NDS_TASK36_HW_COMPOSE=$effectiveTask36HwComposeMode"
-$makeArgs += "NDS_TASK44_STAGE_STEADY=$effectiveTask44StageSteadyMode"
+$makeArgs += "NDS_STAGE_STEADY=$effectiveStageSteadyMode"
 $makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
 $makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
@@ -1392,8 +1392,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             [int]$Task34StageStreamCensus.IsPresent -and
         $benchmarkMakeIdentity.Task36HwComposeMode -eq
             $effectiveTask36HwComposeMode -and
-        $benchmarkMakeIdentity.Task44StageSteadyMode -eq
-            $effectiveTask44StageSteadyMode -and
+        $benchmarkMakeIdentity.StageSteadyMode -eq
+            $effectiveStageSteadyMode -and
         $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
             [int]$Task22WallpaperRunLab.IsPresent -and
         $benchmarkMakeIdentity.ScreenSpaceCensusMode -eq
@@ -1765,11 +1765,11 @@ try {
                         if ($Task36HwComposeMode -eq 2) {
                             $coarseBenchmarkCommands += 'printf "STAGE_GX=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsP2StageProgDraws, gNdsP2StageProgWords, gNdsP2StageProgLoads, gNdsP2StageProgBytes, gNdsP2StageProgDeclines, gNdsP2StageProgReason, gNdsP2StageProgNearRuns, gNdsP2StageProgDmas'
                         }
-                        if ($effectiveTask44StageSteadyMode -eq 1) {
+                        if ($effectiveStageSteadyMode -eq 1) {
                             # Task 44 item 3 admission ledger. Admit + revalidate
                             # must sum to the preparation count, and revalidate
                             # must move across a stage-asset invalidation event.
-                            $coarseBenchmarkCommands += 'printf "TASK44_ADMIT=%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererTask44SteadyAdmitCount, gNdsRendererTask44RevalidateCount, gNdsRendererTask44AdmissionGeneration'
+                            $coarseBenchmarkCommands += 'printf "STAGE_STEADY_ADMIT=%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererStageSteadyAdmitCount, gNdsRendererStageSteadyRevalidateCount, gNdsRendererStageSteadyAdmissionGeneration'
                         }
                     }
                     if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
@@ -3034,7 +3034,7 @@ try {
     $m3StageBenchmark = @()
     $task36HwBenchmark = @()
     $stageGxBenchmark = @()
-    $task44AdmitBenchmark = @()
+    $stageSteadyAdmitBenchmark = @()
     $m3GeneratedSegment0Benchmark = @()
     $m3GeneratedSegment0ShadowBenchmark = @()
     $m3GeneratedSegment0GxBenchmark = @()
@@ -3195,8 +3195,8 @@ try {
                 if ($Task36HwComposeMode -eq 2) {
                     $stageGxBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE_GX' -FieldCount 9)
                 }
-                if ($effectiveTask44StageSteadyMode -eq 1) {
-                    $task44AdmitBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK44_ADMIT' -FieldCount 4)
+                if ($effectiveStageSteadyMode -eq 1) {
+                    $stageSteadyAdmitBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE_STEADY_ADMIT' -FieldCount 4)
                 }
             }
             if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
@@ -4324,7 +4324,7 @@ try {
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
                 $stageGxMetricSummary = ''
-                $task44MetricSummary = ''
+                $stageSteadyMetricSummary = ''
                 $m3GeneratedSegment0MetricSummary = ''
                 $m3GeneratedSegment0ShadowMetricSummary = ''
                 $m3GeneratedSegment0GxMetricSummary = ''
@@ -4581,7 +4581,7 @@ try {
                         $g2StateSamples = [System.Collections.Generic.List[object]]::new()
                         $task36HwSamples = [System.Collections.Generic.List[object]]::new()
                         $stageGxSamples = [System.Collections.Generic.List[object]]::new()
-                        $task44AdmitSamples = [System.Collections.Generic.List[object]]::new()
+                        $stageSteadyAdmitSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
@@ -4679,8 +4679,8 @@ try {
                             if ($Task36HwComposeMode -eq 2) {
                                 Assert-Condition ($stageGxBenchmark.Count -eq $RendererBenchmarkSamples) "Compiled stage benchmark captured $($stageGxBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             }
-                            if ($effectiveTask44StageSteadyMode -eq 1) {
-                                Assert-Condition ($task44AdmitBenchmark.Count -eq $RendererBenchmarkSamples) "Task 44 admission ledger captured $($task44AdmitBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            if ($effectiveStageSteadyMode -eq 1) {
+                                Assert-Condition ($stageSteadyAdmitBenchmark.Count -eq $RendererBenchmarkSamples) "Task 44 admission ledger captured $($stageSteadyAdmitBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             }
                         }
                         if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
@@ -5133,31 +5133,31 @@ try {
                                         }
                                         $stageGxSamples.Add($stageGx)
                                     }
-                                    if ($effectiveTask44StageSteadyMode -eq 1) {
-                                        $task44Admit = Get-Ints `
-                                            $task44AdmitBenchmark[$sampleIndex]
+                                    if ($effectiveStageSteadyMode -eq 1) {
+                                        $stageSteadyAdmit = Get-Ints `
+                                            $stageSteadyAdmitBenchmark[$sampleIndex]
                                         # Steady state must admit on the
                                         # generation compare, hold a nonzero
                                         # armed generation, and never fall back
                                         # to full revalidation once armed.
                                         Assert-Condition (
-                                            $task44Admit[0] -eq $frame -and
-                                            $task44Admit[1] -gt 0 -and
-                                            $task44Admit[3] -gt 0
-                                        ) "Task 44 steady admission is not engaged at frame $frame (actual=$($task44Admit -join ','))." $gdbStdout
+                                            $stageSteadyAdmit[0] -eq $frame -and
+                                            $stageSteadyAdmit[1] -gt 0 -and
+                                            $stageSteadyAdmit[3] -gt 0
+                                        ) "Task 44 steady admission is not engaged at frame $frame (actual=$($stageSteadyAdmit -join ','))." $gdbStdout
                                         if ($sampleIndex -gt 0) {
-                                            $previousTask44Admit = Get-Ints `
-                                                $task44AdmitBenchmark[$sampleIndex - 1]
+                                            $previousStageSteadyAdmit = Get-Ints `
+                                                $stageSteadyAdmitBenchmark[$sampleIndex - 1]
                                             Assert-Condition (
-                                                $task44Admit[1] -eq
-                                                    ($previousTask44Admit[1] + 1) -and
-                                                $task44Admit[2] -eq
-                                                    $previousTask44Admit[2] -and
-                                                $task44Admit[3] -eq
-                                                    $previousTask44Admit[3]
-                                            ) "Task 44 admission did not advance exactly once without revalidating across frame $frame (actual=$($task44Admit -join ','))." $gdbStdout
+                                                $stageSteadyAdmit[1] -eq
+                                                    ($previousStageSteadyAdmit[1] + 1) -and
+                                                $stageSteadyAdmit[2] -eq
+                                                    $previousStageSteadyAdmit[2] -and
+                                                $stageSteadyAdmit[3] -eq
+                                                    $previousStageSteadyAdmit[3]
+                                            ) "Task 44 admission did not advance exactly once without revalidating across frame $frame (actual=$($stageSteadyAdmit -join ','))." $gdbStdout
                                         }
-                                        $task44AdmitSamples.Add($task44Admit)
+                                        $stageSteadyAdmitSamples.Add($stageSteadyAdmit)
                                     }
                                 }
                                 if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
@@ -5743,10 +5743,10 @@ try {
                                 $stageGxLast = $stageGxSamples[-1]
                                 $stageGxMetricSummary = "Compiled stage: draws=$($stageGxLast[1]) words=$($stageGxLast[2]) loads=$($stageGxLast[3]) bytes=$($stageGxLast[4]) declines=$($stageGxLast[5]) reason=$($stageGxLast[6]) near=$($stageGxLast[7]) dma=$($stageGxLast[8])"
                             }
-                            if ($effectiveTask44StageSteadyMode -eq 1) {
-                                $task44AdmitFirst = $task44AdmitSamples[0]
-                                $task44AdmitLast = $task44AdmitSamples[-1]
-                                $task44MetricSummary = "Renderer Task 44 stage admission: admit=$($task44AdmitFirst[1])..$($task44AdmitLast[1]) revalidate=$($task44AdmitFirst[2])..$($task44AdmitLast[2]) generation=$($task44AdmitLast[3])"
+                            if ($effectiveStageSteadyMode -eq 1) {
+                                $stageSteadyAdmitFirst = $stageSteadyAdmitSamples[0]
+                                $stageSteadyAdmitLast = $stageSteadyAdmitSamples[-1]
+                                $stageSteadyMetricSummary = "Renderer Task 44 stage admission: admit=$($stageSteadyAdmitFirst[1])..$($stageSteadyAdmitLast[1]) revalidate=$($stageSteadyAdmitFirst[2])..$($stageSteadyAdmitLast[2]) generation=$($stageSteadyAdmitLast[3])"
                             }
                             if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
                                 $m3GeneratedSegment0Last =
@@ -6182,7 +6182,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($stageGxMetricSummary) { Write-Output $stageGxMetricSummary }
-                    if ($task44MetricSummary) { Write-Output $task44MetricSummary }
+                    if ($stageSteadyMetricSummary) { Write-Output $stageSteadyMetricSummary }
                     if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
                     if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }
@@ -6932,7 +6932,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($stageGxMetricSummary) { Write-Output $stageGxMetricSummary }
-                    if ($task44MetricSummary) { Write-Output $task44MetricSummary }
+                    if ($stageSteadyMetricSummary) { Write-Output $stageSteadyMetricSummary }
                     if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
                     if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }

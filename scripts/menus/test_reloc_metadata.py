@@ -18,7 +18,7 @@ typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32;
 typedef int32_t s32; typedef s32 sb32;
 #define TRUE 1
 #define FALSE 0
-#define NDS_TASK44_STAGE_STEADY 0
+#define NDS_STAGE_STEADY 0
 #define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 144u
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
 '''

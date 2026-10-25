@@ -1215,6 +1215,18 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "stats.hardware_texture_ready_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_triangle_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_zbuffer_triangle_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
           "access": "stats.triangle_count",
           "classification": "callback_visible_mutation_output"
         }
@@ -1226,10 +1238,6 @@
       "fields": [
         {
           "access": "config.texture_data_layout",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "entry.green_texels",
           "classification": "live_camera_independent"
         },
         {
@@ -1249,10 +1257,6 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "entry.nonwhite_texels",
-          "classification": "live_camera_independent"
-        },
-        {
           "access": "entry.params",
           "classification": "live_camera_independent"
         },
@@ -1261,19 +1265,7 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "entry.profile_height",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "entry.profile_width",
-          "classification": "live_camera_independent"
-        },
-        {
           "access": "entry.ready",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "entry.source_texels",
           "classification": "live_camera_independent"
         },
         {
@@ -1851,14 +1843,6 @@
           "classification": "callback_visible_mutation_output"
         },
         {
-          "access": "plan.semantic_key_hash",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "plan.semantic_params",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
           "access": "plan.site",
           "classification": "callback_visible_mutation_output"
         },
@@ -1872,22 +1856,6 @@
         },
         {
           "access": "plan.state_hash2",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "plan.texel1_image0",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "plan.texel1_image1",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "plan.texel1_primary_state",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "plan.texel1_tile_state",
           "classification": "callback_visible_mutation_output"
         },
         {
@@ -2017,27 +1985,7 @@
           "classification": "callback_visible_mutation_output"
         },
         {
-          "access": "state.semantic_branch_path",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.semantic_command_index",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.semantic_tri2_half",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
           "access": "state.source_command_site",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_key_hash",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_params",
           "classification": "callback_visible_mutation_output"
         },
         {
@@ -2408,7 +2356,7 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     },
     {
-      "closure": "ndsRendererAdapterMvpMod1F",
+      "closure": "ndsRendererAdapterMvpMod1Q",
       "fields": [
         {
           "access": "cobj.vec.at.x",
@@ -2433,6 +2381,18 @@
         {
           "access": "cobj.vec.eye.z",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "out.l1_q30",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "out.l2_q30",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "out.zero",
+          "classification": "live_camera_dependent"
         }
       ],
       "path": "src/port/reloc_backend_renderer_dl.c"
@@ -2441,7 +2401,7 @@
       "closure": "ndsRendererAdapterApplyMvpRecalc",
       "fields": [
         {
-          "access": "camera.mod1_f",
+          "access": "camera.mod1",
           "classification": "live_camera_dependent"
         },
         {
@@ -3005,8 +2965,20 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.dyn_pinned_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.dyn_quiet",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "workspace.projection",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.slice44_validate_cursor",
+          "classification": "live_camera_independent"
         }
       ],
       "path": "src/port/reloc_backend_renderer_dl.c"
@@ -3016,14 +2988,6 @@
       "fields": [
         {
           "access": "workspace.binding_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "workspace.binding_dobjs",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "workspace.binding_world",
           "classification": "immutable_generation"
         },
         {
@@ -3193,10 +3157,6 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "workspace.dobj_count",
-          "classification": "immutable_generation"
-        },
-        {
           "access": "workspace.frame",
           "classification": "live_camera_independent"
         },
@@ -3289,11 +3249,11 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "workspace.task36_runtime_rigid_mask",
+          "access": "workspace.steady_admission_generation",
           "classification": "live_camera_independent"
         },
         {
-          "access": "workspace.task44_admission_generation",
+          "access": "workspace.task36_runtime_rigid_mask",
           "classification": "live_camera_independent"
         },
         {
@@ -3321,6 +3281,10 @@
         {
           "access": "workspace.next_segment",
           "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.segment_bloom",
+          "classification": "immutable_generation"
         },
         {
           "access": "workspace.segments",
@@ -3481,14 +3445,6 @@
           "classification": "immutable_generation"
         },
         {
-          "access": "sNdsNativeStageValidationCache.prepared_dense_indices",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "sNdsNativeStageValidationCache.prepared_dense_offsets",
-          "classification": "immutable_generation"
-        },
-        {
           "access": "segment.binding_count",
           "classification": "immutable_generation"
         },
@@ -3551,22 +3507,6 @@
       "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
       "fields": [
         {
-          "access": "certificate.material_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.run_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.texture_epoch_count",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "certificate.triangle_count",
-          "classification": "immutable_generation"
-        },
-        {
           "access": "frame.asset_bases",
           "classification": "immutable_generation"
         },
@@ -3600,244 +3540,6 @@
         },
         {
           "access": "stats.sync_command_count",
-          "classification": "callback_visible_mutation_output"
-        }
-      ],
-      "path": "src/nds/nds_renderer.c"
-    },
-    {
-      "closure": "ndsRendererNativeStageHashGeneratedSegment0Outputs",
-      "fields": [
-        {
-          "access": "prepared.alpha_ref",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.alpha_test",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.near_inside",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.packed_color",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.poly_fmt",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.s",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.t",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_entry",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_format",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_generation",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_height",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_name",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_params",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.texture_width",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "prepared.textured",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "sNdsNativeStageOwnerExecution.runs",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "sNdsNativeStageSegment0HotRuns.run_index",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "sNdsNativeStageValidationCache.prepared_dense_indices",
-          "classification": "immutable_generation"
-        },
-        {
-          "access": "state.texture_prepare_alpha_constant",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_decal_depth",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_enabled",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_material_color",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_name",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_offset",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_origin_s",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_origin_t",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_poly_alpha",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_poly_fmt",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_prim_depth",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_scale_s",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_scale_t",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_source_zbuffered",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_valid",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "state.texture_prepare_vertex_flags",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.blend_color",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.color_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.first_othermode_opcode",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.first_othermode_w0",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.first_othermode_w1",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_clear_mask",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_mode",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.geometry_set_mask",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.ignored_state_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.othermode_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.othermode_h",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.othermode_l",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.state_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.sync_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_combine_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_combine_w0",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_combine_w1",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_command_count",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_image",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_mask",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_source_hash1",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_source_hash2",
-          "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "stats.texture_state_flags",
           "classification": "callback_visible_mutation_output"
         }
       ],
@@ -3928,7 +3630,7 @@
         "ndsRendererAdapterBuildDObjLocalMatrix",
         "ndsRendererAdapterMvpParentScaleX",
         "ndsRendererAdapterMvpPerspectiveF",
-        "ndsRendererAdapterMvpMod1F",
+        "ndsRendererAdapterMvpMod1Q",
         "ndsRendererAdapterApplyMvpRecalc",
         "ndsRendererAdapterPrepareNativeStageMatrices",
         "ndsRendererAdapterPrepareNativeStageBindingMatrix"

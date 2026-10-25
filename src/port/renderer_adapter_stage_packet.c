@@ -597,7 +597,7 @@ static sb32 ndsRendererAdapterNativeStageSegmentsUnchanged(
             ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
             (gobj->dl_link_id !=
              ndsRendererAdapterNativeStageSegmentLink(i)) ||
-            (DObjGetStruct(gobj) != workspace->task44_segment_roots[i]) ||
+            (DObjGetStruct(gobj) != workspace->steady_segment_roots[i]) ||
             (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE))
         {
             return FALSE;
@@ -649,7 +649,7 @@ static sb32 ndsRendererAdapterCollectNativeStageTopologyBody(
     for (i = segment_count; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
     {
         workspace->segments[i] = NULL;
-        workspace->task44_segment_roots[i] = NULL;
+        workspace->steady_segment_roots[i] = NULL;
     }
     for (i = 0u; i < segment_count; i++)
     {
@@ -701,7 +701,7 @@ static sb32 ndsRendererAdapterCollectNativeStageTopologyBody(
             gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
-        workspace->task44_segment_roots[i] = DObjGetStruct(gobj);
+        workspace->steady_segment_roots[i] = DObjGetStruct(gobj);
     }
     /* P2-4n1 step 7: on a DLLink packet every captured binding must hang off
      * the DObj and draw into the head the generator compiled it from, or the
@@ -1074,7 +1074,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     /* The stage GX cull keeps each rigid run's world-space bounds until the
      * worlds are captured again (nds_stage_gx.exec.inc). */
     gNdsStageRigidWorldSerial++;
-    workspace->task44_rigid_binding_count = 0u;
+    workspace->steady_rigid_binding_count = 0u;
     for (binding_index = 0u;
          binding_index < workspace->binding_count;
          binding_index++)
@@ -1082,11 +1082,11 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         if ((rigid_mask &
              ((u64)1u << binding_index)) != 0u)
         {
-            workspace->task44_rigid_bindings[
-                workspace->task44_rigid_binding_count++] = (u8)binding_index;
+            workspace->steady_rigid_bindings[
+                workspace->steady_rigid_binding_count++] = (u8)binding_index;
         }
     }
-    workspace->task44_binding_lists_valid = TRUE;
+    workspace->steady_binding_lists_valid = TRUE;
     return TRUE;
 }
 
@@ -1113,10 +1113,10 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     /* Task 44 item 4: walk the 26 rigid bindings directly. The list is only
      * consulted when capture built it for this topology; otherwise fall back
      * to the mask scan below so a torn workspace can never skip validation. */
-    if (workspace->task44_binding_lists_valid != FALSE)
+    if (workspace->steady_binding_lists_valid != FALSE)
     {
         for (rigid_slot = 0u;
-             rigid_slot < workspace->task44_rigid_binding_count;
+             rigid_slot < workspace->steady_rigid_binding_count;
              rigid_slot++)
         {
             if ((rigid_slot % NDS_R2_STAGE_VALIDATE_STRIDE) !=
@@ -1126,7 +1126,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
                 continue;
             }
             NDS_DIAG(gNdsR2Slice44RigidChecks++);
-            binding_index = workspace->task44_rigid_bindings[rigid_slot];
+            binding_index = workspace->steady_rigid_bindings[rigid_slot];
             if (ndsRendererAdapterStageWorldSourceKeyMatches(
                     workspace->binding_dobjs[binding_index],
                     &workspace->task36_rigid_source_keys[binding_index]) ==
@@ -1269,7 +1269,7 @@ void ndsRendererAdapterSetStagePreviewLayers(void *const *layers)
     sNdsRendererAdapterStagePreviewMode = (layers != NULL) ? 1u : 0u;
     workspace->active = FALSE;
     workspace->topology_valid = FALSE;
-    workspace->task44_admission_generation = 0u;
+    workspace->steady_admission_generation = 0u;
 }
 
 /* A preview stand-in for a capture row's battle-only actor (source
@@ -1346,8 +1346,8 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * already recorded in the workspace and provably unchanged, because every
      * seam that can change it bumps sNdsRelocStageAssetMutation. */
     if ((workspace->topology_valid != FALSE) &&
-        (workspace->task44_admission_generation != 0u) &&
-        (workspace->task44_admission_generation ==
+        (workspace->steady_admission_generation != 0u) &&
+        (workspace->steady_admission_generation ==
          sNdsRelocStageAssetMutation) &&
         (ndsRendererAdapterNativeStageSegmentsUnchanged(workspace) != FALSE))
     {
@@ -1443,7 +1443,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         goto reject;
     }
     /* Only a completed full validation may arm the fast path. */
-    workspace->task44_admission_generation = sNdsRelocStageAssetMutation;
+    workspace->steady_admission_generation = sNdsRelocStageAssetMutation;
     }
     /* Slice 44: one advance per frame, here, because this is the only site the
      * c120 profile shows running exactly once -- 26 rigid checks a frame against

@@ -626,7 +626,16 @@ SOURCE_CLOSURE_POLICIES = (
                 segment.first_run segment.owner segment.run_count
                 """,
             ),
-            **_classified(FIELD_CLASS_CALLBACK, "stats.triangle_count"),
+            # The three hardware counters are read only by the lab GX hash
+            # (NDS_LAB_STAGE_GX_HASH, fa35dd61607): the callbacks' outputs.
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.hardware_texture_ready_count
+                stats.hardware_triangle_count
+                stats.hardware_zbuffer_triangle_count stats.triangle_count
+                """,
+            ),
         },
     },
     {
@@ -640,11 +649,10 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                config.texture_data_layout entry.green_texels
+                config.texture_data_layout
                 entry.key_generation entry.key_hash entry.last_used_frame
-                entry.name entry.nonwhite_texels entry.params entry.pinned
-                entry.profile_height entry.profile_width entry.ready
-                entry.source_texels load.image load.image_format
+                entry.name entry.params entry.pinned entry.ready
+                load.image load.image_format
                 load.image_size load.image_width load.load_dxt load.load_kind
                 load.load_lrs load.load_texels load.load_tile load.load_uls
                 load.load_ult primary_load.image primary_load.image_format
@@ -809,11 +817,8 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_CALLBACK,
                 """
                 candidate.site plan.entry plan.entry_generation plan.format
-                plan.height plan.prim_lod_fraction plan.semantic_key_hash
-                plan.semantic_params plan.site plan.size plan.state_hash1
-                plan.state_hash2 plan.texel1_image0 plan.texel1_image1
-                plan.texel1_primary_state plan.texel1_tile_state
-                plan.uses_texel1 plan.width
+                plan.height plan.prim_lod_fraction plan.site plan.size
+                plan.state_hash1 plan.state_hash2 plan.uses_texel1 plan.width
                 """,
             ),
         },
@@ -846,10 +851,7 @@ SOURCE_CLOSURE_POLICIES = (
                 state.prepared_texcoord_valid_mask
                 state.prepared_vertex_color_valid_mask state.projection
                 state.projection_valid state.raw_vertex_fit_mask
-                state.semantic_branch_path state.semantic_command_index
-                state.semantic_tri2_half state.source_command_site
-                state.texture_prepare_key_hash state.texture_prepare_params
-                state.texture_prepare_valid state.vertex_clip_snapshot
+                state.source_command_site state.texture_prepare_valid state.vertex_clip_snapshot
                 state.vertex_color_valid_mask state.vertex_colors
                 state.vertex_matrix_snapshot state.vertex_valid_mask
                 state.vertices stats.hardware_matrix_seed_count
@@ -939,11 +941,14 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
-        "closure": "ndsRendererAdapterMvpMod1F",
+        "closure": "ndsRendererAdapterMvpMod1Q",
         "tracked_bases": ("cobj",),
+        # The fixed-point Mod1 (44bdf2ed21f) reads back its own camera
+        # operands (`out`) while it builds them.
         "fields": _classified(FIELD_CLASS_CAMERA,
             "cobj.vec.at.x cobj.vec.at.y cobj.vec.at.z "
-            "cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z"),
+            "cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z "
+            "out.l1_q30 out.l2_q30 out.zero"),
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
@@ -957,7 +962,7 @@ SOURCE_CLOSURE_POLICIES = (
                 cobj.projection.persp.fovy cobj.projection.persp.near
                 cobj.projection.persp.norm cobj.projection.persp.scale
                 cobj.xobjs cobj.xobjs_num modelview.m
-                camera.perspective camera.perspective_f camera.mod1_f
+                camera.perspective camera.perspective_f camera.mod1
                 camera.perspective_f_valid camera.mod1_valid
                 """,
             ),
@@ -1094,6 +1099,14 @@ SOURCE_CLOSURE_POLICIES = (
                 "camera.modelview camera.modelview_valid camera.projection "
                 "camera.projection_valid camera.recalc",
             ),
+            # The dynamic bindings' pinning (a binding whose world held still
+            # keeps its matrix) and the rigid guard's stride cursor: runtime
+            # state the binding reads every frame.
+            **_classified(
+                FIELD_CLASS_LIVE,
+                "workspace.dyn_pinned_mask workspace.dyn_quiet "
+                "workspace.slice44_validate_cursor",
+            ),
         },
     },
     {
@@ -1103,7 +1116,7 @@ SOURCE_CLOSURE_POLICIES = (
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
-                "workspace.binding_count workspace.binding_dobjs workspace.binding_world",
+                "workspace.binding_count",
             ),
             # Camera operands are produced once for all bindings in this frame.
             **_classified(
@@ -1176,7 +1189,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.binding_count workspace.binding_display_lists
                 workspace.binding_dobjs
                 workspace.binding_world
-                workspace.dobj_count workspace.frame.asset_bases
+                workspace.frame.asset_bases
                 workspace.frame.binding_display_lists workspace.frame.dobjs
                 workspace.frame.binding_world workspace.frame.rigid_binding_mask
                 workspace.frame.topology_generation
@@ -1210,7 +1223,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.materials workspace.resolver
                 workspace.resolver.primary_file workspace.stats
                 workspace.task36_runtime_rigid_mask
-                workspace.task44_admission_generation
+                workspace.steady_admission_generation
                 workspace.slice44_validate_cursor
                 """,
             ),
@@ -1225,7 +1238,9 @@ SOURCE_CLOSURE_POLICIES = (
         "closure": "ndsRendererAdapterCommitNativeStageDisplay",
         "tracked_bases": ("workspace",),
         "fields": {
-            **_classified(FIELD_CLASS_IMMUTABLE, "workspace.segments"),
+            # `segment_bloom` is rebuilt whenever `segments` is written.
+            **_classified(FIELD_CLASS_IMMUTABLE,
+                          "workspace.segment_bloom workspace.segments"),
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 "workspace.active workspace.next_segment",
@@ -1280,28 +1295,15 @@ TASK26_GENERATED_CLOSURE_POLICIES = (
             tail.state_count tail.sync_count
             """,
         ),
-        "tracked_static_bases": ("sNdsNativeStageValidationCache",),
-        "static_fields": _classified(
-            FIELD_CLASS_IMMUTABLE,
-            """
-            sNdsNativeStageValidationCache.prepared_dense_indices
-            sNdsNativeStageValidationCache.prepared_dense_offsets
-            """,
-        ),
     },
     {
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
-        "tracked_bases": ("certificate", "frame", "stats"),
+        # The certificate's counts were read only by the counters the flag
+        # resolution removed (cb344c4671b).
+        "tracked_bases": ("frame", "stats"),
         "fields": {
-            **_classified(
-                FIELD_CLASS_IMMUTABLE,
-                """
-                certificate.material_count certificate.run_count
-                certificate.texture_epoch_count certificate.triangle_count
-                frame.asset_bases
-                """,
-            ),
+            **_classified(FIELD_CLASS_IMMUTABLE, "frame.asset_bases"),
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 """
@@ -1318,59 +1320,8 @@ TASK26_GENERATED_CLOSURE_POLICIES = (
             "sNdsNativeStageValidationCache.valid",
         ),
     },
-    {
-        "path": "src/nds/nds_renderer.c",
-        "closure": "ndsRendererNativeStageHashGeneratedSegment0Outputs",
-        "tracked_bases": ("prepared", "state", "stats"),
-        "fields": _classified(
-            FIELD_CLASS_CALLBACK,
-            """
-            prepared.alpha_ref prepared.alpha_test prepared.near_inside
-            prepared.packed_color prepared.poly_fmt prepared.s prepared.t
-            prepared.texture_entry prepared.texture_format
-            prepared.texture_generation prepared.texture_height prepared.texture_name
-            prepared.texture_params prepared.texture_width prepared.textured
-            state.texture_prepare_alpha_constant
-            state.texture_prepare_decal_depth state.texture_prepare_enabled
-            state.texture_prepare_material_color state.texture_prepare_name
-            state.texture_prepare_offset state.texture_prepare_origin_s
-            state.texture_prepare_origin_t state.texture_prepare_poly_alpha
-            state.texture_prepare_poly_fmt state.texture_prepare_prim_depth
-            state.texture_prepare_scale_s state.texture_prepare_scale_t
-            state.texture_prepare_source_zbuffered
-            state.texture_prepare_valid state.texture_prepare_vertex_flags
-            stats.blend_color stats.color_command_count
-            stats.first_othermode_opcode stats.first_othermode_w0
-            stats.first_othermode_w1 stats.geometry_clear_mask
-            stats.geometry_command_count stats.geometry_mode
-            stats.geometry_set_mask stats.ignored_state_command_count
-            stats.othermode_command_count stats.othermode_h stats.othermode_l
-            stats.state_command_count stats.sync_command_count
-            stats.texture_combine_count stats.texture_combine_w0
-            stats.texture_combine_w1 stats.texture_command_count
-            stats.texture_image stats.texture_mask stats.texture_source_hash1
-            stats.texture_source_hash2 stats.texture_state_flags
-            """,
-        ),
-        "tracked_static_bases": (
-            "sNdsNativeStageOwnerExecution",
-            "sNdsNativeStageSegment0HotRuns",
-            "sNdsNativeStageValidationCache",
-        ),
-        "static_fields": {
-            **_classified(
-                FIELD_CLASS_IMMUTABLE,
-                """
-                sNdsNativeStageSegment0HotRuns.run_index
-                sNdsNativeStageValidationCache.prepared_dense_indices
-                """,
-            ),
-            **_classified(
-                FIELD_CLASS_CALLBACK,
-                "sNdsNativeStageOwnerExecution.runs",
-            ),
-        },
-    },
+    # ndsRendererNativeStageHashGeneratedSegment0Outputs, the lab GX
+    # hash's segment-0 output hash, went with its flag (cb344c4671b).
 )
 
 
@@ -6003,7 +5954,7 @@ def build_consumed_fields_manifest(
                     "ndsRendererAdapterBuildDObjLocalMatrix",
                     "ndsRendererAdapterMvpParentScaleX",
                     "ndsRendererAdapterMvpPerspectiveF",
-                    "ndsRendererAdapterMvpMod1F",
+                    "ndsRendererAdapterMvpMod1Q",
                     "ndsRendererAdapterApplyMvpRecalc",
                     "ndsRendererAdapterPrepareNativeStageMatrices",
                     "ndsRendererAdapterPrepareNativeStageBindingMatrix",

@@ -18,7 +18,7 @@ $(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_
 NDS_R2_PATH ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
-# NDS_TASK36_HW_COMPOSE and NDS_TASK44_STAGE_STEADY.
+# NDS_TASK36_HW_COMPOSE and NDS_STAGE_STEADY.
 #
 # What it deletes, measured on the c120 profile (1600-frame both-CPU gate):
 # ndsRendererAdapterStageWorldSourceKeyMatches runs 54.0x a frame for 7,719
@@ -155,7 +155,7 @@ NDS_R2_COLLISION_FIXED_DISPATCH ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
-NDS_TASK44_STAGE_STEADY ?= 0
+NDS_STAGE_STEADY ?= 0
 # Task 82 ITCM re-pack: evict the animated-CI4 texel path (dead while Dream
 # Land water is frozen) and admit five higher-stall functions. Placement only.
 # KEEP on measurement: WORK-H P95 -52,224 with both evictions; this ships the

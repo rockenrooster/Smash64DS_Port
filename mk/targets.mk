@@ -46,7 +46,7 @@ ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
 endif
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
-override NDS_TASK44_STAGE_STEADY := 1
+override NDS_STAGE_STEADY := 1
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
@@ -219,7 +219,7 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_TASK44_STAGE_STEADY := 1
+override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
@@ -304,7 +304,7 @@ override NDS_R2_PATH := 1
 endif
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_TASK44_STAGE_STEADY := 1
+override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
@@ -384,7 +384,7 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
 override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_TASK44_STAGE_STEADY := 1
+override NDS_STAGE_STEADY := 1
 override NDS_ITCM_LIB_LEAVES := 5
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_P2_UI_KIT := 1
@@ -439,11 +439,11 @@ endif
 # on the heap instead.
 NDS_R2_EFFECT_POOL ?= 12
 # Checked here, after every target block has applied its overrides, so a target
-# that turns both on is accepted while a bare command-line NDS_TASK44_STAGE_STEADY=1
+# that turns both on is accepted while a bare command-line NDS_STAGE_STEADY=1
 # without the Task 36 stage owner still fails loudly.
-ifeq ($(NDS_TASK44_STAGE_STEADY),1)
+ifeq ($(NDS_STAGE_STEADY),1)
 ifeq ($(NDS_TASK36_HW_COMPOSE),0)
-$(error NDS_TASK44_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
+$(error NDS_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
 endif
 endif
 # The stage replay arena needs the Task 36 compose every target forces

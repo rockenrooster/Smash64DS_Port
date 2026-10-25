@@ -1884,9 +1884,9 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u64 task36_runtime_rigid_mask;
     /* Static bindings need only the source-key guard; frame matrix preparation
      * consumes the current mask directly. */
-    u8 task44_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
-    u8 task44_rigid_binding_count;
-    u8 task44_binding_lists_valid;
+    u8 steady_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    u8 steady_rigid_binding_count;
+    u8 steady_binding_lists_valid;
     /* Slice 44. Which residue class of the stride is revalidated this frame.
      * Advanced once per PrepareNativeStageOwner, which is once per frame --
      * the c120 profile pins that at 26 rigid checks per frame against a
@@ -1921,10 +1921,10 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 topology_valid;
     /* Task 44 item 3: the stage-asset mutation generation this workspace was
      * last fully validated against. Zero means "never admitted". */
-    u32 task44_admission_generation;
+    u32 steady_admission_generation;
     /* Per-segment root DObj recorded at collect time, so steady admission can
      * catch a display graph rebuilt underneath an unchanged segment GObj. */
-    DObj *task44_segment_roots[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
+    DObj *steady_segment_roots[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
 } NDSRendererAdapterNativeStageWorkspace;
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
