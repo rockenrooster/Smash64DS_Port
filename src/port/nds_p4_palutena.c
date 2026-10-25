@@ -1349,7 +1349,7 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   the right the left's mirror, fanning out from beside the centre above
  *   her head -- the orb, and in style B the ring's two halves on it, its
  *   crisp ring and dot, p6_light.py ORB_STYLES) in the three smashes, up
- *   air and the taunt. As the 3DS forward
+ *   air, the taunt and the counterattack. As the 3DS forward
  *   smash's wind-up draws them (owner p6ab, 2026-10-17, Strong_Side_A
  *   frames 0-10: "camera facing", "the 2 light wings should be separated by
  *   the small glowing circle", "mostly camera facing with slight rotations
@@ -1470,6 +1470,13 @@ static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
      * (motions/appeal.ms), not Ultimate's 54, and without the ring (owner
      * p7h, 2026-10-19: "an extra blue/green ring ... remove it"). */
     { 164, 11, 13, 65, 85, 0, 12, 0 },
+    /* The counterattack, ground and air (owner 2026-10-25: "its the exact
+     * same wing/orb vfx in the smash attacks, just reuse that"): Ultimate's
+     * backlight at its start at rate 2.75 (its 38 frames over 2.75), turned
+     * as the down smash's, through the clip's anchors (0,0) (6,4) (10,7)
+     * (36,56): grown by 2, held to 9, gone at 15. */
+    { 226, 0, 2, 9, 15, 0, 1, 0 },
+    { 227, 0, 2, 9, 15, 0, 1, 0 },
 };
 
 /* Each light card's material alpha at full, in the tree's order (p6_light.py

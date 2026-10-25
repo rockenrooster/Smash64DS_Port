@@ -492,7 +492,11 @@ Defaults for the specials:
   knockback, growth and base (owner: "inherit the BKB and KBG as the
   attacker's hit"; first floored at the script's 65 and 33, then mirrored
   when a countered jab launched: "a little jab can send them launching").
-  A stage's hit leaves the script's, and the angle stays 361. The hit is the one the hit search picked
+  A stage's hit leaves the script's, and the angle stays 361. It shows
+  her light wings and orb as the smashes do (owner 2026-10-25: "its the
+  exact same wing/orb vfx in the smash attacks, just reuse that"): Ultimate's
+  backlight at the counterattack's start at rate 2.75, grown by frame 2,
+  gone by 15 (`sNdsP4PalutenaLightWindows`, motions 226 and 227). The hit is the one the hit search picked
   (its largest knockback), kept per fighter by `ndsP4UpdateHitDamageStats`
   (`ndsP4PickedHitKnockback`).
 
