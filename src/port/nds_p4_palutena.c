@@ -148,12 +148,11 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_COUNTER_MUL 1.3F
 #define PAL_COUNTER_MIN 11
 #define PAL_COUNTER_MAX 50
-/* Its knockback from that hit too (owner 2026-10-24: "inherit the BKB and
- * KBG as the attacker's hit"): the hit's growth and base, at least the
- * script's (motions/counter_hit.ms, the floor); a hit of set knockback, or a
- * stage's, leaves the script's. The angle stays the script's 361. */
-#define PAL_COUNTER_KBG 65
-#define PAL_COUNTER_BKB 33
+/* Its knockback is that hit's (owner 2026-10-24: "inherit the BKB and KBG
+ * as the attacker's hit", then, a jab's counter launching, the hit
+ * mirrored): its set knockback, growth and base as they were; a stage's
+ * hit (no values kept) leaves the script's (motions/counter_hit.ms). The
+ * angle stays the script's 361. */
 
 static FTSpecialColl sNdsP4PalutenaReflectColl = {
     nFTSpecialCollKindNessReflector, nFTPartsJointCommonStart,
@@ -717,33 +716,34 @@ static s32 *ndsP4PalutenaCounterHit(FTStruct *fp)
     return ndsP4PalutenaVar(fp, 0);
 }
 
-/* The damage of the hit each player's counter last counted, and its growth
- * and base (status_vars do not outlive the status change into the
- * counterattack). */
+/* The damage of the hit each player's counter last counted, and its set
+ * knockback, growth and base (status_vars do not outlive the status change
+ * into the counterattack). */
 static s32 sNdsP4PalutenaCounterTaken[4];
-static s32 sNdsP4PalutenaCounterKnockback[4][2];
+static s32 sNdsP4PalutenaCounterKnockback[4][3];
 
 /* The counterattack's hits deal what the counted hit was worth
- * (PAL_COUNTER_MUL, PAL_COUNTER_MIN, PAL_COUNTER_MAX) with its knockback
- * (PAL_COUNTER_KBG, PAL_COUNTER_BKB), in place of the script's
- * (motions/counter_hit.ms). */
+ * (PAL_COUNTER_MUL, PAL_COUNTER_MIN, PAL_COUNTER_MAX) with its knockback,
+ * in place of the script's (motions/counter_hit.ms). */
 static void ndsP4PalutenaCounterDamage(FTStruct *fp)
 {
+    const s32 *knockback = sNdsP4PalutenaCounterKnockback[fp->player & 3u];
     s32 damage = (s32)(((f32)sNdsP4PalutenaCounterTaken[fp->player & 3u] * PAL_COUNTER_MUL) + 0.5F);
-    s32 scale = sNdsP4PalutenaCounterKnockback[fp->player & 3u][0];
-    s32 base = sNdsP4PalutenaCounterKnockback[fp->player & 3u][1];
+    sb32 mirror = ((knockback[0] | knockback[1] | knockback[2]) != 0) ? TRUE : FALSE;
     s32 i;
 
     damage = (damage < PAL_COUNTER_MIN) ? PAL_COUNTER_MIN : ((damage > PAL_COUNTER_MAX) ? PAL_COUNTER_MAX : damage);
-    scale = (scale < PAL_COUNTER_KBG) ? PAL_COUNTER_KBG : scale;
-    base = (base < PAL_COUNTER_BKB) ? PAL_COUNTER_BKB : base;
     for (i = 0; i < ARRAY_COUNT(fp->attack_colls); i++)
     {
         if (fp->attack_colls[i].attack_state != nGMAttackStateOff)
         {
             fp->attack_colls[i].damage = damage;
-            fp->attack_colls[i].knockback_scale = scale;
-            fp->attack_colls[i].knockback_base = base;
+            if (mirror != FALSE)
+            {
+                fp->attack_colls[i].knockback_weight = knockback[0];
+                fp->attack_colls[i].knockback_scale = knockback[1];
+                fp->attack_colls[i].knockback_base = knockback[2];
+            }
         }
     }
 }
@@ -829,15 +829,11 @@ static s32 ndsP4PalutenaUpdateDamage(FTStruct *fp, s32 damage)
     if (((fp->status_id == PAL_STATUS_COUNTER) || (fp->status_id == (PAL_STATUS_COUNTER + PAL_AIR))) &&
         (fp->motion_vars.flags.flag0 != 0))
     {
-        s32 weight;
-        s32 scale;
-        s32 base;
+        s32 *knockback = sNdsP4PalutenaCounterKnockback[fp->player & 3u];
 
-        ndsP4PickedHitKnockback(fp, &weight, &scale, &base);
+        ndsP4PickedHitKnockback(fp, &knockback[0], &knockback[1], &knockback[2]);
         *ndsP4PalutenaCounterHit(fp) = 1;
         sNdsP4PalutenaCounterTaken[fp->player & 3u] = damage;
-        sNdsP4PalutenaCounterKnockback[fp->player & 3u][0] = (weight != 0) ? 0 : scale;
-        sNdsP4PalutenaCounterKnockback[fp->player & 3u][1] = (weight != 0) ? 0 : base;
         return 0;
     }
     return damage;
