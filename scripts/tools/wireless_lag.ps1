@@ -1,5 +1,10 @@
 param([Parameter(Mandatory)][string]$Build, [int]$MatchCount = 3, [int]$TimeoutSeconds = 1500, [string]$Tag = 'lag',
-      [ValidateRange(2, 4)][int]$Consoles = 2)
+      [ValidateRange(2, 4)][int]$Consoles = 2,
+      # The host's sweep setup (gNdsNetLabSweepRepro, nds_net_lobby.c): 0 the
+      # classic roster over nine stages in one-minute matches; 3 the four heavy
+      # content mixes on Hyrule Castle and Sector Z, two humans and two level-9
+      # CPUs, every item at Very High, five-minute matches.
+      [int]$Repro = 0)
 # Two to four linked consoles (melonDS-mp, MELONDS_MP_INSTANCES, gdb 3600 + 10 a console) run
 # the lab autopilot of a wireless lab ROM in builds/<Build> (NDS_NET_LAB_LOBBY
 # + SWEEP). Each console prints its VBlank count at every scene entry, at the
@@ -13,6 +18,18 @@ $ErrorActionPreference = 'Stop'
 $melon = Join-Path $S64Repo 'emulators\melonds-mp\melonDS.exe'
 $rom = Join-Path $S64Repo "builds\$Build\smash64ds.nds"
 $elf = Join-Path $S64Repo "builds\$Build\smash64ds.elf"
+# Instance n >= 1 joins only when its firmware user name is melonDS<n+1>
+# (nds_net_autopilot.c); melonDS names every instance "melonDS", and such an
+# instance hosts a room of its own, so a four-console run was one pair and
+# two lone hosts until 2026-10-26.
+$toml = Join-Path (Split-Path $melon) 'melonDS.toml'
+if ($Consoles -gt 2) {
+    $text = Get-Content -LiteralPath $toml -Raw
+    foreach ($i in 1..($Consoles - 1)) {
+        $text = $text -replace "(?s)(\[Instance$i\.Firmware\][^\[]*?Username = )`"[^`"]*`"", "`${1}`"melonDS$($i + 1)`""
+    }
+    Set-Content -LiteralPath $toml -Value $text -NoNewline -Encoding ascii
+}
 $env:MELONDS_MP_INSTANCES = [string]$Consoles
 $env:MELONDS_NO_ACTIVATE = '1'
 $p = Start-Process -FilePath $melon -ArgumentList @($rom) -WorkingDirectory (Split-Path $melon) -PassThru -WindowStyle Minimized
@@ -30,6 +47,8 @@ try {
         @('set pagination off', 'set confirm off', 'set remotetimeout 20', "target remote localhost:$port",
           'set remote X-packet off', 'set breakpoint always-inserted on',
           'tbreak main', 'continue',
+          # the build's NDS_NET_LAB_SWEEP_REPRO (0) unless -Repro picks one
+          $(if ($Repro -gt 0) { "set var gNdsNetLabSweepRepro = $Repro" } else { 'echo' }),
           # bp 2: scene entries; arms bp 3 at the battle's entry
           'break ndsSceneManagerEnter', 'commands', 'silent',
           "printf `"S i=$i vb=%u scene=%u role=%u heap=%u\n`", sVBlankCount, gSCManagerSceneData.scene_curr, gNdsNetAutopilotRole, gNdsTaskmanGeneralHeapFreeMin",
@@ -63,6 +82,12 @@ try {
     foreach ($g in $gps) { if (-not $g.HasExited) { Stop-Process -Id $g.Id -Force } }
     if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
 }
+# One session is one host (role 1) and the rest guests (role 2).
+$roles = foreach ($i in 0..($Consoles - 1)) {
+    $m = Select-String -LiteralPath (Join-Path $S64Probes "$Tag-$i.log") -Pattern '^S i=\d+ .* role=(\d+)' | Select-Object -First 1
+    if ($m) { $m.Matches[0].Groups[1].Value } else { '?' }
+}
+"ROLES $($roles -join ',')" + $(if (@($roles | Where-Object { $_ -eq '1' }).Count -ne 1) { ' -- NOT ONE SESSION' } else { '' })
 foreach ($i in 0..($Consoles - 1)) {
     Get-Content (Join-Path $S64Probes "$Tag-$i.log") | Where-Object { $_ -match '^(S|G|H|C|END|VEC) ' }
     Get-Content (Join-Path $S64Probes "$Tag-$i.err") -ErrorAction SilentlyContinue | Select-String 'No symbol|Error|error' |
