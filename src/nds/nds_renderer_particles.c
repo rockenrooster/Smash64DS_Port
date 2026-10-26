@@ -163,6 +163,11 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void
 {
     FILE *file = NULL;
     u32 texture;
+    /* Never the sheet table: the env-colour variants bake from
+     * sNdsRendererParticleAtlasPalette all battle, and borrowing it left
+     * sheet 0's copy holding these colours (the launch smoke's dark first
+     * frames, BUGS.md 2026-10-26). Bounded by the entry guard below. */
+    u16 palette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
 
     gNdsRendererWhispyNativePrepareCount++;
     file = ndsRendererHardwareFencedTextureFopen(
@@ -231,8 +236,8 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void
             (ndsRendererHardwareFencedTextureFseek(
                  file, (long)palette_offset, SEEK_SET) != 0) ||
             (ndsRendererHardwareFencedTextureFread(
-                 sNdsRendererParticleAtlasPalette, sizeof(u16),
-                 palette_entries, file) != palette_entries))
+                 palette, sizeof(u16), palette_entries, file) !=
+             palette_entries))
         {
             goto fail;
         }
@@ -271,7 +276,7 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void
             goto fail;
         }
         glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0,
-                        sNdsRendererParticleAtlasPalette);
+                        palette);
         /* GFX_PAL_FORMAT is a write-only GX command port, not readable state.
          * Ask libnds for the palette object's encoded PLTT_BASE word so the
          * direct binder and packet stream reproduce glBindTexture exactly. */
@@ -327,6 +332,8 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(voi
     int size_y;
     int params = TEXGEN_TEXCOORD | GL_TEXTURE_COLOR0_TRANSPARENT |
                  GL_TEXTURE_WRAP_T | GL_TEXTURE_FLIP_T;
+    /* Its own scratch, as in the Whispy prepare above. */
+    u16 palette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
 
     gNdsRendererFoxBlasterGlowPrepareCount++;
     texel_bytes = ((u32)texture->width * (u32)texture->height) >> 1;
@@ -362,8 +369,8 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(voi
                     ((u32)texture->palette_offset * sizeof(u16))),
              SEEK_SET) != 0) ||
         (ndsRendererHardwareFencedTextureFread(
-             sNdsRendererParticleAtlasPalette, sizeof(u16),
-             texture->palette_entries, file) != texture->palette_entries))
+             palette, sizeof(u16), texture->palette_entries, file) !=
+         texture->palette_entries))
     {
         goto fail;
     }
@@ -380,7 +387,7 @@ NDS_RENDERER_COLD static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(voi
         goto fail;
     }
     glColorTableEXT(GL_TEXTURE_2D, 0, texture->palette_entries, 0, 0,
-                    sNdsRendererParticleAtlasPalette);
+                    palette);
     glGetColorTableParameterEXT(
         GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
     if (palette_format < 0)

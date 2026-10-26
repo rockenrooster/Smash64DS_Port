@@ -3170,9 +3170,9 @@ static u32 sNdsRendererParticleAtlasPrepared;
  * generator writes it. Each sheet gets its own colours; see the note at the
  * glColorTableEXT call in ndsRendererHardwarePrepareParticleAtlas.
  *
- * ndsRendererHardwarePrepareWhispyNativeTextures borrows this buffer as palette
- * scratch, which stays safe because it runs after all four sheets are uploaded
- * and its own guard still bounds it by NDS_PARTICLE_QUAD_PALETTE_ENTRIES. */
+ * Read-only after that read: the env-colour variants (and the animation
+ * sheets loaded after the countdown) take their colours from here for the
+ * whole battle, so nothing may borrow it as scratch. */
 static u16 sNdsRendererParticleAtlasPalette[
     NDS_PARTICLE_QUAD_PALETTE_BYTES / sizeof(u16)];
 /* The upload loop indexes sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES and the
