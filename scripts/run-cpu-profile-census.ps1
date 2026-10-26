@@ -168,7 +168,7 @@ $censusWindow = @{
 }
 
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
-    $OutDir = Join-Path $root 'artifacts\task37-census'
+    $OutDir = Join-Path $root 'artifacts\cpu-profile-census'
 }
 # melonDS runs with its own working directory (emulators/melonds) and opens
 # MELONDS_ARM9_PROFILE_CSV verbatim. A relative -OutDir would therefore resolve

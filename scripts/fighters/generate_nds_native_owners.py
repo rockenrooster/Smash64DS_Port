@@ -10273,7 +10273,7 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 "lookup": "checked direct indices in exact source order",
             },
         },
-        "task21c_disposition": {
+        "binding_consumer_disposition": {
             "verdict": "REVERT_RUNTIME_KEEP_FOUNDATION",
             "retained": [
                 "u16 joint schedules", "u8 binding-joint indices",
@@ -10308,7 +10308,7 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 "bytes_per_record": 4,
                 "fields": ["vertex_flags"],
             },
-            "task21b_disposition": (
+            "record_split_disposition": (
                 "record split and clear deletion require an independently positive "
                 "exact A/B; retain the 56-byte layout when that gate is not met"
             ),

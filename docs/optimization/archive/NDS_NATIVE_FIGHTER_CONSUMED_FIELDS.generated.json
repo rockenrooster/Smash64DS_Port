@@ -5,6 +5,17 @@
     "live_camera_independent",
     "callback_visible_mutation_output"
   ],
+  "binding_consumer_disposition": {
+    "retained": [
+      "u16 joint schedules",
+      "u8 binding-joint indices",
+      "16-byte root/epoch records",
+      "8-byte run records",
+      "consumed-field and invalidation manifest"
+    ],
+    "reverted": "the adapter direct-index binding consumer; its exact same-slot A/B reduced matrix ticks but regressed complete fighter draw and P95",
+    "verdict": "REVERT_RUNTIME_KEEP_FOUNDATION"
+  },
   "compact_program": {
     "binding_joints": {
       "consumer": "the native hierarchy's owner tables",
@@ -213,8 +224,8 @@
     "line_bytes": 32,
     "record": "NDSNativeHierarchyPreparedRun",
     "record_bytes": 56,
+    "record_split_disposition": "record split and clear deletion require an independently positive exact A/B; retain the 56-byte layout when that gate is not met",
     "records": 49,
-    "task21b_disposition": "record split and clear deletion require an independently positive exact A/B; retain the 56-byte layout when that gate is not met",
     "unconsumed_fields": {
       "bytes_per_record": 4,
       "fields": [
@@ -914,16 +925,5 @@
       "resource_offset": "0x0139",
       "sha256": "8c49ded8144d153b25101afc6c71f5e455ef43e2ddc5326c0f71a72ae740b5a5"
     }
-  ],
-  "task21c_disposition": {
-    "retained": [
-      "u16 joint schedules",
-      "u8 binding-joint indices",
-      "16-byte root/epoch records",
-      "8-byte run records",
-      "consumed-field and invalidation manifest"
-    ],
-    "reverted": "the adapter direct-index binding consumer; its exact same-slot A/B reduced matrix ticks but regressed complete fighter draw and P95",
-    "verdict": "REVERT_RUNTIME_KEEP_FOUNDATION"
-  }
+  ]
 }

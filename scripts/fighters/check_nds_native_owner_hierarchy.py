@@ -532,9 +532,9 @@ def main() -> int:
             compact["joint_schedule"]["field_bytes"] == 2 and
             compact["binding_joints"]["field_bytes"] == 1,
             "consumed-field manifest lost compact source-order cardinality")
-    require(manifest["task21c_disposition"]["verdict"] ==
+    require(manifest["binding_consumer_disposition"]["verdict"] ==
             "REVERT_RUNTIME_KEEP_FOUNDATION",
-            "Task 21C runtime/table disposition changed")
+            "the binding consumer's runtime/table disposition changed")
     retained_plans, _ = packet.parse_generated_plans(checked_in_generated)
     _, context = packet.build_plans(source_root)
 
