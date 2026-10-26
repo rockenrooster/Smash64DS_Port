@@ -252,8 +252,8 @@ def emitted_programs(owner: str) -> dict[tuple[str, str], list[tuple[int, ...]]]
     merged high-first and low re-indexed through the union (generate()).
     A low context built alone fails the generator's own light-index pins
     (Link's appendix rows), which is why this does not call it per detail."""
-    high = native.build_p2_owner_runtime_context(REPO, owner, "high")
-    low = native.build_p2_owner_runtime_context(REPO, owner, "low")
+    high = native.build_owner_runtime_context(REPO, owner, "high")
+    low = native.build_owner_runtime_context(REPO, owner, "low")
     merged = list(high["light_preambles"])
     for preamble in low["light_preambles"]:
         if preamble not in merged:

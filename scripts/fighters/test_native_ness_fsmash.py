@@ -64,7 +64,7 @@ def test_fsmash_program_puts_the_bat_at_joint_17(detail):
     payload = native.load_o2r_payload(SOURCE, "ness")
     descriptors = native._owner_joint_descriptors(payload, "ness", detail)[:-1]
     assert descriptors[BAT_DESCRIPTOR][1] is None     # blank in the JointTree
-    context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+    context = native.build_owner_runtime_context(SOURCE, "ness", detail)
     assert (BAT_BINDING, BAT_ROOT) in [
         (binding, offset)
         for binding, offset in context["root_program_appendix_specs"]]
@@ -84,7 +84,7 @@ def test_fsmash_program_puts_the_bat_at_joint_17(detail):
     assert fsmash["binding_parents"] == win3["binding_parents"]
     assert set(fsmash["cross_slots"]) == {native.PACKED_GX_SLOT_CURRENT}
 
-    emitted = "\n".join(native.render_p2_owner_runtime_program(
+    emitted = "\n".join(native.render_owner_runtime_program(
         dict(context, root_programs=programs)))
     suffix = "" if detail == "high" else "Low"
     for array in ("Roots", "CrossPaletteSlots"):
@@ -98,18 +98,18 @@ def test_bat_root_dropped_from_either_detail_fails(victim):
     """Remove the bat's bake for ONE detail: the generator refuses that detail
     alone (control first)."""
     for detail in ("high", "low"):
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+        context = native.build_owner_runtime_context(SOURCE, "ness", detail)
         assert "FSmash" in [p["name"] for p in
                             native.build_owner_root_programs(SOURCE, context)]
     saved = native.ROOT_PROGRAM_APPENDIX["ness"][victim]
     native.ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
         row for row in saved if row[1] != BAT_ROOT)
     try:
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", victim)
+        context = native.build_owner_runtime_context(SOURCE, "ness", victim)
         with pytest.raises(ValueError, match="0x6b50"):
             native.build_owner_root_programs(SOURCE, context)
         other = "low" if victim == "high" else "high"
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", other)
+        context = native.build_owner_runtime_context(SOURCE, "ness", other)
         assert "FSmash" in [p["name"] for p in
                             native.build_owner_root_programs(SOURCE, context)]
     finally:

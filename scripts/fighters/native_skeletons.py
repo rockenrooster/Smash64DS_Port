@@ -83,7 +83,7 @@ def root_offsets(repo: Path, name: str, skeleton_id=1) -> tuple[int, ...]:
 def contexts(repo: Path):
     result = {}
     for name, sid in PROGRAMS:
-        context = owners.build_p2_root_set_runtime_context(
+        context = owners.build_root_set_runtime_context(
             repo, name, "high", root_offsets(repo, name, sid))
         # The source skeleton has one DL vector, independent of body detail.
         for detail in ("high", "low"):

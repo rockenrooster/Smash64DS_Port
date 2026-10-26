@@ -15,10 +15,10 @@ from source_test_helpers import source as read_source  # noqa: E402
 
 @pytest.fixture(scope="module", params=("high", "low"))
 def link(request):
-    context = native.build_p2_owner_runtime_context(ROOT, "link", request.param)
+    context = native.build_owner_runtime_context(ROOT, "link", request.param)
     if request.param == "low":
         # Production shares the union of both details' light preambles.
-        high = native.build_p2_owner_runtime_context(ROOT, "link", "high")
+        high = native.build_owner_runtime_context(ROOT, "link", "high")
         merged = list(high["light_preambles"])
         merged.extend(row for row in context["light_preambles"] if row not in merged)
         context["light_preamble_indices"] = [

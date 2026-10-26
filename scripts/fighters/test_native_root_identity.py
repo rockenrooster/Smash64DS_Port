@@ -22,9 +22,9 @@ def test_emitted_identity_matches_original_model(owner, detail):
     payload = source[size_offset + 4:]
     assert len(payload) == size
 
-    context = native.build_p2_owner_runtime_context(ROOT, owner, detail)
+    context = native.build_owner_runtime_context(ROOT, owner, detail)
     decode_roots = tuple(context["roots"])
-    emitted = "\n".join(native.render_p2_owner_runtime_program(context))
+    emitted = "\n".join(native.render_owner_runtime_program(context))
     block = re.search(
         r"static const NDSNativeRoot \w+\[\d+\] =\s*\{(.*?)\n\};",
         emitted, re.S,

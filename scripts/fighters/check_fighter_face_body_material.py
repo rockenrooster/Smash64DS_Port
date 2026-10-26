@@ -562,7 +562,7 @@ def fold_census(resolved, ctx, verbose: bool, label: str, model=None):
 
 def check_owner(owner: str, detail: str, verbose: bool, mutate: bool) -> int:
     payload = G.load_o2r_payload(REPO_ROOT, owner)
-    ctx = G.build_p2_owner_runtime_context(REPO_ROOT, owner, detail)
+    ctx = G.build_owner_runtime_context(REPO_ROOT, owner, detail)
     canonical = ctx["canonical_root_count"]
     counts = [root_material_counts(ctx, r) for r in range(canonical)]
     records = decode_mobjsubs(payload, owner, sum(counts))

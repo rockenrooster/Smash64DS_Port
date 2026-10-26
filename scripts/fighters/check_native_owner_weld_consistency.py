@@ -103,7 +103,7 @@ def binding_metadata(owner: str, detail: str):
         # P2 branch below already reads by another name.
         root_bindings = list(context["owner_root_bindings"][owner_index])
     else:
-        context = native.build_p2_owner_runtime_context(REPO, owner, detail)
+        context = native.build_owner_runtime_context(REPO, owner, detail)
         roots = context["roots"]
         topology = context["topology"]
         root_bindings = context["root_bindings"]

@@ -218,7 +218,7 @@ def _member_values(
         context: dict[str, object]) -> list[tuple[str, str, list[str], str]]:
     """(C type, member name, initializer rows, guard) for every array.
 
-    The value formats are the ones `render_p2_owner_runtime_program` already
+    The value formats are the ones `render_owner_runtime_program` already
     emits; keeping them identical is what makes the image byte-comparable
     against the arrays it replaces.
 
@@ -292,7 +292,7 @@ def _member_values(
          [f"0x{value:08x}u" for value in dense_shade_words], ""),
         # Scene-resident PreparedDense: the exact generated initial bytes the
         # static arrays used to carry, in the same row format
-        # `render_p2_owner_runtime_program` emits so the image stays
+        # `render_owner_runtime_program` emits so the image stays
         # byte-comparable against the arrays it replaces. Placed immediately
         # after dense_normals (a u32 array, so this member always starts
         # 4-aligned with zero padding in both 10-byte and 16-byte layouts).
@@ -329,7 +329,7 @@ def _member_values(
     ]
 
     # The fighter primitive streams. Both compiled modes are emitted under their
-    # own guard, exactly as `render_p2_owner_runtime_program` emits the arrays:
+    # own guard, exactly as `render_owner_runtime_program` emits the arrays:
     # the mode is a build flag, so which stream is in the image is decided by
     # the same `nds_build_config.h` the renderer reads.
     for mode in (1, 2):
@@ -853,7 +853,7 @@ def main() -> int:
             contexts[(owner_name, detail)] = (
                 owners.build_mariofox_runtime_context(repo_root, detail)
                 if owner_name == "mariofox" else
-                owners.build_p2_owner_runtime_context(
+                owners.build_owner_runtime_context(
                     repo_root, owner_name, detail))
     hat_contexts: dict[tuple[int, str], dict[str, object]] = {}
     skeleton_contexts = skeletons.contexts(repo_root)
@@ -861,7 +861,7 @@ def main() -> int:
     for modelpart_id in owners.KIRBY_COPY_HAT_MODEL_PART_IDS:
         for detail in DETAILS:
             hat_contexts[(modelpart_id, detail)] = (
-                owners.build_p2_kirby_hat_runtime_context(
+                owners.build_kirby_hat_runtime_context(
                     repo_root, detail, modelpart_id))
 
     # The owners generator guards exactly `NATIVE_OWNER_IMAGE_ARRAYS` out of

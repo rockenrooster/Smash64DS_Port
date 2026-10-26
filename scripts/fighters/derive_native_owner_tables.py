@@ -30,7 +30,7 @@ root = Path({str(root)!r})
 spec = importlib.util.spec_from_file_location('g', root / 'scripts/fighters/generate_nds_native_owners.py')
 g = importlib.util.module_from_spec(spec); sys.modules['g'] = g; spec.loader.exec_module(g)
 try:
-    inv = g.build_p2_owner_model_inventory(root, {fighter!r})
+    inv = g.build_owner_model_inventory(root, {fighter!r})
     print('OK ' + json.dumps({{d: inv['details'][d].get('hierarchy') for d in inv['details']}}))
 except Exception as e:
     print('ERR ' + type(e).__name__ + ' ' + str(e))

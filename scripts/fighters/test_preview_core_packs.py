@@ -307,7 +307,7 @@ class CorePackTest(unittest.TestCase):
             if kind in ("mario", "fox"):
                 ctx, rows = shared, shared[kind + "_roots"]
             else:
-                ctx = native.build_p2_owner_runtime_context(root, kind, "high")
+                ctx = native.build_owner_runtime_context(root, kind, "high")
                 rows = ctx["roots"]
             d = gen.decode_pack(blob)
             secs = d["sections"]

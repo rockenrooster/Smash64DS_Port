@@ -1345,11 +1345,11 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
         return (ndsP4RelocAssetPath(token) != NULL) ?
             token : NDS_RELOC_ASSET_INVALID;
     }
-    u32 p2_anim_asset_id = ndsRelocFighterAnimAssetIDForToken(token);
+    u32 fighter_anim_asset_id = ndsRelocFighterAnimAssetIDForToken(token);
 
-    if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+    if (fighter_anim_asset_id != NDS_RELOC_ASSET_INVALID)
     {
-        return p2_anim_asset_id;
+        return fighter_anim_asset_id;
     }
     /* Core P2-3 symbols have real source IDs in the decomp-derived port table,
      * but keep this generated bridge beside the animation table so the

@@ -629,7 +629,7 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
 
 
 def _cross_bindings(name: str, detail: str) -> list[int]:
-    data = O.build_p2_owner_source_export(REPO, name, detail)
+    data = O.build_owner_source_export(REPO, name, detail)
     vertex = O.unpack_many("<BBBBIhh", data["vertex"])
     vb = dict(O.unpack_many("<HH", data.get("vertex_bindings", b"")))
     tris = [i[0] for i in O.unpack_many("<H", data["triangles"])]
@@ -681,8 +681,8 @@ def learn(name: str, o2r_dir: Path, attr_offset: int) -> dict:
         try:
             for detail in ("high", "low"):
                 building[0] = detail
-                O.build_p2_owner_runtime_context(REPO, name, detail)
-            O.build_p2_owner_model_inventory(REPO, name)
+                O.build_owner_runtime_context(REPO, name, detail)
+            O.build_owner_model_inventory(REPO, name)
             if pins.get("cross_low") == pins["cross_high"]:
                 del pins["cross_low"]
             return pins
@@ -947,7 +947,7 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         o2r_dir, attr = owners[name]
         register(name, o2r_dir, attr, load_pins(name))
         guard = f"NDS_P4_{name.upper()}"
-        contexts = {d: O.build_p2_owner_runtime_context(REPO, name, d) for d in ("high", "low")}
+        contexts = {d: O.build_owner_runtime_context(REPO, name, d) for d in ("high", "low")}
         _merge_light_preambles(name, contexts["high"], contexts["low"])
         # A lean build images no dense_vertices (generate_nds_native_owner_
         # images.py LEAN_TRIM): the lean renderer reads s/t of them, from
@@ -969,11 +969,11 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
                     REPO, contexts[detail])
         owner_inc = []
         for detail in ("high", "low"):
-            owner_inc += O.render_p2_owner_runtime_program(contexts[detail])
+            owner_inc += O.render_owner_runtime_program(contexts[detail])
         # The model-part variants the program emitted (donor_variants), by
         # name for the renderer's resolver; NULL and 0 when it has none.
         for detail, suffix in (("high", ""), ("low", "Low")):
-            count = len(O._p2_owner_variant_specs(name, detail))
+            count = len(O._owner_variant_specs(name, detail))
             macro = f"NDS_P4_NATIVE_{name.upper()}_ROOT_VARIANTS{'_LOW' if detail == 'low' else ''}"
             array = f"sNdsNative{O._owner_title(name)}RootVariants{suffix}" if count else "NULL"
             owner_inc += [f"#define {macro} {array}", f"#define {macro}_COUNT {count}u"]
@@ -1108,8 +1108,8 @@ def main() -> int:
         raise SystemExit(f"no pins for {args.owner}; run --learn once")
     register(args.owner, args.o2r, args.attributes, pins)
     for detail in ("high", "low"):
-        O.build_p2_owner_runtime_context(REPO, args.owner, detail)
-    O.build_p2_owner_model_inventory(REPO, args.owner)
+        O.build_owner_runtime_context(REPO, args.owner, detail)
+    O.build_owner_model_inventory(REPO, args.owner)
     print(f"{args.owner}: native owner verified against pins")
     return 0
 

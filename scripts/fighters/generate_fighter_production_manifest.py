@@ -1468,7 +1468,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     for fighter in fighters:
         owner_name = str(fighter["fighter"]).lower()
         if owner_name in native_owner.OWNER_MODEL_CENSUS:
-            fighter["native_model"] = native_owner.build_p2_owner_model_inventory(
+            fighter["native_model"] = native_owner.build_owner_model_inventory(
                 repo_root, owner_name
             )
         fighter["special_status_contract"] = build_special_status_contract(

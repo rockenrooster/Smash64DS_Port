@@ -6,7 +6,7 @@ model part keeps the source hat's materials and tracks, and its display
 lists come from KIRBY_CUSTOM_HATS (use_extended_special_parts_). This module
 compiles each hat a power of the enabled contents draws through the owner
 generator's own copy-hat path (generate_nds_native_owners.py
-build_p2_kirby_hat_runtime_context, which also carries the trio body baked
+build_kirby_hat_runtime_context, which also carries the trio body baked
 against the hat's own head): the hat's two lists and their vertices are
 appended to Kirby's model payload, standing in for the source hat's model
 part, and the textures they load move to one texture file per content, so
@@ -462,7 +462,7 @@ def clear_caches():
 def build_hat(hat: HatSource, detail: str, resident: dict, vanilla_size: int,
               source_offset: int):
     """The hat's image context and its trio program at one detail."""
-    context = O.build_p2_kirby_hat_runtime_context(REPO, detail, hat.base)
+    context = O.build_kirby_hat_runtime_context(REPO, detail, hat.base)
     if "trio_body_root" not in context:
         raise HatError(f"hat {hat.hat:#x} {detail}: image carries no trio body")
     faithful = O.build_kirby_trio_context_program(REPO, detail, hat.base)
@@ -565,7 +565,7 @@ def main() -> int:
     resident = {}
     source_offsets = {}
     for detail in DETAILS:
-        ctx = O.build_p2_owner_runtime_context(REPO, "kirby", detail)
+        ctx = O.build_owner_runtime_context(REPO, "kirby", detail)
         resident[detail] = {row[0]: (row, light)
                             for row, light in zip(ctx["roots"], ctx["light_preamble_indices"])}
         source_offsets[detail] = [spec[1] for spec in O.MODEL_PART_ROOT_VARIANTS["kirby"][detail]]

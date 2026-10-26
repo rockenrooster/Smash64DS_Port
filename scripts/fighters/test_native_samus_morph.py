@@ -18,7 +18,7 @@ from source_test_helpers import source as read_split  # noqa: E402
 
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_morph_programs_reuse_source_geometry_and_live_joint(detail):
-    context = native.build_p2_owner_runtime_context(SOURCE, "samus", detail)
+    context = native.build_owner_runtime_context(SOURCE, "samus", detail)
     programs = native.build_owner_root_programs(SOURCE, context)
     # FSmash (the forward smash's own root program) sits between Catch and
     # the morph pair.
@@ -29,7 +29,7 @@ def test_morph_programs_reuse_source_geometry_and_live_joint(detail):
         assert program["roots"] == [next(row for row in context["roots"] if row[0] == offset)]
         assert program["binding_parents"] == (255,)
         assert program["cross_slots"] == (native.PACKED_GX_SLOT_CURRENT,)
-        emitted = "\n".join(native.render_p2_owner_runtime_program(
+        emitted = "\n".join(native.render_owner_runtime_program(
             dict(context, root_programs=programs)))
         assert "sNdsNativeSamus" + program["name"] + "Roots" in emitted
 

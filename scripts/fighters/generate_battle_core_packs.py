@@ -218,7 +218,7 @@ def _native_texture_roots(fighter: str, model_id: int):
             context = native.build_owner_source_context(ROOT, detail)
             programs.append((detail, context, context[owner + "_roots"]))
         else:
-            context = native.build_p2_owner_runtime_context(ROOT, owner, detail)
+            context = native.build_owner_runtime_context(ROOT, owner, detail)
             programs.append((detail, context, context["roots"]))
     # Electric bodies set their own G_SETTIMG; without these spans the compact
     # Model resolves a null image and the whole fighter draw rejects.

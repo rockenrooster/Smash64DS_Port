@@ -125,7 +125,7 @@ def test_joint_30_is_blank_and_outside_setup_parts(detail):
 
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_yoyo_program_appends_the_root_last(detail):
-    context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+    context = native.build_owner_runtime_context(SOURCE, "ness", detail)
     assert context["canonical_root_count"] == CANONICAL_ROOT_COUNT
     assert (YOYO_BINDING, YOYO_ROOT) in [
         (binding, offset)
@@ -152,7 +152,7 @@ def test_yoyo_program_appends_the_root_last(detail):
     assert yoyo["roots"] == [rows[offset][0]
                              for offset in yoyo["root_offsets"]]
 
-    emitted = "\n".join(native.render_p2_owner_runtime_program(
+    emitted = "\n".join(native.render_owner_runtime_program(
         dict(context, root_programs=programs)))
     suffix = "" if detail == "high" else "Low"
     for array in ("Roots", "CrossPaletteSlots"):
@@ -165,7 +165,7 @@ def test_yoyo_root_dropped_from_either_detail_fails(victim):
     """Remove the yo-yo's bake for ONE detail and require the red for that
     detail alone, with a control that proves the tables green first."""
     for detail in ("high", "low"):
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+        context = native.build_owner_runtime_context(SOURCE, "ness", detail)
         assert "YoYo" in [p["name"] for p in
                           native.build_owner_root_programs(SOURCE, context)]
 
@@ -175,12 +175,12 @@ def test_yoyo_root_dropped_from_either_detail_fails(victim):
     try:
         # The generator refuses a program whose root has no bake rather than
         # emitting a vector that matches nothing...
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", victim)
+        context = native.build_owner_runtime_context(SOURCE, "ness", victim)
         with pytest.raises(ValueError, match="0x69e0"):
             native.build_owner_root_programs(SOURCE, context)
         # ...and only in the detail that lost it.
         other = "low" if victim == "high" else "high"
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", other)
+        context = native.build_owner_runtime_context(SOURCE, "ness", other)
         assert "YoYo" in [p["name"] for p in
                           native.build_owner_root_programs(SOURCE, context)]
     finally:

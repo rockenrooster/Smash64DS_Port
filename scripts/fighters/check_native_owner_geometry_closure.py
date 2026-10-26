@@ -276,7 +276,7 @@ def owner_program(owner: str, detail: str) -> dict:
             # covers the whole shared program once, under "mario".
             "shared": True,
         }
-    context = native.build_p2_owner_runtime_context(REPO, owner, detail)
+    context = native.build_owner_runtime_context(REPO, owner, detail)
     return {
         "roots": context["roots"],
         "canonical_root_count": context["canonical_root_count"],
@@ -327,7 +327,7 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
     if (head_mp, 0) not in native.KIRBY_TRIO_CONTEXTS:
         raise ValueError(
             f"kirby trio: unreachable context head_mp={head_mp}")
-    context = native.build_p2_owner_runtime_context(REPO, "kirby", detail)
+    context = native.build_owner_runtime_context(REPO, "kirby", detail)
     entry = context.get("kirby_trio_bodies", {}).get(head_mp)
     if entry is None:
         raise ValueError(

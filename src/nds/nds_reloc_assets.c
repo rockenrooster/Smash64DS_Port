@@ -861,12 +861,12 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
         return ndsRelocAssetFoxAnimEntry(asset_id);
     }
     {
-        const NDSRelocAssetEntry *p2_anim =
+        const NDSRelocAssetEntry *fighter_anim =
             ndsRelocAssetFighterAnimEntry(asset_id);
 
-        if (p2_anim != NULL)
+        if (fighter_anim != NULL)
         {
-            return p2_anim;
+            return fighter_anim;
         }
     }
 

@@ -685,8 +685,8 @@ def owner_contexts(owner):
     table, the union of both details, and each detail's root programs."""
     if owner in _CTX:
         return _CTX[owner]
-    high = g.build_p2_owner_runtime_context(ROOT, owner, 'high')
-    low = g.build_p2_owner_runtime_context(ROOT, owner, 'low')
+    high = g.build_owner_runtime_context(ROOT, owner, 'high')
+    low = g.build_owner_runtime_context(ROOT, owner, 'low')
     merged = list(high['light_preambles'])
     for pre in low['light_preambles']:
         if pre not in merged:

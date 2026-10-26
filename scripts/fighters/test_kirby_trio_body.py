@@ -28,7 +28,7 @@ def _reference_body_xyz(detail, head_mp):
     payload = live.load_o2r_payload(closure.REPO, "kirby")
     canon = live.unpack_many(
         "<IHHHBBBB2x",
-        live.build_p2_owner_source_export(
+        live.build_owner_source_export(
             closure.REPO, "kirby", detail)["kirby_roots"])
     slots = [None] * live.VERTEX_CACHE_SIZE
     geometry = [0x00020000]
@@ -128,7 +128,7 @@ class KirbyTrioBodyTests(unittest.TestCase):
         for detail in closure.DETAILS:
             canon = live.unpack_many(
                 "<IHHHBBBB2x",
-                live.build_p2_owner_source_export(
+                live.build_owner_source_export(
                     closure.REPO, "kirby", detail)["kirby_roots"])
             with self.subTest(detail=detail):
                 old = (
@@ -165,7 +165,7 @@ class KirbyTrioBodyTests(unittest.TestCase):
                     _quiet(closure.source_closure, "kirby", detail, program),
                     [])
                 # Census pins hold: the generator edit moved no canonical byte.
-                live.build_p2_owner_runtime_context(
+                live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail)
 
     def test_variant_schema_names_the_main_seam(self):
@@ -202,7 +202,7 @@ class KirbyTrioShippedTests(unittest.TestCase):
     """The SHIPPED tables (grown kirby context + per-head body section).
 
     Every test below reads the real emitted context -- the same arrays
-    render_p2_owner_runtime_program emits and the image payload carries --
+    render_owner_runtime_program emits and the image payload carries --
     assembled into the live 9/10-root draw order, never the scratch bake.
     """
 
@@ -295,9 +295,9 @@ class KirbyTrioShippedTests(unittest.TestCase):
         # prefix of the shipped one, and all other owners ignore the flag.
         for detail in closure.DETAILS:
             with self.subTest(detail=detail):
-                off = live.build_p2_owner_runtime_context(
+                off = live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=False)
-                on = live.build_p2_owner_runtime_context(
+                on = live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=True)
                 self.assertNotIn("kirby_trio_bodies", off)
                 for key in ("state", "sequence", "vertex", "triangles",
@@ -323,9 +323,9 @@ class KirbyTrioShippedTests(unittest.TestCase):
         for owner in ("luigi", "donkey", "link", "samus"):
             with self.subTest(owner=owner):
                 for detail in closure.DETAILS:
-                    off = live.build_p2_owner_runtime_context(
+                    off = live.build_owner_runtime_context(
                         closure.REPO, owner, detail, kirby_trio=False)
-                    on = live.build_p2_owner_runtime_context(
+                    on = live.build_owner_runtime_context(
                         closure.REPO, owner, detail, kirby_trio=True)
                     self.assertEqual(off, on)
 
@@ -335,14 +335,14 @@ class KirbyTrioShippedTests(unittest.TestCase):
         # emitted variant blocks match line for line.
         for detail in closure.DETAILS:
             with self.subTest(detail=detail):
-                off = live.build_p2_owner_runtime_context(
+                off = live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=False)
-                on = live.build_p2_owner_runtime_context(
+                on = live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=True)
                 self.assertEqual(off["variant_specs"], on["variant_specs"])
                 self.assertEqual(off["roots"], on["roots"])
-                old_lines = live.render_p2_owner_runtime_program(off)
-                new_lines = live.render_p2_owner_runtime_program(on)
+                old_lines = live.render_owner_runtime_program(off)
+                new_lines = live.render_owner_runtime_program(on)
 
                 def _block(lines, symbol):
                     start = next(
@@ -377,11 +377,11 @@ class KirbyTrioShippedTests(unittest.TestCase):
         import generate_nds_native_owner_images as images
         for detail in closure.DETAILS:
             with self.subTest(detail=detail):
-                context = live.build_p2_owner_runtime_context(
+                context = live.build_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=True)
                 context["root_programs"] = live.build_owner_root_programs(
                     closure.REPO, context)
-                lines = live.render_p2_owner_runtime_program(context)
+                lines = live.render_owner_runtime_program(context)
                 text = "\n".join(lines)
                 suffix = "Low" if detail == "low" else ""
                 for head in RESIDENT_BODY_HEADS:
@@ -397,16 +397,16 @@ class KirbyTrioShippedTests(unittest.TestCase):
                 # and every other owner's member set is byte-identical.
                 for owner in ("luigi", "donkey"):
                     for det in ("high", "low"):
-                        a = live.build_p2_owner_runtime_context(
+                        a = live.build_owner_runtime_context(
                             closure.REPO, owner, det, kirby_trio=False)
-                        b = live.build_p2_owner_runtime_context(
+                        b = live.build_owner_runtime_context(
                             closure.REPO, owner, det, kirby_trio=True)
                         ma = images.render_image(owner, det, a)
                         mb = images.render_image(owner, det, b)
                         self.assertEqual(ma, mb)
                 grown = images.render_image("kirby", detail, context)
                 plain = images.render_image(
-                    "kirby", detail, live.build_p2_owner_runtime_context(
+                    "kirby", detail, live.build_owner_runtime_context(
                         closure.REPO, "kirby", detail, kirby_trio=False))
                 self.assertGreater(len(grown), len(plain))
                 self.assertIn(".abi_tag", grown.split(".state_deltas")[0])
@@ -581,7 +581,7 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
                            0x2AF8, 0x17850, 0x3858, 0x2B80, 0x2C28),
         }
         for detail in closure.DETAILS:
-            context = live.build_p2_owner_runtime_context(
+            context = live.build_owner_runtime_context(
                 closure.REPO, "kirby", detail)
             programs = live.build_owner_root_programs(closure.REPO, context)
             names = [p["name"] for p in programs]

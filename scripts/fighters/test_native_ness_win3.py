@@ -138,7 +138,7 @@ def test_joint_17_is_selected_but_carries_no_canonical_display_list(detail):
 
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_win3_program_inserts_the_root_in_source_order(detail):
-    context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+    context = native.build_owner_runtime_context(SOURCE, "ness", detail)
     assert context["canonical_root_count"] == CANONICAL_ROOT_COUNT
     # Win3's row first; slice 7 appended the yo-yo's and the forward-smash
     # bat's after it (test_native_ness_yoyo.py, test_native_ness_fsmash.py),
@@ -178,7 +178,7 @@ def test_win3_program_inserts_the_root_in_source_order(detail):
     assert len(win3["binding_parents"]) == WIN3_ROOT_COUNT
     assert win3["binding_parents"][WIN3_ROOT_INDEX] == WIN3_PARENT_BINDING
 
-    emitted = "\n".join(native.render_p2_owner_runtime_program(
+    emitted = "\n".join(native.render_owner_runtime_program(
         dict(context, root_programs=programs)))
     suffix = "" if detail == "high" else "Low"
     for array in ("Roots", "CrossPaletteSlots"):
@@ -201,7 +201,7 @@ def test_win3_root_dropped_from_either_detail_fails(victim):
     # guards against.)
     assert not [line for line in census_failures() if "0x6d90" in line]
     for detail in ("high", "low"):
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
+        context = native.build_owner_runtime_context(SOURCE, "ness", detail)
         assert native.build_owner_root_programs(SOURCE, context)
 
     saved = native.ROOT_PROGRAM_APPENDIX["ness"][victim]
@@ -210,7 +210,7 @@ def test_win3_root_dropped_from_either_detail_fails(victim):
     try:
         # The generator must refuse to build a program whose root has no bake,
         # rather than silently emitting a short vector that matches nothing.
-        context = native.build_p2_owner_runtime_context(SOURCE, "ness", victim)
+        context = native.build_owner_runtime_context(SOURCE, "ness", victim)
         with pytest.raises(ValueError, match="0x6d90"):
             native.build_owner_root_programs(SOURCE, context)
         # ...and the mutation census must name that detail, and only it.

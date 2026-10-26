@@ -119,7 +119,7 @@ def test_samus_high_and_low_images_map_to_real_source_payloads(tmp_path):
     source = battle._source_payload(model[0])
     offsets = set()
     for detail in ("high", "low"):
-        context = battle.native.build_p2_owner_runtime_context(
+        context = battle.native.build_owner_runtime_context(
             battle.ROOT, "samus", detail)
         offsets.update(delta[1] for delta in context["state"]
                        if delta[2] == 6 and delta[3] == 0)
@@ -153,9 +153,9 @@ def test_kirby_bex2_contains_private_source_yoshi_pixels(tmp_path):
     local_spans = local["spans"][model[4]:model[4] + model[5]]
     local_source = battle._source_payload(model[0])
     for detail in ("high", "low"):
-        contexts = [battle.native.build_p2_owner_runtime_context(
+        contexts = [battle.native.build_owner_runtime_context(
             battle.ROOT, "kirby", detail)]
-        contexts.extend(battle.native.build_p2_kirby_hat_runtime_context(
+        contexts.extend(battle.native.build_kirby_hat_runtime_context(
             battle.ROOT, detail, modelpart) for modelpart in
             battle.native.KIRBY_COPY_HAT_MODEL_PART_IDS)
         for context in contexts:

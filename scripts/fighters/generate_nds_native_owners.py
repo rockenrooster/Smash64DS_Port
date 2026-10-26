@@ -2086,7 +2086,7 @@ def build_source_export(repo_root: Path, detail: str = "high"
     return data
 
 
-def build_p2_owner_source_export(
+def build_owner_source_export(
         repo_root: Path, owner_name: str, detail: str = "high"
         ) -> dict[str, bytes]:
     """Decode a P2-3 owner without changing the frozen Mario/Fox program."""
@@ -2652,7 +2652,7 @@ KIRBY_COPY_LINK_MODELPART_ID = 10
 KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET = 0x00F8
 
 
-def _p2_owner_variant_specs(owner_name: str, detail: str):
+def _owner_variant_specs(owner_name: str, detail: str):
     specs = MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(detail, ())
     if owner_name != "kirby":
         return specs
@@ -2668,7 +2668,7 @@ def _p2_owner_variant_specs(owner_name: str, detail: str):
     return resident_joint6 + tuple(spec for spec in specs[14:] if spec[0] != 0)
 
 
-def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
+def _owner_root_program_appendix_specs(owner_name: str, detail: str):
     return ROOT_PROGRAM_APPENDIX.get(owner_name, {}).get(detail, ())
 
 # Complete source events that alter Link's live DObj display-list program.
@@ -3220,7 +3220,7 @@ def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
 def build_kirby_trio_context_program(repo_root, detail="high", head_mp=1):
     """Bake one reachable trio program with LIVE helpers only.
 
-    Same decoder path as build_p2_owner_runtime_context (source export, epoch
+    Same decoder path as build_owner_runtime_context (source export, epoch
     light restore, dense geometry, direct tables), but over the faithful spec
     order so the body inherits the [canon0, head] cache exactly as the source
     JointTree draws it. The per-head arrangement legitimately differs from the
@@ -3232,7 +3232,7 @@ def build_kirby_trio_context_program(repo_root, detail="high", head_mp=1):
         raise ValueError(
             f"kirby trio: unreachable context head_mp={head_mp}")
     repo_root = Path(repo_root).resolve()
-    canon = build_p2_owner_source_export(repo_root, "kirby", detail)
+    canon = build_owner_source_export(repo_root, "kirby", detail)
     canon_roots = unpack_many("<IHHHBBBB2x", canon["kirby_roots"])
     specs = build_kirby_trio_faithful_specs(canon_roots, detail, head_mp)
     return _bake_kirby_specs_program(
@@ -3688,7 +3688,7 @@ def _append_kirby_trio_sections(repo_root, detail, context):
     return trio
 
 
-def build_p2_owner_model_inventory(
+def build_owner_model_inventory(
         repo_root: Path, owner_name: str) -> dict[str, object]:
     """Return a compact, adversarially checked native-model inventory.
 
@@ -3708,7 +3708,7 @@ def build_p2_owner_model_inventory(
 
     details: dict[str, object] = {}
     for detail in ("high", "low"):
-        data = build_p2_owner_source_export(repo_root, owner_name, detail)
+        data = build_owner_source_export(repo_root, owner_name, detail)
         state = unpack_many(STATE_DELTA_FORMAT, data["state"])
         sequence = list(data["sequence"])
         vertex = unpack_many("<BBBBIhh", data["vertex"])
@@ -6005,7 +6005,7 @@ def emit_rows(
     return result
 
 
-def render_p2_owner_runtime_program(
+def render_owner_runtime_program(
         context: dict[str, object]) -> list[str]:
     """Emit one independent P2-3 owner using the production table ABI."""
     owner_name = str(context["owner_name"])
@@ -6695,7 +6695,7 @@ def build_owner_source_context(
     }
 
 
-def build_p2_owner_runtime_context(
+def build_owner_runtime_context(
         repo_root: Path, owner_name: str, detail: str = "high",
         kirby_trio: bool = True,
         variant_specs_override=None,
@@ -6714,7 +6714,7 @@ def build_p2_owner_runtime_context(
     tables exactly and exists so tests can prove the append is purely
     additive. Every other owner ignores the flag.
     """
-    canonical_data = build_p2_owner_source_export(repo_root, owner_name, detail)
+    canonical_data = build_owner_source_export(repo_root, owner_name, detail)
     canonical_state = unpack_many(STATE_DELTA_FORMAT, canonical_data["state"])
     canonical_sequence = list(canonical_data["sequence"])
     canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
@@ -6733,11 +6733,11 @@ def build_p2_owner_runtime_context(
     canonical_root_count = len(canonical_roots)
 
     variant_specs = (
-        _p2_owner_variant_specs(owner_name, detail)
+        _owner_variant_specs(owner_name, detail)
         if variant_specs_override is None else tuple(variant_specs_override)
     )
     root_program_appendix_specs = (
-        _p2_owner_root_program_appendix_specs(owner_name, detail)
+        _owner_root_program_appendix_specs(owner_name, detail)
         if variant_specs_override is None else ()
     )
     root_bindings = list(range(canonical_root_count))
@@ -7008,7 +7008,7 @@ def _build_dense_shade_words(
     return words
 
 
-def build_p2_single_root_runtime_context(
+def build_single_root_runtime_context(
         repo_root: Path, owner_name: str, detail: str, root_offset: int,
         ) -> dict[str, object]:
     """Build one self-contained donor root through the normal fighter IR.
@@ -7018,10 +7018,10 @@ def build_p2_single_root_runtime_context(
     the fighter owner's arrays: compile the donor resource independently and let
     the runtime choose this table set for that exact binding.
     """
-    return build_p2_root_set_runtime_context(repo_root, owner_name, detail, (root_offset,))
+    return build_root_set_runtime_context(repo_root, owner_name, detail, (root_offset,))
 
 
-def build_p2_root_set_runtime_context(
+def build_root_set_runtime_context(
         repo_root: Path, owner_name: str, detail: str, root_offsets,
         ) -> dict[str, object]:
     """Compile a complete source-selected root set with independent bindings.
@@ -7353,7 +7353,7 @@ def _append_kirby_trio_body_to_hat(repo_root, detail, head_mp, hat):
 _KIRBY_HAT_CONTEXT_CACHE: dict = {}
 
 
-def build_p2_kirby_hat_runtime_context(
+def build_kirby_hat_runtime_context(
         repo_root: Path, detail: str, copy_modelpart_id: int,
         ) -> dict[str, object]:
     """Cut one joint-6 Kirby copy hat into a self-contained runtime image.
@@ -7381,11 +7381,11 @@ def build_p2_kirby_hat_runtime_context(
     if len(all_specs) < 14:
         raise ValueError("Kirby joint-6 modelpart variant table is incomplete")
     hat_spec = all_specs[copy_modelpart_id - 1]
-    base = build_p2_owner_runtime_context(
+    base = build_owner_runtime_context(
         repo_root, "kirby", detail, kirby_trio=False,
         variant_specs_override=(),
     )
-    full = build_p2_owner_runtime_context(
+    full = build_owner_runtime_context(
         repo_root, "kirby", detail, kirby_trio=False,
         variant_specs_override=(hat_spec,),
     )
@@ -8536,7 +8536,7 @@ def build_owner_root_programs(
             hat_context = None
             entry = trio.get(head_mp)
             if head_offset not in roots_by_offset:
-                hat_context = build_p2_kirby_hat_runtime_context(
+                hat_context = build_kirby_hat_runtime_context(
                     repo_root, detail_name, head_mp)
                 if hat_context["roots"][0][0] != head_offset:
                     raise ValueError(
@@ -8656,9 +8656,9 @@ def build_owner_root_programs(
         # Kirby's canonical tree remains KirbyModel.  This is NOT a LinkModel
         # body graft: the natural low-detail failure at frame 1324 proved the
         # foreign root is 326:0xF8 immediately after Kirby root 2.
-        hat = build_p2_kirby_hat_runtime_context(
+        hat = build_kirby_hat_runtime_context(
             repo_root, str(context["detail"]), KIRBY_COPY_LINK_MODELPART_ID)
-        boomerang = build_p2_single_root_runtime_context(
+        boomerang = build_single_root_runtime_context(
             repo_root, "linkboomerang", str(context["detail"]),
             KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
         canonical_count = int(context["canonical_root_count"])
@@ -9055,7 +9055,7 @@ def build_owner_root_programs(
             # asset 0x146 (LinkBoomerangModel), not LinkModel.  Compile that
             # one root in its own source context so its local epoch/run/dense
             # indices can never be interpreted through Link's tables.
-            donor = build_p2_single_root_runtime_context(
+            donor = build_single_root_runtime_context(
                 repo_root, "linkboomerang", detail,
                 KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
             if (len(donor["roots"]) != 1 or
@@ -9333,7 +9333,7 @@ def build_mariofox_runtime_context(
     image generator (generate_nds_native_owner_images.py, owner "mariofox")
     builds the NitroFS image that replaces them in the ARM9 binary from the
     same dictionary, so the two cannot disagree. The keys are the ones
-    build_p2_owner_runtime_context gives a P2-3 owner's image. Mario/Fox runs
+    build_owner_runtime_context gives a P2-3 owner's image. Mario/Fox runs
     carry no run metadata and their dense shade words are the runtime bake's
     normals (the image generator bakes them from dense_vertices).
     """
@@ -9445,7 +9445,7 @@ def generate(repo_root: Path | None = None) -> str:
 
     # The shared Mario/Fox arrays the "mariofox" NitroFS image carries leave
     # the ARM9 binary under its image guard, exactly as a P2-3 owner's do
-    # (render_p2_owner_runtime_program's choke point; P8 R7).
+    # (render_owner_runtime_program's choke point; P8 R7).
     _emit_rows = globals()["emit_rows"]
 
     def emit_rows(type_name, name, rows, const=True, attribute=""):
@@ -9535,12 +9535,12 @@ def generate(repo_root: Path | None = None) -> str:
     # P2-3 keeps new owners as independent programs so the qualified Mario/Fox
     # arrays above are not reindexed. They are emitted behind per-owner admission
     # flags and therefore have zero code/data cost in the standing P2-2 build.
-    p2_runtime_contexts = {}
+    owner_runtime_contexts = {}
     for owner_name, _flag in RUNTIME_OWNERS:
-        p2_high_context = build_p2_owner_runtime_context(
+        owner_high_context = build_owner_runtime_context(
             repo_root, owner_name, "high"
         )
-        p2_low_context = build_p2_owner_runtime_context(
+        owner_low_context = build_owner_runtime_context(
             repo_root, owner_name, "low"
         )
         # ONE PREAMBLE TABLE PER OWNER, BUT IT IS THE UNION OF BOTH DETAILS.
@@ -9555,8 +9555,8 @@ def generate(repo_root: Path | None = None) -> str:
         # faithful decode.  Take the UNION instead.  The high table is a prefix
         # of the union, so every high root index is unchanged; the low roots
         # are re-indexed through their own table's position in it.
-        merged_preambles = list(p2_high_context["light_preambles"])
-        for preamble in p2_low_context["light_preambles"]:
+        merged_preambles = list(owner_high_context["light_preambles"])
+        for preamble in owner_low_context["light_preambles"]:
             if preamble not in merged_preambles:
                 merged_preambles.append(preamble)
         if len(merged_preambles) > 0xff:
@@ -9565,38 +9565,38 @@ def generate(repo_root: Path | None = None) -> str:
             )
         low_remap = [
             merged_preambles.index(preamble)
-            for preamble in p2_low_context["light_preambles"]
+            for preamble in owner_low_context["light_preambles"]
         ]
-        p2_low_context["light_preamble_indices"] = [
+        owner_low_context["light_preamble_indices"] = [
             low_remap[index]
-            for index in p2_low_context["light_preamble_indices"]
+            for index in owner_low_context["light_preamble_indices"]
         ]
-        trio_low = p2_low_context.get("kirby_trio_bodies")
+        trio_low = owner_low_context.get("kirby_trio_bodies")
         if owner_name == "kirby" and trio_low:
             # Trio body roots index the same union table through their own
             # light field; remap them exactly like the low main roots.
             for entry in trio_low.values():
                 entry["root"]["light_index"] = low_remap[
                     entry["root"]["light_index"]]
-        p2_high_context["light_preambles"] = merged_preambles
-        p2_low_context["light_preambles"] = merged_preambles
-        p2_low_context["high_light_preambles"] = merged_preambles
+        owner_high_context["light_preambles"] = merged_preambles
+        owner_low_context["light_preambles"] = merged_preambles
+        owner_low_context["high_light_preambles"] = merged_preambles
         if owner_name in OWNER_ROOT_PROGRAMS or owner_name == "kirby":
-            p2_high_context["root_programs"] = build_owner_root_programs(
-                repo_root, p2_high_context)
-            p2_low_context["root_programs"] = build_owner_root_programs(
-                repo_root, p2_low_context)
-        p2_runtime_contexts[owner_name] = (p2_high_context, p2_low_context)
+            owner_high_context["root_programs"] = build_owner_root_programs(
+                repo_root, owner_high_context)
+            owner_low_context["root_programs"] = build_owner_root_programs(
+                repo_root, owner_low_context)
+        owner_runtime_contexts[owner_name] = (owner_high_context, owner_low_context)
 
     # CopyLink's hidden joint 12 references extern-data asset 0x146 rather than
     # KirbyModel.  Keep its six-triangle root in a tiny independent table set so
     # its local epoch/run/dense indices can never be interpreted through the
     # resident Kirby arrays.  High/Low resolve the same source root; merge the
     # light-preamble table exactly like ordinary owner pairs for one ABI.
-    copylink_boomerang_high = build_p2_single_root_runtime_context(
+    copylink_boomerang_high = build_single_root_runtime_context(
         repo_root, "linkboomerang", "high",
         KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
-    copylink_boomerang_low = build_p2_single_root_runtime_context(
+    copylink_boomerang_low = build_single_root_runtime_context(
         repo_root, "linkboomerang", "low",
         KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
     copylink_boomerang_preambles = list(
@@ -10149,22 +10149,22 @@ def generate(repo_root: Path | None = None) -> str:
     )
     lines += ["#endif", ""]
     for owner_name, flag in RUNTIME_OWNERS:
-        high_context, low_context = p2_runtime_contexts[owner_name]
+        high_context, low_context = owner_runtime_contexts[owner_name]
         lines += [
             f"#if {flag}",
             f"/* P2-3: independent source-derived {_owner_title(owner_name)} runtime owner. */",
             "",
         ]
-        lines += render_p2_owner_runtime_program(high_context)
-        lines += render_p2_owner_runtime_program(low_context)
+        lines += render_owner_runtime_program(high_context)
+        lines += render_owner_runtime_program(low_context)
         lines += [f"#endif  /* {flag} */", ""]
     lines += [
         "#if NDS_LINK || NDS_KIRBY",
         "/* Link/Kirby Neutral-B donor: LinkBoomerangModel asset 0x146. */",
         "",
     ]
-    lines += render_p2_owner_runtime_program(copylink_boomerang_high)
-    lines += render_p2_owner_runtime_program(copylink_boomerang_low)
+    lines += render_owner_runtime_program(copylink_boomerang_high)
+    lines += render_owner_runtime_program(copylink_boomerang_low)
     lines += ["#endif  /* NDS_LINK || NDS_KIRBY */", ""]
     return "\n".join(lines)
 

@@ -33,7 +33,7 @@ def test_image_dedup_distinguishes_owner_local_and_foreign_same_offset():
 
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_kirby_auxiliary_root_images_keep_yoshi_source_asset(detail):
-    context = native.build_p2_owner_runtime_context(ROOT, "kirby", detail)
+    context = native.build_owner_runtime_context(ROOT, "kirby", detail)
     root = next(row for row in context["roots"] if row[0] == 0x17850)
     indices = []
     for epoch in context["epochs"][root[1]:root[1] + root[4]]:
@@ -55,7 +55,7 @@ def test_welded_pair_streams_keep_original_image_slots(owner):
     # Synthetic pair streams insert parent VTX commands before the post DL;
     # they must resolve fixups from original source PCs after that insertion.
     for detail in ("high", "low"):
-        context = native.build_p2_owner_runtime_context(ROOT, owner, detail)
+        context = native.build_owner_runtime_context(ROOT, owner, detail)
         foreign = {(row[1], row[3]) for row in context["state"] if row[3]}
         # NYoshi's source references the shared polygon texture asset 302.
         assert foreign == ({(0x8, 303), (0x30, 303)} if owner == "nyoshi" else set())
@@ -64,7 +64,7 @@ def test_welded_pair_streams_keep_original_image_slots(owner):
 @pytest.mark.parametrize("detail", ("high", "low"))
 def test_link_ci_root_keeps_palette_load_ownership(detail):
     """Link root 0x2C88 must replay each CI palette before its texel image."""
-    context = native.build_p2_owner_runtime_context(ROOT, "link", detail)
+    context = native.build_owner_runtime_context(ROOT, "link", detail)
     root = next(row for row in context["roots"] if row[0] == 0x2C88)
     sequence = []
     for epoch in context["epochs"][root[1]:root[1] + root[4]]:
