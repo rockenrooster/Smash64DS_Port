@@ -54,8 +54,22 @@ static u32 gNdsEntryEffectNativeTexturePrepareCount;
  * the 2026-09-13 realtime re-fence; the shared prepare counter stays untouched. */
 static u32 gNdsEntryEffectNativeShieldPrepareCount;
 static u16 captured[5][32];
-static u32 calls, fail_call;
+static u32 calls, fail_call, alias_calls, alias_fail;
 static void ndsRendererEntryEffectTextureFill(void) {}
+/* P8 V9: a variant first tries to alias a live variant's texels with its own
+ * palette; only when that fails does it upload an image of its own. */
+static s32 ndsRendererHardwarePrepareIFCommonA3I5Alias(
+    u32 source, u32 width, u32 height, const u16 palette[32], u32 *name)
+{
+    u32 slot = (u32)(name - sNdsEntryShieldTextureName);
+    assert(width == 16 && height == 32 && slot < 5);
+    assert(source >= 100 && source < 105 && source != 100 + slot);
+    alias_calls++;
+    if (alias_fail) { return FALSE; }
+    memcpy(captured[slot], palette, sizeof(captured[slot]));
+    *name = 100 + slot;
+    return TRUE;
+}
 static s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 *palette, void (*fill)(void),
     void *user, u32 *name)
@@ -97,19 +111,26 @@ int main(void)
         /* The generator's own 32-entry grayscale ramp: identity per channel. */
         palette[color] = (u16)(color | (color << 5) | (color << 10));
     }
+    /* No alias possible: every variant uploads, and the third upload fails. */
+    alias_fail = 1;
     fail_call = 3;
     assert(!ndsRendererPrepareEntryShieldTextures(&texture));
     assert(calls == 3 && gNdsEntryEffectNativeShieldPrepareCount == 2);
+    assert(alias_calls == 3); /* Variant 1 tried variant 0; variant 2 both. */
     assert(gNdsEntryEffectNativeTexturePrepareCount == 0);
     assert(sNdsEntryShieldTextureName[0] == 100);
     assert(sNdsEntryShieldTextureName[1] == 101);
     assert(sNdsEntryShieldTextureName[2] == 0);
+    /* The retry aliases the live image for the three missing variants. */
+    alias_fail = 0;
     fail_call = 0;
     assert(ndsRendererPrepareEntryShieldTextures(&texture));
-    assert(calls == 6 && gNdsEntryEffectNativeShieldPrepareCount == 5);
+    assert(calls == 3 && alias_calls == 6);
+    assert(gNdsEntryEffectNativeShieldPrepareCount == 5);
     assert(gNdsEntryEffectNativeTexturePrepareCount == 0);
     assert(ndsRendererPrepareEntryShieldTextures(&texture));
-    assert(calls == 6); /* Reuse cannot rewrite palettes of queued polygons. */
+    /* Reuse cannot rewrite palettes of queued polygons. */
+    assert(calls == 3 && alias_calls == 6);
     for (variant = 0; variant < 5; variant++)
     {
         assert(sNdsEntryShieldTextureName[variant] == 100 + variant);
@@ -129,7 +150,7 @@ int main(void)
     }
     texture.palette_entries = 16;
     assert(!ndsRendererPrepareEntryShieldTextures(&texture));
-    assert(calls == 6);
+    assert(calls == 3 && alias_calls == 6);
     {
         Stats stats = {0x11223344, 0xff0000c0, 0xa5a5a5a5, 0x5a5a5a5a};
         Pair baked = {0, 1}, writes = {0, 3};

@@ -26,7 +26,7 @@ table, and where runs write. Conventions:
 
 | tool | does |
 |---|---|
-| `quick_check.ps1 [-Reference TAG] [-Skip host,configs,digests]` | the checks a change passes, in one command: the host tests, the five configs built incrementally into `builds/qc-*` (play = the ship link, walk, gate, profiling gate, wireless lab; each seeded once from the newest build of its kind), and the heavy roster's replay digests on Hyrule Temple, Congo Jungle and Yoshi's Island against a reference gate sweep (`-Reference s82v` = `artifacts/performance/p8-sweep/s82v-<slot>-...csv`). Summary: `builds/probes/quick-check.txt`; exit 0 only when every step that ran passed |
+| `quick_check.ps1 [-Reference TAG] [-Skip host,configs,digests]` | the checks a change passes, in one command: the host tests, the five configs built incrementally into `builds/qc-*` (play = the ship link, walk, gate, profiling gate, wireless lab; each seeded once from the newest build of its kind), and the heavy roster's replay digests on Hyrule Temple, Congo Jungle and Yoshi's Island against a reference gate sweep (`-Reference s82v` = `artifacts/performance/p8-sweep/s82v-<slot>-...csv`; `compare-replay-digest.py --ticks 16`: the same frames, or the same tick stream when a new ROM image only moved presentation timing). Summary: `builds/probes/quick-check.txt`; exit 0 only when every step that ran passed |
 | `run_host_tests.py OUT [--workers N]` | every tracked `scripts/**/test_*.py` under pytest, one process a file, N at a time: a line a file and a TOTAL line; exit 0 only with no failure, error or timeout |
 
 ## Builds

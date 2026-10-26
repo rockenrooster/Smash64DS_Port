@@ -18,7 +18,9 @@ param(
 #     the gate ROM, the profiling gate ROM and the wireless lab ROM -- each
 #     seeded once from the newest build of its kind.
 #  3. digests: the heavy roster on three stages on the gate ROM against the
-#     reference sweep (scripts/compare-replay-digest.py): IDENTICAL or fail.
+#     reference sweep (scripts/compare-replay-digest.py --ticks 16): the same
+#     frames, or the same tick stream when only presentation timing moved
+#     (a different ROM image relabels frames); anything else fails.
 # Exit 0 only when every step that ran passed; the summary is
 # builds/probes/quick-check.txt. Builds serialise on the tools' mutex, so this
 # waits behind a running build; never edit sources while it runs.
@@ -112,7 +114,7 @@ if ($Skip -notcontains 'digests') {
                 Step "digest$slot" $false "missing $(if (-not (Test-Path $want)) { $want } else { $got })"
                 continue
             }
-            $verdict = python scripts/compare-replay-digest.py $want $got | Select-Object -Last 1
+            $verdict = python scripts/compare-replay-digest.py $want $got --ticks 16 | Select-Object -Last 1
             Step "digest$slot" ($verdict -like 'IDENTICAL*') "g$($stages[$i]): $verdict"
         }
     }

@@ -182,10 +182,11 @@ def generated_rows():
 
 def aobj32_ids():
     """Every AObj32 clip id the generated manifest names, plus the pack
-    producer's own list."""
+    producer's own list. The fighters' rows only: the 1P bosses' rows
+    (NDS_1P_BOSS_...) are not MF corpus clips."""
     text = GEN_H.read_text()
     ids = set()
-    for block in re.finditer(r"#define NDS_\w+_AOBJ32_ASSET_ROWS\(X\)((?:[^\n]*\\\n)*[^\n]*)",
+    for block in re.finditer(r"#define NDS_(?!1P_)\w+_AOBJ32_ASSET_ROWS\(X\)((?:[^\n]*\\\n)*[^\n]*)",
                              text):
         for m in re.finditer(r"X\(ll\w+FileID,\s*(0x[0-9a-f]+)u\)", block.group(1)):
             ids.add(int(m.group(1), 16))

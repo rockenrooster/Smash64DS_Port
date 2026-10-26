@@ -30,6 +30,18 @@ separately as seam tick-B words. The same seam shape with NO shift (every
 differing sample has equal DGSA and a fully equal next sample; seen 2026-09-27
 at three of four ring stops of an unshifted run) is reported as IDENTICAL WITH
 N SEAM TICK-B WORDS, and only when --resync is given.
+
+--ticks N, when the frame comparison diverges, compares the runs' tick
+streams instead: each run's digest words in frame order (DGSA, DGSB), a word
+equal to the one before it counted once (a row samples the same state again
+while no new tick ran: the load waits, and the frames whose two words agree)
+and zero words dropped. Merged in order, the words must match except for gaps
+of at most N words that one run recorded and the other did not (its sampler
+missed those frames), with at most N words left over at either end. A change in presentation timing
+(a different ROM image, the same game code: frames presented a VBlank earlier
+or later) relabels frames without changing one tick, and this sees through it;
+a real divergence changes every later tick, which no offset can hide. Reported
+as IDENTICAL TICK STREAM, never as plain IDENTICAL.
 """
 import argparse
 import csv
@@ -54,6 +66,54 @@ def load(path, sequence=False, labels=None):
                 for i, row in enumerate(rows)}
 
 
+def tick_stream(samples):
+    """The digest words in frame order (DGSA then DGSB), a word repeated next
+    to itself and zero words dropped (see --ticks)."""
+    stream = []
+    for frame in sorted(samples):
+        for word in samples[frame]:
+            if word == 0 or (stream and stream[-1] == word):
+                continue
+            stream.append(word)
+    return stream
+
+
+def compare_ticks(control, candidate, limit):
+    """Merge the two tick streams in order: equal words match; a run of words
+    in one stream only (samples the other run did not record) is a gap of at
+    most `limit` words; a word in each stream that the other never reaches is
+    a divergence. Returns (matched, control gap words, candidate gap words,
+    longest gap) or None on a divergence."""
+    c, d = tick_stream(control), tick_stream(candidate)
+
+    def ahead(stream, start, word):
+        for index in range(start, min(len(stream), start + limit + 1)):
+            if stream[index] == word:
+                return index
+        return None
+
+    i = j = matched = only_c = only_d = longest = 0
+    while i < len(c) and j < len(d):
+        if c[i] == d[j]:
+            matched += 1
+            i += 1
+            j += 1
+            continue
+        k = ahead(c, i, d[j])
+        m = ahead(d, j, c[i])
+        if k is None and m is None:
+            return None
+        if m is None or (k is not None and k - i <= m - j):
+            only_c += k - i
+            longest = max(longest, k - i)
+            i = k
+        else:
+            only_d += m - j
+            longest = max(longest, m - j)
+            j = m
+    if (len(c) - i > limit) or (len(d) - j > limit) or matched < limit:
+        return None
+    return matched, only_c, only_d, longest
 
 
 def main():
@@ -66,6 +126,9 @@ def main():
     parser.add_argument('--resync', type=int, default=0,
                         help='with --sequence: accept one shift of up to N samples '
                              'after the first divergence if every later sample matches')
+    parser.add_argument('--ticks', type=int, default=0,
+                        help='when frames diverge, compare the tick streams at one '
+                             'offset of up to N words (presentation timing changes)')
     args = parser.parse_args()
 
     control_labels = []
@@ -154,9 +217,22 @@ def main():
                                     'unrecordedWords': unrecorded,
                                     'seamTickBWords': seam_b}
                 break
+    if (result['diverged'] and not args.sequence and args.ticks > 0):
+        ticks = compare_ticks(control, candidate, args.ticks)
+        if ticks is not None:
+            result['ticks'] = {'matched': ticks[0], 'controlOnly': ticks[1],
+                               'candidateOnly': ticks[2], 'longestGap': ticks[3]}
     if args.json:
         with open(args.json, 'w') as fh:
             json.dump(result, fh, indent=1)
+    if result.get('ticks'):
+        t = result['ticks']
+        print(f"IDENTICAL TICK STREAM over {t['matched']} digest words in order "
+              f"({t['controlOnly']} control-only and {t['candidateOnly']} "
+              f"candidate-only words in gaps of at most {t['longestGap']}; frame "
+              f"labels differ on {result['diverged']} of {len(shared)} shared "
+              f"frames: presentation timing)")
+        return 0
     if result.get('seamOnly'):
         print(f"IDENTICAL WITH {result['seamOnly']} SEAM TICK-B WORDS over "
               f"{len(shared)} {unit} (DGSA equal and the next sample equal at "
