@@ -89,6 +89,9 @@ INLINE_FRAGMENTS = {
         "renderer_adapter_stage_claims.inc",
         "renderer_adapter_stage_submits.inc",
     ),
+    "nds/nds_platform.c": (
+        "nds_platform_gl_wraps.c",
+    ),
 }
 
 
