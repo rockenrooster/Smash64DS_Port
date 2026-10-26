@@ -1232,11 +1232,40 @@ static NDS_RENDERER_COLD void ndsRendererParticleAnimationPumpSheet(void)
     }
 }
 
+/* A SHEET WAITS FOR A FRAME WITH ROOM FOR IT (P8 criterion B, owner
+ * 2026-10-25). A sheet's synchronous read is ~50K ticks, and in the frames
+ * right after the countdown it landed on the frames the fighters' first
+ * motion misses landed in: together they pushed frames past two VBlanks. A
+ * frame whose work so far (the battle iteration's start stamp, the led
+ * frame's wait excluded, as the particle LOD reads it) leaves less than
+ * this room before two VBlanks keeps its sheet for a later frame end, at
+ * most NDS_PARTICLE_ANIM_DEFER_MAX frames running (a heavy match still gets
+ * its sheets within a second or so of the countdown). Only when a sheet
+ * joins the lookup changes; until it does, its rows draw the nearest earlier
+ * resident frame, as before the sheets existed. */
+#define NDS_PARTICLE_ANIM_PUMP_ROOM 150000u
+#define NDS_PARTICLE_ANIM_TWO_VBLANKS 1120380u
+#define NDS_PARTICLE_ANIM_DEFER_MAX 30u
+extern volatile u32 gNdsBattleIterationStartTick;
+volatile u32 gNdsParticleAnimDeferredFrames;
+static u32 sNdsParticleAnimDeferRun;
+
 /* The frame end's whole cost when no animation sheet is pending. */
 static inline void ndsRendererParticleAnimationPump(void)
 {
     if (sNdsParticleAnimNextSheet != 0u)
     {
+        const u32 start = gNdsBattleIterationStartTick;
+
+        if ((start != 0u) && (sNdsParticleAnimDeferRun < NDS_PARTICLE_ANIM_DEFER_MAX) &&
+            ((cpuGetTiming() - start) >
+             (NDS_PARTICLE_ANIM_TWO_VBLANKS - NDS_PARTICLE_ANIM_PUMP_ROOM)))
+        {
+            sNdsParticleAnimDeferRun++;
+            gNdsParticleAnimDeferredFrames++;
+            return;
+        }
+        sNdsParticleAnimDeferRun = 0u;
         ndsRendererParticleAnimationPumpSheet();
     }
 }
