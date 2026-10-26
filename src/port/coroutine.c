@@ -207,10 +207,15 @@ static void ndsCoroutineLabNote(const PortCoroutine *coroutine)
     const u32 *words = (const u32 *)coroutine->stack;
     const u32 count = (u32)(coroutine->stack_size / 4u);
     const u32 owner = (u32)coroutine->lab_owner + 1u;
+    /* objman writes its overflow guard after the paint: gobjthread->stack[7],
+     * a u64 (0xFEDCBA98, 0) 56 bytes above a GObj stack's base. Not use. */
+    const u32 guard = ((count > 15u) && (words[14] == 0xFEDCBA98u)) ? 14u : count;
     u32 used;
     u32 i;
 
-    for (i = 0u; (i < count) && (words[i] == NDS_COROUTINE_LAB_PAINT); i++)
+    for (i = 0u; (i < count) &&
+                 ((words[i] == NDS_COROUTINE_LAB_PAINT) || (i == guard) || (i == guard + 1u));
+         i++)
     {
     }
     used = (count - i) * 4u;
