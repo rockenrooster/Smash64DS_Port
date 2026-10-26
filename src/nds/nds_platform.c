@@ -3820,6 +3820,9 @@ void ndsPlatformEndFrame(void)
     u32 lead_flush_vblank = 0u;
 #endif
 
+    /* Every present, a load's held ones too, beats the freeze report's
+     * heartbeat: a game thread that stops getting here trips it. */
+    NDS_FREEZE_DIAGNOSTICS_BEAT();
     /* A present while a frame is held is a loading service present -- every
      * scene's own frame Thaws before its EndFrame. It keeps the pacing and
      * commits nothing: no frame consume (its cloud emit and tint-tile
@@ -3837,6 +3840,8 @@ void ndsPlatformEndFrame(void)
         }
         ndsPlatformTransitionThaw();
     }
+    /* The scene's own frame: its load (the long freeze budget) is over. */
+    NDS_FREEZE_DIAGNOSTICS_FRAME();
     /* A present path that releases its cover without the explicit call
      * still starts the music its scene asked for during the load. */
     if (ndsPlatformSceneLoading() == FALSE)

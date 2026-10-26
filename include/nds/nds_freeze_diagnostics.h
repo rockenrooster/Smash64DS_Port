@@ -14,6 +14,9 @@
 #if NDS_FREEZE_DIAGNOSTICS
 
 #define NDS_FREEZE_DIAGNOSTICS_BREADCRUMB_COUNT 8u
+/* Once a scene presents frames: one unfinished for three to four seconds
+ * trips the report (the watchdog samples once a second). */
+#define NDS_FREEZE_DIAGNOSTICS_STALE_SAMPLES 3u
 
 enum NDSFreezeDiagnosticsBreadcrumb {
     NDS_FREEZE_BREADCRUMB_UPDATE_START = 0x55504454u, /* UPDT */
@@ -30,6 +33,8 @@ enum NDSFreezeDiagnosticsBreadcrumb {
 };
 
 void ndsFreezeDiagnosticsInit(void);
+/* Once NitroFS is up: the build id the report names (net/build.id). */
+void ndsFreezeDiagnosticsLoadBuildId(void);
 void ndsFreezeDiagnosticsBreadcrumb(u32 marker);
 void ndsFreezeDiagnosticsFgmEnter(u16 fgm_id);
 void ndsFreezeDiagnosticsFgmReturn(s32 channel);
@@ -37,8 +42,8 @@ void ndsFreezeDiagnosticsFlush(void);
 void ndsFreezeDiagnosticsVBlankWait(void);
 void ndsFreezeDiagnosticsHeartbeat(void);
 void ndsFreezeDiagnosticsStallMarker(void);
-/* Battle exit: the watchdog sleeps until the next battle's first frame. */
-void ndsFreezeDiagnosticsDisarm(void);
+/* A scene's entry: its load gets the long budget until its first frame. */
+void ndsFreezeDiagnosticsSceneLoad(void);
 /* One VBlank of the lockstep waiting for another console: alive. */
 void ndsFreezeDiagnosticsNetWait(void);
 
@@ -64,8 +69,16 @@ extern volatile u32 gNdsFreezeDiagnosticsReportIpcFifo;
 extern volatile u32 gNdsFreezeDiagnosticsReportIpcSync;
 extern volatile u32 gNdsFreezeDiagnosticsReportPresentedFrames;
 extern volatile u32 gNdsFreezeDiagnosticsReportLogicFrames;
+extern volatile u32 gNdsFreezeDiagnosticsStaleLimit;
 
 #define NDS_FREEZE_DIAGNOSTICS_INIT() ndsFreezeDiagnosticsInit()
+#define NDS_FREEZE_DIAGNOSTICS_LOAD_BUILD_ID() ndsFreezeDiagnosticsLoadBuildId()
+#define NDS_FREEZE_DIAGNOSTICS_SCENE_LOAD() ndsFreezeDiagnosticsSceneLoad()
+/* Any present, a load's held ones too: the game is alive (no breadcrumb). */
+#define NDS_FREEZE_DIAGNOSTICS_BEAT() ((void)gNdsFreezeDiagnosticsHeartbeat++)
+/* A scene's own frame: its load is over, the frame budget applies. */
+#define NDS_FREEZE_DIAGNOSTICS_FRAME() \
+    ((void)(gNdsFreezeDiagnosticsStaleLimit = NDS_FREEZE_DIAGNOSTICS_STALE_SAMPLES))
 #define NDS_FREEZE_DIAGNOSTICS_MARK(marker) \
     ndsFreezeDiagnosticsBreadcrumb((marker))
 #define NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id) \
@@ -77,19 +90,21 @@ extern volatile u32 gNdsFreezeDiagnosticsReportLogicFrames;
     ndsFreezeDiagnosticsVBlankWait()
 #define NDS_FREEZE_DIAGNOSTICS_HEARTBEAT() \
     ndsFreezeDiagnosticsHeartbeat()
-#define NDS_FREEZE_DIAGNOSTICS_DISARM() ndsFreezeDiagnosticsDisarm()
 #define NDS_FREEZE_DIAGNOSTICS_NET_WAIT() ndsFreezeDiagnosticsNetWait()
 
 #else
 
 #define NDS_FREEZE_DIAGNOSTICS_INIT() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_LOAD_BUILD_ID() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_SCENE_LOAD() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_BEAT() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_FRAME() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_MARK(marker) ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id) ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_FGM_RETURN(channel) ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_FLUSH() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_HEARTBEAT() ((void)0)
-#define NDS_FREEZE_DIAGNOSTICS_DISARM() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_NET_WAIT() ((void)0)
 
 #endif

@@ -17,6 +17,19 @@ function Use-S64DevkitPro {
     $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 }
 
+# The freeze report's trips, for every probe whose ROM carries the report
+# (P8 S5): gdb lines that print an X STALL line (trip count, scene, the one
+# before it, heartbeat) whenever the watchdog trips; none for an ELF without
+# the report, since an unknown breakpoint ends a gdb batch script.
+function Get-S64StallLines([string]$Elf) {
+    $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
+    if (-not (Test-Path -LiteralPath $Elf)) { return @() }
+    if (-not (& $nm $Elf | Select-String -SimpleMatch ' ndsFreezeDiagnosticsStallMarker' -Quiet)) { return @() }
+    return @('break ndsFreezeDiagnosticsStallMarker', 'commands', 'silent',
+        'printf "X STALL trips=%u scene=%u prev=%u hb=%u\n", gNdsFreezeDiagnosticsWatchdogTripCount, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsFreezeDiagnosticsHeartbeat',
+        'continue', 'end')
+}
+
 # The ship layout: every P4 content, the P5 stages and the shipping front end
 # (memory play-rom-needs-p5-flag, sweep-must-use-ship-layout).
 $S64ContentFlags = @('FALCO', 'GANONDORF', 'WOLF', 'BOWSER', 'MARTH', 'ROY', 'WARIO', 'PEACH',

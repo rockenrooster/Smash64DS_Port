@@ -18,7 +18,9 @@ table, and where runs write. Conventions:
 - `-Tag` names a run: its gdb command file and log are
   `builds/probes/<Tag>.gdb` / `<Tag>.log` (lines starting `X `/`x ` are the
   probe's records), captures go to `artifacts/visibility/probes/<Tag>/`, and
-  audit summaries to `builds/probes/audit-*.txt`.
+  audit summaries to `builds/probes/audit-*.txt`. Every gdb driver records a
+  freeze-report trip as an `X STALL` line (`Get-S64StallLines`, when the ROM
+  carries the report; `probe_session.ps1 -NoStall` leaves it out).
 - Builds are serialised on one named mutex (the lab linker script and UI-kit
   outputs are shared); never edit sources while one runs.
 

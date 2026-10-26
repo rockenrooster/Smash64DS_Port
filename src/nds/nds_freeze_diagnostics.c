@@ -1,29 +1,43 @@
-/* The freeze report: a heartbeat each battle frame beats (a frame unfinished
- * for three to four seconds trips it; the lockstep's waits for another
- * console count as beats), the exception handlers, breadcrumbs, and the
+/* The freeze report: a heartbeat every presented frame beats -- any scene's
+ * present (ndsPlatformEndFrame, the loads' held presents too) and each battle
+ * frame's end -- and a frame unfinished for three to four seconds trips it,
+ * from boot on; the boot and each scene's load get twenty seconds until the
+ * scene's first frame. The game's storage requests and the lockstep's and the
+ * lobby's waits for another console count as beats. Then the exception handlers, breadcrumbs, and the
  * lower-screen report of where the game thread and the interrupted code
- * stood. Built into the ship target (NDS_FREEZE_DIAGNOSTICS, Makefile) and
- * wired in through the NDS_FREEZE_DIAGNOSTICS_* macros, no-ops elsewhere. */
+ * stood, with the build id, scene, stage, roster and heap. Built into the
+ * ship target (NDS_FREEZE_DIAGNOSTICS, Makefile) and wired in through the
+ * NDS_FREEZE_DIAGNOSTICS_* macros, no-ops elsewhere. The report's drawing is
+ * cold code (it runs only on a freeze). */
 
 #include <nds.h>
+#include <stdio.h>
 
 #include <calico/system/tick.h>
 
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>
 #include <nds/nds_audio_storage.h>
+#include <nds/nds_cold.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_startup.h>
 
 #define NDS_FREEZE_DIAGNOSTICS_REPORT_STALL 0x5354414cu /* STAL */
 #define NDS_FREEZE_DIAGNOSTICS_REPORT_EXCEPTION 0x45584350u /* EXCP */
 #define NDS_FREEZE_DIAGNOSTICS_WATCHDOG_HZ 1u
-/* A battle frame that has not finished for three to four seconds. The
- * lockstep's wait for another console beats the heartbeat itself
- * (ndsFreezeDiagnosticsNetWait), so a stalled link is not a freeze. */
-#define NDS_FREEZE_DIAGNOSTICS_STALE_SAMPLES 3u
+/* From the boot (video setup) or a scene's entry to its first frame: a
+ * scene's load presents nothing for seconds -- on the emulator's card timing
+ * a VS battle's 2.4 s, the 1P Polygon Team stage's 3.4 s; at 1 MB/s (the S2
+ * slow-card lab) the VS battle's 11.2 s -- so it gets this many samples
+ * without a beat; once the scene presents a frame
+ * (NDS_FREEZE_DIAGNOSTICS_FRAME), NDS_FREEZE_DIAGNOSTICS_STALE_SAMPLES (the
+ * header) do. */
+#define NDS_FREEZE_DIAGNOSTICS_LOAD_SAMPLES 20u
 #define NDS_FREEZE_DIAGNOSTICS_VISIBLE_ROWS 24u
 #define NDS_FREEZE_DIAGNOSTICS_COLUMNS 32u
+/* scripts/nds_net_build_id.py: the first eight bytes of the hash of the
+ * loadable code and every NitroFS file, which the build log prints. */
+#define NDS_FREEZE_DIAGNOSTICS_BUILD_ID_PATH "nitro:/net/build.id"
 
 volatile u32 gNdsFreezeDiagnosticsHeartbeat;
 volatile u32 gNdsFreezeDiagnosticsLastBreadcrumb;
@@ -47,6 +61,9 @@ volatile u32 gNdsFreezeDiagnosticsReportIpcFifo;
 volatile u32 gNdsFreezeDiagnosticsReportIpcSync;
 volatile u32 gNdsFreezeDiagnosticsReportPresentedFrames;
 volatile u32 gNdsFreezeDiagnosticsReportLogicFrames;
+/* Samples without a beat that trip the report: the load budget from the boot
+ * or a scene's entry until the scene's first frame, then the frame budget. */
+volatile u32 gNdsFreezeDiagnosticsStaleLimit;
 
 VoidFn gNdsFreezeDiagnosticsOriginalIrqVector;
 void ndsFreezeDiagnosticsIrqVector(void);
@@ -58,9 +75,11 @@ static u16 sNdsFreezeDiagnosticsFontPalette;
 static u16 sNdsFreezeDiagnosticsAsciiOffset;
 static u16 sNdsFreezeDiagnosticsCharacterCount;
 static u32 sNdsFreezeDiagnosticsLastHeartbeat;
+static u32 sNdsFreezeDiagnosticsLastRequests;
 static u32 sNdsFreezeDiagnosticsStaleSamples;
-static u32 sNdsFreezeDiagnosticsWatchdogArmed;
 static u32 sNdsFreezeDiagnosticsInitialized;
+/* net/build.id's eight bytes as two big-endian words (0 when unread). */
+static u32 sNdsFreezeDiagnosticsBuildId[2];
 /* The game's thread, so a report can show where it waits when it is blocked
  * (the interrupted PC is then the idle thread's). */
 static Thread *sNdsFreezeDiagnosticsMainThread;
@@ -106,8 +125,10 @@ extern volatile u32 gNdsSyMallocOverflowArenaID __attribute__((weak));
 extern volatile u32 gNdsSyMallocOverflowRequest __attribute__((weak));
 extern volatile u32 gNdsSyMallocOverflowHeadroom __attribute__((weak));
 extern volatile u32 gNdsSyMallocOverflowCallerLR __attribute__((weak));
+/* The scene, stage, roster and heap words (nds_scene_manager.c). */
+extern void ndsSceneManagerFreezeIdentity(u32 words[4]) __attribute__((weak));
 
-static u16 ndsFreezeDiagnosticsCharacterTile(char value)
+static NDS_COLD u16 ndsFreezeDiagnosticsCharacterTile(char value)
 {
     u32 character = (u8)value;
 
@@ -122,7 +143,8 @@ static u16 ndsFreezeDiagnosticsCharacterTile(char value)
             (u16)(character - sNdsFreezeDiagnosticsAsciiOffset));
 }
 
-static void ndsFreezeDiagnosticsPutCharacter(u32 row, u32 column, char value)
+static NDS_COLD void ndsFreezeDiagnosticsPutCharacter(u32 row, u32 column,
+                                                      char value)
 {
     if ((sNdsFreezeDiagnosticsConsoleMap == NULL) ||
         (row >= NDS_FREEZE_DIAGNOSTICS_VISIBLE_ROWS) ||
@@ -135,7 +157,8 @@ static void ndsFreezeDiagnosticsPutCharacter(u32 row, u32 column, char value)
             ndsFreezeDiagnosticsCharacterTile(value);
 }
 
-static u32 ndsFreezeDiagnosticsPutText(u32 row, u32 column, const char *text)
+static NDS_COLD u32 ndsFreezeDiagnosticsPutText(u32 row, u32 column,
+                                                const char *text)
 {
     while ((*text != '\0') && (column < NDS_FREEZE_DIAGNOSTICS_COLUMNS))
     {
@@ -144,8 +167,8 @@ static u32 ndsFreezeDiagnosticsPutText(u32 row, u32 column, const char *text)
     return column;
 }
 
-static u32 ndsFreezeDiagnosticsPutHex(u32 row, u32 column, u32 value,
-                                      u32 digits)
+static NDS_COLD u32 ndsFreezeDiagnosticsPutHex(u32 row, u32 column, u32 value,
+                                               u32 digits)
 {
     static const char hex[] = "0123456789ABCDEF";
     u32 shift = digits * 4u;
@@ -159,7 +182,8 @@ static u32 ndsFreezeDiagnosticsPutHex(u32 row, u32 column, u32 value,
     return column;
 }
 
-static u32 ndsFreezeDiagnosticsPutFourCC(u32 row, u32 column, u32 value)
+static NDS_COLD u32 ndsFreezeDiagnosticsPutFourCC(u32 row, u32 column,
+                                                  u32 value)
 {
     u32 shift;
 
@@ -195,7 +219,7 @@ static u32 ndsFreezeDiagnosticsIsCodeWord(u32 value)
             (value < 0x02400000u)) ? 1u : 0u;
 }
 
-static void ndsFreezeDiagnosticsClearReport(void)
+static NDS_COLD void ndsFreezeDiagnosticsClearReport(void)
 {
     u32 row;
     u32 column;
@@ -207,6 +231,30 @@ static void ndsFreezeDiagnosticsClearReport(void)
             ndsFreezeDiagnosticsPutCharacter(row, column, ' ');
         }
     }
+}
+
+/* Rows 22 and 23, on both reports: which build (net/build.id), the scene,
+ * the one before it and the stage; each player's fighter kind and P4
+ * content, players 1-4 left to right; the general heap's free bytes. */
+static NDS_COLD void ndsFreezeDiagnosticsPutIdentity(void)
+{
+    u32 words[4] = { 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu };
+
+    if (ndsSceneManagerFreezeIdentity != NULL)
+    {
+        ndsSceneManagerFreezeIdentity(words);
+    }
+    ndsFreezeDiagnosticsPutText(22u, 0u, "ID ");
+    ndsFreezeDiagnosticsPutHex(22u, 3u, sNdsFreezeDiagnosticsBuildId[0], 8u);
+    ndsFreezeDiagnosticsPutHex(22u, 11u, sNdsFreezeDiagnosticsBuildId[1], 8u);
+    ndsFreezeDiagnosticsPutText(22u, 20u, "SC ");
+    ndsFreezeDiagnosticsPutHex(22u, 23u, words[0], 6u);
+    ndsFreezeDiagnosticsPutText(23u, 0u, "FK ");
+    ndsFreezeDiagnosticsPutHex(23u, 3u, words[1], 8u);
+    ndsFreezeDiagnosticsPutText(23u, 12u, "C ");
+    ndsFreezeDiagnosticsPutHex(23u, 14u, words[2], 8u);
+    ndsFreezeDiagnosticsPutText(23u, 23u, "H ");
+    ndsFreezeDiagnosticsPutHex(23u, 25u, words[3], 6u);
 }
 
 static void ndsFreezeDiagnosticsSnapshotReportState(void)
@@ -222,7 +270,7 @@ static void ndsFreezeDiagnosticsSnapshotReportState(void)
         gNdsBattlePlayablePacingLogicFrames;
 }
 
-static void ndsFreezeDiagnosticsRenderStall(u32 resumed)
+static NDS_COLD void ndsFreezeDiagnosticsRenderStall(u32 resumed)
 {
     const u32 write_count = gNdsFreezeDiagnosticsBreadcrumbWriteCount;
     Thread *const main_thread = sNdsFreezeDiagnosticsMainThread;
@@ -248,7 +296,7 @@ static void ndsFreezeDiagnosticsRenderStall(u32 resumed)
 
     ndsFreezeDiagnosticsClearReport();
     ndsFreezeDiagnosticsPutText(0u, 0u, (resumed != 0u) ?
-        "FREEZE REPORT (RESUMED)" : "FREEZE REPORT: BATTLE STALL");
+        "FREEZE REPORT (RESUMED)" : "FREEZE REPORT: STALL");
     ndsFreezeDiagnosticsPutText(1u, 0u, "PC ");
     ndsFreezeDiagnosticsPutHex(1u, 3u, gNdsFreezeDiagnosticsInterruptedPC, 8u);
     ndsFreezeDiagnosticsPutText(1u, 12u, "LR ");
@@ -405,10 +453,11 @@ static void ndsFreezeDiagnosticsRenderStall(u32 resumed)
     ndsFreezeDiagnosticsPutHex(21u, 26u, ndsFreezeDiagnosticsWeak(&gNdsGxStallVcount), 3u);
     ndsFreezeDiagnosticsPutText(21u, 30u, "S");
     ndsFreezeDiagnosticsPutHex(21u, 31u, ndsFreezeDiagnosticsWeak(&gNdsGxStallSite), 1u);
+    ndsFreezeDiagnosticsPutIdentity();
 }
 
-static void ndsFreezeDiagnosticsRenderException(ExcptContext *context,
-                                                unsigned flags)
+static NDS_COLD void ndsFreezeDiagnosticsRenderException(ExcptContext *context,
+                                                         unsigned flags)
 {
     u32 row;
     u32 fault_address = getExceptionAddress(context, context->r[15]);
@@ -443,6 +492,7 @@ static void ndsFreezeDiagnosticsRenderException(ExcptContext *context,
         ndsFreezeDiagnosticsPutText(report_row, 14u, " ");
         ndsFreezeDiagnosticsPutHex(report_row, 15u, context->r[second], 8u);
     }
+    ndsFreezeDiagnosticsPutIdentity();
 }
 
 static void ndsFreezeDiagnosticsExceptionHandler(ExcptContext *context,
@@ -466,21 +516,18 @@ void __attribute__((noinline, used)) ndsFreezeDiagnosticsStallMarker(void)
 static void ndsFreezeDiagnosticsWatchdog(TickTask *task)
 {
     u32 heartbeat = gNdsFreezeDiagnosticsHeartbeat;
+    /* A game that keeps reading is alive however slow the card (a load, the
+     * Results podium's files): its storage requests count as beats. They all
+     * come from the game thread, one each time it moves on (a stuck read's
+     * retries do not count), so a hung thread issues none. */
+    const u32 requests = ndsFreezeDiagnosticsWeak(&gNdsAudioStorageRequests);
+    const u32 reading = (requests != sNdsFreezeDiagnosticsLastRequests);
 
     (void)task;
+    sNdsFreezeDiagnosticsLastRequests = requests;
     if (gNdsFreezeDiagnosticsForceTrip == 0u)
     {
-        if (sNdsFreezeDiagnosticsWatchdogArmed == 0u)
-        {
-            if (heartbeat == 0u)
-            {
-                return;
-            }
-            sNdsFreezeDiagnosticsWatchdogArmed = 1u;
-            sNdsFreezeDiagnosticsLastHeartbeat = heartbeat;
-            return;
-        }
-        if (heartbeat != sNdsFreezeDiagnosticsLastHeartbeat)
+        if ((heartbeat != sNdsFreezeDiagnosticsLastHeartbeat) || reading)
         {
             sNdsFreezeDiagnosticsLastHeartbeat = heartbeat;
             sNdsFreezeDiagnosticsStaleSamples = 0u;
@@ -494,8 +541,7 @@ static void ndsFreezeDiagnosticsWatchdog(TickTask *task)
             return;
         }
         sNdsFreezeDiagnosticsStaleSamples++;
-        if (sNdsFreezeDiagnosticsStaleSamples <
-            NDS_FREEZE_DIAGNOSTICS_STALE_SAMPLES)
+        if (sNdsFreezeDiagnosticsStaleSamples < gNdsFreezeDiagnosticsStaleLimit)
         {
             return;
         }
@@ -518,16 +564,10 @@ static void ndsFreezeDiagnosticsWatchdog(TickTask *task)
     ndsFreezeDiagnosticsRenderStall(0u);
 }
 
-void ndsFreezeDiagnosticsDisarm(void)
+void ndsFreezeDiagnosticsSceneLoad(void)
 {
-    const ArmIrqState state = armIrqLockByPsr();
-
-    gNdsFreezeDiagnosticsHeartbeat = 0u;
-    sNdsFreezeDiagnosticsWatchdogArmed = 0u;
+    gNdsFreezeDiagnosticsStaleLimit = NDS_FREEZE_DIAGNOSTICS_LOAD_SAMPLES;
     sNdsFreezeDiagnosticsStaleSamples = 0u;
-    sNdsFreezeDiagnosticsReporting = 0u;
-    ndsFreezeDiagnosticsShowSubSprites();
-    armIrqUnlockByPsr(state);
 }
 
 void ndsFreezeDiagnosticsNetWait(void)
@@ -563,7 +603,7 @@ void ndsFreezeDiagnosticsInit(void)
     sNdsFreezeDiagnosticsCharacterCount = console->font.numChars;
     sNdsFreezeDiagnosticsLastHeartbeat = gNdsFreezeDiagnosticsHeartbeat;
     sNdsFreezeDiagnosticsStaleSamples = 0u;
-    sNdsFreezeDiagnosticsWatchdogArmed = 0u;
+    gNdsFreezeDiagnosticsStaleLimit = NDS_FREEZE_DIAGNOSTICS_LOAD_SAMPLES;
     sNdsFreezeDiagnosticsMainThread = threadGetSelf();
     gNdsFreezeDiagnosticsOriginalIrqVector = SystemVectors.irq;
     SystemVectors.irq = ndsFreezeDiagnosticsIrqVector;
@@ -573,6 +613,25 @@ void ndsFreezeDiagnosticsInit(void)
                   ticksFromHz(NDS_FREEZE_DIAGNOSTICS_WATCHDOG_HZ),
                   ticksFromHz(NDS_FREEZE_DIAGNOSTICS_WATCHDOG_HZ));
     sNdsFreezeDiagnosticsInitialized = 1u;
+}
+
+NDS_COLD void ndsFreezeDiagnosticsLoadBuildId(void)
+{
+    u8 id[8];
+    FILE *file = fopen(NDS_FREEZE_DIAGNOSTICS_BUILD_ID_PATH, "rb");
+
+    if (file == NULL)
+    {
+        return;
+    }
+    if (fread(id, 1u, sizeof(id), file) == sizeof(id))
+    {
+        sNdsFreezeDiagnosticsBuildId[0] = ((u32)id[0] << 24) | ((u32)id[1] << 16) |
+                                          ((u32)id[2] << 8) | id[3];
+        sNdsFreezeDiagnosticsBuildId[1] = ((u32)id[4] << 24) | ((u32)id[5] << 16) |
+                                          ((u32)id[6] << 8) | id[7];
+    }
+    fclose(file);
 }
 
 void ndsFreezeDiagnosticsBreadcrumb(u32 marker)

@@ -544,9 +544,19 @@ Both instances are also *gate-design* bugs, not just reporting bugs: a phase gat
 should name a check that exists and is wired into a profile, or say explicitly
 that building the check is part of the phase.
 
-## The freeze watchdog cannot see a hang before the first presented frame (2026-07-29)
+## The freeze watchdog cannot see a hang before the first presented frame (2026-07-29) -- closed 2026-10-26
 
-`ndsFreezeDiagnosticsWatchdog` (`src/nds/nds_freeze_diagnostics.c`) refuses to arm
+**Closed (P8 S5).** Every present beats the heartbeat now (`ndsPlatformEndFrame`,
+a load's held presents too) and the watchdog is armed from its start in video
+setup: the boot and each scene's load (from `ndsSceneManagerEnter`) get 20
+seconds until the scene's first frame, then three to four; the game's storage
+requests count as beats, so slow cards do not trip it. Real hangs on the walk
+ROM tripped it in the character select (3.7 s), in the VS battle's fighter file
+loads (19.8 s) and before the first present (20.0 s). Probing note: melonDS's gdb
+stub takes a written PC's bit 0 as the Thumb state -- `set $pc` to a Thumb
+address must be odd, or the CPU runs the Thumb bytes as ARM. The history:
+
+`ndsFreezeDiagnosticsWatchdog` (`src/nds/nds_freeze_diagnostics.c`) refused to arm
 until `gNdsFreezeDiagnosticsHeartbeat != 0`, and the heartbeat only advances in
 `ndsFreezeDiagnosticsHeartbeat()` on a completed presented frame. Anything that
 hangs during boot or scene load — which includes every arena overflow in

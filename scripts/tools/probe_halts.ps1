@@ -26,7 +26,7 @@ try {
        'printf "x enter scene=%u prev=%u heapmin=%u native=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsRendererNativeFailure.count',
        "if (gSCManagerSceneData.scene_curr == $EndScene) && (gSCManagerSceneData.scene_prev == $EndPrev)",
        'printf "x END reached\n"') + $EndPrints + @('detach', 'quit', 'end',
-       'continue', 'end',
+       'continue', 'end') + (Get-S64StallLines $elfPath) + @(
        'hbreak ndsSyMallocOverflowHalt', 'hbreak __arm_excpt_dabt', 'hbreak __arm_excpt_pabt', 'hbreak __arm_excpt_und',
        'continue',
        'printf "x HALT pc=%x lr=%x scene=%u\n", $pc, $lr, gSCManagerSceneData.scene_curr',

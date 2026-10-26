@@ -29,6 +29,7 @@
 #include <ft/fighter.h>
 #include <sc/scene.h>
 
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_p7.h>
 #include <nds/nds_net.h>
@@ -1239,6 +1240,8 @@ int ndsNetLobbyHostStartMatch(void)
         if (waiting == 0u)
             break;
         swiWaitForVBlank();
+        /* Up to 5 s for a guest's answer (a slow card's load): alive. */
+        NDS_FREEZE_DIAGNOSTICS_NET_WAIT();
     }
     /* The verdict, repeated: a guest that misses every GO still sees this
      * console's first lockstep packet; one that misses every CANCEL sees the
@@ -1252,6 +1255,7 @@ int ndsNetLobbyHostStartMatch(void)
         ndsNetSend(buf, n);
         sFrame++;
         swiWaitForVBlank();
+        NDS_FREEZE_DIAGNOSTICS_NET_WAIT();
     }
     if (waiting != 0u)
     {

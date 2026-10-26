@@ -16,7 +16,9 @@ param(
     [string]$Image = '', [switch]$Fresh,
     # End the run when gdb exits (a record taken at one breakpoint that then
     # quits) instead of waiting out $Seconds.
-    [switch]$StopWithGdb
+    [switch]$StopWithGdb,
+    # Leave out the freeze report's X STALL breakpoint (common.ps1).
+    [switch]$NoStall
 )
 # One gdb session for a whole emulator run on runner slot $Slot (the melonDS
 # stub takes one attach per instance): main, the pokes, the caller's
@@ -59,7 +61,8 @@ try {
     Wait-MelonDSGdbListener -Process $p -Port $port | Out-Null
     $cmd = Join-Path $S64Probes "$Tag.gdb"
     (@('set pagination off', 'set confirm off', 'set remote X-packet off', "target remote localhost:$port",
-       'break main', 'continue', 'delete') + $Pokes + $Lines + @('continue')) |
+       'break main', 'continue', 'delete') + $(if ($NoStall) { @() } else { Get-S64StallLines $elfPath }) +
+       $Pokes + $Lines + @('continue')) |
         Set-Content -LiteralPath $cmd -Encoding ascii
     $g = Start-Process -FilePath $S64Gdb -ArgumentList @('-batch', '-x', $cmd, $elfPath) -RedirectStandardOutput $log `
         -RedirectStandardError "$log.err" -WindowStyle Hidden -PassThru

@@ -1,13 +1,17 @@
 /* The port's scene registry and seam: the scenes this build has, requests
  * and transitions between them (ndsSceneManagerRequest/Enter/Exit, called
- * by the imported taskman and the menus) and each scene's draw-memory
- * preparation. A kind that is not registered cannot be requested; every
- * registered scene resets the arena at its start. Contract and reasoning:
+ * by the imported taskman and the menus), each scene's draw-memory
+ * preparation and the freeze report's scene, roster and heap words. A kind
+ * that is not registered cannot be requested; every registered scene resets
+ * the arena at its start. Contract and reasoning:
  * include/nds/nds_scene_manager.h. */
 
 #include <string.h>
 #include <gr/ground.h>
+#include <nds/nds_cold.h>
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_os.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_frontend_overlay.h>
@@ -274,6 +278,10 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
     u32 kind = (u32)gSCManagerSceneData.scene_curr;
     const NdsSceneDesc *desc = ndsSceneManagerFind(kind);
 
+    /* The scene's load presents nothing until its first frame (a VS battle's
+     * for 2.4 s, the 1P Polygon Team stage's for 3.4 s): the freeze report's
+     * long budget until then. */
+    NDS_FREEZE_DIAGNOSTICS_SCENE_LOAD();
     sNdsSceneManagerDepth++;
 
     /* The stage state union is scene-scoped: each stage's InitAll sets the
@@ -398,6 +406,37 @@ void ndsSceneManagerExit(void)
         sNdsSceneManagerDepth--;
     }
 }
+
+#if NDS_FREEZE_DIAGNOSTICS
+/* The freeze report's identity rows (nds_freeze_diagnostics.c, from its
+ * watchdog tick, so nothing here may wait or allocate): the scene, the one
+ * before it and the stage; each player's fighter kind -- the running battle's
+ * state, else the menus' transfer copy -- and P4 content, player 1 in the top
+ * byte; the general heap's free bytes. */
+NDS_COLD void ndsSceneManagerFreezeIdentity(u32 words[4])
+{
+    const SCBattleState *state = gSCManagerBattleState;
+    u32 i;
+
+    if (((uintptr_t)state < 0x02000000u) || ((uintptr_t)state >= 0x02400000u) ||
+        (((uintptr_t)state & 3u) != 0u))
+    {
+        state = &gSCManagerTransferBattleState;
+    }
+    words[0] = ((u32)gSCManagerSceneData.scene_curr << 16) |
+               ((u32)gSCManagerSceneData.scene_prev << 8) |
+               (u32)gSCManagerSceneData.gkind;
+    words[1] = 0u;
+    words[2] = 0u;
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        words[1] = (words[1] << 8) | (u32)state->players[i].fkind;
+        words[2] = (words[2] << 8) | (u32)gNdsP4PlayerContent[i];
+    }
+    words[3] = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                     (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+}
+#endif
 
 sb32 ndsSceneWalkAdvance(u32 next_kind)
 {

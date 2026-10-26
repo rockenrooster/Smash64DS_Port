@@ -13,6 +13,7 @@
 #include <nds/nds_arm9_wram.h>
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_video.h>
 #include <nds/nds_net.h>
@@ -103,6 +104,7 @@ int main(void)
     ndsLabUncacheSinTableIfRequested();
     ndsPlatformInit();
     ndsRelocAssetsInit();
+    NDS_FREEZE_DIAGNOSTICS_LOAD_BUILD_ID();
     portCoroutineInitMain();
     os_test = ndsOsSelfTest();
 #if NDS_BOOT_DIAG_TEXT

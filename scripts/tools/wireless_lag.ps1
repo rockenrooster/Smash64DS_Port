@@ -49,8 +49,8 @@ try {
           "printf `"END i=$i vb=%u m=%u desync=%u abort=%u stallmax=%u stalls=%u\n`", sVBlankCount, gNdsNetAutopilotMatches, gNdsNetDesyncs, gNdsNetAborted, gNdsNetStallMaxVBlanks, gNdsNetStallBatches",
           "if gNdsNetAutopilotMatches >= $MatchCount", 'detach', 'quit', 'end',
           'continue', 'end',
-          'break __arm_excpt_dabt', 'commands', 'silent', "printf `"VEC i=$i fault pc=%#x\n`", `$lr - 8", 'bt 8', 'detach', 'quit', 'end',
-          'continue') | Set-Content -LiteralPath $cmd -Encoding ascii
+          'break __arm_excpt_dabt', 'commands', 'silent', "printf `"VEC i=$i fault pc=%#x\n`", `$lr - 8", 'bt 8', 'detach', 'quit', 'end') +
+          (Get-S64StallLines $elf) + @('continue') | Set-Content -LiteralPath $cmd -Encoding ascii
         $gps += Start-Process -FilePath $S64Gdb -ArgumentList @('-batch', '-x', $cmd, $elf) -PassThru -WindowStyle Hidden `
             -RedirectStandardOutput $log -RedirectStandardError (Join-Path $S64Probes "$Tag-$i.err")
     }

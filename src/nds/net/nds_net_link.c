@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_net.h>
 #include <nds/nds_net_link.h>
 #include <nds/nds_platform.h>
@@ -56,6 +57,8 @@ static int ndsNetLinkWaitState(u32 want, u32 frames)
         if (state == NDS_NET_STATE_ERROR)
             return NDS_NET_ERR_RADIO;
         swiWaitForVBlank();
+        /* The radio's start (up to 3 s with the attach): alive. */
+        NDS_FREEZE_DIAGNOSTICS_NET_WAIT();
     }
     return NDS_NET_ERR_TIMEOUT;
 }
