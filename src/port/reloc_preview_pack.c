@@ -1372,6 +1372,17 @@ NDS_COLD void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
     {
         return NULL;
     }
+    /* The load may have compacted the loaded-file table (motion entries
+     * retired, sNdsRelocLoadedFilesEpoch bumped), so the row the lookup above
+     * returned can now hold another file: soak m6 (Crash, Lanky, Sheik,
+     * Sonic on Yoshi's Island) wrote the Tails plane's pointer into
+     * SonicSpecial1 + 8 -- the spring's anim_joints -- and left Main's slot
+     * NULL. Find Main again. */
+    main_loaded = ndsRelocFindLoadedFileByData(d->main_data);
+    if (main_loaded == NULL)
+    {
+        return NULL;
+    }
     ndsRelocAddStatusBufferFile(d->dep_asset, dep->data);
     if ((d->target_offset != NDS_BATTLE_EXTERN_LOAD_ONLY) &&
         (ndsPreviewFileOffset(main_loaded, d->slot, sizeof(void *), &main_offset) != FALSE) &&
@@ -1492,8 +1503,13 @@ NDS_COLD s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         u32 main_offset;
         u32 dep_offset;
 
-        if (ndsPreviewFileOffset(main_loaded, rows[i].slot, sizeof(void *),
-                                 &main_offset) == FALSE)
+        /* A dependency load below may compact the loaded-file table and move
+         * Main's row (ndsRelocLoadDeferredEntryFile): find it for every row,
+         * and patch through Main's data, which does not move. */
+        main_loaded = ndsRelocFindLoadedFileByData(*fighter->p_file_main);
+        if ((main_loaded == NULL) ||
+            (ndsPreviewFileOffset(main_loaded, rows[i].slot, sizeof(void *),
+                                  &main_offset) == FALSE))
         {
             ndsBattleCoreExternHalt(fkind);
         }
@@ -1569,9 +1585,14 @@ NDS_COLD s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         {
             ndsBattleCoreExternHalt(fkind);
         }
-        ndsRelocWriteNativePointer((u8 *)main_loaded->data + main_offset,
+        ndsRelocWriteNativePointer((u8 *)*fighter->p_file_main + main_offset,
                                    (u8 *)dep->data + dep_offset);
         gNdsBattleCoreExternPatchCount++;
+    }
+    main_loaded = ndsRelocFindLoadedFileByData(*fighter->p_file_main);
+    if (main_loaded == NULL)
+    {
+        ndsBattleCoreExternHalt(fkind);
     }
     if ((fkind >= 12) && (ndsP4GuardPosesNeeded() != FALSE) &&
         (ndsShieldPosePatchCompactMain(fkind, main_loaded->data,
