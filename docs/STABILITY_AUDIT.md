@@ -1,4 +1,50 @@
-# Stability and reliability audit (P7, 2026-10-20)
+# Stability and reliability audit
+
+## P8 final matrix (2026-10-26, code `5e2b10ef04c`)
+
+The P8 goal's stability matrix on the final tree, ship layout. ROMs: walk
+`walk-p8u`, ship `play-p8x`, gate `gate-p8u`, soak `soak5-p8u` / `soak30-p8u`
+(the gate target with 5- and 30-minute matches; its tick HUD leaves 24.8 KB
+less arena than the ship), wireless `net-p8u`, and the lab variants of S2: the
+16 KB heap squeeze `sq-gate3`, slow storage `slow2-*` / `slow8-*` (every 8 KB
+part of a card read sleeps 2 / 8 ms: about 4 and 1 MB/s), the stack paint
+`stk-gate3` / `stk-walk3`. Every gdb driver records a freeze-report trip
+(`X STALL`); the report now covers every scene, every load and the boot (S5).
+
+| run | what | result |
+|---|---|---|
+| 1P campaign | the 32 fighters (12, Metal Mario, 19 contents), level-9 walk player, 480 s a run | 31 to Master Hand or the ending, content 4 at stage 12 when its time ran out; 0 halts, 0 native failures, 0 trips; heap low-water 36,360 (content 19) to 75,792 |
+| Training | the 32 fighters | 32 of 32 to the select (the last matrix's 3 probe timeouts gone); 0 native failures, 0 trips |
+| Bonus practices | both boards, every fighter (64) | 64 of 64; 0 native failures, 0 trips |
+| Metal Mario | his campaign stage and both boards | clean |
+| Seeded fuzz | seeds 1-3, 10 random matches each (roster, costumes, levels, stage, rules, items, teams) | 30 matches through Results, 0 failures, battle heap low-water 46,600 at the least |
+| VS rematch laps | the walk's VS route (character select tour with its 3D previews, stage select, match, Results, back), 50 laps | 50 matches through Results, 0 halts, 0 native failures, 0 trips; battle heap low-water 92,996 at the least and no drift (the first ten laps 107,576-112,264, the last ten 110,000-112,056) |
+| Stage select, every stage | the walk's stage-select cursor steered to each of the 16 VS stages (`gNdsMenuShellSssWalkTargetGkind`), a lap each | the cursor crossed the grid to every stage, its preview, the match on it and Results; 0 native failures; battle heap low-water 95,152-114,984 |
+| 4P soaks, 5 min | m1-m8, every fighter, every item at Very High | all eight through Results (9,243 frames), 0 halts, 0 native failures, 0 trips; heap low-water 41,648 (m7) to 86,776 on the soak ROM |
+| 4P soaks, 30 min | heavy roster and the cast on Hyrule Temple and Yoshi's Island, every item at Very High | all four through Results at 54,243 frames, 0 halts, 0 native failures, 0 trips; heap low-water 49,168-55,992; the source pools take 2.6-6.4 KB in the first five minutes and 1.3-4.2 KB in the next 25 (flat, against P7's 14.8-19.8 KB every five minutes) |
+| Wireless | 2 consoles, 4 consoles (`net-p8u`); 2 consoles on 1 MB/s cards (`net-slow8`) | 3 matches on every console each run, 0 desyncs, 0 aborts; on the slow cards the host waits up to 640 VBlanks (10.7 s) at the first lockstep gate for the guest's load (the lockstep waits up to 30 s) |
+| Heap squeeze | 16 KB taken at each battle's first frame: heavy roster and mixes A-D on Hyrule Temple, Congo Jungle, Saffron City, Sector Z, Yoshi's Island | 25 of 25 to the end, 0 native failures; lowest heap 46,716 with the 16 KB gone (the heavy roster on Hyrule Temple; 62,068 without); Hyrule Temple's whole stage program (57,400 B) in every squeezed roster |
+| Slow storage | load ledgers at 4 and 1 MB/s; the gate at 4 MB/s (criterion B); the 1P Polygon Team stage and a Yoshi win at 1 MB/s | ledger at 1 MB/s: VS battle to Results 313 VBlanks (5.2 s), character select to stage select 279-299 (4.7-5.0 s), Results to character select 155; at 4 MB/s 106 / 90-96 / 54 (normal: 36 / 27-31 / 20). Polygon Team to the ending and two Yoshi wins through Results at 1 MB/s: 0 native failures, 0 trips. The gate at 4 MB/s (heavy roster and mix A on five stages): replay digests IDENTICAL to the normal card's, 0 native failures, lowest heap 49,756; motion misses pushed 3-11 frames a match past two VBlanks (73 in 10 runs, against 6 in 96 at the normal speed) |
+| Stacks | paint on the gate (heavy roster, Hyrule Temple) and the walk (VS laps, Kirby's campaign) | every stack at least 25% free: the DTCM hot stack 4,516 of 6,144 B (26.5%, the heavy roster), the game thread 10,236 of 16,384 (37.5%), the GObj threads at most 984 of 4,096 (76%; objman's guard word skipped, `12c3695ef79`), the relay threads 94-96%, the main thread's DTCM stack about 50%, IRQ 73.4%, SVC 75% |
+| CPU and cast exit set | `gate-p8u`: heavy roster, mixes A-D and the cast on the 16 VS stages (96 runs) | replay digests IDENTICAL to `xf` on all 96; 0 native failures; lowest heap 44,456; Hyrule Temple's whole program with every roster; motion reads pushed 6 frames in 5 runs, all mid-match (the misses the owner accepted) |
+| Freeze report (S5) | forced trips in every scene class; real hangs (the game thread spun by gdb) | trips in the title, mode select, VS mode, character and stage selects, battle, Results, the 1P select, intro card, stage and stage clear; real hangs tripped in the character select after 3.7 s, in the battle's fighter loads after 20.8 s and before the first present after 20.0 s, the report naming the build id, scene, stage, roster and heap |
+| Open rows (S6) | reproduction attempts | the Results freeze after a Yoshi win (four matches; two more on a 1 MB/s card), Master Hand stiff, Palutena's Results dress: not reproduced; Final Destination's shooting stars and boss backgrounds still not drawn (parked, the owner's "for later") |
+
+Across the matrix: 0 crashes, 0 freezes (no freeze-report trip in any run),
+0 desyncs, 0 native failures; the heap low-water stays above 25,600 everywhere
+(36,360 at the least, content 19's campaign; 41,648 on the soak ROM, which has
+24.8 KB less arena); every stack keeps at least 25% free; the source pools
+flatten. `quick_check.ps1` passes on the final tree (host 734 of 734, the five
+configurations, the heavy roster's tick streams IDENTICAL on Hyrule Temple,
+Congo Jungle and Yoshi's Island).
+
+Probing notes from this pass: the soak and sweep runs need wall-clock caps that
+allow for a loaded host (12 emulators at once doubled a 5-minute match's
+time); a job's `Invoke-Expression` does not see the job's own parameters (a
+whole queue once ran on slot 0); a seeded build directory holds its seed's ROM
+until its own make replaces it.
+
+## P7 audit (2026-10-20)
 
 The goal asks for every mode 100% working on every fighter: 1P/VS character
 select (3D previews), the 1P campaign, both bonus practices, Training, the
@@ -7,7 +53,7 @@ multiplayer), Results and back to the rematch. This audit drives each of them
 on the current tree, every fighter, and records halts, native failures,
 event-script ledger refusals, lean declines and the general heap's low-water.
 
-## Method
+### Method
 
 Scripted emulator runs on ship-layout ROMs, one probe per runner slot (each
 slot has its own SD image, so four ran side by side), gdb on each:
@@ -30,9 +76,9 @@ Scratch drivers: `audit/campaign.ps1`, `soak.ps1`, `bonus.ps1`, `training.ps1`,
 `vswalk.ps1`, `mm.ps1`; multiplayer `tools/mplag.ps1` (two linked consoles,
 melonDS-mp).
 
-## Results
+### Results
 
-### 1P campaign, every fighter
+#### 1P campaign, every fighter
 
 The walk plays the whole ladder (route 1) from stage 1 through Master Hand,
 the Congratulations screen and the staff roll, 9 minutes a run, on
@@ -80,7 +126,7 @@ The Yoshi Team is the tightest stage for most rows above (`walk-u13`, the
 lean caches' 12 KB margin); fix 5 lifts every row's Yoshi Team low by about
 12 KB.
 
-### 4-player matches, 5 minutes, every item at Very High
+#### 4-player matches, 5 minutes, every item at Very High
 
 Four CPUs, every fighter once, a stage each; every match ran its 5 minutes
 (9,243 presented frames) to Results (two through Sudden Death first).
@@ -103,7 +149,7 @@ too little for any lean spare -- and the source's object pools then took
 go first to the lean caches, which leave 25,600 + 24 KB, so the same match
 bottoms out near 31 KB.
 
-### Bonus practices, every fighter
+#### Bonus practices, every fighter
 
 Break the Targets and Board the Platforms through the native bonus select, a
 fresh SD image, the twelve, Metal Mario and the nineteen contents in turn: all
@@ -115,14 +161,14 @@ message and the return to the title, as the source routes it), and found the
 bug below. Each content's 3D preview drew on its select
 (`artifacts/visibility/p7-walk/bonus-select-sheet.png`).
 
-### Training, every fighter
+#### Training, every fighter
 
 Every fighter (the twelve, Metal Mario, the nineteen contents) through the
 Training select, each on a different VS or P5 stage with the next fighter as
 the CPU, out to the Training select again: 32 of 32, 0 native failures,
 lowest heap 35,480 (Mr. Game & Watch on Dinosaur Land).
 
-### Multiplayer
+#### Multiplayer
 
 Two linked consoles (melonDS-mp), the lobby autopilot through VS Mode, the
 shared character select, the host's stage select, the match, Results and the
@@ -148,7 +194,7 @@ cleared those picks on the way back, so the host's START never took. Lab
 builds of the autopilot now see every fighter open (`ndsP7DevOpen`), as the
 other lab builds do; a player can only pick an unlocked fighter.
 
-## Issues found
+### Issues found
 
 1. **A content's records counted as its parent's in the source's unlock tests**
    (fixed, `fb1b096b36d`). During a content's or Metal Mario's practice or
@@ -207,7 +253,7 @@ other lab builds do; a player can only pick an unlocked fighter.
    1,303,872) and every replay digest holds (four Bowsers differ from s27
    since the owner's p7h balance, `c9228f1817b`; s31 and s34 match).
 
-## Still open against the goal
+### Still open against the goal
 
 Owner answers, 2026-10-20 (`docs/OWNER_QUESTIONS.md`): the victory end poses
 were never in question (the 1P card was: c4, shield rolled, `8e37a1646e7`);
