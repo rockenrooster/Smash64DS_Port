@@ -1576,7 +1576,8 @@ static void ndsRendererEntryRampPaletteCommit(void)
 /* Which refusal the entry-effect owner took (lab builds only: the stores
  * stay out of the gate ROM). A distinct constant store per site keeps GCC
  * from merging the tails. */
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) || \
+    (defined(NDS_LAB_ENTRY_REJECT_LINE) && NDS_LAB_ENTRY_REJECT_LINE)
 __attribute__((used)) volatile u32 gNdsEntryEffectRejectLine;
 __attribute__((used)) volatile u32 gNdsEntryEffectRejectRoot;
 #define NDS_ENTRY_EFFECT_REJECT() \

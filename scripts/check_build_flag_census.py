@@ -92,6 +92,8 @@ ALLOW: dict[str, str] = {
         "lab clip trace, CPPFLAGS only (reloc_backend_force_load.c)",
     "NDS_LAB_STACK_PAINT":
         "lab coroutine stack paint, CPPFLAGS only (coroutine.c, P8 S3)",
+    "NDS_LAB_ENTRY_REJECT_LINE":
+        "lab entry-effect refusal line, CPPFLAGS only (nds_renderer_native_entry.c, P8 S1)",
     "NDS_LAB_HEAP_SQUEEZE":
         "lab heap squeeze bytes, CPPFLAGS only (taskman_seam_battle_host.c, P8 S2)",
     # The ARM7's lab defines arrive through NDS_ARM7_LAB_FLAGS (mk/rules_arm7.mk).
