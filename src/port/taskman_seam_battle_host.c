@@ -1523,6 +1523,25 @@ u32 ndsHostBattleUpdateOnce(u32 update_index)
                         gSCManagerSceneData.scene_curr, nFTKindKirby, 0u, 348u, 0u,
                         NDS_NATIVE_FAILURE_BAD_ASSET);
         }
+        /* Gameplay entry images the scene start had no room for, retried at
+         * GO in every battle but VSBattle, which retries two frames on in its
+         * retired startup images' room (P8 S1, 2026-10-25). A 1P battle keeps
+         * its startup images (a fighter may enter later), so this is its
+         * only retry: the Kirby Team stage refused four of Palutena's, and
+         * her light then failed natively all match. Banks A+B are locked by
+         * now: open their holes. */
+        if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+        {
+            extern s32 ndsFtrLeanAdmitOpenHoles(void);
+            extern void ndsFtrLeanAdmitCloseHoles(void);
+            const s32 holes = ndsFtrLeanAdmitOpenHoles();
+
+            (void)ndsRendererHardwarePrepareEntryEffectGameplayTextures();
+            if (holes != FALSE)
+            {
+                ndsFtrLeanAdmitCloseHoles();
+            }
+        }
         ndsRendererHardwareArmBattleStaticTextures();
     }
 #if NDS_TICK_HUD
