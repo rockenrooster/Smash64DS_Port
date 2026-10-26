@@ -543,7 +543,7 @@ Hyrule Temple decimation (nothing to take).
 | P9 | Soft-float in the band: the hottest float paths to fixed point or the hardware divider and square root, one path at a time | per path | whole-subsystem passes were slower |
 | P10 | Menus and loads: the CSS with four previews, SSS and Results WORK; scene-load CPU (relocation, normalization, decompression) from S4's ledger | menu frames within two VBlanks; shorter loads | |
 | P11 | Hyrule Temple's half-res textures (owner-approved 2026-10-21, gkind 43 only) | Hyrule Temple's heavy roster | only if it still misses after its spend |
-| P12 | Lower update rates where `PROJECT_GOAL.md` allows them (particles, background animation) | | visible: owner's yes first, and only after P1-P11 |
+| P12 | Lower update rates where `PROJECT_GOAL.md` allows them (particles, background animation) | | visible: owner's yes first, and only after P1-P11. Tried 2026-10-25 (material animations and stage layers at 15 Hz, a particle-draw bound: P95 -1K to -14K mean); not taken (owner: "drop 15hz, not worth it") |
 
 Added 2026-10-25 from the modern-techniques audit
 (`docs/optimization/MODERN_TECHNIQUES_AUDIT.md`; its bounds are from the
@@ -559,7 +559,7 @@ Added 2026-10-25 from the modern-techniques audit
 
 **Exit P:** the heavy roster and the four mixes meet the owner's stress target
 (<= 1,250,000 and >= 90% within two VBlanks) on every VS stage, or every lever
-P1-P11 and P13-P17 landed or refuted with numbers; the cast keeps <= 1,250,000 / >= 95% on
+P1-P17 landed or refuted with numbers (P12 tried and dropped by the owner); the cast keeps <= 1,250,000 / >= 95% on
 all 16 VS stages with no stage worse than `s56`; replay digests identical;
 no frame pushed past two VBlanks by a motion read. Record the over-target
 counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
