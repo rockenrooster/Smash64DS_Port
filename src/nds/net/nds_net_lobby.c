@@ -1053,9 +1053,9 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     {
         /* Owner, 2026-10-11: four-player matches froze on Hyrule and Sector
          * Z, and a two-player Hyrule match ran at 3 FPS. Four heavy content
-         * mixes in turn -- the two humans and two level-9 CPUs, Kirby in one
-         * for copies -- on those two stages, every item at the highest rate,
-         * five-minute time. */
+         * mixes in turn -- a human on every console's port (two or more) and
+         * level-9 CPUs on the rest, Kirby in one for copies -- on those two
+         * stages, every item at the highest rate, five-minute time. */
         static const u8 kStressStages[2] = { nGRKindHyrule, nGRKindSector };
         static const u8 kStressContent[4][NDS_NET_PORTS] = {
             { 4u, 9u, 19u, 14u },  /* Bowser, Crash, Ike, Dedede (Banjo, 12, retired) */
@@ -1071,7 +1071,12 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
             NdsMatchFighterConfig *f = &cfg->fighters[i];
             const NDSP4Fighter *p4 = (row[i] != 0u) ? ndsP4Fighter(row[i]) : NULL;
 
-            f->pkind = (i < 2u) ? nFTPlayerKindMan : nFTPlayerKindCom;
+            /* A console in the room keeps its port human: the character
+             * select reopens on these picks after the match, and a member's
+             * port made a CPU is one the host resets and that console's
+             * autopilot never picks again (three consoles stalled there). */
+            f->pkind = ((i < 2u) || (sMembers[i].active != 0u)) ?
+                nFTPlayerKindMan : nFTPlayerKindCom;
             f->fkind = (p4 != NULL) ? (u8)p4->parent_kind : (u8)nFTKindKirby;
             f->p4_content = (p4 != NULL) ? row[i] : 0u;
             f->level = 9u;
@@ -1178,6 +1183,8 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     {
         NdsMatchFighterConfig *f = &cfg->fighters[i];
 
+        if (sMembers[i].active != 0u)
+            continue; /* a console in the room keeps its own pick */
         f->pkind = nFTPlayerKindCom;
         f->fkind = kRoster[(2u * m + i) % 12u];
         f->level = 9u;
