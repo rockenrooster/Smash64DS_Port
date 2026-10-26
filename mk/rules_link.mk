@@ -330,31 +330,31 @@ $(NDS_FLOAT_ITCM_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 	@cd ".float-itcm" && $(NDS_SHELL_DEVKIT_ENV) $(NDS_FLOAT_AR) x "libgcc.a" $(NDS_FLOAT_ITCM_MEMBERS)
 	@for member in $(NDS_FLOAT_ITCM_MEMBERS); do \
 		stem="$${member%.o}"; \
-		phase2_filter=""; \
+		golden_filter=""; \
 		if test "$$member" = "_arm_cmpsf2.o"; then \
-			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_libgcc_fcmpeq_golden"; \
+			golden_filter="--redefine-sym __aeabi_fcmpeq=__nds_libgcc_fcmpeq_golden"; \
 		fi; \
 		if test "$$member" = "_arm_cmpsf2.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmplt=__nds_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_libgcc_fcmpgt_golden"; \
+			golden_filter="$$golden_filter --redefine-sym __aeabi_fcmplt=__nds_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_libgcc_fcmpgt_golden"; \
 		fi; \
 		if test "$$member" = "_arm_unordsf2.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmpun=__nds_libgcc_fcmpun_golden"; \
+			golden_filter="$$golden_filter --redefine-sym __aeabi_fcmpun=__nds_libgcc_fcmpun_golden"; \
 		fi; \
 		if test "$$member" = "_arm_addsubsf3.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fadd=__nds_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_libgcc_fsub_golden"; \
+			golden_filter="$$golden_filter --redefine-sym __aeabi_fadd=__nds_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_libgcc_fsub_golden"; \
 		fi; \
 		if test "$$member" = "_arm_addsubsf3.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_libgcc_i2f_golden"; \
+			golden_filter="$$golden_filter --redefine-sym __aeabi_i2f=__nds_libgcc_i2f_golden"; \
 		fi; \
 		if test "$(NDS_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
-			phase2_filter="$$phase2_filter --redefine-sym __aeabi_ui2f=__nds_p2_libgcc_ui2f_golden --redefine-sym __floatunsisf=__nds_p2_libgcc_floatunsisf_golden --redefine-sym __aeabi_l2f=__nds_p2_libgcc_l2f_golden --redefine-sym __floatdisf=__nds_p2_libgcc_floatdisf_golden --redefine-sym __floatsisf=__nds_p2_libgcc_floatsisf_golden"; \
+			golden_filter="$$golden_filter --redefine-sym __aeabi_ui2f=__nds_libgcc_ui2f_golden --redefine-sym __floatunsisf=__nds_libgcc_floatunsisf_golden --redefine-sym __aeabi_l2f=__nds_libgcc_l2f_golden --redefine-sym __floatdisf=__nds_libgcc_floatdisf_golden --redefine-sym __floatsisf=__nds_libgcc_floatsisf_golden"; \
 		fi; \
 		rename_filter="--rename-section .text=.itcm,alloc,load,readonly,code,contents"; \
 		out="$$stem.itcm.o"; \
 		case " $(strip $(NDS_FLOAT_MAIN_MEMBERS)) " in \
 			*" $$member "*) rename_filter=""; out="$$stem.mainram.o";; \
 		esac; \
-		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) $$phase2_filter $$rename_filter \
+		$(NDS_SHELL_DEVKIT_ENV) $(OBJCOPY) $$golden_filter $$rename_filter \
 			".float-itcm/$$member" "$$out" || exit $$?; \
 	done
 	@rm -rf ".float-itcm"
@@ -363,8 +363,8 @@ NDS_LIBC_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-na
 NDS_LIBM_ARCHIVE := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) $(ARCH) -print-file-name=libm.a)
 NDS_ARCHIVER := $(shell $(NDS_SHELL_DEVKIT_ENV) $(CC) -print-prog-name=ar)
 # Grouped recipe, one verified private copy per archive, extract only the named
-# members. Same shape as the Task 9 block above and for the same reason: the
-# installed archives must stay out of Make's prerequisite graph.
+# members. Same shape as the libgcc float block above and for the same reason:
+# the installed archives must stay out of Make's prerequisite graph.
 $(NDS_ITCM_LIB_OFILES) &: $(NDS_MAKEFILES) $(NDS_BUILD_CONFIG)
 	@test "$(NDS_ITCM_LIBC)" != "1" || echo "$(NDS_LIBC_ARCHIVE_SHA256) *$(NDS_LIBC_ARCHIVE)" | sha256sum -c -
 	@test "$(NDS_ITCM_LIBM)" != "1" || echo "$(NDS_LIBM_ARCHIVE_SHA256) *$(NDS_LIBM_ARCHIVE)" | sha256sum -c -
