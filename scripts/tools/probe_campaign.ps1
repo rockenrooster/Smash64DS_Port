@@ -13,7 +13,7 @@ param([string]$Build = 'walk-u16', [string]$Tag = 'c1', [int]$Content = 20,
 . "$PSScriptRoot\common.ps1"
 $shot = Join-Path $S64Shots "$Tag-select.png"
 $bp = @('break ndsSceneManagerEnter', 'commands', 'silent',
-  'printf "X enter scene=%u stage=%u prevHeapLow=%u loan=%u used=%u spill=%u native=%u dom=%u id=%x st=%u root=%u reason=%u fkind=%u content=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.spgame_stage, gNdsTaskmanGeneralHeapFreeMin, gNdsFrontendOverlayLoanBytes, gNdsFrontendOverlayUsedBytes, gNdsFrontendOverlaySpillBytes, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.reason, gSCManagerSceneData.fkind, gNdsP4OnePlayerContent',
+  'printf "X enter scene=%u stage=%u prevHeapLow=%u loan=%u used=%u spill=%u native=%u dom=%u id=%x st=%u root=%u reason=%u fkind=%u content=%u ev32=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.spgame_stage, gNdsTaskmanGeneralHeapFreeMin, gNdsFrontendOverlayLoanBytes, gNdsFrontendOverlayUsedBytes, gNdsFrontendOverlaySpillBytes, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.reason, gSCManagerSceneData.fkind, gNdsP4OnePlayerContent, gNdsAObjEvent32NormalizeFailCount',
   'set var gNdsTaskmanGeneralHeapFreeMin = 0xffffffff',
   "if (gSCManagerSceneData.scene_curr == 14) && (`$skip == 0) && ($SkipTo != 0)",
   'set $sa = (unsigned)&gSCManagerSceneData.spgame_stage', 'set $sw = *(unsigned*)($sa & ~3)', 'set $ss = ($sa & 3) * 8',

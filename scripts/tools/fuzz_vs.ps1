@@ -75,7 +75,7 @@ $lines = $defines + @(
   'set $fz_lap = $fz_lap + 1',
   'continue', 'end',
   'break ndsSceneManagerEnter', 'commands', 'silent',
-  'printf "X enter scene=%u prev=%u prevHeapLow=%u native=%u lean=%u gkind=%u fk=%u,%u,%u,%u c=%u,%u,%u,%u laps=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsRendererNativeFailure.count, gNdsFtrLeanDeclineCount, gSCManagerSceneData.gkind, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[3].fkind, gNdsP4PlayerContent[0], gNdsP4PlayerContent[1], gNdsP4PlayerContent[2], gNdsP4PlayerContent[3], gNdsMenuShellWalkLoops',
+  'printf "X enter scene=%u prev=%u prevHeapLow=%u native=%u lean=%u gkind=%u fk=%u,%u,%u,%u c=%u,%u,%u,%u laps=%u ev32=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsRendererNativeFailure.count, gNdsFtrLeanDeclineCount, gSCManagerSceneData.gkind, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[3].fkind, gNdsP4PlayerContent[0], gNdsP4PlayerContent[1], gNdsP4PlayerContent[2], gNdsP4PlayerContent[3], gNdsMenuShellWalkLoops, gNdsAObjEvent32NormalizeFailCount',
   'set var gNdsTaskmanGeneralHeapFreeMin = 0xffffffff',
   'continue', 'end',
   'break __arm_excpt_dabt', 'commands', 'printf "X DABT lr-8=%x lap=%u\n", $lr-8, $fz_lap', 'bt 8', 'end',

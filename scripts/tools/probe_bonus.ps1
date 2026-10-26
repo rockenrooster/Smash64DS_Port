@@ -9,7 +9,7 @@ param([string]$Build = 'walk-u16', [string]$Tag = 'bp', [int]$Content = 0,
 . "$PSScriptRoot\common.ps1"
 $shot = Join-Path $S64Shots "$Tag-select.png"
 $bp = @('break ndsSceneManagerEnter', 'commands', 'silent',
-  'printf "X enter scene=%u prev=%u prevHeapLow=%u loan=%u native=%u dom=%u id=%x st=%u reason=%u bfk=%u pc=%u pm=%u board=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsFrontendOverlayLoanBytes, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.reason, gSCManagerSceneData.bonus_fkind, gNdsP7BonusPracticeContent, gNdsP7BonusPracticeMetal, gNdsP7BonusBoardKind',
+  'printf "X enter scene=%u prev=%u prevHeapLow=%u loan=%u native=%u dom=%u id=%x st=%u reason=%u bfk=%u pc=%u pm=%u board=%u ev32=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsFrontendOverlayLoanBytes, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.reason, gSCManagerSceneData.bonus_fkind, gNdsP7BonusPracticeContent, gNdsP7BonusPracticeMetal, gNdsP7BonusBoardKind, gNdsAObjEvent32NormalizeFailCount',
   'set var gNdsTaskmanGeneralHeapFreeMin = 0xffffffff',
   'continue', 'end',
   'break ndsMenuShellCssBonusCommit', 'commands', 'silent',

@@ -23,7 +23,7 @@ try {
     (@('set pagination off', 'set confirm off', 'set remote X-packet off', 'set remotetimeout 30',
        "target remote localhost:$port", 'break main', 'continue', 'delete') + $Pokes + @(
        'break ndsSceneManagerEnter', 'commands', 'silent',
-       'printf "x enter scene=%u prev=%u heapmin=%u native=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsRendererNativeFailure.count',
+       'printf "x enter scene=%u prev=%u heapmin=%u native=%u ev32=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsTaskmanGeneralHeapFreeMin, gNdsRendererNativeFailure.count, gNdsAObjEvent32NormalizeFailCount',
        "if (gSCManagerSceneData.scene_curr == $EndScene) && (gSCManagerSceneData.scene_prev == $EndPrev)",
        'printf "x END reached\n"') + $EndPrints + @('detach', 'quit', 'end',
        'continue', 'end') + (Get-S64StallLines $elfPath) + @(
