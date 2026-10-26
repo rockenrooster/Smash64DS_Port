@@ -352,6 +352,18 @@ SECTIONS {
         :battleship_mvopeningfox.o (.bss.sMVOpeningFoxStatusBuffer)
         :battleship_mvopeningpikachu.o (.bss.sMVOpeningPikachuForceStatusBuffer)
         :battleship_mvopeningpikachu.o (.bss.sMVOpeningPikachuStatusBuffer)
+        /* The fighter movies' battle states (P8 R6, 2026-10-25): each movie's
+         * start assigns its copy from dSCManagerDefaultBattleState before it
+         * points gSCManagerBattleState at it, and every battle scene points
+         * that at its own state first, so a lent overlay leaves none read. */
+        :battleship_mvopeningmario.o (.bss.sMVOpeningMarioBattleState)
+        :battleship_mvopeningdonkey.o (.bss.sMVOpeningDonkeyBattleState)
+        :battleship_mvopeninglink.o (.bss.sMVOpeningLinkBattleState)
+        :battleship_mvopeningsamus.o (.bss.sMVOpeningSamusBattleState)
+        :battleship_mvopeningyoshi.o (.bss.sMVOpeningYoshiBattleState)
+        :battleship_mvopeningkirby.o (.bss.sMVOpeningKirbyBattleState)
+        :battleship_mvopeningfox.o (.bss.sMVOpeningFoxBattleState)
+        :battleship_mvopeningpikachu.o (.bss.sMVOpeningPikachuBattleState)
         :battleship_mntitlefiles.o (.bss.sMNTitleStatusBuffer)
         :battleship_mnvsmode.o (.bss.sMNVSModeStatusBuffer)
         :battleship_mnplayersvs.o (.bss.sMNPlayersVSStatusBuffer)
