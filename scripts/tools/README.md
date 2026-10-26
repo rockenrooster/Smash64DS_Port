@@ -63,7 +63,7 @@ table, and where runs write. Conventions:
 | `audit_vswalk.ps1` | walk ROM | the VS select tour (3D previews), SSS, match, Results, back, `-Laps` times |
 | `audit_metal_mario.ps1` | walk ROM | Metal Mario's campaign and both practices |
 | `audit_soak.ps1` | soak ROM | four-player all-items matches m1-m8, every fighter once |
-| `wireless_lag.ps1 -Build` | wireless lab ROM | two linked consoles (melonDS-mp): scene loads, lockstep gates, desyncs, stalls |
+| `wireless_lag.ps1 -Build` | wireless lab ROM | two to four linked consoles (melonDS-mp, `-Consoles`; it names the instances so all but the first join, and prints `ROLES 1,2,..`): scene loads, lockstep gates, desyncs, stalls; `-Repro 3` the four heavy mixes |
 | `fuzz_vs.ps1 -Build -Seed [-Laps]` | walk ROM | S2's seeded fuzz: the VS route for `-Laps` laps, each match drawn from the seed (four CPUs from the cast and the P4 contents, levels, the sixteen VS stages, time or stock rules, item rates and switches, teams) and written into `gNdsMatchConfig` by gdb at every `ndsMatchConfigApply` (word writes); `X LAP`/`X enter`/`X FAIL` lines, the draw in `<Tag>-plan.txt` |
 
 S2's fault injection is lab builds only (never the gate or ship ROMs): the

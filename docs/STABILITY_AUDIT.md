@@ -22,27 +22,35 @@ part of a card read sleeps 2 / 8 ms: about 4 and 1 MB/s), the stack paint
 | Stage select, every stage | the walk's stage-select cursor steered to each of the 16 VS stages (`gNdsMenuShellSssWalkTargetGkind`), a lap each | the cursor crossed the grid to every stage, its preview, the match on it and Results; 0 native failures; battle heap low-water 95,152-114,984 |
 | 4P soaks, 5 min | m1-m8, every fighter, every item at Very High | all eight through Results (9,243 frames), 0 halts, 0 native failures, 0 trips; heap low-water 41,648 (m7) to 86,776 on the soak ROM |
 | 4P soaks, 30 min | heavy roster and the cast on Hyrule Temple and Yoshi's Island, every item at Very High | all four through Results at 54,243 frames, 0 halts, 0 native failures, 0 trips; heap low-water 49,168-55,992; the source pools take 2.6-6.4 KB in the first five minutes and 1.3-4.2 KB in the next 25 (flat, against P7's 14.8-19.8 KB every five minutes) |
-| Wireless | 2 consoles, 4 consoles (`net-p8u`); 2 consoles on 1 MB/s cards (`net-slow8`) | 3 matches on every console each run, 0 desyncs, 0 aborts; on the slow cards the host waits up to 640 VBlanks (10.7 s) at the first lockstep gate for the guest's load (the lockstep waits up to 30 s) |
+| Wireless | the classic roster on 2 consoles (`net-p8u`) and on 2 consoles with 1 MB/s cards (`net-slow8`), 3 matches a run; the four heavy mixes (Hyrule Castle and Sector Z, a human on every console's port and level-9 CPUs on the rest, every item at Very High, five-minute matches) in sessions of 2 (`net-p8u`), 3 and 4 consoles (`net-p8v`), 4 matches a session | every console through every match, 0 desyncs, 0 aborts, no fault or freeze-report trip; heap low-water 29,996 (2 consoles, mix C on Hyrule Castle), 44,588 (3), 59,608 (4); the lockstep's longest wait 531 VBlanks (8.9 s, one guest mid-match on 3 consoles: melonds-mp runs every console in one process and their clocks drift), on the slow cards 640 at the first gate for the guest's load (the lockstep aborts at 30 s) |
 | Heap squeeze | 16 KB taken at each battle's first frame: heavy roster and mixes A-D on Hyrule Temple, Congo Jungle, Saffron City, Sector Z, Yoshi's Island | 25 of 25 to the end, 0 native failures; lowest heap 46,716 with the 16 KB gone (the heavy roster on Hyrule Temple; 62,068 without); Hyrule Temple's whole stage program (57,400 B) in every squeezed roster |
 | Slow storage | load ledgers at 4 and 1 MB/s; the gate at 4 MB/s (criterion B); the 1P Polygon Team stage and a Yoshi win at 1 MB/s | ledger at 1 MB/s: VS battle to Results 313 VBlanks (5.2 s), character select to stage select 279-299 (4.7-5.0 s), Results to character select 155; at 4 MB/s 106 / 90-96 / 54 (normal: 36 / 27-31 / 20). Polygon Team to the ending and two Yoshi wins through Results at 1 MB/s: 0 native failures, 0 trips. The gate at 4 MB/s (heavy roster and mix A on five stages): replay digests IDENTICAL to the normal card's, 0 native failures, lowest heap 49,756; motion misses pushed 3-11 frames a match past two VBlanks (73 in 10 runs, against 6 in 96 at the normal speed) |
-| Stacks | paint on the gate (heavy roster, Hyrule Temple) and the walk (VS laps, Kirby's campaign) | every stack at least 25% free: the DTCM hot stack 4,516 of 6,144 B (26.5%, the heavy roster), the game thread 10,236 of 16,384 (37.5%), the GObj threads at most 984 of 4,096 (76%; objman's guard word skipped, `12c3695ef79`), the relay threads 94-96%, the main thread's DTCM stack about 50%, IRQ 73.4%, SVC 75% |
+| Stacks | paint on the gate (the heavy roster and mixes A-D, Hyrule Temple, each through Results) and the walk (VS laps, Kirby's campaign) | every stack at least 25% free: the DTCM hot stack 4,516 of 6,144 B (26.5%, the heavy roster and every mix), the game thread at most 10,404 of 16,384 (36.5%, mix B; the heavy roster 10,236), the GObj threads at most 984 of 4,096 (76%; objman's guard word skipped, `12c3695ef79`), the relay threads 94-96%, the main thread's DTCM stack about 50%, IRQ 73.4%, SVC 75% |
 | CPU and cast exit set | `gate-p8u`: heavy roster, mixes A-D and the cast on the 16 VS stages (96 runs) | replay digests IDENTICAL to `xf` on all 96; 0 native failures; lowest heap 44,456; Hyrule Temple's whole program with every roster; motion reads pushed 6 frames in 5 runs, all mid-match (the misses the owner accepted) |
 | Freeze report (S5) | forced trips in every scene class; real hangs (the game thread spun by gdb) | trips in the title, mode select, VS mode, character and stage selects, battle, Results, the 1P select, intro card, stage and stage clear; real hangs tripped in the character select after 3.7 s, in the battle's fighter loads after 20.8 s and before the first present after 20.0 s, the report naming the build id, scene, stage, roster and heap |
 | Open rows (S6) | reproduction attempts | the Results freeze after a Yoshi win (four matches; two more on a 1 MB/s card), Master Hand stiff, Palutena's Results dress: not reproduced; Final Destination's shooting stars and boss backgrounds still not drawn (parked, the owner's "for later") |
 
 Across the matrix: 0 crashes, 0 freezes (no freeze-report trip in any run),
 0 desyncs, 0 native failures; the heap low-water stays above 25,600 everywhere
-(36,360 at the least, content 19's campaign; 41,648 on the soak ROM, which has
+(29,996 at the least, the two-console heavy mixes on the wireless lab ROM;
+36,360 on the ship, content 19's campaign; 41,648 on the soak ROM, which has
 24.8 KB less arena); every stack keeps at least 25% free; the source pools
 flatten. `quick_check.ps1` passes on the final tree (host 734 of 734, the five
 configurations, the heavy roster's tick streams IDENTICAL on Hyrule Temple,
-Congo Jungle and Yoshi's Island).
+Congo Jungle and Yoshi's Island), and again on `9c1810792c2` after the exit check's
+readability batches.
 
 Probing notes from this pass: the soak and sweep runs need wall-clock caps that
 allow for a loaded host (12 emulators at once doubled a 5-minute match's
 time); a job's `Invoke-Expression` does not see the job's own parameters (a
 whole queue once ran on slot 0); a seeded build directory holds its seed's ROM
-until its own make replaces it.
+until its own make replaces it. Until 2026-10-26 the four-console runs were one
+pair and two lone hosts: the autopilot joins only as `melonDS2`..`melonDS9`, and
+melonds-mp named instances 2 and 3 `melonDS` (`wireless_lag.ps1` now names them
+and prints the session's roles). The first real three-console session then
+stalled at the character select after its first match: the lab sweep made the
+third console's port a CPU, which the host resets and the autopilot never picks
+again (`83230709c6f`, lab code only).
 
 ## P7 audit (2026-10-20)
 
