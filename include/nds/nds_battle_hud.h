@@ -69,6 +69,9 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
 /* Same TU: FALSE when that player's meter has no emblem to draw (no meter,
  * the source's hidden placeholder, or a sprite that is not one I4 bitmap). */
 u32 ndsIFCommonGetBattleHudEmblem(u32 player, NDSBattleHudEmblemState *out);
+/* Same TU: the source x the scene laid that player's meter out at
+ * (gIFCommonPlayerInterface.player_pos_x: VS's table or the 1P game's). */
+s32 ndsIFCommonGetBattleHudPlayerX(u32 player);
 
 /* The 1P team stock row (sc1PGameTeamStockDisplayProcDisplay), one look per
  * shown icon in source order, published by battleship_ifcommon.c's lower-HUD

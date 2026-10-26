@@ -1066,6 +1066,21 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
     return TRUE;
 }
 
+/* The source x a player's meter, stock row and emblem hang from: the table
+ * the scene installed -- VS's (ifCommonPlayerDamageSetDigitPositions) or the
+ * 1P game's per-player-count layout (sc1PGameSetPlayerInterfacePositions) --
+ * which ifCommonPlayerStockMultiProcDisplay:1055/1071 reads for the icons. */
+s32 ndsIFCommonGetBattleHudPlayerX(u32 player)
+{
+    if (player >= (u32)GMCOMMON_PLAYERS_MAX)
+    {
+        return 0;
+    }
+    return (gIFCommonPlayerInterface.player_pos_x != NULL) ?
+        gIFCommonPlayerInterface.player_pos_x[player] :
+        dIFCommonPlayerDamagePositionOffsetsX[player];
+}
+
 /* ifCommonPlayerDamageInitInterface (:929-951) gives every meter's GObj the
  * fighter's emblem as its first SObj, placed and tinted, or a hidden
  * placeholder; ifCommonPlayerDamageProcDisplay draws that SObj every frame

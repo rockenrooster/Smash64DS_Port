@@ -48,12 +48,6 @@ _Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
 /* An emblem (at most 30x27 in the source frame, 24x22 here) in a 32x32 cell. */
 #define NDS_BATTLE_HUD_EMBLEM_CELL 32u
 
-static const s16 sNdsBattleHudPlayerCenterX[NDS_BATTLE_HUD_PLAYERS] = {
-    NDS_BATTLE_HUD_SOURCE_SCALE(55),
-    NDS_BATTLE_HUD_SOURCE_SCALE(125),
-    NDS_BATTLE_HUD_SOURCE_SCALE(195),
-    NDS_BATTLE_HUD_SOURCE_SCALE(265)
-};
 static const s16 sNdsBattleHudTimerCenterX[5] = {
     NDS_BATTLE_HUD_SOURCE_SCALE(232),
     NDS_BATTLE_HUD_SOURCE_SCALE(247),
@@ -693,6 +687,10 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 content,
     u32 stock = ndsBattleHudStock(player);
     u32 owner = ndsBattleHudStockOwner(fkind);
     u32 palette = NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player;
+    /* The meter's source x as the scene laid it out: VS's 55 + 70 a port, or
+     * the 1P game's per-count layout (a 1v1 puts the player at 125), which
+     * the damage digits and emblem already follow. */
+    s32 base = ndsIFCommonGetBattleHudPlayerX(player);
     u16 *icon;
     u32 i;
 
@@ -715,7 +713,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 content,
     {
         for (i = 0u; i < stock; i++)
         {
-            s32 source_center = (s32)(55 + player * 70u) - 24 + (s32)i * 10;
+            s32 source_center = base - 24 + (s32)i * 10;
             s32 x = NDS_BATTLE_HUD_SOURCE_SCALE(source_center) -
                     ((s32)NDS_BATTLE_HUD_STOCK_CONTENT_W / 2);
 
@@ -728,7 +726,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 content,
     {
         u8 digits[3];
         u32 count;
-        s32 center = sNdsBattleHudPlayerCenterX[player];
+        s32 center = NDS_BATTLE_HUD_SOURCE_SCALE(base);
         s32 x;
 
         if (stock > 999u) stock = 999u;
