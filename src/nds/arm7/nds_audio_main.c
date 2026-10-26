@@ -101,6 +101,13 @@ int ndsAudioStorageReadRom(uint32_t offset, void *destination, uint32_t bytes)
          * foreground transfers; the generation fences a close/reopen. */
         uint32_t part = bytes < 8192u ? bytes : 8192u;
         mutexLock(&sMediaMutex);
+#if defined(NDS_ARM7_LAB_SLOW_CARD_US) && NDS_ARM7_LAB_SLOW_CARD_US
+        /* P8 S2 slow storage (lab: NDS_ARM7_LAB_FLAGS=-DNDS_ARM7_LAB_SLOW_CARD_US=N,
+         * and delete the lab build's nds-audio-arm7.o): every part of a card
+         * read takes N microseconds longer, the medium held as a slow card
+         * holds it, so the BGM refills wait too. */
+        threadSleep(NDS_ARM7_LAB_SLOW_CARD_US);
+#endif
         int ok = generation == sMediaGeneration &&
             (sFileMap.extent_count ? ndsAudioStorageReadMap(offset, out, part) :
              sCardOpen && ntrcardRomRead(-1, offset, out, part));

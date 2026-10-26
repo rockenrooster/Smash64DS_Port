@@ -533,6 +533,16 @@ static void ndsBattlePlayablePresentFrame(void)
     }
 #endif
     gNdsBattlePlayablePacingPresentedFrames++;
+#if defined(NDS_LAB_HEAP_SQUEEZE) && NDS_LAB_HEAP_SQUEEZE
+    /* P8 S2 heap squeeze (lab, CPPFLAGS=-DNDS_LAB_HEAP_SQUEEZE=16384): the
+     * battle's first presented frame takes this many bytes of the general
+     * heap for the rest of the match (the next scene's heap reset returns
+     * them), so the match runs that far below its own low-water. */
+    if (gNdsBattlePlayablePacingPresentedFrames == 1u)
+    {
+        (void)syTaskmanMalloc(NDS_LAB_HEAP_SQUEEZE, 0x8);
+    }
+#endif
     /* The battle-time low-water of the taskman general heap, which is the
      * number every memory decision on this target turns on:
      * ifCommonSetMaxNumGObj caps the GObj pool the instant it drops under

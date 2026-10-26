@@ -62,6 +62,14 @@ table, and where runs write. Conventions:
 | `audit_metal_mario.ps1` | walk ROM | Metal Mario's campaign and both practices |
 | `audit_soak.ps1` | soak ROM | four-player all-items matches m1-m8, every fighter once |
 | `wireless_lag.ps1 -Build` | wireless lab ROM | two linked consoles (melonDS-mp): scene loads, lockstep gates, desyncs, stalls |
+| `fuzz_vs.ps1 -Build -Seed [-Laps]` | walk ROM | S2's seeded fuzz: the VS route for `-Laps` laps, each match drawn from the seed (four CPUs from the cast and the P4 contents, levels, the sixteen VS stages, time or stock rules, item rates and switches, teams) and written into `gNdsMatchConfig` by gdb at every `ndsMatchConfigApply` (word writes); `X LAP`/`X enter`/`X FAIL` lines, the draw in `<Tag>-plan.txt` |
+
+S2's fault injection is lab builds only (never the gate or ship ROMs): the
+heap squeeze takes `-Extra 'CPPFLAGS=-DNDS_LAB_HEAP_SQUEEZE=16384'` (that many
+bytes of the general heap from each battle's first frame), slow storage
+`-Extra 'NDS_ARM7_LAB_FLAGS=-DNDS_ARM7_LAB_SLOW_CARD_US=N'` (every 8 KB part of a
+card read N microseconds longer; delete the build's `nds-audio-arm7.o` when
+only the delay changes).
 
 ## Measurements
 

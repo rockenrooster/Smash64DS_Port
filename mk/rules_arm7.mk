@@ -43,9 +43,12 @@ NDS_ARM7_SOURCE := $(PROJECT_ROOT)/src/nds/arm7/nds_audio_main.c
 NDS_ARM7_HEADER := $(PROJECT_ROOT)/include/nds/nds_audio_storage.h
 NDS_ARM7_OBJECTS := nds-audio-arm7.o nds-audio-dldi-arm7.o nds-audio-extent-arm7.o \
 	nds-bgm-stream-arm7.o nds-bgm-service-arm7.o nds-net-arm7.o
+# NDS_ARM7_LAB_FLAGS: lab defines for the ARM7 only (P8 S2's slow storage,
+# -DNDS_ARM7_LAB_SLOW_CARD_US=N); never set by a configuration.
+NDS_ARM7_LAB_FLAGS ?=
 NDS_ARM7_FLAGS := -march=armv4t -mtune=arm7tdmi -mthumb -g -Os \
 	-Wall -Wextra -ffunction-sections -fdata-sections -DARM7 -D__NDS__ \
-	-I$(PROJECT_ROOT)/include -I$(CALICO)/include
+	-I$(PROJECT_ROOT)/include -I$(CALICO)/include $(NDS_ARM7_LAB_FLAGS)
 _ARM7_ELF := -7 $(NDS_ARM7_ELF)
 .PHONY: arm7-service
 arm7-service: $(NDS_ARM7_ELF)
