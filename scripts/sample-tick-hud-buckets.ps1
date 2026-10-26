@@ -11,19 +11,6 @@ param(
     [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     [string]$Build = 'build-tick-hud-buckets',
     [switch]$NoBuild,
-    # Requires a ROM built NDS_TASK68_FALLBACK_CENSUS=1. Off by default because
-    # that flag adds BSS and this ROM's pacing is cache-placement sensitive, so a
-    # census build is not comparable to an ordinary tick-HUD baseline.
-    #
-    # R2-03 E35: NDS_TASK75_LOAD_CENSUS=1 alone is NOT enough. It re-points the
-    # shared per-frame ring at gNdsTask75AssetLoadCount, but this switch also
-    # reads gNdsTickHudNativeOwnerFallbackByReason[], which only Task 68 defines,
-    # so the run reaches its window and then dies in GDB with "No symbol ... in
-    # current context". Build with BOTH flags: Task 75 wins the #if that selects
-    # the ring source in nds_platform.c, and Task 68 supplies the symbol. Which
-    # counter a given dump holds is a property of the build -- the column is
-    # labelled "fallback" either way.
-    [switch]$FallbackCensus,
     # Read the ROM's own 128-entry sample ring in a single stop instead of
     # stopping GDB once per presented frame. ndsPlatformTickHudSample already
     # records every bucket of every presented iteration into
@@ -41,8 +28,7 @@ param(
     # fired/skipped counters and read them from the same run that produced the
     # buckets, not from a second run that may not have taken the same path.
     [string[]]$ExtraGlobals = @(),
-    # Extra `make` variables for the build, e.g.
-    # -MakeFlags NDS_TASK75_LOAD_CENSUS=1,NDS_TASK68_FALLBACK_CENSUS=1.
+    # Extra `make` variables for the build, e.g. -MakeFlags NDS_DIAG_COUNTERS=1.
     # -ExtraGlobals names that only exist behind a census flag REQUIRE the
     # matching flag here: without it this script rebuilds the ROM without the
     # symbol and then rejects it in its own guard below, which reads as "the
@@ -305,9 +291,6 @@ if ($RingStartRead) {
             'later in the match would stop GDB on every preceding frame and ' +
             'invalidate RingDump timing.')
     }
-    if ($FallbackCensus) {
-        throw '-RingStartRead and -FallbackCensus both own the exact start stop; do not combine them.'
-    }
 }
 # -RingDump reads ONE ring of bucket words out of the ROM at a single stop
 # ($ringBytes = bucketNames * 128 * 4). Per-frame globals are not in that ring
@@ -366,12 +349,6 @@ $srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM',
                    'MWPN', 'MITM', 'MEFX', 'MACT', 'MPRT', 'MTEX',
                    'MCAP', 'MPRO', 'MCAM', 'MFLS', 'GPOL', 'GVTX',
                    'DGSA', 'DGSB', 'STRD')
-# Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
-$fallbackReasons = if ($FallbackCensus) {
-    @('calls', 'eligible', 'animLock', 'selected', 'displayList',
-      'materialCount', 'validate', 'matrices', 'materialPrep',
-      'inputs', 'contract', 'postGx', 'begin',
-      'animLoad', 'animResident') } else { @() }
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `
@@ -394,14 +371,10 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        # Census flags must reach `make`. This script's own header documents
-        # that -ExtraGlobals reads such as gNdsTask75AssetLoadCount need
-        # NDS_TASK75_LOAD_CENSUS=1 (and NDS_TASK68_FALLBACK_CENSUS=1), but the
-        # build line never passed them -- so a run that asked for those globals
-        # rebuilt the ROM WITHOUT them and then failed its own symbol guard.
-        # Third harness in this campaign with the same defect (2026-07-31);
-        # capture-sudden-death-entry.ps1 and soak-freeze-watch.ps1 were the
-        # other two. Generic pass-through here so the next flag needs no edit.
+        # Lab flags must reach `make`: -ExtraGlobals that exist only behind a
+        # lab flag need it in -MakeFlags, or the rebuilt ROM lacks the symbol
+        # and fails the symbol guard below. Generic pass-through, so a new
+        # flag needs no edit here.
         $makeArgs = @("TARGET=$target", "BUILD=$Build") + $MakeFlags
         make -C $root @makeArgs
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -470,9 +443,8 @@ try {
                 @{ n = '-PerStopGlobals';  v = $PerStopGlobals },
                 @{ n = 'always-read';      v = $alwaysRead })) {
                 # Validate the BASE identifier so an array element is readable:
-                # `gNdsTickHudNativeOwnerFallbackByReason[13]` is a legal GDB
-                # expression but never a symbol name, and R2-07 L5 needs exactly
-                # that (animLoad is index 13 of the fallback reason array).
+                # `gNdsTickHudBuckets[13]` is a legal GDB expression but never a
+                # symbol name.
                 # A typo in the base is still caught, which is what the guard is
                 # for; a bad subscript is a GDB error, not a silent zero.
                 #
@@ -534,34 +506,19 @@ try {
     # bucket is a one-line change. Task 66 added two and the second hardcoded
     # bound was missed, which silently dropped WAIT and WORK from the table
     # while every other check still passed.
-    # Task 67: the native-owner fallback counters ride along on the same stop.
-    # They are cumulative, so the per-frame count is a difference between
-    # consecutive samples -- which is the point, because it lines the fallback
-    # up against the very frame whose WORK spiked instead of leaving the two to
-    # be correlated across separate runs.
-    #
-    # Only the total rides per frame. Reading the four per-reason counters here
-    # too meant five extra GDB round-trips on every stop, which stretched the
-    # stop far enough that the game's own frame pacing skipped and repeated
-    # presented frames -- the sampler's uniqueness check caught it. The reason
-    # breakdown is a run-level question, so it is read once at the end instead.
-    $fallbackFields = if ($FallbackCensus -and (-not $RingDump)) {
-        @('gNdsTickHudNativeOwnerFallbackCount') } else { @() }
     # Per-frame globals ride the SAME printf as the buckets, which is the whole
     # point: one read per presented frame, at the frame's own sample point, so
     # the value is attributable to that frame.
     $sampleFields = ((0..($bucketNames.Count - 1) |
-        ForEach-Object { "gNdsTickHudBuckets[$_]" }) + $fallbackFields +
+        ForEach-Object { "gNdsTickHudBuckets[$_]" }) +
         $PerFrameGlobals) -join ', '
     $extraLine = if ($ExtraGlobals.Count -ne 0) {
         "printf `"TICKEXTRA=$((, '%u' * $ExtraGlobals.Count) -join ',')\n`", " +
             ($ExtraGlobals -join ', ')
     } else { $null }
-    $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count +
-        $PerFrameGlobals.Count
+    $sampleColumnCount = $bucketNames.Count + $PerFrameGlobals.Count
     $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     $ringPath = Join-Path $temp 'tick-hud-ring.bin'
-    $fbRingPath = Join-Path $temp 'tick-hud-fallback-ring.bin'
     $ringWindow = if ((Get-Variable -Name ringElfWindow -ErrorAction SilentlyContinue) -and ($ringElfWindow -gt 0)) { $ringElfWindow } else { 128 }
     if ($RingStopStride -lt 0) { $RingStopStride = [int][Math]::Floor($ringWindow * 3 / 4) }
     if ($RingStopStride -ge $ringWindow) {
@@ -589,23 +546,13 @@ try {
             }
             $ringStopTargets += $ringEndFrame
         }
-        if ($FallbackCensus -and ($ringStopTargets.Count -gt 1)) {
-            # The fallback ring shares the bucket ring's index, so stitching it
-            # would need the same per-stop treatment. Rather than half-support
-            # it and hand back a column that is quietly wrong for every stop
-            # after the first, refuse.
-            throw ('-FallbackCensus is single-stop only, but this run needs ' +
-                "$($ringStopTargets.Count) ring stops for $Samples samples. " +
-                "Lower -Samples to $ringWindow or drop -FallbackCensus.")
-        }
     }
     $ringStopPaths = @(for ($i = 0; $i -lt $ringStopTargets.Count; $i++) {
         Join-Path $temp "tick-hud-ring-$i.bin"
     })
     # One unrolled stop per target rather than a GDB-side loop: the breakpoint
-    # condition changes per stop, and `delete` + a fresh `break` is the same
-    # shape the -FallbackCensus baseline stop already uses and is known to work
-    # in batch mode.
+    # condition changes per stop, and `delete` + a fresh `break` is known to
+    # work in batch mode.
     $ringStopLines = @(for ($i = 0; $i -lt $ringStopTargets.Count; $i++) {
         # Intermediate drains may use the stress-only sparse marker. The final
         # stop is exact on the universal marker; it is installed only after the
@@ -669,30 +616,8 @@ try {
         'set remote X-packet off',
         $bootGlobalLines,
         $setGlobalLines,
-        $gdbExtraLines,
-        # The fallback counters run from boot, so a single read at the end would
-        # charge the census window with every fallback taken during boot, the
-        # menu and the seeding presents. Stop once at the start frame to take a
-        # baseline and difference it. Two stops, not 128.
-        $(if ($FallbackCensus) { "break $ringMarker" }),
-        $(if ($FallbackCensus) { 'commands' }),
-        $(if ($FallbackCensus) { 'silent' }),
-        $(if ($FallbackCensus) {
-            "if gNdsBattlePlayablePacingPresentedFrames < $StartFrame" }),
-        $(if ($FallbackCensus) { 'continue' }),
-        $(if ($FallbackCensus) { 'end' }),
-        $(if ($FallbackCensus) { 'end' }),
-        $(if ($FallbackCensus) { 'continue' }),
-        $(if ($FallbackCensus) {
-            "printf `"TICKFB0=$((, '%u' * $fallbackReasons.Count) -join ',')\n`", " +
-                ((0..($fallbackReasons.Count - 1) | ForEach-Object {
-                    "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
-        }),
-        $(if ($FallbackCensus) { 'delete' })
+        $gdbExtraLines
         ) + $ringStartLines + $ringStopLines + @(
-        $(if ($FallbackCensus) {
-            "dump binary memory $fbRingPath &sBattleTickHudFallbackRing[0] " +
-                "&sBattleTickHudFallbackRing[$ringWindow]" }),
         ('printf "TICKVBI=%u,%u,%u,%u,%u\n", ' +
             'gNdsBattlePlayablePacingPresentIntervalBucket[2], ' +
             'gNdsBattlePlayablePacingPresentIntervalBucket[3], ' +
@@ -700,11 +625,6 @@ try {
             'gNdsBattlePlayablePacingPresentIntervalBucket[5], ' +
             'gNdsBattlePlayablePacingPresentIntervalMax'),
         'printf "TICKSLIP=%u\n", gNdsBattlePlayablePacingCadenceViolationCount',
-        $(if ($FallbackCensus) {
-            "printf `"TICKFB=$((, '%u' * $fallbackReasons.Count) -join ',')\n`", " +
-                ((0..($fallbackReasons.Count - 1) | ForEach-Object {
-                    "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
-        }),
         $extraLine,
         'detach')
     } else {
@@ -741,11 +661,6 @@ try {
             'gNdsBattlePlayablePacingPresentIntervalBucket[5], ' +
             'gNdsBattlePlayablePacingPresentIntervalMax'),
         'printf "TICKSLIP=%u\n", gNdsBattlePlayablePacingCadenceViolationCount',
-        $(if ($FallbackCensus) {
-            "printf `"TICKFB=$((, '%u' * $fallbackReasons.Count) -join ',')\n`", " +
-                ((0..($fallbackReasons.Count - 1) | ForEach-Object {
-                    "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
-        }),
         $extraLine,
         'detach')
     }
@@ -904,22 +819,6 @@ try {
     $output = Get-Content $gdbOut -Raw
     if ($GdbOutCopy -ne '') { Copy-Item -LiteralPath $gdbOut -Destination $GdbOutCopy -Force }
     $rows = if ($RingDump) {
-        # Task 70: the per-frame fallback deltas share the ring index, so they
-        # append as one more column and every frame carries its own count.
-        # Single-stop only -- the guard where $ringStopTargets is built refuses
-        # the combination rather than emitting a quietly wrong column.
-        $fbRaw = if ($FallbackCensus) {
-            if (-not (Test-Path -LiteralPath $fbRingPath -PathType Leaf)) {
-                throw ("Fallback ring dump wrote no file at $fbRingPath. The " +
-                    'ROM must be built NDS_TASK68_FALLBACK_CENSUS=1.')
-            }
-            $bytes = [System.IO.File]::ReadAllBytes($fbRingPath)
-            if ($bytes.Length -ne ($ringWindow * 4)) {
-                throw ("Fallback ring dump is $($bytes.Length) bytes, expected " +
-                    "$($ringWindow * 4).")
-            }
-            $bytes
-        } else { $null }
         $stitched = New-Object 'System.Collections.Generic.List[uint64[]]'
         $ringStopSkews = New-Object 'System.Collections.Generic.List[object]'
         # Where each stop's rows begin in $stitched, and the skew that stop was
@@ -1085,9 +984,6 @@ try {
                     $row.Add([BitConverter]::ToUInt32($raw,
                         ((($b * $ringWindow) + $slot) * 4)))
                 }
-                if ($null -ne $fbRaw) {
-                    $row.Add([BitConverter]::ToUInt32($fbRaw, ($slot * 4)))
-                }
                 $stitched.Add([uint64[]]$row.ToArray())
             }
             $prevHead = $head
@@ -1196,8 +1092,7 @@ try {
         } else {
             throw ("Tick-HUD samples repeated a presented frame " +
                 "($($dupIndex.Count) of $($rows.Count)):`n$($frames -join ',')`n" +
-                "columns: frame,$($bucketNames -join ',')" +
-                "$(if ($fallbackFields) { ',fbTotal' })`n" +
+                "columns: frame,$($bucketNames -join ',')`n" +
                 ($detail -join "`n") +
                 "$(if ($unexplained.Count -ne 0) { "`n$($unexplained.Count) of " +
                     "$($dupIndex.Count) duplicates are NOT at a ring-stop seam " +
@@ -1330,20 +1225,14 @@ try {
         # reader never has to guess which is which. They sit after WORK-H so the
         # existing column order -- which other tooling and every prior rows CSV
         # depend on -- is unchanged.
-        # -FallbackCensus was ALREADY sampled per frame (it rides $sampleFields
-        # with the buckets) and was then dropped at write time -- the same shape
-        # as -ExtraGlobals, data collected and discarded. R2-07 L4 needs exactly
-        # this column: which frames fell off the native fighter owner.
         # WRAPFIX goes LAST, after the per-frame globals, so every existing
         # column keeps its position -- prior rows CSVs and the tooling that
         # reads them are unaffected. (Every consumer in scripts/ reads by NAME
         # -- csv.DictReader or Import-Csv -- so this is belt and braces.)
         $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H' +
-            $(if ($fallbackFields.Count) { ',fbTotal' }) +
             $(if ($PerFrameGlobals.Count) { ',' + ($PerFrameGlobals -join ',') }) +
             ',WRAPFIX'))
-        $fallbackBase = $bucketNames.Count + 1
-        $perFrameBase = $bucketNames.Count + $fallbackFields.Count + 1
+        $perFrameBase = $bucketNames.Count + 1
         for ($ri = 0; $ri -lt $rows.Count; $ri++) {
             $row = $rows[$ri]
             $cells = @($row[0])
@@ -1351,9 +1240,6 @@ try {
                 $cells += $row[$b + 1]
             }
             $cells += ([uint64]$row[$workCsvIndex] - [uint64]$row[$hudCsvIndex])
-            for ($fb = 0; $fb -lt $fallbackFields.Count; $fb++) {
-                $cells += $row[$fallbackBase + $fb]
-            }
             for ($g = 0; $g -lt $PerFrameGlobals.Count; $g++) {
                 $cells += $row[$perFrameBase + $g]
             }
@@ -1449,35 +1335,6 @@ try {
         min = [uint64]($workNoHud | Measure-Object -Minimum).Minimum
         max = [uint64]($workNoHud | Measure-Object -Maximum).Maximum
     }
-
-    # Task 67: fallbacks per frame, and how the frames that took one compare to
-    # the frames that did not. If the P95 really is the renderer dropping out of
-    # its native owner, the two medians separate here and nowhere else.
-    $fbBase = $bucketNames.Count + 1
-    $workCol = [array]::IndexOf($bucketNames, 'WORK') + 1
-    $hudCol = [array]::IndexOf($bucketNames, 'HUD') + 1
-    # Ring mode rings the delta itself, so the column is already per-frame and
-    # every sample counts. The per-stop column is cumulative and has to be
-    # differenced, which costs the first sample.
-    $fbPerFrame = @(if ($FallbackCensus -and $RingDump) {
-        for ($i = 0; $i -lt $rows.Count; $i++) {
-            [PSCustomObject]@{
-                frame = $rows[$i][0]
-                total = [uint64]$rows[$i][$fbBase]
-                workH = [uint64]$rows[$i][$workCol] - [uint64]$rows[$i][$hudCol]
-            }
-        }
-    } elseif ($FallbackCensus) {
-        for ($i = 1; $i -lt $rows.Count; $i++) {
-            [PSCustomObject]@{
-                frame = $rows[$i][0]
-                total = [uint64]$rows[$i][$fbBase] - [uint64]$rows[$i - 1][$fbBase]
-                workH = [uint64]$rows[$i][$workCol] - [uint64]$rows[$i][$hudCol]
-            }
-        }
-    })
-    $fbFrames = @($fbPerFrame | Where-Object { $_.total -gt 0 })
-    $cleanFrames = @($fbPerFrame | Where-Object { $_.total -eq 0 })
 
     # ALL is measured wall ticks for the whole iteration, not a sum of the
     # others; OTHR is defined as the ALL remainder, and WAIT/WORK are two more
@@ -1693,82 +1550,6 @@ try {
             '{0}={1:N0}' -f $_.name, $_.value }) -join '  '))
     }
 
-    if ($FallbackCensus) {
-    $fbMatch = [regex]::Match($output,
-        "TICKFB=([0-9]+(?:,[0-9]+){$($fallbackReasons.Count - 1)})")
-    $fbTotals = if ($fbMatch.Success) {
-        [uint64[]]($fbMatch.Groups[1].Value -split ',')
-    } else { @(0) * $fallbackReasons.Count }
-    # Ring mode brackets the window with a baseline read, so the reported
-    # numbers are fallbacks taken during the sampled frames rather than since
-    # reset -- boot, the menu and the seeding presents no longer count.
-    $fb0Match = [regex]::Match($output,
-        "TICKFB0=([0-9]+(?:,[0-9]+){$($fallbackReasons.Count - 1)})")
-    $fbBaseline = if ($fb0Match.Success) {
-        [uint64[]]($fb0Match.Groups[1].Value -split ',')
-    } else { @([uint64]0) * $fallbackReasons.Count }
-    $fbWindow = @(0..($fallbackReasons.Count - 1) | ForEach-Object {
-        [uint64]$fbTotals[$_] - [uint64]$fbBaseline[$_] })
-    $fbByReason = @(0..($fallbackReasons.Count - 1) | ForEach-Object {
-        '{0}:{1}' -f $fallbackReasons[$_], $fbWindow[$_]
-    })
-    if ($RingDump) {
-        # calls and eligible lead the enum as denominators, so they are excluded
-        # from the fallback total and reported as the rate's base instead --
-        # summing them in would report 522 fallbacks out of 256 draws.
-        #
-        # R2-03 E54: the enum's LAST TWO entries are not fallback reasons either.
-        # Task 73's AnimForceLoad/AnimForceResident ride along on this counter
-        # bank because it already had plumbing, and summing them in reported
-        # "23 fell back" for a window whose real answer was 5 -- with animLoad's
-        # 18 dominating the breakdown and pointing the next reader at animation
-        # residency instead of at the hitlag shuffle that was actually firing.
-        # Report them, separately, as what they are.
-        $fbDenominators = 2
-        $fbRideAlongs = 2
-        $fbReasonCount = $fallbackReasons.Count - $fbDenominators - $fbRideAlongs
-        $fbCalls = [double]$fbWindow[0]
-        $fbReasonSum = (($fbWindow | Select-Object -Skip $fbDenominators `
-            -First $fbReasonCount | Measure-Object -Sum).Sum)
-        Write-Output (("native-owner: {0} draws over {1} frames, {2} eligible, " +
-            "{3} fell back ({4:N1}%)  [{5}]") -f
-            $fbWindow[0], $rows.Count, $fbWindow[1], $fbReasonSum,
-            (100.0 * $fbReasonSum / [Math]::Max(1.0, $fbCalls)),
-            (($fbByReason | Select-Object -Skip $fbDenominators `
-                -First $fbReasonCount) -join ' '))
-        Write-Output ("  Task 73 anim residency (NOT fallbacks): {0}" -f
-            (($fbByReason | Select-Object -Last $fbRideAlongs) -join ' '))
-        Write-Output (("  frames with a fallback: {0} of {1} " +
-            "(ring counts every reason including the ride-alongs)") -f
-            $fbFrames.Count, $fbPerFrame.Count)
-    } else {
-        Write-Output (("native-owner fallback: {0} of {1} frames took one  [{2}]") -f
-            $fbFrames.Count, $fbPerFrame.Count, ($fbByReason -join ' '))
-    }
-    if (($fbFrames.Count -gt 0) -and ($cleanFrames.Count -gt 0)) {
-        $fbMed = ((@($fbFrames.workH | Sort-Object))[
-            [int][Math]::Floor(($fbFrames.Count - 1) * 0.5)])
-        $clMed = ((@($cleanFrames.workH | Sort-Object))[
-            [int][Math]::Floor(($cleanFrames.Count - 1) * 0.5)])
-        Write-Output (("  WORK-H median: fallback {0:N0} vs clean {1:N0} " +
-            "({2:N2}x)") -f $fbMed, $clMed, ($fbMed / [double]$clMed))
-        # A median over a handful of frames is a weak basis for "the fallback
-        # frames are the expensive frames". What settles it is whether the two
-        # populations separate: how many clean frames reach the cheapest
-        # fallback frame. Zero overlap is the claim; anything else is not.
-        $fbMin = ($fbFrames.workH | Measure-Object -Minimum).Minimum
-        $cleanAbove = @($cleanFrames | Where-Object { $_.workH -ge $fbMin })
-        $cleanSorted = @($cleanFrames.workH | Sort-Object)
-        Write-Output (("  separation: cheapest fallback frame {0:N0}; " +
-            "{1} of {2} clean frames reach it; clean P95 {3:N0}") -f
-            $fbMin, $cleanAbove.Count, $cleanFrames.Count,
-            $cleanSorted[[int][Math]::Floor(($cleanSorted.Count - 1) * 0.95)])
-        Write-Output ("  fallback frames: " + (($fbFrames |
-            ForEach-Object { '{0}({1}):{2:N0}' -f
-                $_.frame, $_.total, $_.workH }) -join ' '))
-    }
-    }
-
     if ($JsonOut) {
         $jsonDir = Split-Path -Parent $JsonOut
         if ($jsonDir) { New-Item -ItemType Directory -Force -Path $jsonDir | Out-Null }
@@ -1785,7 +1566,6 @@ try {
     }
     Restore-MelonDSGdbConfig -State $configState
     Remove-Item $gdbScript, $gdbOut, $gdbErr, $emulatorOut, $emulatorErr, `
-        (Join-Path $temp 'tick-hud-ring.bin'), `
-        (Join-Path $temp 'tick-hud-fallback-ring.bin') `
+        (Join-Path $temp 'tick-hud-ring.bin') `
         -Force -ErrorAction SilentlyContinue
 }
