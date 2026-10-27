@@ -683,6 +683,22 @@ static void ndsMenuShellVsJoinStep(u32 taps)
 
         if (answer > 0)
         {
+            /* In the room. The character select draws the host's locked
+             * fighters once, at entry (ndsMenuShellCssSyncLockedCells), so it
+             * opens only after the host's first snapshot has brought its
+             * unlocks; a room gone silent meanwhile ends the search. */
+            if (ndsNetLobbyGuestHeardHost() == 0u)
+            {
+                if (ndsNetLobbyLost() != 0u)
+                {
+                    ndsNetSessionClose();
+                    ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
+                    sMenuVsJoin = NDS_MENU_VS_JOIN_IDLE;
+                    sMenuVsSelected = NDS_MENU_VS_ENTRIES;
+                    ndsMenuShellRefreshVs();
+                }
+                return;
+            }
             sMenuVsJoin = NDS_MENU_VS_JOIN_IDLE;
             ndsMenuShellVsSaveRules();
             ndsMenuShellGoto((u32)nSCKindPlayersVS);

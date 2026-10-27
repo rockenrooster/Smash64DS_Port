@@ -124,6 +124,8 @@ static u32 sHostLastHeard;
 static NdsNetLobbySlot sSnapSlots[NDS_NET_PORTS];
 static u32 sSnapTeamBattle;
 static u32 sSnapFresh;
+/* A whole snapshot has arrived since the join. */
+static u32 sSnapHeard;
 /* The host's save unlock mask and rules from the latest snapshot. */
 static u32 sHostUnlockMask;
 /* The host's P7 masks: fighters (two words), stages. */
@@ -356,6 +358,7 @@ static void ndsNetLobbyReset(void)
     sStartAckLeft = 0u;
     sStartPending = 0u;
     sSnapFresh = 0u;
+    sSnapHeard = 0u;
     sHaveProposal = 0u;
     sRevision = 0u;
     memset(sMembers, 0, sizeof(sMembers));
@@ -722,6 +725,7 @@ static void ndsNetLobbyReceive(void)
                                  ((u32)w[2] << 16) | ((u32)w[3] << 24);
                 }
                 sSnapFresh = 1u;
+                sSnapHeard = 1u;
                 if (((sHumanMask >> sLocalPort) & 1u) == 0u)
                     sLost = 1u;   /* the host dropped us */
             }
@@ -1277,6 +1281,11 @@ int ndsNetLobbyHostStartMatch(void)
 }
 
 /* --- Guest API ----------------------------------------------------------- */
+
+uint32_t ndsNetLobbyGuestHeardHost(void)
+{
+    return (sRole == NDS_NET_ROLE_GUEST) ? sSnapHeard : 0u;
+}
 
 uint32_t ndsNetLobbyGuestSnapshot(NdsNetLobbySlot slots[4], uint32_t *team_battle)
 {

@@ -95,6 +95,10 @@ void ndsNetLobbyHostSetStageCursor(uint32_t slot);
 int ndsNetLobbyHostStartMatch(void);
 
 /* Guest. */
+/* 1 once a whole snapshot has arrived since the join: the host's unlocks,
+ * rules and names are known (the character select reads the unlocks at
+ * entry). */
+uint32_t ndsNetLobbyGuestHeardHost(void);
 uint32_t ndsNetLobbyGuestSnapshot(NdsNetLobbySlot slots[4], uint32_t *team_battle);
 void ndsNetLobbyGuestPropose(const NdsNetLobbySlot *mine);
 /* 1 once the host's START arrived: the descriptor is applied, the seed set,
