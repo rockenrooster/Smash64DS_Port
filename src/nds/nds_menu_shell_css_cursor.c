@@ -329,7 +329,9 @@ static u32 ndsMenuShellCssCheckReady(void)
 
         for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
         {
-            if (((mask >> i) & 1u) != 0u && sCssSelected[i] == 0u)
+            if (((mask >> i) & 1u) != 0u &&
+                ((sCssSelected[i] == 0u) ||
+                 (ndsMenuShellCssNetAbsent(i) != FALSE)))
             {
                 return FALSE;
             }

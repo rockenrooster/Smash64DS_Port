@@ -480,6 +480,15 @@ static u32 ndsMenuShellCssNetHumanOther(u32 slot)
             (((ndsNetLobbyHumanMask() >> slot) & 1u) != 0u)) ? TRUE : FALSE;
 }
 
+/* Host: a guest still on Results has not proposed since the match. Its pick
+ * and costume stand, but it is not ready and the room sees it unchosen. */
+static u32 ndsMenuShellCssNetAbsent(u32 slot)
+{
+    return ((ndsMenuShellCssNetHumanOther(slot) != FALSE) &&
+            (ndsNetRole() == NDS_NET_ROLE_HOST) &&
+            (ndsNetLobbyHostMemberPresent(slot) == 0u)) ? TRUE : FALSE;
+}
+
 static void ndsMenuShellCssNetSlotOut(u32 slot, NdsNetLobbySlot *s)
 {
     s->pkind = sCssPkind[slot];
@@ -487,7 +496,8 @@ static void ndsMenuShellCssNetSlotOut(u32 slot, NdsNetLobbySlot *s)
     s->team = sCssTeam[slot];
     s->level = sCssLevel[slot];
     s->handicap = sCssHandicap[slot];
-    s->selected = sCssSelected[slot];
+    s->selected = (ndsMenuShellCssNetAbsent(slot) != FALSE) ? 0u :
+                                                            sCssSelected[slot];
     s->puck_x = sCssPuckX[slot];
     s->puck_y = sCssPuckY[slot];
     s->costume = (u8)ndsMNPlayersVSPreviewGetAppearance(slot);
@@ -650,10 +660,21 @@ static u32 ndsMenuShellCssNetSync(void)
                 {
                     u32 presses =
                         (u8)(proposal.costume - sCssNetCostumeSeen[i]);
+                    const u32 moved =
+                        ndsMenuShellCssNetSlotIn(i, &proposal, FALSE);
 
-                    changed |= ndsMenuShellCssNetSlotIn(i, &proposal, FALSE);
+                    changed |= moved;
                     /* That guest's costume presses, each the source's own
-                     * costume change (mnPlayersVSFuncRun's C buttons). */
+                     * costume change (mnPlayersVSFuncRun's C buttons), on the
+                     * fighter they were pressed on: while this console's
+                     * preview is still bringing that fighter in, they wait
+                     * (cycled now, they were refused and lost). */
+                    if ((presses != 0u) && (proposal.selected != 0u) &&
+                        ((moved != FALSE) ||
+                         (ndsMNPlayersVSPreviewSettled(i) == FALSE)))
+                    {
+                        continue;
+                    }
                     sCssNetCostumeSeen[i] = proposal.costume;
                     if (presses > 3u)
                     {
@@ -663,13 +684,6 @@ static u32 ndsMenuShellCssNetSync(void)
                     {
                         (void)ndsMNPlayersVSPreviewCycleCostume(i);
                     }
-                }
-                else if ((ndsNetLobbyHostMemberPresent(i) == 0u) &&
-                         (sCssSelected[i] != 0u))
-                {
-                    /* Still on Results: not ready until they are back. */
-                    sCssSelected[i] = 0u;
-                    changed = TRUE;
                 }
             }
             else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
@@ -711,9 +725,13 @@ static u32 ndsMenuShellCssNetSync(void)
                 }
                 else
                 {
-                    /* Its own costume is the host's to resolve as well. */
+                    /* Its own costume is the host's to resolve as well. The
+                     * preview's kind is the selection's (a Remix fighter's
+                     * parent), as for the other slots: the raw selection
+                     * refused every Remix fighter's costume. */
                     (void)ndsMNPlayersVSPreviewSetCostume(
-                        i, (s32)slots[i].fkind, (s32)slots[i].costume);
+                        i, (s32)ndsMenuShellCssSelFkind((u32)slots[i].fkind),
+                        (s32)slots[i].costume);
                 }
             }
             if ((team_battle != 0u) != (sCssIsTeamBattle != 0u))
@@ -1207,6 +1225,10 @@ static void ndsMenuShellCssInitTraining(void)
         sCssPkind[i] = (i == man) ? (u8)nFTPlayerKindMan : (u8)nFTPlayerKindCom;
         fkind = (i == man) ? (u32)gSCManagerSceneData.training_man_fkind :
                              (u32)gSCManagerSceneData.training_com_fkind;
+        /* mnPlayers1PTrainingInitPlayer :3003 / :3098. */
+        sCssEntryCostume[i] = (i == man) ?
+            (s16)gSCManagerSceneData.training_man_costume :
+            (s16)gSCManagerSceneData.training_com_costume;
         if ((fkind != (u32)nFTKindNull) &&
             (ndsP4Fighter(gNdsP4TrainingContent[slot_index]) != NULL))
         {
@@ -1220,6 +1242,7 @@ static void ndsMenuShellCssInitTraining(void)
         if ((i == com) && (fkind == (u32)nFTKindNull))
         {
             fkind = ndsMenuShellCssP4RandomSel();
+            sCssEntryCostume[i] = -1;
         }
         sCssFkind[i] = (u8)fkind;
         sCssLevel[i] = 3u;
@@ -1265,6 +1288,8 @@ static void ndsMenuShellCssInitOneP(void)
         sCssPkind[i] = (i == 0u) ? (u8)nFTPlayerKindMan : (u8)nFTPlayerKindNot;
         sCssFkind[i] = (i == 0u) ? (u8)fkind : (u8)nFTKindNull;
         sCssSelected[i] = ((i == 0u) && (fkind != (u32)nFTKindNull)) ? 1u : 0u;
+        /* mnPlayers1PGameInitPlayer :3358. */
+        sCssEntryCostume[i] = (i == 0u) ? (s16)gSCManagerSceneData.costume : -1;
         sCssTeam[i] = (u8)nSCBattleTeamIDRed;
         sCssLevel[i] = 3u;
         ndsMenuShellCssCenterPuck(i, (u32)sCssFkind[i]);
@@ -1410,6 +1435,8 @@ static void ndsMenuShellCssInit(void)
         {
             sCssFkind[i] = (u8)(NDS_P4_SEL_BASE + cfg->p4_content);
         }
+        /* mnPlayersVSInitPlayer :4626: the transfer state's costume. */
+        sCssEntryCostume[i] = (s16)cfg->costume;
         sCssLevel[i] = (cfg->level < 1u) ? 1u : ((cfg->level > 9u) ? 9u :
                                                  cfg->level);
         sCssHandicap[i] = ndsMatchConfigClampPublishedHandicap(cfg->handicap);
@@ -1471,6 +1498,14 @@ static void ndsMenuShellCssInit(void)
             (s16)(sCssCursorX + NDS_CSS_PUCK_CARRY_DX);
         sCssPuckY[NDS_CSS_CURSOR_SLOT] =
             (s16)(sCssCursorY + NDS_CSS_PUCK_CARRY_DY);
+    }
+    /* A kept fighter opens in its committed costume (mnPlayersVSInitSlot's
+     * mnPlayersVSMakeFighter). */
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        ndsMNPlayersVSPreviewSetEntryCostume(
+            i, (u32)sCssFkind[i],
+            (sCssSelected[i] != 0u) ? (s32)sCssEntryCostume[i] : -1);
     }
     /* P2-1N (3): mnPlayersVSMakeGate seeds EVERY slot at door_offset=41
      * (closed), then mnPlayersVSShutterProcUpdate opens each occupied slot by

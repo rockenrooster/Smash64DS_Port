@@ -234,6 +234,9 @@ static u8 sCssLevel[NDS_CSS_SLOTS];
 static u8 sCssHandicap[NDS_CSS_SLOTS];
 static u8 sCssTeam[NDS_CSS_SLOTS];
 static u8 sCssSelected[NDS_CSS_SLOTS]; /* is_fighter_selected */
+/* The costume the last visit committed for the fighter a slot keeps, -1 for
+ * none: set where the screen's init reads the fighter, worn from entry. */
+static s16 sCssEntryCostume[NDS_CSS_SLOTS];
 static s16 sCssPuckX[NDS_CSS_SLOTS];
 static s16 sCssPuckY[NDS_CSS_SLOTS];
 static s32 sCssCursorX;
@@ -346,6 +349,7 @@ static u32 sCssNetArt;
 
 static u32 ndsMenuShellCssNetGuest(void);
 static u32 ndsMenuShellCssNetHumanOther(u32 slot);
+static u32 ndsMenuShellCssNetAbsent(u32 slot);
 
 static void ndsMenuShellCssCue(u32 id)
 {

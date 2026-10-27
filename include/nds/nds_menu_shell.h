@@ -221,6 +221,13 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot);
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
 /* P3: mirror the costume the host resolved (TRUE when the preview changed). */
 sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume);
+/* The kind (a selection) a slot opens with and the costume its last visit
+ * committed (-1: none): the slot's first fighter wears it if it is that kind.
+ * Set after ndsMNPlayersVSPreviewInit, before the first sync. */
+void ndsMNPlayersVSPreviewSetEntryCostume(u32 slot, u32 kind, s32 costume);
+/* The slot shows the fighter it was last asked for, made and selected, with
+ * no change in flight. */
+sb32 ndsMNPlayersVSPreviewSettled(u32 slot);
 void ndsMNPlayersVSPreviewFrame(void);
 void ndsMNPlayersVSPreviewExit(void);
 

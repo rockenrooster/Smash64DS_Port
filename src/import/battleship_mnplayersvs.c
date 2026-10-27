@@ -1653,6 +1653,60 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
     return TRUE;
 }
 
+/* A costume this slot's fighter has: one of its four common ids or a team
+ * id (contents' own rows through the macros above). */
+static sb32 ndsMNPlayersVSPreviewCostumeValid(u32 slot, s32 costume)
+{
+    s32 i;
+
+    for (i = 0; i < 4; i++)
+    {
+        if ((ftParamGetCostumeCommonID(sMNPlayersVSSlots[slot].fkind, i) ==
+             costume) ||
+            ((i < 3) &&
+             (ftParamGetCostumeTeamID(sMNPlayersVSSlots[slot].fkind, i) ==
+              costume)))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSInitPlayer (mnplayersvs.c:4626) opens a slot in the costume the
+ * last visit committed, and mnPlayersVSInitSlot makes its fighter in it; this
+ * preview makes every fighter through mnPlayersVSUpdateFighter's free costume.
+ * The shell names each slot's opening kind and committed costume
+ * (ndsMNPlayersVSPreviewSetEntryCostume), and the slot's first fighter takes
+ * the costume back if it is that kind. -1: nothing to restore. */
+static s32 sNdsPlayersVSPreviewEntryKind[GMCOMMON_PLAYERS_MAX];
+static s32 sNdsPlayersVSPreviewEntryCostume[GMCOMMON_PLAYERS_MAX];
+
+static void ndsMNPlayersVSPreviewTakeEntryCostume(u32 slot)
+{
+    const s32 costume = sNdsPlayersVSPreviewEntryCostume[slot];
+    GObj *fighter_gobj = sMNPlayersVSSlots[slot].player;
+
+    if ((costume < 0) || (fighter_gobj == NULL) ||
+        (sMNPlayersVSSlots[slot].is_fighter_selected == FALSE))
+    {
+        return;
+    }
+    /* First fighter made: a different kind is a new pick, which takes the
+     * free costume as the source's does. */
+    sNdsPlayersVSPreviewEntryCostume[slot] = -1;
+    if ((sNdsPlayersVSPreviewShownKind[slot] !=
+         sNdsPlayersVSPreviewEntryKind[slot]) ||
+        ((s32)sMNPlayersVSSlots[slot].costume == costume) ||
+        (ndsMNPlayersVSPreviewCostumeValid(slot, costume) == FALSE))
+    {
+        return;
+    }
+    sMNPlayersVSSlots[slot].costume = costume;
+    ftParamInitAllParts(fighter_gobj, costume, sMNPlayersVSSlots[slot].shade);
+    ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
+}
+
 /* mnPlayersVSUpdateFighter with the slot's figatree heap sized first (S15).
  * A slot whose kind the region cannot hold a heap for shows no fighter; its
  * old one keeps its own heap, hidden. */
@@ -1676,6 +1730,7 @@ static void ndsMNPlayersVSPreviewUpdateFighter(u32 slot)
         return;
     }
     mnPlayersVSUpdateFighter((s32)slot);
+    ndsMNPlayersVSPreviewTakeEntryCostume(slot);
 }
 
 static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
@@ -2774,6 +2829,7 @@ void ndsMNPlayersVSPreviewInit(void)
         sNdsPlayersVSReleasedRotationY[i] = 0.0F;
         sNdsPlayersVSPreviewPending[i].fkind = nFTKindNull;
         sNdsPlayersVSPreviewShownKind[i] = nFTKindNull;
+        sNdsPlayersVSPreviewEntryCostume[i] = -1;
         ndsP4SetPreviewContent((u32)i, 0u);
         sNdsPlayersVSPreviewPending[i].stable_tics = 0u;
         sNdsPlayersVSPreviewPending[i].seen_request = FALSE;
@@ -3387,30 +3443,14 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
  * a costume that fighter has (a common or a team id). TRUE when it changed. */
 sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
 {
-    s32 i;
-    sb32 valid = FALSE;
     s32 player = (s32)slot;
 
     if ((sNdsPlayersVSPreviewActive == FALSE) ||
         (slot >= ARRAY_COUNT(sMNPlayersVSSlots)) ||
         (sMNPlayersVSSlots[slot].player == NULL) ||
         (sMNPlayersVSSlots[slot].fkind != fkind) || (fkind == nFTKindNull) ||
-        ((s32)sMNPlayersVSSlots[slot].costume == costume))
-    {
-        return FALSE;
-    }
-    for (i = 0; i < 4; i++)
-    {
-        if ((ftParamGetCostumeCommonID(sMNPlayersVSSlots[slot].fkind, i) ==
-             costume) ||
-            ((i < 3) &&
-             (ftParamGetCostumeTeamID(sMNPlayersVSSlots[slot].fkind, i) ==
-              costume)))
-        {
-            valid = TRUE;
-        }
-    }
-    if (valid == FALSE)
+        ((s32)sMNPlayersVSSlots[slot].costume == costume) ||
+        (ndsMNPlayersVSPreviewCostumeValid(slot, costume) == FALSE))
     {
         return FALSE;
     }
@@ -3431,6 +3471,32 @@ u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot)
     }
     return ((u32)sMNPlayersVSSlots[slot].costume & 0xffu) |
            (((u32)sMNPlayersVSSlots[slot].shade & 0xffu) << 8);
+}
+
+void ndsMNPlayersVSPreviewSetEntryCostume(u32 slot, u32 kind, s32 costume)
+{
+    if (slot < ARRAY_COUNT(sMNPlayersVSSlots))
+    {
+        sNdsPlayersVSPreviewEntryKind[slot] = (s32)kind;
+        sNdsPlayersVSPreviewEntryCostume[slot] = costume;
+    }
+}
+
+sb32 ndsMNPlayersVSPreviewSettled(u32 slot)
+{
+    const NDSPlayersVSPreviewPending *pending;
+
+    if ((sNdsPlayersVSPreviewActive == FALSE) ||
+        (slot >= ARRAY_COUNT(sMNPlayersVSSlots)))
+    {
+        return FALSE;
+    }
+    pending = &sNdsPlayersVSPreviewPending[slot];
+    return ((sMNPlayersVSSlots[slot].player != NULL) &&
+            (sMNPlayersVSSlots[slot].is_fighter_selected != FALSE) &&
+            (pending->acquire_pending == FALSE) &&
+            (pending->fkind == sNdsPlayersVSPreviewShownKind[slot])) ? TRUE :
+                                                                       FALSE;
 }
 
 void ndsMNPlayersVSPreviewFrame(void)
