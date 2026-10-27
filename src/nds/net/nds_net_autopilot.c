@@ -36,10 +36,28 @@ extern u32 ndsPlatformVBlankCount(void);
 volatile u32 gNdsNetAutopilotRole;     /* 1 host, 2 guest */
 volatile u32 gNdsNetAutopilotMatches;
 volatile u32 gNdsNetAutopilotStep;
+/* The matches the host starts in a room; a probe may raise it at boot. */
+volatile u32 gNdsNetLabMatchCap __attribute__((used)) = NDS_NET_AP_MATCHES;
 /* Nonzero (a probe pokes it at boot): after the first pick each console asks
  * for its own next costume once, as the sweep's guest does, so the rematches
  * show which costumes carry over. */
 volatile u32 gNdsNetLabCostumePress __attribute__((used));
+/* Nonzero (poked at boot): every stage select, the host first walks its cursor
+ * over every cell -- up to the top row, then each row left to right, one tap
+ * every NDS_NET_AP_SSS_STEP tics so each 3D preview has time to load -- and
+ * confirms after, so a probe sees every stage's preview on both consoles. */
+volatile u32 gNdsNetLabSssTour __attribute__((used));
+/* Nonzero (poked at boot): on its first select visit the host presses A at
+ * tics 160 and 220 -- a probe puts the cursor on the mode label first, so the
+ * select goes to Team Battle and back to free-for-all. */
+volatile u32 gNdsNetLabModeToggles __attribute__((used));
+#define NDS_NET_AP_SSS_STEP 80u
+static const u16 kNdsNetApSssTour[] = {
+    KEY_UP, KEY_UP,
+    KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_DOWN,
+    KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_DOWN,
+    KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT,
+};
 
 static u32 sApRole;
 static u32 sApScreen = 0xFFFFFFFFu;
@@ -212,18 +230,33 @@ u32 ndsNetLabAutopilotKeys(void)
                 if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 128u, 4u))
                     keys |= KEY_A;
             }
+            if ((sApRole == 1u) && (gNdsNetLabModeToggles != 0u) &&
+                (ndsNetApWindow(NDS_NET_AP_PICK_AT + 160u, 4u) ||
+                 ndsNetApWindow(NDS_NET_AP_PICK_AT + 220u, 4u)))
+                keys |= KEY_A;
         }
 
         /* The host asks to start every half second once everyone has picked;
          * the screen refuses until then. */
         if (sApRole == 1u && sApTics > NDS_NET_AP_PICK_AT + 300u &&
-            (sApTics % 30u) < 4u && gNdsNetAutopilotMatches < NDS_NET_AP_MATCHES)
+            (sApTics % 30u) < 4u && gNdsNetAutopilotMatches < gNdsNetLabMatchCap)
             keys |= KEY_START;
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:
         gNdsNetAutopilotStep = 5u;
         /* NDS_NET_LAB_SWEEP: the stage comes from the host's descriptor
          * (ndsNetLabSweepDescriptor), whatever is confirmed here. */
+        if ((sApRole == 1u) && (gNdsNetLabSssTour != 0u))
+        {
+            const u32 steps = sizeof(kNdsNetApSssTour) / sizeof(kNdsNetApSssTour[0]);
+            const u32 step = sApTics / NDS_NET_AP_SSS_STEP;
+
+            if ((step < steps) && ((sApTics % NDS_NET_AP_SSS_STEP) == 30u))
+                keys = kNdsNetApSssTour[step];
+            if (ndsNetApWindow((steps * NDS_NET_AP_SSS_STEP) + 30u, 4u))
+                keys = KEY_A;
+            break;
+        }
         if (sApRole == 1u)
         {
             if (ndsNetApWindow(60u, 4u))
