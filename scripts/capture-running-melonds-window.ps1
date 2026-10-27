@@ -3,7 +3,11 @@ param(
     [Parameter(Mandatory=$true)]
     [int]$EmulatorProcessId,
     [Parameter(Mandatory=$true)]
-    [string]$Output
+    [string]$Output,
+    # melonDS-mp runs every console in one process: -1 takes the process's
+    # first window; n picks console n by its title ("melonDS (n+1)" for
+    # n >= 1, the plain title for console 0).
+    [int]$Instance = -1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,6 +74,9 @@ public static class Smash64DSRunningMelonDSCapture
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(
         IntPtr window, out uint processId);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(
+        IntPtr window, System.Text.StringBuilder text, int length);
 
     public static IntPtr FindTopLevelWindow(int processId)
     {
@@ -79,6 +86,33 @@ public static class Smash64DSRunningMelonDSCapture
             uint owner;
             GetWindowThreadProcessId(window, out owner);
             if (owner == (uint)processId)
+            {
+                found = window;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    // The process's top-level window whose title holds the needle, or (with
+    // exclude) the first melonDS window whose title does not.
+    public static IntPtr FindTitledWindow(int processId, string needle,
+                                          bool exclude)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows(delegate(IntPtr window, IntPtr parameter)
+        {
+            uint owner;
+            System.Text.StringBuilder text = new System.Text.StringBuilder(128);
+            GetWindowThreadProcessId(window, out owner);
+            if (owner != (uint)processId)
+            {
+                return true;
+            }
+            GetWindowText(window, text, text.Capacity);
+            string title = text.ToString();
+            if (title.Contains("melonDS") && (title.Contains(needle) != exclude))
             {
                 found = window;
                 return false;
@@ -98,10 +132,18 @@ do {
     if ($process.HasExited) {
         throw 'melonDS exited before evidence capture.'
     }
-    $handle = $process.MainWindowHandle
-    if ($handle -eq [IntPtr]::Zero) {
-        $handle = [Smash64DSRunningMelonDSCapture]::FindTopLevelWindow(
-            $process.Id)
+    if ($Instance -ge 1) {
+        $handle = [Smash64DSRunningMelonDSCapture]::FindTitledWindow(
+            $process.Id, "melonDS ($($Instance + 1))", $false)
+    } elseif ($Instance -eq 0) {
+        $handle = [Smash64DSRunningMelonDSCapture]::FindTitledWindow(
+            $process.Id, 'melonDS (', $true)
+    } else {
+        $handle = $process.MainWindowHandle
+        if ($handle -eq [IntPtr]::Zero) {
+            $handle = [Smash64DSRunningMelonDSCapture]::FindTopLevelWindow(
+                $process.Id)
+        }
     }
     if ($handle -ne [IntPtr]::Zero) { break }
     Start-Sleep -Milliseconds 50

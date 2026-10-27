@@ -36,6 +36,10 @@ extern u32 ndsPlatformVBlankCount(void);
 volatile u32 gNdsNetAutopilotRole;     /* 1 host, 2 guest */
 volatile u32 gNdsNetAutopilotMatches;
 volatile u32 gNdsNetAutopilotStep;
+/* Nonzero (a probe pokes it at boot): after the first pick each console asks
+ * for its own next costume once, as the sweep's guest does, so the rematches
+ * show which costumes carry over. */
+volatile u32 gNdsNetLabCostumePress __attribute__((used));
 
 static u32 sApRole;
 static u32 sApScreen = 0xFFFFFFFFu;
@@ -192,18 +196,22 @@ u32 ndsNetLabAutopilotKeys(void)
                 keys |= KEY_UP;
             if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 90u, 4u))
                 keys |= KEY_A;
-#if NDS_NET_LAB_SWEEP
-            /* The guest walks back down to its own preview (the cursor's
-             * seat is inside it, mnplayersvs.c:4604) and asks for the next
-             * costume once: the host resolves it and both show it. */
-            if (sApRole == 2u)
+            /* The sweep's guest (or, with gNdsNetLabCostumePress, each
+             * console) walks back down to its own preview (the cursor's seat
+             * is inside it, mnplayersvs.c:4604; the host first undoes its
+             * step right) and asks for the next costume once: the host
+             * resolves it and both show it. */
+            if ((NDS_NET_LAB_SWEEP && (sApRole == 2u)) ||
+                (gNdsNetLabCostumePress != 0u))
             {
+                if ((sApRole == 1u) &&
+                    ndsNetApWindow(NDS_NET_AP_PICK_AT + 100u, 12u))
+                    keys |= KEY_LEFT;
                 if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 100u, 25u))
                     keys |= KEY_DOWN;
                 if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 128u, 4u))
                     keys |= KEY_A;
             }
-#endif
         }
 
         /* The host asks to start every half second once everyone has picked;
