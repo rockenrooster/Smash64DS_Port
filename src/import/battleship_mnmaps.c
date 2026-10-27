@@ -349,6 +349,9 @@ extern u32 cpuGetTiming(void);
 extern s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index);
 extern size_t ndsRelocExternTreeUnloadedSize(const void *file_id);
 extern void ndsRendererHardwareReleaseStageWarmTextures(void);
+extern void ndsIFCommonNativeOamReleaseCloudTextures(void);
+extern void ndsRendererHardwareDiscardParticleAtlas(void);
+extern void ndsRendererHardwareResetSceneTextureVram(void);
 extern void (*gNdsRendererTexturePrefilter)(u16 *texels, u32 width,
                                             u32 height);
 extern volatile u32 gNdsNativeStageWarmUploadLimit;
@@ -1032,6 +1035,17 @@ void ndsMNMapsPreviewInit(s32 gkind)
     {
         return;
     }
+    /* Texture VRAM from an empty allocator, as a battle's entry takes it
+     * (ndsBattlePrepareSceneTextures). The last battle's own owners -- its
+     * particle atlas, the HUD's cloud atlases, the names it leaves for the
+     * next reset -- otherwise hold banks A and B through VS Results and the
+     * character select (C and D are this screen's BG2/BG3), and a stage whose
+     * textures no longer fit warmed forever without a whole draw: after any
+     * match eight stages never showed their preview (owner BUGS.md
+     * 2026-10-27). Owners holding names let go before the reset. */
+    ndsIFCommonNativeOamReleaseCloudTextures();
+    ndsRendererHardwareDiscardParticleAtlas();
+    ndsRendererHardwareResetSceneTextureVram();
     rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
     rl_setup.table_files_num = (u32)&llRelocFileCount;
     rl_setup.file_heap = NULL;
