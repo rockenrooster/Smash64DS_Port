@@ -1101,11 +1101,6 @@ static NdsUiKitSurfaceId ndsMenuShellCssGateSurface(u32 slot)
         slot, ndsMenuShellCssGateState(slot));
 }
 
-static s32 ndsMenuShellCssRoundSource(s32 value)
-{
-    return (value * 4 + 2) / 5;
-}
-
 static NdsUiKitSurfaceId ndsMenuShellCssTeamSelectSurface(u32 slot)
 {
     u32 team = (u32)sCssTeam[slot];
@@ -1120,16 +1115,13 @@ static NdsUiKitSurfaceId ndsMenuShellCssTeamSelectSurface(u32 slot)
 
 static void ndsMenuShellCssClearTeamSelect(u32 slot)
 {
-    s32 source_x = (s32)(slot * 69u) + 30;
-
-    /* The source sprite sits at x+34,y=131 and its hit rectangle ends at
-     * x+58,y=141. Clear a deliberately slightly wider transparent BG3 pocket
-     * so antialiased/keyed edge pixels from the previous team cannot survive a
-     * color change. No other CSS foreground owner occupies this rectangle. */
-    ndsUiKitClearForegroundRect(ndsMenuShellCssRoundSource(source_x),
-                                ndsMenuShellCssRoundSource(128),
-                                (u32)ndsMenuShellCssRoundSource(34),
-                                (u32)ndsMenuShellCssRoundSource(16));
+    /* The selector's own baked rectangle on BG3: a slot's three team rasters
+     * share it, so clearing it removes whichever colour is up. The source
+     * rectangle scaled 4/5 belonged to the card layout before P4's; it missed
+     * most of the P4 card's selector, which stayed on screen after Team
+     * Battle went back to free-for-all (owner BUGS.md 2026-10-27). */
+    ndsUiKitClearForegroundSurfaceRect(
+        (u32)NDS_MN_UI_KIT_SURFACE_CSS_TEAM_SELECT_RED_0 + slot);
 }
 
 static void ndsMenuShellCssDrawTeamSelect(u32 slot)
