@@ -124,9 +124,9 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * effects): she vanishes at the end of the start, travels 2,000 units along
  * the stick (eight directions; neutral is up) and reappears; from the air she
  * ends in special fall. Owner (2026-10-28: too fast beside Ultimate's 67
- * frames): Ultimate's timing -- a 16-frame start, 17 frames of travel (its
- * intangible 16-32) at 2,000/17 units a frame, and a reappearance twice the
- * landing's length (20), 53 frames in all. A wall or ceiling met
+ * frames): a 16-frame start (Ultimate's), 10 frames of travel at 200 units a
+ * frame (Ultimate's 17 "feels bad"), and a reappearance twice the landing's
+ * length (20), 46 frames in all. A wall or ceiling met
  * nearly head-on stops her; one met at a glancing angle she slides along
  * (Pikachu's Quick Attack's rule), so an upward warp beside a wall rides it
  * to the ledge. A CPU recovering travels only as far as its target.
@@ -137,7 +137,7 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * along it for its frames left, as Ultimate's warp slides along a surface.
  * Owner (2026-10-19): on a platform she could drop through, a downward warp
  * goes down through it; straight down on solid ground she stays put. */
-#define PAL_WARP_FRAMES 17
+#define PAL_WARP_FRAMES 10
 #define PAL_WARP_FRAMES_MIN 3
 #define PAL_WARP_DISTANCE 2000.0F
 #define PAL_WARP_SPEED (PAL_WARP_DISTANCE / (f32)PAL_WARP_FRAMES)

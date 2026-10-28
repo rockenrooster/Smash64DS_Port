@@ -1337,12 +1337,12 @@ game's camera, back faces culled as the DS culls them):
   67 frames on the ground (ultimateframedata: intangible 16-32, landing 22;
   the owner's local motions: start `d02specialhistart` 16 frames, the
   reappearance `d02specialhi` 36). Hers was 35: the start 15, 10 frames of
-  travel, the reappearance (Peach's landing) 10. Now 53: the start 16
-  (`warp_start.json`, retimed 4/3), the travel 17 frames at 2,000/17 units
-  a frame (the same 2,000 units; `PAL_WARP_FRAMES`, `PAL_WARP_DISTANCE`),
-  the reappearance twice as long, 20 (`warp_end.json`; the owner picked 2x
-  over Ultimate's full 34). A recovering CPU's shorter warp scales with the
-  speed.
+  travel, the reappearance (Peach's landing) 10. Now 46: the start 16
+  (`warp_start.json`, retimed 4/3), the travel still 10 frames at 200 units
+  a frame (Ultimate's 17 tried in `play-p9b`: "17 frame teleport feels bad.
+  go back to 10 frames"; `PAL_WARP_FRAMES`, `PAL_WARP_DISTANCE` 2,000), the
+  reappearance twice as long, 20 (`warp_end.json`; the owner picked 2x over
+  Ultimate's full 34).
 - **Explosive Flame in the air "really floaty".** The air cast cut her
   downward speed to a quarter as it began and held her fall to 12 units a
   frame for the whole cast. Now half-floaty (owner's pick): her downward
