@@ -1,5 +1,6 @@
 {
- "comment": "Warp's reappearance: Peach's landing.",
+ "comment": "Warp's reappearance: Peach's landing, played twice as long, 20 frames (owner 2026-10-28: 2x, the warp's total nearer Ultimate's 67).",
  "source": "0x1384",
- "skeleton": "peach"
+ "skeleton": "peach",
+ "retime": 2.0
 }

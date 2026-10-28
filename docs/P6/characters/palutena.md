@@ -1331,6 +1331,25 @@ game's camera, back faces culled as the DS culls them):
   flickering over the next eight ticks (the blend and the 30 Hz pose hold
   alternating). Frames: `artifacts/visibility/p6-vfx/palurun38/dash_run_sheet.png`.
 
+## Owner 2026-10-28: Warp's length, Explosive Flame's air fall
+
+- **Warp "seems too fast"; its total near Ultimate's.** Ultimate's Warp is
+  67 frames on the ground (ultimateframedata: intangible 16-32, landing 22;
+  the owner's local motions: start `d02specialhistart` 16 frames, the
+  reappearance `d02specialhi` 36). Hers was 35: the start 15, 10 frames of
+  travel, the reappearance (Peach's landing) 10. Now 53: the start 16
+  (`warp_start.json`, retimed 4/3), the travel 17 frames at 2,000/17 units
+  a frame (the same 2,000 units; `PAL_WARP_FRAMES`, `PAL_WARP_DISTANCE`),
+  the reappearance twice as long, 20 (`warp_end.json`; the owner picked 2x
+  over Ultimate's full 34). A recovering CPU's shorter warp scales with the
+  speed.
+- **Explosive Flame in the air "really floaty".** The air cast cut her
+  downward speed to a quarter as it began and held her fall to 12 units a
+  frame for the whole cast. Now half-floaty (owner's pick): her downward
+  speed halved as it starts, then at most half her terminal velocity
+  (`PAL_FLAME_AIR_ENTRY_FALL_SCALE`, `PAL_FLAME_AIR_FALL_SHARE`). The air
+  counter keeps its 12 (`PAL_COUNTER_AIR_FALL_MAX`).
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

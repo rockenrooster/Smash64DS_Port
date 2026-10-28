@@ -111,14 +111,22 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
 #define PAL_FLAME_BLAST_KNOCKBACK_BASE 35
-/* In the air she nearly hangs while casting. */
-#define PAL_FLAME_AIR_FALL_MAX 12.0F
+/* In the air the cast slows her fall: her downward speed halved as it starts,
+ * then at most half her terminal velocity (owner 2026-10-28: "really floaty"
+ * when it held her to 12 units a frame; asked for half). */
+#define PAL_FLAME_AIR_ENTRY_FALL_SCALE 0.5F
+#define PAL_FLAME_AIR_FALL_SHARE 0.5F
+/* The air counter's slow fall. */
+#define PAL_COUNTER_AIR_FALL_MAX 12.0F
 
 /* Warp (card; owner playtest 2026-10-14: twice the first 1000 units -- three
  * times was too far -- sliding along walls, white twinkles for the
- * effects): she vanishes at the end of the start, travels 10 frames at 200
- * units a frame along the stick (eight directions; neutral is up) and
- * reappears; from the air she ends in special fall. A wall or ceiling met
+ * effects): she vanishes at the end of the start, travels 2,000 units along
+ * the stick (eight directions; neutral is up) and reappears; from the air she
+ * ends in special fall. Owner (2026-10-28: too fast beside Ultimate's 67
+ * frames): Ultimate's timing -- a 16-frame start, 17 frames of travel (its
+ * intangible 16-32) at 2,000/17 units a frame, and a reappearance twice the
+ * landing's length (20), 53 frames in all. A wall or ceiling met
  * nearly head-on stops her; one met at a glancing angle she slides along
  * (Pikachu's Quick Attack's rule), so an upward warp beside a wall rides it
  * to the ledge. A CPU recovering travels only as far as its target.
@@ -129,9 +137,10 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * along it for its frames left, as Ultimate's warp slides along a surface.
  * Owner (2026-10-19): on a platform she could drop through, a downward warp
  * goes down through it; straight down on solid ground she stays put. */
-#define PAL_WARP_FRAMES 10
+#define PAL_WARP_FRAMES 17
 #define PAL_WARP_FRAMES_MIN 3
-#define PAL_WARP_SPEED 200.0F
+#define PAL_WARP_DISTANCE 2000.0F
+#define PAL_WARP_SPEED (PAL_WARP_DISTANCE / (f32)PAL_WARP_FRAMES)
 #define PAL_WARP_STICK 11
 #define PAL_WARP_DRIFT 0.6F
 #define PAL_WARP_HALT_ANGLE F_CST_DTOR32(150.0F)
@@ -412,7 +421,7 @@ void ndsP4PalutenaFlameAirInitial(GObj *fighter_gobj)
 
     if (fp->physics.vel_air.y < 0.0F)
     {
-        fp->physics.vel_air.y *= 0.25F;
+        fp->physics.vel_air.y *= PAL_FLAME_AIR_ENTRY_FALL_SCALE;
     }
     ndsP4PalutenaFlameStart(fighter_gobj, PAL_STATUS_FLAME + PAL_AIR);
 }
@@ -440,15 +449,16 @@ void ndsP4PalutenaFlameMain(GObj *fighter_gobj)
     }
 }
 
-/* The air cast: a slow fall, the stick drifting her. */
+/* The air cast: a slowed fall, the stick drifting her. */
 void ndsP4PalutenaFlameAirPhysics(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 fall_max = fp->attr->tvel_base * PAL_FLAME_AIR_FALL_SHARE;
 
     ftPhysicsApplyAirVelDrift(fighter_gobj);
-    if (fp->physics.vel_air.y < -PAL_FLAME_AIR_FALL_MAX)
+    if (fp->physics.vel_air.y < -fall_max)
     {
-        fp->physics.vel_air.y = -PAL_FLAME_AIR_FALL_MAX;
+        fp->physics.vel_air.y = -fall_max;
     }
 }
 
@@ -841,9 +851,9 @@ void ndsP4PalutenaCounterAirPhysics(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     ftPhysicsApplyAirVelDrift(fighter_gobj);
-    if (fp->physics.vel_air.y < -PAL_FLAME_AIR_FALL_MAX)
+    if (fp->physics.vel_air.y < -PAL_COUNTER_AIR_FALL_MAX)
     {
-        fp->physics.vel_air.y = -PAL_FLAME_AIR_FALL_MAX;
+        fp->physics.vel_air.y = -PAL_COUNTER_AIR_FALL_MAX;
     }
 }
 

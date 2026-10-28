@@ -1,10 +1,10 @@
 {
- "comment": "Warp (card: new, the vanish): Peach's parasol-opening start to frame 12, the staff raised overhead; played 1.25x as long (owner p6v: a longer wait before the warp for steadier direction control), 15 frames.",
+ "comment": "Warp (card: new, the vanish): Peach's parasol-opening start to frame 12, the staff raised overhead; played 4/3 as long, 16 frames: Ultimate's start (owner 2026-10-28: the warp's total near Ultimate's 67; owner p6v: a longer wait before the warp for steadier direction control).",
  "source": "0x13fe",
  "skeleton": "peach",
  "frames": [
   0,
   12
  ],
- "retime": 1.25
+ "retime": 1.3334
 }
