@@ -138,7 +138,8 @@ left: devkitPro, Python, Git, PowerShell 7.
   `background.h`, `videoGL.h`), so devkitPro must sit at `C:\devkitPro`, or the
   build adds `-ffile-prefix-map`/`-fmacro-prefix-map`. The project path is not
   embedded (0 hits in play-p9d), so the clone folder does not matter.
-- **Python.** Set `PYTHONHASHSEED=0`, pin numpy/Pillow/pyyaml/lineinfile/pandas
+- **Python.** Pin 3.15.2 (tested identical to 3.14.7, below). Set
+  `PYTHONHASHSEED=0`, pin numpy/Pillow/pyyaml/lineinfile/pandas
   versions (EXTRA's Pipfile pins nothing; take versions from the owner's
   `Pipfile.lock` venv), and use one interpreter version. EXTRA's appender
   numbers files in `os.listdir` order (alphabetical on NTFS; other file
@@ -148,6 +149,42 @@ left: devkitPro, Python, Git, PowerShell 7.
   only has by accident. Diff the clean ROM's NitroFS list against play-p9d's;
   every difference needs an explanation.
 - `DECOMP_PIN.txt` `OUTPUT_*` still pins the P1 artifact. Re-pin at release.
+- **NitroFS directory order (found 2026-10-29).** ndstool numbers NitroFS
+  directories in the order the file system lists them. NTFS lists sorted, but
+  this PC's D: is a StableBit DrivePool pool, which lists folder by folder
+  per underlying disk. Two builds of the same tree on D: then differ in the
+  file-name table only: file data, file table, ARM9/ARM7 and
+  `net/build.id` match, so wireless still pairs them. FAT32/exFAT drives
+  list in creation order too. Fix before re-pinning: pack NitroFS from a
+  sorted listing, either a staging copy on plain NTFS or (portable) a
+  post-pass that renumbers the directory table in sorted order.
+
+### Clean-build trial and Python 3.15.2 (2026-10-29)
+
+Two clean worktrees of `a3f978a1d08`, outside the repo. Each had the same
+inputs make cannot produce, and each built the play ROM from scratch
+(~26-29 min, 25 of them Palutena's dress re-keying): one with Python 3.14.7,
+one with a 3.15.2 venv (same numpy 2.5.4 and Pillow 13.0.0).
+
+- **Result:** all 3,822 NitroFS files, ARM9 and ARM7 are byte-identical
+  between the two. Packed from a sorted listing (a copy on C:), both give the
+  same ROM (129,394,688 B, SHA-256 `2EF9A9D9...A0CB`). As built on D: they
+  differ in the file-name table only (DrivePool order, above). Python 3.15.2
+  is safe to pin for the release.
+- **Inputs the worktrees needed besides the checkout:** junctions to the
+  staging (`builds/p4-staging/extra-96621af`), `BattleShip_o2r`,
+  `decomp/BattleShip-main/decomp/assets` and `.../decomp/build`; copies of
+  `assets/audio` (BGM/FGM renders), `assets/intro`, `assets/congra`,
+  `assets/p6-art`; and the decomp's encoded credits
+  (`decomp/BattleShip-main/decomp/src/credits/*.credits.encoded` and
+  `.metadata`, made by the decomp's `tools/creditsTextConverter.py`, read by
+  `scripts/generate-battleship-import-overlay.ps1`). The release script
+  produces each of these.
+- **Build bugs only a clean tree shows (fixed):** Ike's `entry` clip reads
+  the built `wait.o2r` but make did not know it (a parallel build ran it
+  first; edge in `scripts/p4/p4_rules.mk`), and the shield-pose generator's
+  declared outputs lacked Mario's and Yoshi's files 00 and 06, so no rule made
+  them (`mk/rules_native.mk`).
 
 ### R6: prerequisite install mechanics
 

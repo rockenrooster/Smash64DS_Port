@@ -196,3 +196,8 @@ $(NDS_P4_DEAD_SPANS_H): $(PROJECT_ROOT)/scripts/p4/p4_dead_spans.py \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_dead_spans.py" --gen-root "$(NDS_P4_GEN)" \
 		--contents "$(NDS_P4_ENABLED)" --out "$@"
 battleship_ftmanager.o: $(NDS_P4_DEAD_SPANS_H)
+# P6: a clip that eases into another built clip (a recipe's "blend_to"
+# {"anim": ...}, anim.py) is built after it. Ike's entry eases into his
+# wait: without the edge, a clean parallel build ran the entry first and
+# found no wait.o2r (2026-10-29).
+$(PROJECT_ROOT)/builds/p6-art/ike/anims/entry.o2r: $(PROJECT_ROOT)/builds/p6-art/ike/anims/wait.o2r
