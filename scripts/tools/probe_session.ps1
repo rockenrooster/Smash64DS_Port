@@ -18,7 +18,12 @@ param(
     # quits) instead of waiting out $Seconds.
     [switch]$StopWithGdb,
     # Leave out the freeze report's X STALL breakpoint (common.ps1).
-    [switch]$NoStall
+    [switch]$NoStall,
+    # Another repo-owned melonDS instead of runner slot $Slot's (gdb on
+    # 4380 + 2 * Slot; common.ps1 Initialize-S64AltMelonDSContext), and the GX
+    # trap build's log file (gxtrap/README.md).
+    [string]$MelonPath = '',
+    [string]$TrapLog = ''
 )
 # One gdb session for a whole emulator run on runner slot $Slot (the melonDS
 # stub takes one attach per instance): main, the pokes, the caller's
@@ -35,7 +40,9 @@ if ($WaitFile -ne '') {
 . (Join-Path $S64Repo 'scripts\lib\melonds.ps1')
 $shots = Join-Path $S64Shots $Tag
 New-Item -ItemType Directory -Force $shots | Out-Null
-$context = Initialize-MelonDSVerifierContext -Root $S64Repo -RunnerSlot $Slot -NoBuild
+$context = if ($MelonPath -ne '') { Initialize-S64AltMelonDSContext $MelonPath $Slot } else {
+    Initialize-MelonDSVerifierContext -Root $S64Repo -RunnerSlot $Slot -NoBuild }
+if ($TrapLog -ne '') { $env:MELONDS_GX_TRAP_LOG = $TrapLog }
 $port = $context.GdbPort
 $melon = $context.MelonDSPath
 $romPath = Join-Path $S64Repo "builds\$Build\$Rom.nds"

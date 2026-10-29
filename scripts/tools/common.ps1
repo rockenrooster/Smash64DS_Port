@@ -63,3 +63,18 @@ function Copy-S64BuildSeed([string]$Build, [string]$Seed, [string[]]$DropRoms = 
         Remove-Item (Join-Path $S64Repo "builds\$Build\$rom") -ErrorAction SilentlyContinue
     }
 }
+
+# A repo-owned melonDS other than a runner slot's (emulators/<dir>/melonDS.exe
+# with its own SD image beside it, e.g. the GX trap build, gxtrap/README.md):
+# the context Initialize-MelonDSVerifierContext returns, minus its repair of
+# the shared SD image, which throws while any melonDS runs. gdb listens on
+# 4380 + 2 * Slot. Needs scripts/lib/melonds.ps1 dot-sourced first.
+function Initialize-S64AltMelonDSContext([string]$MelonPath, [int]$Slot) {
+    $port = 4380 + 2 * $Slot
+    Set-MelonDSVerifierRunContext -Root $S64Repo -RunnerSlot -1 -GdbPort $port
+    $env:SMASH64DS_VERIFY_NO_BUILD = '1'
+    return [pscustomobject]@{
+        RunnerSlot = -1; GdbPort = $port; Arm7Port = $port + 1; PersistentConfig = $false
+        MelonDSPath = Resolve-MelonDSPath -Root $S64Repo -MelonDS $MelonPath
+    }
+}

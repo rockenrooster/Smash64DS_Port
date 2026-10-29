@@ -52,6 +52,7 @@ table, and where runs write. Conventions:
 | `probe_bonus.ps1` | one bonus practice run through the native bonus select |
 | `capture_battle.ps1` | four-CPU forced-move schedule with frame captures and gdb lines per frame |
 | `capture_slot.ps1` | captures a runner slot's window (from a gdb breakpoint's `shell`) |
+| `gxtrap/` | a melonDS build that logs stray geometry commands (CPU writes during a FIFO DMA, packed headers no list uses) and their source; `capture_battle.ps1` / `probe_session.ps1 -MelonPath -TrapLog` run on it ([README](gxtrap/README.md)) |
 
 ## Audits (the S1 matrix, `docs/STABILITY_AUDIT.md`)
 

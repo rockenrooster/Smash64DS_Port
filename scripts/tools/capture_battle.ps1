@@ -15,7 +15,12 @@ param(
     [string[]]$Plan = @(),
     [int]$TimeoutSeconds = 1200,
     # gdb lines (dprintf ...) set after main and again after each frame's delete
-    [string[]]$Persist = @()
+    [string[]]$Persist = @(),
+    # Another repo-owned melonDS instead of runner slot $Slot's (gdb on
+    # 4380 + 2 * Slot; common.ps1 Initialize-S64AltMelonDSContext), and the GX
+    # trap build's log file (gxtrap/README.md).
+    [string]$MelonPath = '',
+    [string]$TrapLog = ''
 )
 # Frame captures of a forced-move schedule on a four-CPU ROM (gate or lab):
 # words poked at main, the guest halted at the presented-frame marker of each
@@ -28,7 +33,9 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $S64Repo 'scripts\lib\melonds.ps1')
 $out = Join-Path $S64Shots $Tag
 New-Item -ItemType Directory -Force $out | Out-Null
-$context = Initialize-MelonDSVerifierContext -Root $S64Repo -RunnerSlot $Slot -NoBuild
+$context = if ($MelonPath -ne '') { Initialize-S64AltMelonDSContext $MelonPath $Slot } else {
+    Initialize-MelonDSVerifierContext -Root $S64Repo -RunnerSlot $Slot -NoBuild }
+if ($TrapLog -ne '') { $env:MELONDS_GX_TRAP_LOG = $TrapLog }
 $port = $context.GdbPort
 $melon = $context.MelonDSPath
 $rom = Join-Path $S64Repo "builds\$Build\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
