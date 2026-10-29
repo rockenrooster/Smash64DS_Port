@@ -3715,6 +3715,15 @@ void ndsPlatformEndFrame(void)
         }
 #endif
         glFlush(GL_TRANS_MANUALSORT);
+        /* NO GX WRITER EMITS SPECULAR_EMISSION, so the engine would keep
+         * whatever a stray FIFO command left there for every later lit
+         * polygon: emission is added before the texture multiply, a flat
+         * colour over every fighter that lasts through Results and the
+         * character select until a restart, the stage (unlit) untouched
+         * (owner 2026-10-26 red, 2026-10-28 green; one poked write in the lab
+         * draws exactly that). Rewritten each frame -- no specular, no
+         * emission, no shininess table -- so such a write lasts one frame. */
+        GFX_SPECULAR_EMISSION = 0u;
 #if NDS_PRESENT_LEAD_LIVE
         lead_flush_vblank = sVBlankCount;
 #endif
