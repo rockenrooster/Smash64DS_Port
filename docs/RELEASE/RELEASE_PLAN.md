@@ -155,9 +155,13 @@ left: devkitPro, Python, Git, PowerShell 7.
   per underlying disk. Two builds of the same tree on D: then differ in the
   file-name table only: file data, file table, ARM9/ARM7 and
   `net/build.id` match, so wireless still pairs them. FAT32/exFAT drives
-  list in creation order too. Fix before re-pinning: pack NitroFS from a
-  sorted listing, either a staging copy on plain NTFS or (portable) a
-  post-pass that renumbers the directory table in sorted order.
+  list in creation order too. **Fixed 2026-10-29:**
+  `scripts/nds_nitrofs_order.py` runs right after ndstool in the ROM recipe
+  and renumbers the directories as a sorted (NTFS) listing would; it checks
+  that every path keeps its file id. Two fresh play builds on D: needed 36
+  and 27 of 39 directories renumbered, and both came out
+  `2EF9A9D9...A0CB`, the ROM ndstool makes from a sorted copy on C:. A boot
+  check read 3,373 NitroFS files with 0 failures.
 
 ### Clean-build trial and Python 3.15.2 (2026-10-29)
 

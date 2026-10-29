@@ -101,10 +101,14 @@ $(OUTPUT).nds: $(NITROFS_DIR)/net/net7.bin
 # ARM9 and ARM7 bytes and every other NitroFS file, and consoles refuse a
 # room whose id differs from their own. It has to see the finished NitroFS
 # tree, so it runs in the ROM recipe itself, right before ndstool; this
-# recipe replaces ds_rules' %.nds one and keeps its ndstool line.
+# recipe replaces ds_rules' %.nds one and keeps its ndstool line. ndstool
+# numbers NitroFS directories in the order the file system lists them, so
+# scripts/nds_nitrofs_order.py renumbers them as a sorted listing does: one
+# tree gives one ROM on any drive (owner 2026-10-29).
 $(OUTPUT).nds:
 	@python "$(PROJECT_ROOT)/scripts/nds_net_build_id.py" --arm9 "$(OUTPUT).elf" --arm7 "$(NDS_ARM7_ELF)" --nitrofs "$(NITROFS_DIR)" --out "$(NITROFS_DIR)/net/build.id"
 	$(SILENTCMD)ndstool -c $@ -9 $(OUTPUT).elf $(_ARM7_ELF) -b $(GAME_ICON) "$(GAME_TITLE);$(GAME_SUBTITLE1);$(GAME_SUBTITLE2)" $(_ADDFILES)
+	@python "$(PROJECT_ROOT)/scripts/nds_nitrofs_order.py" "$@"
 	$(SILENTMSG) built ... $(notdir $@)
 -include nds-net7-module.d
 -include nds-net7-mwl-rx.d

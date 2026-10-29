@@ -13,6 +13,13 @@ with every Python read of the rip folders blocked is byte-identical
 local, so the `safe_for_public_release` column is unchanged: authoring
 replaces them one file at a time.
 
+**Workspace:** `assets/p6-reauthor/` (local, ignored) holds a reference copy
+of everything to re-author: Palutena's model, textures, costume sheet, stock
+icon, gate, wings, effect masks, and both fighters' current clips and sounds
+with the Ultimate sources they came from. Its `INDEX.csv` gives each
+replacement's target (clip lengths, sound kinds), its `README.md` the
+conventions; replacements go in each category's `new/` folder.
+
 Spreadsheet: [P6_AUTHORING_LIST.csv](P6_AUTHORING_LIST.csv), one row per
 build input (343: look parts, gate-file parts, every clip, every sound,
 presentation, committed sources). `safe_for_public_release` is true when the
