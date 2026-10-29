@@ -80,10 +80,11 @@ worktree_report.md
 backups/
 /.codex-worktrees/
 
-# P6: ripped Brawl/Ultimate/3DS data stays local (public repo; docs/P6/P6_PLAN.md D1).
-/decomp/alt_assets/Fighters/Super Smash Bros Ultimate/
-/decomp/alt_assets/Fighters/Super Smash Bros brawl/
-/decomp/alt_assets/Fighters/Super Smash Bros 3DS/
+# Ripped game data stays local (public repo; docs/P6/P6_PLAN.md D1): the whole
+# alt_assets tree -- the P6 Brawl/Ultimate/3DS kits and the SSB64 texture, model
+# and sound packs, which were tracked by accident from 75f7f6b4b48 (2026-09-15)
+# until 2026-10-28. Nothing in the build reads them.
+/decomp/alt_assets/
 # P6: local-only reference scenes and owner voice clips beside the committed art.
 /art/**/*.local.blend
 /art/**/voice.local/
