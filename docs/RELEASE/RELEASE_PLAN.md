@@ -37,13 +37,24 @@ NitroFS file, so two players can only play together on identical ROMs.
 
 ## Roadblocks
 
-### R1 (blocker): Palutena and Ike cannot be built from repo + N64 ROM, and their data comes from rips
+### R1 (decided 2026-10-29): Ike and Palutena stay on the owner's PC; a checkout without their files builds the rest
 
-**2026-10-29:** the build no longer reads the rips. The Ultimate-derived
-clips and cues are stored once under `assets/p6-art/<name>/` (frozen;
-`docs/P6/P6_STATUS.md`), and the rebuilt play ROM is byte-identical. The
-stored files are still rip-derived and local, so R1 stands until the owner's
-authored replacements land ([P6_AUTHORING_LIST.md](P6_AUTHORING_LIST.md)).
+**Owner 2026-10-29:** Ike and Palutena stay local to the owner, and a
+checkout without their files must build everything else. Done:
+`scripts/p6/p6_local.py` reports an authored content ready only when every
+stored file its tracked recipes name is present (digests checked), and the
+build tools (`Select-S64ContentFlags`, `scripts/tools/common.ps1`) leave out,
+and name, a content that is not. A clean worktree with no P6 files and no
+rips built the play ROM that way: 17 Remix contents plus P5, 122,670,080 B,
+no P6 file in NitroFS, boot check 3,366 reads with 0 failures. On the owner's
+PC both are ready and the builds are unchanged. The release script uses the
+same check, so a public clone gets the 17-content ROM.
+
+**Earlier the same day:** the build stopped reading the rips (the
+Ultimate-derived clips and cues stored once under `assets/p6-art/<name>/`;
+`docs/P6/P6_STATUS.md`). The owner's re-authoring attempt
+(`assets/p6-reauthor/`) measured 98.9-100% identical to the originals and was
+dropped; the workspace is deleted.
 
 The project's own records (`docs/P6/P6_PLAN.md` D1/D5-D10, the P6 receipts)
 show:
@@ -227,7 +238,7 @@ one with a 3.15.2 venv (same numpy 2.5.4 and Pillow 13.0.0).
 
 | | Decision | Recommendation |
 |---|---|---|
-| D1 | Ike/Palutena in 1.0 (R1) | A: leave them out of the release set; re-author later if wanted |
+| D1 | Ike/Palutena in 1.0 (R1) | **Decided 2026-10-29:** they stay on the owner's PC; checkouts without their files build without them |
 | D2 | ROM-derived generated files (R2) | Build outputs, untracked. (`decomp/alt_assets`: decided and done 2026-10-28, no history rewrite) |
 | D3 | Intro stills (R3) | Try a: render at load, timeboxed; fallback b |
 | D4 | Repo license; Remix/EXTRA permission (R7) | Owner's choice; ask the Remix and EXTRA teams before release |

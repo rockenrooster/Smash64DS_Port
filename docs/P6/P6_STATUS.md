@@ -19,8 +19,10 @@ again with the rips (and `ssbh_data_py`, installed in Python 3.13 only);
 `check_p6_art.py` check 8 fails a recipe or cue that would convert from a
 rip in the build. The hand-run look, gate, stock-icon and costume chains
 still read the kit when re-run; their outputs under `assets/p6-art/` are what
-the build reads. Next: authored replacements
-([docs/RELEASE/P6_AUTHORING_LIST.md](../RELEASE/P6_AUTHORING_LIST.md)).
+the build reads. Owner 2026-10-29: both fighters stay on the owner's PC; a
+checkout without these stored files builds every other content
+(`scripts/p6/p6_local.py`, `Select-S64ContentFlags` in
+`scripts/tools/common.ps1`).
 
 **State (2026-10-20): done.** The owner approved Palutena's VFX after the
 p7 playtests ("Palutena VFX approved", 2026-10-20), the last of P6's

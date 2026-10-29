@@ -35,7 +35,7 @@ table, and where runs write. Conventions:
 
 | tool | builds |
 |---|---|
-| `build_play_rom.ps1 -Build play-pNN` | the owner's play ROM: free play with every content and P5 (never the root ROM) |
+| `build_play_rom.ps1 -Build play-pNN` | the owner's play ROM: free play with every content (Ike and Palutena only where their local files are, `scripts/p6/p6_local.py`) and P5 (never the root ROM) |
 | `build_walk_rom.ps1 -Build walk-uNN` | the play ROM plus the menu walk (`NDS_MENU_WALK=1`), for the audits |
 | `build_gate_rom.ps1 -Build build-sweep-sNN` | THE gate ROM: four-CPU sweep target in the ship layout, with the lab ITCM evictions |
 | `build_soak_rom.ps1 -Build build-soak-sNN [-Minutes 5]` | the gate ROM with timed matches, for the soaks |
