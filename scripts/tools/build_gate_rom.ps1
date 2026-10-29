@@ -9,7 +9,7 @@ param([Parameter(Mandatory)][string]$Build, [string]$Seed = '', [string[]]$Extra
 # fit (a diagnostics build, build-vram-*); never for a gate.
 . "$PSScriptRoot\common.ps1"
 & "$PSScriptRoot\build_sweep_rom.ps1" -Build $Build -Seed $Seed -EvictSyms ($S64SweepEvictions + $EvictSyms) `
-    -EvictSections $EvictSections -Extra ($S64ShipFlags + $Extra)
+    -EvictSections $EvictSections -Extra ((Select-S64ContentFlags $S64ShipFlags) + $Extra)
 $cfg = Join-Path $S64Repo "builds\$Build\nds_build_config.h"
 foreach ($k in 'NDS_1P_GAME', 'NDS_MENU_SHELL', 'NDS_P4', 'NDS_P5') {
     $line = Select-String -Path $cfg -Pattern "#define $k " | Select-Object -First 1

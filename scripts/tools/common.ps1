@@ -39,6 +39,22 @@ $S64PlayFlags = $S64ContentFlags + @('NDS_P5=1')
 $S64ShipFlags = $S64PlayFlags + @('NDS_1P_GAME=1', 'NDS_MENU_SHELL=1', 'NDS_UI_KIT=1',
     'NDS_FREEZE_DIAGNOSTICS=1', 'NDS_SHIP_TELEMETRY=1', 'NDS_BOOT_DIAG_TEXT=0',
     'NDS_DEMO_FOX_CPU_LADDER=0')
+
+# Ike and Palutena (the authored contents, P6) build from stored files that
+# derive from the owner's rips and stay on the owner's PC (owner 2026-10-29).
+# A build tool passes its flags through this, which leaves out, and names,
+# each authored content scripts/p6/p6_local.py does not report ready, so a
+# checkout without those files builds every other content. make itself still
+# fails a content that is enabled without its inputs.
+function Select-S64ContentFlags([string[]]$Flags) {
+    $notReady = @(& python (Join-Path $S64Repo 'scripts\p6\p6_local.py') --not-ready)
+    if ($LASTEXITCODE -ne 0) { throw 'scripts/p6/p6_local.py failed' }
+    foreach ($name in $notReady) {
+        Write-Host "Building without ${name}: its local files are absent (python scripts/p6/p6_local.py --why)" -ForegroundColor Yellow
+    }
+    $drop = @($notReady | ForEach-Object { "NDS_P4_$($_.ToUpper())=1" })
+    return @($Flags | Where-Object { $drop -notcontains $_ })
+}
 # The sweep ROM's lab-only ITCM evictions (memory lab-build-needs-itcm-evictions).
 $S64SweepEvictions = @('ndsMPWallSweepStaticMiss', 'ndsRendererInitVertexCache', 'ndsF32ToFixed')
 
