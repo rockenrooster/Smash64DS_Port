@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/fall.o2r",
+  "sha256": "13bf0ebfa6b234cbcfc6a0e8ad4d8938ff9b17227a8fb3042ad7b62cf1e0451f"
  }
 }

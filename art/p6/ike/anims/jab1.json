@@ -27,5 +27,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/jab1.o2r",
+  "sha256": "9049ca153669d30825c7db054f9e44af8fbf63596c125ab6eb2594bb083557f1"
  }
 }

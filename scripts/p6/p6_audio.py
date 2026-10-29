@@ -23,6 +23,10 @@ cue's gain, resampled (band-limited, by FFT) to the kind's rate (read as
 recorded at its rate times the pitch ratio) and encoded IMA by the vanilla
 pack's encoder. Voices pause with the game, as Remix's voice template
 does.
+
+A cue with "frozen" plays its stored render instead (frozen_cue): the
+Ultimate-derived cues are rendered once by scripts/p6/p6_freeze.py, so the
+build no longer reads the recordings (owner 2026-10-29).
 """
 from __future__ import annotations
 
@@ -148,6 +152,26 @@ def render_cue(row: dict, source: Path) -> tuple[list[int], int]:
     return [int(round(x * 32767)) for x in pcm], target
 
 
+def frozen_cue(row: dict) -> tuple[list[int], int]:
+    """A cue's stored render ("frozen": {"pcm", "sha256"}): render_cue's
+    samples as scripts/p6/p6_freeze.py wrote them, a 16-bit mono WAV at the
+    kind's rate under assets/p6-art/<name>/audio (local, rip-derived, never
+    tracked), checked against the cue's digest."""
+    import hashlib
+    import numpy as np
+    path = REPO / row["frozen"]["pcm"]
+    if not path.exists():
+        raise AudioError(f"{path}: not stored (scripts/p6/p6_freeze.py writes it)")
+    if hashlib.sha256(path.read_bytes()).hexdigest() != row["frozen"]["sha256"]:
+        raise AudioError(f"{path}: not the cue's stored render (re-freeze: scripts/p6/p6_freeze.py)")
+    rate = RATES[row["kind"]]
+    with wave.open(str(path), "rb") as w:
+        if (w.getnchannels(), w.getsampwidth(), w.getframerate()) != (1, 2, rate):
+            raise AudioError(f"{path}: not 16-bit mono at {rate} Hz")
+        raw = w.readframes(w.getnframes())
+    return np.frombuffer(raw, dtype="<i2").astype(int).tolist(), rate
+
+
 def records(name: str, renderer, source: Path | None = None) -> list[dict]:
     """The content's pack entries (p4_audio.py's record form)."""
     spec = load(name)
@@ -159,7 +183,7 @@ def records(name: str, renderer, source: Path | None = None) -> list[dict]:
     out = []
     for cue in sorted(spec["cues"]):
         row = spec["cues"][cue]
-        pcm, rate = render_cue(row, source)
+        pcm, rate = frozen_cue(row) if "frozen" in row else render_cue(row, source)
         ima = renderer.ima_encode(pcm)
         decoded = renderer.ima_decode(ima, len(pcm))
         metrics = renderer.audio_metrics(pcm, decoded)

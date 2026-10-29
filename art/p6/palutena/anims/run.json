@@ -34,5 +34,11 @@
    "window": 9
   },
   "skirt_smooth": 9
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/run.o2r",
+  "sha256": "33543ff9a4ef95b4827dd9e5b10479bc1df9f17d8c202944d88ffa76a912e1d1",
+  "skirt_guide": "assets/p6-art/palutena/anims/run.skirt.json",
+  "skirt_guide_sha256": "0834b25ec74fc3999f6b9dea96f6056a98331d07e757226517280711f11e1134"
  }
 }

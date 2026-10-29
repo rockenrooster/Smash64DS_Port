@@ -45,5 +45,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/dtilt.o2r",
+  "sha256": "799ddf694cbbbae551533f9b93d1eb7a1512bf625c68c9a6e4facbc86bfa8424"
  }
 }

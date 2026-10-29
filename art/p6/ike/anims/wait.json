@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/wait.o2r",
+  "sha256": "c381bd028ea3d6eb53cec9c14c72e2905765dddc4c521d8d9fbc1a830a6f88b3"
  }
 }

@@ -22,5 +22,11 @@
     4
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/kneebend.o2r",
+  "sha256": "e26835f53ec7ca1714cf080f71af886f084fa2219436ebd59c15620742e66756",
+  "skirt_guide": "assets/p6-art/palutena/anims/kneebend.skirt.json",
+  "skirt_guide_sha256": "f028e6aeb5cf3550f34e133f1a9658980743361ea23cd820d8071125dbd62705"
  }
 }

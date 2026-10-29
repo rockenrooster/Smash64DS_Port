@@ -59,5 +59,11 @@
    ],
    "ease": 6
   }
- ]
+ ],
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/dsmash.o2r",
+  "sha256": "224f61dcd6b5034e79a8415f4caa50dad7fffbd0cc386cae86ebc8fb74fb0187",
+  "skirt_guide": "assets/p6-art/palutena/anims/dsmash.skirt.json",
+  "skirt_guide_sha256": "5fe3e619d7c41006d93d368369b839abf099036cf724e1ec27fe92d2aee4ee97"
+ }
 }

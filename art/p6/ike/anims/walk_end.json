@@ -18,5 +18,9 @@
     23
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/walk_end.o2r",
+  "sha256": "f3c1612dcafabc676ef7f9d1a648c76f5f9babd43dca4edd89f4b9361856d06c"
  }
 }

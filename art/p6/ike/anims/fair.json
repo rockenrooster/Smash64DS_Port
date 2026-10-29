@@ -45,5 +45,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/fair.o2r",
+  "sha256": "c1b3f5349fa14a37040d345b30d2cfd7eaa0e157962c80a00e85407e691692c5"
  }
 }

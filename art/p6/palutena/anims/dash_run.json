@@ -32,5 +32,11 @@
    ],
    "leave": 20
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/dash_run.o2r",
+  "sha256": "379856158b0af7c81d2abdc9b2b8d1f6ff0315c79a0236f89dabe9e810fdcb5c",
+  "skirt_guide": "assets/p6-art/palutena/anims/dash_run.skirt.json",
+  "skirt_guide_sha256": "4fdb48d5ea8e81082dbe717cf8444409208f94ea7f1538f1e8d1ff54a8a3eaa9"
  }
 }

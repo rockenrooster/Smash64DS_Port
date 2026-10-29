@@ -184,5 +184,11 @@
     ]
    ]
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/dair.o2r",
+  "sha256": "0f0b5469a1c254573a5f562f9c5ca0d680a2378490ededd212ef625201bb6f57",
+  "skirt_guide": "assets/p6-art/palutena/anims/dair.skirt.json",
+  "skirt_guide_sha256": "58c2ae9e880c526b85bbb3bcf6fd07c7b5ad7e69bbaecc455a02a771f5f49b08"
  }
 }

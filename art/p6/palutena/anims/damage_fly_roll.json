@@ -19,5 +19,11 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/damage_fly_roll.o2r",
+  "sha256": "a3a92d21581d25f1620146863f3a4e1301d2ecb6a031c46e3d8db8f2aad50fc2",
+  "skirt_guide": "assets/p6-art/palutena/anims/damage_fly_roll.skirt.json",
+  "skirt_guide_sha256": "628f3c1d05d0f8de065e30b8243c27704526c95b43ac26f44d525c244e0c7856"
  }
 }

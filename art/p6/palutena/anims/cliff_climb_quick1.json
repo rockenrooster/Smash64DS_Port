@@ -21,5 +21,11 @@
   "transn": {
    "absolute": true
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/cliff_climb_quick1.o2r",
+  "sha256": "2685426e22707f768e28143de85561f4fa2c27e050451c4a447f69bd9f0242fd",
+  "skirt_guide": "assets/p6-art/palutena/anims/cliff_climb_quick1.skirt.json",
+  "skirt_guide_sha256": "155061691fb29aae6898103aae4658cac5d76b7844e215e18a20da0c941110f7"
  }
 }

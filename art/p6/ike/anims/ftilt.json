@@ -41,5 +41,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/ftilt.o2r",
+  "sha256": "3653dffdacb6de820bb4b5da7ce01c264909668ba35c53b6f5f99d47777b6c1f"
  }
 }

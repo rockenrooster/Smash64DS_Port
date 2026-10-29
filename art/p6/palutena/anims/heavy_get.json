@@ -19,5 +19,11 @@
    ]
   ],
   "held": true
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/heavy_get.o2r",
+  "sha256": "5ccd8c82604a36fd14e5232c3cdd027349dd163c7387f4354ce67653eff6e9d6",
+  "skirt_guide": "assets/p6-art/palutena/anims/heavy_get.skirt.json",
+  "skirt_guide_sha256": "f43f77a1e796c721bfd59d4f6a7f49811c6b862dd8cb05c88cd27169b208aad0"
  }
 }

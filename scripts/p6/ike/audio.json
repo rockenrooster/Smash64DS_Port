@@ -6,221 +6,413 @@
  "cues": {
   "announcer": {
    "file": "vc_narration_characall_ike.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/announcer.wav",
+    "sha256": "01123c84e242a098147a8fa7ce689673948fd0fef722eb964611d508be1bce62"
+   }
   },
   "cheer": {
    "file": "vc_ike_cheer.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/cheer.wav",
+    "sha256": "97866f55475c501b886677ae724dc86325728680fa86a8d61239e4448980bd71"
+   }
   },
   "attack01": {
    "file": "vc_ike_c01/vc_ike_attack01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack01.wav",
+    "sha256": "60c4b8eb0aa0f64bccbccaf50e09cffef209ef121be9169c82b2df9a30f8bde9"
+   }
   },
   "attack02": {
    "file": "vc_ike_c01/vc_ike_attack02.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack02.wav",
+    "sha256": "c2442d00f35959d3e41bc83b72a66d1315338c4d62887273854102c331ccc1a2"
+   }
   },
   "attack03": {
    "file": "vc_ike_c01/vc_ike_attack03.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack03.wav",
+    "sha256": "9d8b16d580ff536838aa8e11577794e6f1de6b4833a9640f6f83a12f770e6a54"
+   }
   },
   "attack04": {
    "file": "vc_ike_c01/vc_ike_attack04.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack04.wav",
+    "sha256": "39b0f0741abdba9fd95747dffd0ebb975577dd336268bfce7eb0391323c5c1fd"
+   }
   },
   "attack05": {
    "file": "vc_ike_c01/vc_ike_attack05.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack05.wav",
+    "sha256": "fa072bfbd7875c3d42037df0f6ef2cfebcbcbf1938bf3b870f7d25f383236255"
+   }
   },
   "attack06": {
    "file": "vc_ike_c01/vc_ike_attack06.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack06.wav",
+    "sha256": "18f0e59c8621f0d12e2c25bb86e56ba232d27e4c4a3d0fbccdefe67f47e8da3c"
+   }
   },
   "attack07": {
    "file": "vc_ike_c01/vc_ike_attack07.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/attack07.wav",
+    "sha256": "f5bc21edeee6fbc34b3219789ed82085e9c73d4dbadcf99bfaa68d910a6760f1"
+   }
   },
   "appeal01": {
    "file": "vc_ike_c01/vc_ike_appeal01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/appeal01.wav",
+    "sha256": "287a5f88b03aeb776b33414736ef81a848413d10249827358c01b39aaa52ce52"
+   }
   },
   "cliffcatch": {
    "file": "vc_ike_c01/vc_ike_cliffcatch.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/cliffcatch.wav",
+    "sha256": "ae218cd40dade086e03f6f1ef1c9e9c35da74c7bb2cebf8db64878decc04f0c5"
+   }
   },
   "damage01": {
    "file": "vc_ike_c01/vc_ike_damage01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/damage01.wav",
+    "sha256": "b5d44960d2193eef470d7e5b5d47eccdda28ad5c1b874af1f637fc87f3e1f06a"
+   }
   },
   "damage02": {
    "file": "vc_ike_c01/vc_ike_damage02.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/damage02.wav",
+    "sha256": "89ea12f44c54b49a7d22f7d3d77986fc0e28dcba3eb592ebd9d61f022d69608d"
+   }
   },
   "damagefly01": {
    "file": "vc_ike_c01/vc_ike_damagefly01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/damagefly01.wav",
+    "sha256": "e8e7a209b27d98cedb39e4dbc49aa67d448b6ea7e1352d150fd7e8acd7919c8a"
+   }
   },
   "damage_twinkle": {
    "file": "vc_ike_c01/vc_ike_damage_twinkle.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/damage_twinkle.wav",
+    "sha256": "1b569ad18991f225adc0faafe7584d0a190797f4aa7b92d60fa3e1a5d9e35fad"
+   }
   },
   "knockout": {
    "file": "vc_ike_c01/vc_ike_knockout.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/knockout.wav",
+    "sha256": "8704ddb292d1cc41dff955592a7f0024b44743550c30fd64e45f0cfaccd5474f"
+   }
   },
   "furafura": {
    "file": "vc_ike_c01/vc_ike_furafura.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/furafura.wav",
+    "sha256": "5f1ada91682d63d273d5a1f9464980b196a6b77f3f21b9fedf1cec70b5059964"
+   }
   },
   "furasleep": {
    "file": "vc_ike_c01/vc_ike_furasleep.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/furasleep.wav",
+    "sha256": "d6a941b32661d7421d86215bc59d74fdb9d16ccc99cd1291116e70b4fc477b1a"
+   }
   },
   "heavyget": {
    "file": "vc_ike_c01/vc_ike_heavyget.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/heavyget.wav",
+    "sha256": "c111ee3748de6595bc4029fb2fe7a010251f9c190bb58fa925b49df86d5904d3"
+   }
   },
   "jump01": {
    "file": "vc_ike_c01/vc_ike_jump01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/jump01.wav",
+    "sha256": "9ac33147611ed14b7495b2eb322d13a1f46276ec7d32e07b60963c474f61cf3b"
+   }
   },
   "special_n01": {
    "file": "vc_ike_c01/vc_ike_special_N01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/special_n01.wav",
+    "sha256": "787d22389de1805afb7b2efb63510592c229f1ff91ea5eefb058b416c59b448d"
+   }
   },
   "special_s01": {
    "file": "vc_ike_c01/vc_ike_special_S01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/special_s01.wav",
+    "sha256": "f7c628da74e2f7bf1722e33aaa499e5eea3f29ec325e90450c27767b5fd4b416"
+   }
   },
   "special_h01": {
    "file": "vc_ike_c01/vc_ike_special_H01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/special_h01.wav",
+    "sha256": "0b72acfc71863196f59f9e89ad54c396214184dccdb091657413c2d491f813eb"
+   }
   },
   "special_h02": {
    "file": "vc_ike_c01/vc_ike_special_H02.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/special_h02.wav",
+    "sha256": "f0918dc0cd7d8513a0a70e1cedb299dbfa4832f6b23d0143548485e1a63dbee2"
+   }
   },
   "special_l01": {
    "file": "vc_ike_c01/vc_ike_special_L01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/special_l01.wav",
+    "sha256": "9c18ac8af245372fab75ed16a0ebb3786826d4aa43188ff59c890039f818e164"
+   }
   },
   "win01": {
    "file": "vc_ike_c01/vc_ike_win01.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/win01.wav",
+    "sha256": "6250aec1909c366a3fdba29145929858fb778a901240eb1c37874f09ea7e8a80"
+   }
   },
   "win02": {
    "file": "vc_ike_c01/vc_ike_win02.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/win02.wav",
+    "sha256": "74a74553ddb9f8521ae4926180789103ac89caf032c4330925f5ceaa5079f6aa"
+   }
   },
   "win03": {
    "file": "vc_ike_c01/vc_ike_win03.wav",
    "kind": "voice",
-   "pitch_semitones": 1.5
+   "pitch_semitones": 1.5,
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/win03.wav",
+    "sha256": "b1c7bcfaa8a56b94d02fc3ce936bfb587599f46b9e11d679ef32c465c3999d65"
+   }
   },
   "se_swing_s": {
    "file": "se_ike/se_ike_swing_s.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_swing_s.wav",
+    "sha256": "4781c26880db61d40a225d936e9dc973245fac37e96dddd3d09b93929d63951e"
+   }
   },
   "se_swing_m": {
    "file": "se_ike/se_ike_swing_m.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_swing_m.wav",
+    "sha256": "d5e7d80b89a07629b8ae4351eb327656937d5df211a69431e41b98d7534830fb"
+   }
   },
   "se_swing_l": {
    "file": "se_ike/se_ike_swing_l.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_swing_l.wav",
+    "sha256": "5d7a6aff9b0e92a1c6241a4788b705cf5060e5fd78a11f463909630af98040a5"
+   }
   },
   "se_swing_ll": {
    "file": "se_ike/se_ike_swing_ll.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_swing_ll.wav",
+    "sha256": "10ecaa6ec6ad1359c14bbcca0a13c74d084c0483d041588c7d7bb6eba8b702a0"
+   }
   },
   "se_swordgroundhit": {
    "file": "se_ike/se_ike_swordgroundhit.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_swordgroundhit.wav",
+    "sha256": "0dbb55d3704f4181ff30b72e29cc0d3b9362bb7222cc7726bb42d28d987d0366"
+   }
   },
   "se_eruption_charge": {
    "file": "se_ike/se_ike_special_N01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_eruption_charge.wav",
+    "sha256": "6b31eeb6c95042c4d2444c194d7c985b75ffd12d2cc04faf4cb1acfb30bb22cb"
+   }
   },
   "se_quickdraw": {
    "file": "se_ike/se_ike_special_S03.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_quickdraw.wav",
+    "sha256": "0267e68504b1fee2ecf0abea774cb79552d9203eafe7b0af16730b5a372ed705"
+   }
   },
   "se_quickdraw_charge": {
    "file": "se_ike/se_ike_special_S01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_quickdraw_charge.wav",
+    "sha256": "fc63dd76331827f4f94251d577db46775aa55b9bb96a2d9119492e2e00635912"
+   }
   },
   "se_quickdraw_charge2": {
    "file": "se_ike/se_ike_special_S02.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_quickdraw_charge2.wav",
+    "sha256": "2c5fc0c6b15b1d74faebee3d3c672e48795c5f463b5e2fcab9875670a9dba735"
+   }
   },
   "se_quickdraw_slash": {
    "file": "se_ike/se_ike_special_S04.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_quickdraw_slash.wav",
+    "sha256": "595123d31d6244951ff568fb7aeaab6c87bad739f6999304915c3b5811122f4b"
+   }
   },
   "se_aether": {
    "file": "se_ike/se_ike_special_H01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_aether.wav",
+    "sha256": "cccdf39d92e3052f772de66a231426058922e5c41ccf06efc6c05ee161887269"
+   }
   },
   "se_aether_land": {
    "file": "se_ike/se_ike_special_H05.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_aether_land.wav",
+    "sha256": "b73d7620b1ff28d3f50bd3df162261625a921e56d76acf7be87a3fbc678da5f4"
+   }
   },
   "se_counter": {
    "file": "se_ike/se_ike_special_L01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_counter.wav",
+    "sha256": "6473a775861844572a36ccb1ba7300e8a48f8f2d7d53664ad222cdc2b829dba3"
+   }
   },
   "se_appear": {
    "file": "se_ike/se_ike_appear01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_appear.wav",
+    "sha256": "0f3fd1f4cb5d2842c03a3a60439b67530b4a23177d19cdeff2b36bcf40f95ab6"
+   }
   },
   "se_landing": {
    "file": "se_ike/se_ike_landing01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_landing.wav",
+    "sha256": "035e2ded7d9525169a439997f96c86470412f37a9a4aeb1d0654522d8a1b8439"
+   }
   },
   "se_step": {
    "file": "se_ike/se_ike_step_right_m_souen01.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_step.wav",
+    "sha256": "2affcf798d6048d55ea5f242c2b1c2deaafdbea480cc26cded825c512c16f783"
+   }
   },
   "se_dash": {
    "file": "se_ike/se_ike_dash_start.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_dash.wav",
+    "sha256": "df44ee6b729bba6fa1864f87d7a557200f7d00149acd8fabb0603ace1899576f"
+   }
   },
   "se_brake": {
    "file": "se_ike/se_ike_dash_stop.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_brake.wav",
+    "sha256": "740024d2f0fdac7ddfc62663411fb7232d14688c7976674cf49cc4d02d32ea8d"
+   }
   },
   "se_escape": {
    "file": "se_ike/se_ike_escape.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_escape.wav",
+    "sha256": "91b1a04eafa5c11dac0ed9009e494ca24af235f8af098b5690a8763a1860443f"
+   }
   },
   "se_eruption_blast": {
    "file": "se_ike/se_ike_special_N06.wav",
-   "kind": "effect"
+   "kind": "effect",
+   "frozen": {
+    "pcm": "assets/p6-art/ike/audio/se_eruption_blast.wav",
+    "sha256": "9109c218d39ca08164f8e2aed8d93bf4eef5fede7d09ab6fcb230c5b0f86911f"
+   }
   }
  },
  "map": {

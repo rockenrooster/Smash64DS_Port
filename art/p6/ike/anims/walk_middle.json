@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/walk_middle.o2r",
+  "sha256": "6c52de1888513f16de84cf03afcb9de78834f1129d286bc7a6447207953d0909"
  }
 }

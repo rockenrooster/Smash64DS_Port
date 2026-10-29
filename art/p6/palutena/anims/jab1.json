@@ -39,5 +39,11 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/jab1.o2r",
+  "sha256": "0f55f7457c5735ba2fadcd77adb982779df34bfa91d4aa1defad38bff1f235ce",
+  "skirt_guide": "assets/p6-art/palutena/anims/jab1.skirt.json",
+  "skirt_guide_sha256": "a4aa6c36152fffd1c4c06ae9ee13247e9fbeeedf3278488dbc0009898854c92e"
  }
 }

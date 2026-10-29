@@ -22,5 +22,9 @@
     30
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/landing_air_f.o2r",
+  "sha256": "87298157b9732ebf930be863b32bf1a155658581508c4c32cdd654fd8d9eed4f"
  }
 }

@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/squat_wait.o2r",
+  "sha256": "37e59fc094af9ad59747b154026521353892909458c10436a2ec1fab7035d4b8"
  }
 }

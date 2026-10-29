@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/aether_fall.o2r",
+  "sha256": "c9392cce6f5419c376b13897c1f12e19f6ab75fabf4eb5475b1c3aca4ac2b668"
  }
 }

@@ -68,5 +68,9 @@
    ],
    "size": 0.84
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/aether_rise.o2r",
+  "sha256": "0f649c533639e1e428e189a288d9b709720f72ac9b6094211ba3b28f20147049"
  }
 }

@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/qd_dash.o2r",
+  "sha256": "41809e000582947821afe74771380d26ef4530116c2a328479af8d1174c66627"
  }
 }

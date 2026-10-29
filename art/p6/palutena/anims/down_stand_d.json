@@ -18,5 +18,11 @@
     29
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/down_stand_d.o2r",
+  "sha256": "a85430a70e36177e05014c8f6bd271acf722a494cafcceefc5a2f67418cb001e",
+  "skirt_guide": "assets/p6-art/palutena/anims/down_stand_d.skirt.json",
+  "skirt_guide_sha256": "5b007139904a73ec0010f49f6bee8c721c51c230d87edc72d33849e80b9fb090"
  }
 }

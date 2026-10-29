@@ -37,5 +37,11 @@
   "transn": {
    "scale": 1.33
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/dash.o2r",
+  "sha256": "1aaee8e8f776fcc215398c26c2c7c514db44303eb49e864694e56a2a0e00f1eb",
+  "skirt_guide": "assets/p6-art/palutena/anims/dash.skirt.json",
+  "skirt_guide_sha256": "2103ad2ad4a56992fdce4b196e62d346a610329c84e4133cbbdd729d6f99bc29"
  }
 }

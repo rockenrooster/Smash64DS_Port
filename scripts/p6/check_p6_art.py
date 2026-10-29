@@ -27,7 +27,11 @@ left out of the content checks):
 7. fresh: each authored content's export (builds/p4-staging/export-x/<name>,
    when built) was written from the current spec, motion and menu scripts
    and audio recipe, and from the current files its spec names (main
-   excepted: the author rewrites it).
+   excepted: the author rewrites it);
+8. frozen: the build converts nothing from a rip: every clip recipe with an
+   Ultimate conversion block, and every cue of an audio recipe whose source
+   is a rip folder, names its stored result ("frozen",
+   scripts/p6/p6_freeze.py; owner 2026-10-29).
 
     check_p6_art.py            run the checks on the repository
     check_p6_art.py --self-test  plant a fault for each check and expect red
@@ -139,8 +143,10 @@ def check_ignores(repo: Path) -> list[str]:
     text = (repo / ".gitignore").read_text(encoding="utf-8") if (repo / ".gitignore").exists() else ""
     rules = {ln.strip().rstrip("/") for ln in text.splitlines()}
     bad = []
+    # A rule for a parent folder counts (/decomp/alt_assets/ keeps all three).
+    roots = {r.lstrip("/") for r in rules if r}
     for r in RIPS:
-        if "/" + r not in rules and r not in rules:
+        if not any(r == k or r.startswith(k + "/") for k in roots):
             bad.append(f"ignores: .gitignore does not keep {r} out")
     for keep in (("builds",), ("assets", "assets/p6-art")):
         if not ({r for k in keep for r in (k, "/" + k)} & rules):
@@ -181,6 +187,24 @@ def check_fresh(repo: Path, export_root: Path) -> list[str]:
     return bad
 
 
+def check_frozen(repo: Path, files: list[str]) -> list[str]:
+    bad = []
+    for f in files:
+        if not f.endswith(".json"):
+            continue
+        if f.startswith("art/p6/") and "/anims/" in f:
+            recipe = json.loads((repo / f).read_text(encoding="utf-8"))
+            if "ultimate" in recipe and "frozen" not in recipe:
+                bad.append(f"frozen: {f} converts an Ultimate motion in the build")
+        elif f.startswith("scripts/p6/") and f.endswith("/audio.json"):
+            spec = json.loads((repo / f).read_text(encoding="utf-8"))
+            if any(str(spec.get("source", "")).startswith(r) for r in RIPS):
+                live = [c for c, row in (spec.get("cues") or {}).items() if "frozen" not in row]
+                if live:
+                    bad.append(f"frozen: {f} renders {len(live)} cue(s) from {spec['source']} in the build")
+    return bad
+
+
 def run(repo: Path, files: list[str] | None = None, derived: dict[str, str] | None = None) -> list[str]:
     files = tracked(repo) if files is None else files
     if derived is None:
@@ -189,7 +213,7 @@ def run(repo: Path, files: list[str] | None = None, derived: dict[str, str] | No
             derived.update(digests(repo / r))
     return (check_tracked(files) + check_audio(files) + check_images(files)
             + check_copies(repo, files, derived) + check_dumps(repo, files) + check_ignores(repo)
-            + check_fresh(repo, repo / "builds/p4-staging/export-x"))
+            + check_fresh(repo, repo / "builds/p4-staging/export-x") + check_frozen(repo, files))
 
 
 def self_test() -> int:
@@ -237,9 +261,14 @@ def self_test() -> int:
         got = check_fresh(repo, repo / "builds/p4-staging/export-x")
         if not any(m.startswith("fresh:") for m in got):
             failures.append(f"fresh: planted fault not reported ({got})")
+        (repo / "art/p6/x/anims").mkdir(parents=True)
+        (repo / "art/p6/x/anims/wait.json").write_text('{"ultimate": {"motion": "a00wait1"}}', encoding="utf-8")
+        got = check_frozen(repo, ["art/p6/x/anims/wait.json"])
+        if not any(m.startswith("frozen:") for m in got):
+            failures.append(f"frozen: planted fault not reported ({got})")
     for f in failures:
         print("SELF-TEST FAIL", f)
-    print(f"check_p6_art self-test: {7 - len(failures)} of 7 checks red on their planted fault")
+    print(f"check_p6_art self-test: {8 - len(failures)} of 8 checks red on their planted fault")
     return 1 if failures else 0
 
 

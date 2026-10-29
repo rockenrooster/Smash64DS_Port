@@ -22,5 +22,9 @@
     6
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/kneebend.o2r",
+  "sha256": "cab0f9761d907c0b097096ba69c2d561b11e946aab59c6152d6acb4e5d011d92"
  }
 }

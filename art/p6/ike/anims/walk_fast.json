@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/walk_fast.o2r",
+  "sha256": "c3e1959b91e968486f2a515cb6b04b24621b63daf2b84bbcbd05ca5c42e18693"
  }
 }

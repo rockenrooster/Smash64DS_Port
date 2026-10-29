@@ -45,5 +45,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/dair.o2r",
+  "sha256": "e6ac6f67ec537dc8180b184a753ab2a77c5b1048da3a214910f6fdbe030ef85c"
  }
 }

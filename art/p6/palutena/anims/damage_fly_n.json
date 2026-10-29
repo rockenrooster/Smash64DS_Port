@@ -18,5 +18,11 @@
     36
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/damage_fly_n.o2r",
+  "sha256": "03ca697ebcb5b7a0b2c7600d6a23fb219d76bbcce411df7ec7905ab29a1576da",
+  "skirt_guide": "assets/p6-art/palutena/anims/damage_fly_n.skirt.json",
+  "skirt_guide_sha256": "34732cb106694b6c8e22358e3f6543509e1734a722107e9913d7c1ea31c94e01"
  }
 }

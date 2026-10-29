@@ -62,5 +62,9 @@
    "frames": 3
   },
   "key_step": 2
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/dsmash.o2r",
+  "sha256": "54351fdfb2848d1c88fd72c12e09a7dff621db92bf6b30a6cf643f1393e0a57b"
  }
 }

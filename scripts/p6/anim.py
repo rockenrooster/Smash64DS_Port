@@ -653,6 +653,30 @@ def with_transn_slot(clip: Clip) -> Clip:
     return out
 
 
+def frozen_clip(frozen: dict, extras: dict | None = None) -> bytes:
+    """A recipe's stored clip ("frozen": {"clip", "sha256"}, plus
+    "skirt_guide" and "skirt_guide_sha256" for a clip that has one): the
+    conversion scripts/p6/p6_freeze.py wrote under assets/p6-art/<name>/anims
+    (local, rip-derived, never tracked), checked against the recipe's
+    digests, so the build no longer reads the owner's Ultimate files (owner
+    2026-10-29)."""
+    import hashlib
+    blobs = {}
+    for key, sha in (("clip", "sha256"), ("skirt_guide", "skirt_guide_sha256")):
+        if key not in frozen:
+            continue
+        path = HERE.parents[1] / frozen[key]
+        if not path.exists():
+            raise ValueError(f"{frozen[key]}: not stored (scripts/p6/p6_freeze.py writes it)")
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != frozen[sha]:
+            raise ValueError(f"{frozen[key]}: not the recipe's stored file (re-freeze: scripts/p6/p6_freeze.py)")
+        blobs[key] = data
+    if "skirt_guide" in blobs and extras is not None:
+        extras["skirt_guide"] = json.loads(blobs["skirt_guide"].decode("utf-8"))
+    return blobs["clip"]
+
+
 def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
@@ -672,7 +696,11 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
     turns, aims and leg IK, keyposes.py, or "ultimate": an Ultimate motion
     on her rig, ultimate.py); the O2R container keeps the source's header
     (p6_author.py gives it its own id; a keyed clip takes "header": a
-    clip of the same tree's id for its header)."""
+    clip of the same tree's id for its header). A recipe with "frozen" is
+    its stored clip (frozen_clip); its conversion block is only read by
+    scripts/p6/p6_freeze.py."""
+    if "frozen" in recipe:
+        return frozen_clip(recipe["frozen"], extras)
     import pose_ops
     if "keyposes" in recipe:
         import keyposes

@@ -4,6 +4,24 @@ Owner of the live P6 state. The plan is [P6_PLAN.md](P6_PLAN.md); the cards
 are [characters/ike.md](characters/ike.md) and
 [characters/palutena.md](characters/palutena.md).
 
+**Rips frozen (2026-10-29, owner).** The build no longer reads the local
+Ultimate files: the 180 clips converted from Ultimate motions (Palutena 134,
+Ike 46) and the 119 cues rendered from Ultimate recordings (71, 48) are
+stored once under `assets/p6-art/<name>/anims` and `.../audio` (local,
+rip-derived, never tracked), and each recipe and cue names its stored file
+and sha256 (`"frozen"`; `anim.py` `frozen_clip`, `p6_audio.py`
+`frozen_cue`). The first freeze took the clips the play ROM was built from
+(`scripts/p6/p6_freeze.py --from-built`); the play ROM rebuilt with every
+Python read of the rip folders blocked is byte-identical (129,394,688 B,
+SHA-256 `4C8A5814...403D`). Editing an Ultimate recipe's conversion block or
+a cue's trim, gain or pitch now changes nothing until `p6_freeze.py` runs
+again with the rips (and `ssbh_data_py`, installed in Python 3.13 only);
+`check_p6_art.py` check 8 fails a recipe or cue that would convert from a
+rip in the build. The hand-run look, gate, stock-icon and costume chains
+still read the kit when re-run; their outputs under `assets/p6-art/` are what
+the build reads. Next: authored replacements
+([docs/RELEASE/P6_AUTHORING_LIST.md](../RELEASE/P6_AUTHORING_LIST.md)).
+
 **State (2026-10-20): done.** The owner approved Palutena's VFX after the
 p7 playtests ("Palutena VFX approved", 2026-10-20), the last of P6's
 criteria; Ike was rated 5/5 at p6x and Palutena's run start, the last open

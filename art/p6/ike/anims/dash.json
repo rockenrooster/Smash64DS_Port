@@ -45,5 +45,9 @@
    ]
   },
   "key_step": 2
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/dash.o2r",
+  "sha256": "e9288aea390ae951a609feeedba11db01cf416405ec9ddc3da2700eb5d58b46e"
  }
 }

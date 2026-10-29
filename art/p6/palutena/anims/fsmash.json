@@ -35,5 +35,11 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/fsmash.o2r",
+  "sha256": "ae88e0d3b87decd3e8088ea8300a37dfc3abdff1feb8aea748ea6357d4899577",
+  "skirt_guide": "assets/p6-art/palutena/anims/fsmash.skirt.json",
+  "skirt_guide_sha256": "b05d800c5ebec0a04ee334d7e1ec7789bf574bb4b9a860547b63f03810142166"
  }
 }

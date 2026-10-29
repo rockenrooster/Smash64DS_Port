@@ -34,5 +34,11 @@
    ]
   }
  },
- "transn_slot": true
+ "transn_slot": true,
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/entry_l.o2r",
+  "sha256": "a267bca513522a1d07314ad3fb065b746d526b4aaf020e2d40ee00db62c4acce",
+  "skirt_guide": "assets/p6-art/palutena/anims/entry_l.skirt.json",
+  "skirt_guide_sha256": "d319fb65d3b9f8f1523d7196b1c6e9cfe946e07d9e332031ff832943dc50a9de"
+ }
 }

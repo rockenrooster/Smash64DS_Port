@@ -18,5 +18,11 @@
     39
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/item_swing1.o2r",
+  "sha256": "78fe29735b09f168131ced5e55d79e66b24fa63897e2ae217e36a1dd0dd46871",
+  "skirt_guide": "assets/p6-art/palutena/anims/item_swing1.skirt.json",
+  "skirt_guide_sha256": "8ba7bd5320f5e8ced33f9d165f1d993994c0047c5e9b2f22b086b15f3e96a923"
  }
 }

@@ -45,5 +45,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/bair.o2r",
+  "sha256": "c7b59312446719dff67c96218fda57d38313899b55a3df3a9326d247f1bdd9b2"
  }
 }

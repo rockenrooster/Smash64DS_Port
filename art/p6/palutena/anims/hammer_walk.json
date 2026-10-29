@@ -19,5 +19,11 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/hammer_walk.o2r",
+  "sha256": "de58b6cdf4f6752ca401a63d6c8c5690d1654a4dc290e5cbb337a4eaab74d27a",
+  "skirt_guide": "assets/p6-art/palutena/anims/hammer_walk.skirt.json",
+  "skirt_guide_sha256": "356aab8152940ce8c6d3235b3cbda8f1102c001b40660b69ffaf461079eb1e34"
  }
 }

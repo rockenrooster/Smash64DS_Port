@@ -18,5 +18,9 @@
     30
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/landing_heavy.o2r",
+  "sha256": "94e98abccd914b4bf299a5f8367a47e26178535787bc440129b318a744675788"
  }
 }

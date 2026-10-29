@@ -35,5 +35,11 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/ftilt.o2r",
+  "sha256": "2ce8d2284b07fbf749bbe65f40c7adaae1aa50bb9a9a70264c558ba4eb0b7533",
+  "skirt_guide": "assets/p6-art/palutena/anims/ftilt.skirt.json",
+  "skirt_guide_sha256": "5596f89432421625f5276c577019a88032784c3d98c121ed812402c8a969f05f"
  }
 }

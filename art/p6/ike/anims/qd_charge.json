@@ -23,5 +23,9 @@
    "frame": 0,
    "frames": 3
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/qd_charge.o2r",
+  "sha256": "72fbc03f85712b8dbd32ed8f48360c83e010161d1f7f289e9d1b4870e3a7679c"
  }
 }

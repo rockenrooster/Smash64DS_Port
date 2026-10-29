@@ -19,5 +19,9 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/fall_aerial.o2r",
+  "sha256": "1c48754d6712aced794e3aa97244bb9f1ad02fad482976e7ff50c1ef918a760b"
  }
 }

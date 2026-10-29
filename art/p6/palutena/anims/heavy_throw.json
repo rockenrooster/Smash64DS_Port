@@ -19,5 +19,11 @@
    ]
   ],
   "held": true
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/heavy_throw.o2r",
+  "sha256": "3ae91998205157f34de93c6a516b0eaa5266fbe3edb36a17f36a2e4f7c245809",
+  "skirt_guide": "assets/p6-art/palutena/anims/heavy_throw.skirt.json",
+  "skirt_guide_sha256": "acc9ed3639190fe3d23a2a523a1db4433517a1856303e604beeca0bdf4045c34"
  }
 }

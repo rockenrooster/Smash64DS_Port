@@ -18,5 +18,11 @@
     27
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/light_throw_hi.o2r",
+  "sha256": "9d91a4cdb53e2c6e31a8002cb0cb1f771d98a011884313128ef089d9bb485f2b",
+  "skirt_guide": "assets/p6-art/palutena/anims/light_throw_hi.skirt.json",
+  "skirt_guide_sha256": "f51ef4e13c5825e3da61aee5ec097962287b43f01b39f310a1e26b625e573e81"
  }
 }

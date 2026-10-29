@@ -19,5 +19,11 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/fura_fura.o2r",
+  "sha256": "28dff4e3edb5989d06fddf8b5971ef150298fdf1a0c4ee079e345c9458b415a7",
+  "skirt_guide": "assets/p6-art/palutena/anims/fura_fura.skirt.json",
+  "skirt_guide_sha256": "fea92038a1da7ac42c114634e6d9afcb2165fdbfe92426aaefec0f083478bd5a"
  }
 }

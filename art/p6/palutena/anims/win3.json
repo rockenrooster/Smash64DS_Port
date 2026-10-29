@@ -20,5 +20,11 @@
   ],
   "key_step": 3
  },
- "eps": 8
+ "eps": 8,
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/win3.o2r",
+  "sha256": "d46ec8f44a536fb2d0c548fa2099fade7a7b7a21c4f2ae69f87fbaa676160407",
+  "skirt_guide": "assets/p6-art/palutena/anims/win3.skirt.json",
+  "skirt_guide_sha256": "c583a17417929d723f33662d901a59df8217089746af22839502a17ae8074476"
+ }
 }

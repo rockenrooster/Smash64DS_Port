@@ -18,5 +18,9 @@
     35
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/qd_end.o2r",
+  "sha256": "3484bf7853e4cedee7fd3602247dd5425aa0e9652127edc48551d2deb89e6f82"
  }
 }

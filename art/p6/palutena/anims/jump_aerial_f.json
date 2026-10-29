@@ -21,5 +21,11 @@
   "transn": {
    "clip": "0x137d"
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/jump_aerial_f.o2r",
+  "sha256": "446cb9e4be84cbe532322e2d1f5be273c0b772578d93f974999efd43d7fd50c7",
+  "skirt_guide": "assets/p6-art/palutena/anims/jump_aerial_f.skirt.json",
+  "skirt_guide_sha256": "94a15575fce923583868ed502a83c967827c3e8a52dae18baa21c4ecc5c06904"
  }
 }

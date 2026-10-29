@@ -54,5 +54,9 @@
    "frames": 3
   },
   "key_step": 2
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/usmash.o2r",
+  "sha256": "a655ba522016604b3efdddab9a410f8ce802c1367025aa5fff7a4e06f827581c"
  }
 }

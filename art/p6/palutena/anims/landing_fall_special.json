@@ -18,5 +18,11 @@
     29
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/landing_fall_special.o2r",
+  "sha256": "fe8e5085f748bf598ff55aef12f704635b7fbd0371a1158743dd6b08cf447123",
+  "skirt_guide": "assets/p6-art/palutena/anims/landing_fall_special.skirt.json",
+  "skirt_guide_sha256": "7276c27beb9f4c32e298b292e01b841f25d7f730eb54a6e46355ac3cf917249f"
  }
 }

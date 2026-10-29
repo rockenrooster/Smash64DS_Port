@@ -18,5 +18,11 @@
     8
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/ottotto.o2r",
+  "sha256": "7454d5dd85198382715ed9a20bde75365363fdf6be1fb90aafb8715106f10063",
+  "skirt_guide": "assets/p6-art/palutena/anims/ottotto.skirt.json",
+  "skirt_guide_sha256": "638bf1af9d38102671e573ed05c30b90ca892035927b9603a20eabeb4af7e5c0"
  }
 }

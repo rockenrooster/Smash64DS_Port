@@ -22,5 +22,11 @@
    "absolute": true
   },
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/cliff_wait.o2r",
+  "sha256": "8df405758101ab864de7b8c18e96e49dedc6a563f2eceaa5c335ae82e0da08e5",
+  "skirt_guide": "assets/p6-art/palutena/anims/cliff_wait.skirt.json",
+  "skirt_guide_sha256": "254d1e9f41d09c2fc9acc8b5d18e87b77a6695066ae12d0922d0e984ce6156c2"
  }
 }

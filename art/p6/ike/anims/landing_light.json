@@ -18,5 +18,9 @@
     15
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/landing_light.o2r",
+  "sha256": "fc185ed034e8acf897c555ad97e7de9f3729e8295668588366b5ba046acc480d"
  }
 }

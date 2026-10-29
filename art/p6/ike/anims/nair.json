@@ -46,5 +46,9 @@
    "frames": 3
   },
   "key_step": 2
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/nair.o2r",
+  "sha256": "901c43b3e699147c2fba4bbbddca24efbf7b3e6a24db4986ad3c59de826a933c"
  }
 }

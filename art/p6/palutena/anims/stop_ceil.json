@@ -18,5 +18,11 @@
     9
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/stop_ceil.o2r",
+  "sha256": "4f77b73daa0fba21b9747c447539487c95158047fa87e245bd951c5e3b695e2f",
+  "skirt_guide": "assets/p6-art/palutena/anims/stop_ceil.skirt.json",
+  "skirt_guide_sha256": "4d2a886ea434d3e8c13cadcf363b24135fa7aff2c727780f588051bb523759cd"
  }
 }

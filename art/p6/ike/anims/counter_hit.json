@@ -22,5 +22,9 @@
     48
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/counter_hit.o2r",
+  "sha256": "77652c23ecad0c32ad2d18412ca935bd245cadc252fb045bd9002e967945ea9a"
  }
 }

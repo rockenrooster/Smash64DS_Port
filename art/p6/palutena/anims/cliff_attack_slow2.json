@@ -21,5 +21,11 @@
   "transn": {
    "absolute": true
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/cliff_attack_slow2.o2r",
+  "sha256": "cabfd3eda234c7408087437d9f0b7aeb28da3ff313205d0a59c43e71eb3e0eb9",
+  "skirt_guide": "assets/p6-art/palutena/anims/cliff_attack_slow2.skirt.json",
+  "skirt_guide_sha256": "0aa23a3309ea19be9acaa77a7f83fd60702d8534872eb2fdd350df5f03fe05ab"
  }
 }

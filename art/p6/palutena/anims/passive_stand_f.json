@@ -21,5 +21,11 @@
   "transn": {
    "clip": "0x13a2"
   }
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/passive_stand_f.o2r",
+  "sha256": "42730ccb835955a550488d556a213b7eff091f8dccb846cfefffdbb6309874a0",
+  "skirt_guide": "assets/p6-art/palutena/anims/passive_stand_f.skirt.json",
+  "skirt_guide_sha256": "8fc231e672eefa1ca5b6e8606562e605148d5fa9baea46e204f6e156c4f08255"
  }
 }

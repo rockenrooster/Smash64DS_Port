@@ -19,5 +19,11 @@
    ]
   ],
   "loop": 0
+ },
+ "frozen": {
+  "clip": "assets/p6-art/palutena/anims/ottotto_wait.o2r",
+  "sha256": "87aab2974d90ca0e8b7a058749b33a8da6f3ee7e085e96cdb5b2a40188cd2ae9",
+  "skirt_guide": "assets/p6-art/palutena/anims/ottotto_wait.skirt.json",
+  "skirt_guide_sha256": "c9b6f43405f944a245ede9aaffab94552eb5978221dea6a62aa7b63025a79e7f"
  }
 }

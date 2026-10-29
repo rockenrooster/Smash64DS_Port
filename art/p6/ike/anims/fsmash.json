@@ -65,5 +65,9 @@
     0
    ]
   ]
+ },
+ "frozen": {
+  "clip": "assets/p6-art/ike/anims/fsmash.o2r",
+  "sha256": "21d51b3e95586c7cef390e4bb64389b4b28caf1fe285e7426c297e9e22e4efa8"
  }
 }
